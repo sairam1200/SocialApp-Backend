@@ -1,0 +1,63 @@
+import { Response } from "express";
+import querystring from 'querystring';
+import { CommandBus } from "@nestjs/cqrs";
+import configs from "../../../../configs";
+import { ApiResponse, ApiTags } from "@nestjs/swagger";
+import { stringUtil } from "../../../../core/utils/string.util";
+import { PinterestConnectCommand } from "./pinterest-connect.handler";
+import { PermissionsGuard } from "../../../../core/passport/permissions.guard";
+import { Body, Controller, Get, HttpRedirectResponse, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
+
+@ApiTags('Integrations')
+// @UseGuards(PermissionsGuard)
+@Controller({
+  path: `/integrations/pinterest`,
+  version: '1',
+})
+export class PinterestConnectController {
+
+  constructor(private readonly commandBus: CommandBus) { }
+
+  @Get('connect')
+  @ApiResponse({ status: 302, description: 'FOUND' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
+  @ApiResponse({ status: 403, description: 'FORBIDDEN' })
+  public async Connect(@Res() res: Response): Promise<void> {
+
+    const scopes = [
+      'read_users',
+      'read_pins',
+      'write_pins',
+      'read_boards',
+      'write_boards',
+      'read_board_groups'
+    ].join(' ');
+
+    const authorizeURL = `https://www.pinterest.com/oauth/` + querystring.stringify({
+      response_type: 'code',
+      client_id: configs.pinterest.clientId,
+      redirect_uri: configs.pinterest.redirectUri,
+      scope: scopes,
+      state: stringUtil.generateRandomString(16),
+    });
+
+    res.status(HttpStatus.FOUND).redirect(authorizeURL);
+  }
+
+  @Get('callback')
+  @ApiResponse({ status: 200, description: 'OK' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
+  @ApiResponse({ status: 403, description: 'FORBIDDEN' })
+  public async Callback(
+    @Query('code') code: string,
+    @Res() res: Response): Promise<Response | void> {
+    if (!code) {
+      return res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid request' });
+    }
+
+    const result = await this.commandBus.execute(new PinterestConnectCommand({ model: { code } }));
+    return res.status(HttpStatus.OK).json(result);
+  }
+}

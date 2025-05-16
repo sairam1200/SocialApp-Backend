@@ -61,3 +61,70 @@ npm run dev
 * Pattern: CQRS (Command Query Responsibility Segregation)
 
 This structure promotes separation of concerns, scalability, and maintainability.
+
+### 📂 Folder Structure Rules
+
+The folder structure of this project follows Clean Architecture principles, with a focus on Vertical Slice Architecture for feature modularity and CQRS for separating command and query concerns.
+
+#### `Core` Layer (src/core)
+Purpose: The Core Layer is where all the business logic and use cases live. This layer is independent of any external dependencies.
+
+Structure Rules:
+
+Contains business logic, services, and application-specific rules that do not depend on frameworks or databases.
+
+Services here should have no dependencies on external libraries (e.g., database, frameworks).
+
+Exceptions and utility functions relevant to the application go here.
+
+#### `Domain` Layer (src/domain)
+Purpose: The Domain Layer encapsulates the business model of the application. It defines entities, contracts, and domain logic.
+
+Structure Rules:
+
+Contains entities, contracts, and domain services that represent the core of the business.
+
+Repositories in this layer are interfaces and will be implemented in the Infrastructure Layer.
+
+The domain model is independent of any frameworks or technologies (e.g., databases, external APIs).
+
+#### `Infrastructure` Layer (src/infrastructure)
+Purpose: The Infrastructure Layer interacts with external dependencies such as databases, external APIs, and third-party services.
+
+Structure Rules:
+
+Implements repositories from the Domain Layer.
+
+Database integration, external APIs, and any third-party services are implemented here.
+
+Should not contain business logic, but only concrete implementations for services and repositories.
+
+#### `Presentation` Layer (Vertical Slice) (src/features)
+Purpose: The Presentation Layer follows the Vertical Slice Architecture, meaning each feature is fully contained within a slice, including its endpoints and handler.
+
+Structure Rules:
+
+Each feature is isolated within its own folder (e.g., user, auth, integrations).
+
+Inside each feature folder, you’ll find the endpoint(controller) and handler for that feature.
+
+All feature-specific logic is contained in one place, making it easier to manage and scale features independently.
+
+This structure follows CQRS, meaning commands (write operations) and queries (read operations) are separated.
+
+## 📜 Naming Conventions
+`Classes`:
+
+Use PascalCase for class names and types (e.g., CreateUserCommand).
+
+`Functions`:
+
+Use camelCase for function names and methods (e.g., createUser()).
+
+`Files and Directories`:
+
+Use lowercase with hyphenated filenames for directories and files (e.g., create-user.endpoint.ts).
+
+DTOs:
+
+For request/response data objects, append Model to the name (e.g., CreateUserModel).
