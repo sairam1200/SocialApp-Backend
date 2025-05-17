@@ -1,4 +1,5 @@
 import axios from 'axios';
+import * as Joi from 'joi';
 import { Inject } from "@nestjs/common";
 import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
@@ -12,34 +13,80 @@ import { HttpContext } from '../../../../core/middlewares/httpContext.middleware
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { IDataProtectionKeyRepository } from 'domain/repositories/idataProtectionKey.repository';
 
 const PLATFORM = 'facebook';
 const GRAPH_BASE = 'https://graph.facebook.com/v22.0';
 
-export class FacebookConnectCommand {
+export class FacebookConnectQuery {
   model: {
-    code: string;
+    state: string;
   }
 
-  constructor(request: Partial<FacebookConnectCommand> = {}) {
+  constructor(request: Partial<FacebookConnectQuery> = {}) {
     Object.assign(this, request);
   }
 }
 
-@CommandHandler(FacebookConnectCommand)
-export class FacebookConnectHandler implements ICommandHandler<FacebookConnectCommand> {
+export class FacebookConnectCallbackQuery {
+  model: {
+    code: string;
+    state: string;
+  }
+
+  constructor(request: Partial<FacebookConnectCallbackQuery> = {}) {
+    Object.assign(this, request);
+  }
+}
+
+const facebookConnectCallbackValidations = Joi.object({
+  code: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
+  state: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
+});
+
+@CommandHandler(FacebookConnectQuery)
+export class FacebookConnectQueryHandler implements ICommandHandler<FacebookConnectQuery> {
+
+  constructor(
+    @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
+    private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
+  ) { }
+
+  public async execute(command: FacebookConnectQuery): Promise<void> {
+
+    const { model } = command;
+
+    // expires in 15 minutes
+    const expiresIn = 15 * 60;
+    await this.dataProtectionKeyRepository.createAsync(
+      model.state,
+      "",
+      HttpContext.user[Globals.ClaimTypes.UserId],
+      expiresIn
+    );
+  }
+}
+
+@CommandHandler(FacebookConnectCallbackQuery)
+export class FacebookConnectCallbackHandler implements ICommandHandler<FacebookConnectCallbackQuery> {
 
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
+    @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
+    private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
   ) { }
 
-  public async execute(command: FacebookConnectCommand): Promise<any> {
+  public async execute(command: FacebookConnectCallbackQuery):
+    Promise<{ accessToken: string; expiresIn: number; profile: FacebookUserData }> {
+
     const { model } = command;
+    await facebookConnectCallbackValidations.validateAsync(model);
+    await this.validateState(model.state);
 
     const exchangeToken = await this.fetchShortLivedToken(model.code);
     const { access_token, expires_in } = await this.fetchLongLivedToken(exchangeToken);
@@ -96,8 +143,11 @@ export class FacebookConnectHandler implements ICommandHandler<FacebookConnectCo
       );
     }
 
-    // save content to db
-
+    return {
+      accessToken: access_token,
+      expiresIn: expires_in,
+      profile: userData
+    }
   }
 
   private async fetchShortLivedToken(code: string): Promise<string> {
@@ -155,4 +205,16 @@ export class FacebookConnectHandler implements ICommandHandler<FacebookConnectCo
     }
   }
 
+  private async validateState(state: string): Promise<void> {
+    const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
+    if (!dataProtectionKey) {
+      throw new ApplicationException('Invalid state parameter');
+    }
+
+    if (new Date(dataProtectionKey.createdOn.getTime() + dataProtectionKey.expiresIn * 1000) < new Date()) {
+      throw new ApplicationException('State parameter has expired');
+    }
+
+    await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
+  }
 }

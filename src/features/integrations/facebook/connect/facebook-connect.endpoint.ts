@@ -5,8 +5,8 @@ import configs from "../../../../configs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { stringUtil } from "../../../../core/utils/string.util";
 import { PermissionsGuard } from "../../../../core/passport/permissions.guard";
-import { Body, Controller, Get, HttpRedirectResponse, HttpStatus, Query, Req, Res, UseGuards } from "@nestjs/common";
-import { FacebookConnectCommand } from "./facebook-connect.handler";
+import { Controller, Get, HttpStatus, Query, Req, Res, UseGuards } from "@nestjs/common";
+import { FacebookConnectCallbackQuery, FacebookConnectQuery } from "./facebook-connect.handler";
 
 @ApiTags('Integrations')
 // @UseGuards(PermissionsGuard)
@@ -39,15 +39,17 @@ export class FacebookConnectController {
       'user_videos'
     ].join(',');
 
+    const state = stringUtil.generateRandomString(16);
     const authorizeURL = `https://www.facebook.com/v22.0/dialog/oauth?` + querystring.stringify({
       response_type: 'code',
       client_id: configs.facebook.clientId,
       redirect_uri: configs.facebook.redirectUri,
       scope: scopes,
-      state: stringUtil.generateRandomString(16),
+      state: state,
       show_dialog: true, // Always show the login page
     });
 
+    await this.commandBus.execute(new FacebookConnectQuery({ model: { state } }));
     res.status(HttpStatus.FOUND).redirect(authorizeURL);
   }
 
@@ -58,14 +60,21 @@ export class FacebookConnectController {
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Callback(
     @Query('code') code: string,
+    @Query('state') state: string,
     @Res() res: Response
   ): Promise<Response | void> {
 
-    if (!code) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid request' });
-    }
-
-    const result = await this.commandBus.execute(new FacebookConnectCommand({ model: { code } }));
-    return res.status(HttpStatus.OK).json(result);
+    const result = await this.commandBus.execute(new FacebookConnectCallbackQuery({ model: { code, state } }));
+    res.cookie('facebook_auth', {
+      accessToken: result.accessToken,
+      expiresIn: result.expiresIn,
+    },
+      {
+        maxAge: 0,
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+      });
+    return res.status(HttpStatus.OK).json(result.profile);
   }
 }
