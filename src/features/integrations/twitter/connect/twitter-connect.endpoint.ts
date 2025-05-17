@@ -4,17 +4,18 @@ import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { stringUtil } from "../../../../core/utils/string.util";
+import { cryptoUtils } from "../../../../core/utils/crypto.utils";
 import { PermissionsGuard } from "../../../../core/passport/permissions.guard";
-import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
-import { InstagramConnectCallbackQuery, InstagramConnectQuery } from "./instagram-connect.handler";
+import { TwitterConnectCallbackQuery, TwitterConnectQuery } from "./twitter-connect.handler";
+import { Body, Controller, Get, HttpRedirectResponse, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 
 @ApiTags('Integrations')
 // @UseGuards(PermissionsGuard)
 @Controller({
-  path: `/integrations/instagram`,
+  path: `/integrations/twitter`,
   version: '1',
 })
-export class InstagramConnectController {
+export class TwitterConnectController {
 
   constructor(private readonly commandBus: CommandBus) { }
 
@@ -26,21 +27,26 @@ export class InstagramConnectController {
   public async Connect(@Res() res: Response): Promise<void> {
 
     const scopes = [
-      'user_profile',
-      'user_media'
-    ].join(',');
+      'tweet.read',
+      'users.read',
+      'offline.access',
+    ].join(' ');
 
-    const state = stringUtil.generateRandomString(16);
-    const authorizeURL = `https://api.instagram.com/oauth/authorize?` + querystring.stringify({
+    const state = cryptoUtils.generateEncryptionKey(16);
+    const codeVerifier = cryptoUtils.generateEncryptionKey();
+    const challenge = cryptoUtils.encodeSHA256ToBase64(codeVerifier);
+
+    const authorizeURL = `https://twitter.com/i/oauth2/authorize?` + querystring.stringify({
       response_type: 'code',
-      client_id: configs.Instagram.clientId,
-      redirect_uri: configs.Instagram.redirectUri,
+      client_id: configs.twitter.clientId,
+      redirect_uri: configs.twitter.redirectUri,
       scope: scopes,
       state: state,
-      show_dialog: true, // Always show the login page
+      code_challenge: challenge,
+      code_challenge_method: 'S256'
     });
 
-    await this.commandBus.execute(new InstagramConnectQuery({ model: { state } }));
+    await this.commandBus.execute(new TwitterConnectQuery({ model: { state, codeVerifier } }));
     res.status(HttpStatus.FOUND).redirect(authorizeURL);
   }
 
@@ -57,18 +63,10 @@ export class InstagramConnectController {
       return res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid request' });
     }
 
-    const result = await this.commandBus.execute(new InstagramConnectCallbackQuery({ model: { code, state } }));
-    res.cookie('instagram_auth', {
-      accessToken: result.accessToken,
-      expiresIn: result.expiresIn,
-    },
-      {
-        maxAge: 0,
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-      });
-    return res.status(HttpStatus.OK).json(result.profile);
+    const result = await this.commandBus.execute(new TwitterConnectCallbackQuery({ model: { code, state } }));
+
+
+    return res.status(HttpStatus.OK).json(result);
   }
 
 }
