@@ -1,4 +1,5 @@
 import axios from "axios";
+import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
@@ -12,37 +13,82 @@ import { IUserRepository } from "../../../../domain/repositories/iuser.repositor
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 
 const PLATFORM = 'instagram';
 const GRAPH_BASE = 'https://graph.instagram.com/v22.0';
 
-export class InstagramConnectCommand {
+export class InstagramConnectQuery {
   model: {
-    code: string;
+    state: string;
   }
 
-  constructor(request: Partial<InstagramConnectCommand> = {}) {
+  constructor(request: Partial<InstagramConnectQuery> = {}) {
     Object.assign(this, request);
+  }
+}
+
+export class InstagramConnectCallbackQuery {
+  model: {
+    code: string;
+    state: string;
+  }
+
+  constructor(request: Partial<InstagramConnectCallbackQuery> = {}) {
+    Object.assign(this, request);
+  }
+}
+
+const instagramConnectCallbackValidations = Joi.object({
+  code: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
+  state: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
+});
+
+@CommandHandler(InstagramConnectQuery)
+export class InstagramConnectQueryHandler implements ICommandHandler<InstagramConnectQuery> {
+
+  constructor(
+    @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
+    private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
+  ) { }
+
+  public async execute(command: InstagramConnectQuery): Promise<void> {
+
+    const { model } = command;
+
+    // expires in 15 minutes
+    const expiresIn = 15 * 60;
+    await this.dataProtectionKeyRepository.createAsync(
+      model.state,
+      "",
+      HttpContext.user[Globals.ClaimTypes.UserId],
+      expiresIn
+    );
   }
 }
 
 /**
  * Important: Instagram does not reviel the email address of the user
  */
-@CommandHandler(InstagramConnectCommand)
-export class InstagramConnectHandler implements ICommandHandler<InstagramConnectCommand> {
+@CommandHandler(InstagramConnectCallbackQuery)
+export class InstagramConnectCallbackQueryHandler implements ICommandHandler<InstagramConnectCallbackQuery> {
 
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
+    @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
+    private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
   ) { }
 
-  public async execute(command: InstagramConnectCommand): Promise<any> {
+  public async execute(command: InstagramConnectCallbackQuery):
+    Promise<{ accessToken: string; expiresIn: number; profile: InstagramUserData; }> {
     const { model } = command;
+    await instagramConnectCallbackValidations.validateAsync(model);
+    await this.validateState(model.state);
 
     const exchangeToken = await this.fetchShortLivedToken(model.code);
     const { access_token, expires_in } = await this.fetchLongLivedToken(exchangeToken);
@@ -97,16 +143,19 @@ export class InstagramConnectHandler implements ICommandHandler<InstagramConnect
       existingAccountLogin = await this.userLoginRepository.createAysnc(
         PLATFORM,
         user.id,
-        "",
-        "",
-        "",
+        "", // deviceId
+        "", // userAgent
+        "", // ipAddress
         access_token,
         new Date(Date.now() + expires_in * 1000)
       );
     }
 
-    // save content to db
-
+    return {
+      accessToken: access_token,
+      expiresIn: expires_in,
+      profile: userData
+    }
   }
 
   private async fetchShortLivedToken(code: string): Promise<string> {
@@ -165,4 +214,16 @@ export class InstagramConnectHandler implements ICommandHandler<InstagramConnect
     }
   }
 
+  private async validateState(state: string): Promise<void> {
+    const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
+    if (!dataProtectionKey) {
+      throw new ApplicationException('Invalid state parameter');
+    }
+
+    if (new Date(dataProtectionKey.createdOn.getTime() + dataProtectionKey.expiresIn * 1000) < new Date()) {
+      throw new ApplicationException('State parameter has expired');
+    }
+
+    await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
+  }
 }
