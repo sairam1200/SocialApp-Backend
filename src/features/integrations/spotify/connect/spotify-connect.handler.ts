@@ -1,4 +1,5 @@
 import axios from "axios";
+import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
@@ -12,34 +13,77 @@ import { IUserRepository } from "../../../../domain/repositories/iuser.repositor
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 
 const PLATFORM = 'spotify';
 const BASE_URL = 'https://api.spotify.com/v1';
 
-export class SpotifyConnectCommand {
+export class SpotifyConnectQuery {
   model: {
-    code: string;
+    state: string;
   }
 
-  constructor(request: Partial<SpotifyConnectCommand> = {}) {
+  constructor(request: Partial<SpotifyConnectQuery> = {}) {
     Object.assign(this, request);
   }
 }
 
-@CommandHandler(SpotifyConnectHandler)
-export class SpotifyConnectHandler implements ICommandHandler<SpotifyConnectCommand> {
+export class SpotifyConnectCallbackQuery {
+  model: {
+    code: string;
+    state: string;
+  }
+
+  constructor(request: Partial<SpotifyConnectCallbackQuery> = {}) {
+    Object.assign(this, request);
+  }
+}
+
+const spotifyConnectCallbackValidations = Joi.object({
+  code: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
+  state: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
+});
+
+@CommandHandler(SpotifyConnectQuery)
+export class SpotifyConnectQueryHandler implements ICommandHandler<SpotifyConnectQuery> {
+
+  constructor(
+    @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
+    private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
+  ) { }
+
+  public async execute(command: SpotifyConnectQuery): Promise<void> {
+
+    const { model } = command;
+
+    // expires in 15 minutes
+    const expiresIn = 15 * 60;
+    await this.dataProtectionKeyRepository.createAsync(
+      model.state,
+      "", // value is not used
+      HttpContext.user[Globals.ClaimTypes.UserId],
+      expiresIn
+    );
+  }
+}
+
+@CommandHandler(SpotifyConnectCallbackQuery)
+export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<SpotifyConnectCallbackQuery> {
 
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
+    @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
+    private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
   ) { }
 
-  public async execute(command: SpotifyConnectCommand): Promise<any> {
+  public async execute(command: SpotifyConnectCallbackQuery): Promise<{ accessToken: string; expiresIn: number; profile: SpotifyUserData }> {
     const { model } = command;
+    await spotifyConnectCallbackValidations.validateAsync(model);
 
     const { access_token, refresh_token, expires_in } = await this.fetchToken(model.code);
 
@@ -59,7 +103,6 @@ export class SpotifyConnectHandler implements ICommandHandler<SpotifyConnectComm
       existingLinkedAccount.metaData = {
         name: userData.data.display_name,
         country: userData.data.country,
-        email: userData.data.email,
         external_url: userData.data.external_urls.spotify,
         product: userData.data.product,
         type: userData.data.type,
@@ -78,7 +121,6 @@ export class SpotifyConnectHandler implements ICommandHandler<SpotifyConnectComm
         metaData: {
           name: userData.data.display_name,
           country: userData.data.country,
-          email: userData.data.email,
           external_url: userData.data.external_urls.spotify,
           product: userData.data.product,
           type: userData.data.type,
@@ -104,8 +146,11 @@ export class SpotifyConnectHandler implements ICommandHandler<SpotifyConnectComm
       );
     }
 
-    // save content to db
-
+    return {
+      accessToken: access_token,
+      expiresIn: expires_in,
+      profile: userData.data
+    }
   }
 
   private async fetchToken(code: string)
@@ -113,9 +158,9 @@ export class SpotifyConnectHandler implements ICommandHandler<SpotifyConnectComm
     try {
       const response = await axios.get(`https://accounts.spotify.com/api/token`, {
         params: {
-          client_secret: configs.pinterest.clientSecret,
-          redirect_uri: configs.pinterest.redirectUri,
-          client_id: configs.pinterest.clientId,
+          client_secret: configs.spotify.clientSecret,
+          redirect_uri: configs.spotify.redirectUri,
+          client_id: configs.spotify.clientId,
           grant_type: 'authorization_code',
           code: code,
         },
@@ -148,6 +193,16 @@ export class SpotifyConnectHandler implements ICommandHandler<SpotifyConnectComm
     }
   }
 
+  private async validateState(state: string): Promise<void> {
+    const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
+    if (!dataProtectionKey) {
+      throw new ApplicationException('Invalid state parameter');
+    }
 
+    if (new Date(dataProtectionKey.createdOn.getTime() + dataProtectionKey.expiresIn * 1000) < new Date()) {
+      throw new ApplicationException('State parameter has expired');
+    }
 
+    await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
+  }
 }

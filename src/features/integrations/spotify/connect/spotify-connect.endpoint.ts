@@ -4,9 +4,9 @@ import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { stringUtil } from "../../../../core/utils/string.util";
-import { SpotifyConnectCommand } from "./spotify-connect.handler";
 import { PermissionsGuard } from "../../../../core/passport/permissions.guard";
-import { Body, Controller, Get, HttpRedirectResponse, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
+import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
+import { SpotifyConnectCallbackQuery, SpotifyConnectQuery } from "./spotify-connect.handler";
 
 @ApiTags('Integrations')
 // @UseGuards(PermissionsGuard)
@@ -39,14 +39,16 @@ export class SpotifyConnectController {
       'user-follow-read'
     ].join(',');
 
+    const state = stringUtil.generateRandomString(16);
     const authorizeURL = `https://accounts.spotify.com/authorize/` + querystring.stringify({
       response_type: 'code',
       client_id: configs.pinterest.clientId,
       redirect_uri: configs.pinterest.redirectUri,
       scope: scopes,
-      state: stringUtil.generateRandomString(16),
+      state: state,
     });
 
+    await this.commandBus.execute(new SpotifyConnectQuery({ model: { state } }));
     res.status(HttpStatus.FOUND).redirect(authorizeURL);
   }
 
@@ -57,12 +59,20 @@ export class SpotifyConnectController {
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Callback(
     @Query('code') code: string,
+    @Query('state') state: string,
     @Res() res: Response): Promise<Response | void> {
-    if (!code) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid request' });
-    }
 
-    const result = await this.commandBus.execute(new SpotifyConnectCommand({ model: { code } }));
-    return res.status(HttpStatus.OK).json(result);
+    const result = await this.commandBus.execute(new SpotifyConnectCallbackQuery({ model: { code, state } }));
+    res.cookie('spotify_auth', {
+      accessToken: result.accessToken,
+      expiresIn: result.expiresIn,
+    },
+      {
+        maxAge: result.expiresIn * 1000,
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+      });
+    return res.status(HttpStatus.OK).json(result.profile);
   }
 }
