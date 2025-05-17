@@ -15,6 +15,15 @@ const envVarsSchema = Joi.object()
             .required(),
         PROJECT_NAME: Joi.string(),
         PORT: Joi.number().default(3000),
+        ENCRYPTION_KEY: Joi.string()
+            .default('this is my custom Secret key for encryption')
+            .description('Encryption key'),
+        ENCRYPTION_ALGORITHM: Joi.string()
+            .default('aes-256-cbc')
+            .description('Encryption algorithm'),
+        ENCRYPTION_IV: Joi.string()
+            .default('this is my custom IV for encryption')
+            .description('Encryption IV'),
         JWT_SECRET: Joi.string()
             .default('this is my custom Secret key for authentication')
             .required()
@@ -60,7 +69,7 @@ const envVarsSchema = Joi.object()
             .default(false)
             .description('Postgres logging'),
         POSTGRES_MIGRATIONS_RUN: Joi.boolean()
-            .default(false)
+            .default(true)
             .description('Run migrations after running project'),
         FACEBOOK_CLIENT_ID: Joi.string()
             .description('Facebook client id'),
@@ -86,7 +95,21 @@ const envVarsSchema = Joi.object()
             .description('Twitter client secret'),
         TWITTER_CALLBACK_URL: Joi.string()
             .description('Twitter callback url'),
-        
+        YOUTUBE_CLIENT_ID: Joi.string()
+            .description('Youtube client id'),
+        YOUTUBE_CLIENT_SECRET: Joi.string()
+            .description('Youtube client secret'),
+        YOUTUBE_CALLBACK_URL: Joi.string()
+            .description('Youtube callback url'),
+        YOUTUBE_API_KEY: Joi.string()
+            .description('Youtube api key'),
+        SPOTIFY_CLIENT_ID: Joi.string()
+            .description('Spotify client id'),
+        SPOTIFY_CLIENT_SECRET: Joi.string()
+            .description('Spotify client secret'),
+        SPOTIFY_CALLBACK_URL: Joi.string()
+            .description('Spotify callback url'),
+
         LOG_PATH: Joi.string()
             .default('logs')
             .description('Path to the log file'),
@@ -106,7 +129,7 @@ export default {
     projectName: envVars.PROJECT_NAME,
     port: envVars.PORT,
     log: {
-        level: envVars.NODE_ENV  === 'development' ? 'debug' : 'info',
+        level: envVars.NODE_ENV === 'development' ? 'debug' : 'info',
         path: envVars.LOG_PATH,
     },
     postgres: {
@@ -129,12 +152,17 @@ export default {
         accessTokenExpiration: envVars.JWT_ACCESS_EXPIRATION_MINUTES,
         refreshTokenExpiration: envVars.JWT_REFRESH_EXPIRATION_HOURS,
     },
-    // cors: {
-    //     origin: process.env.CORS_ORIGIN || '*',
-    //     methods: process.env.CORS_METHODS || 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    //     preflightContinue: false,
-    //     optionsSuccessStatus: 204,
-    // },
+    encryption: {
+        key: envVars.ENCRYPTION_KEY,
+        algorithm: envVars.ENCRYPTION_ALGORITHM,
+        iv: envVars.ENCRYPTION_IV,
+    },
+    youtube: {
+        clientId: envVars.YOUTUBE_CLIENT_ID,
+        clientSecret: envVars.YOUTUBE_CLIENT_SECRET,
+        callbackUrl: envVars.YOUTUBE_CALLBACK_URL,
+        apiKey: envVars.YOUTUBE_API_KEY,
+    },
     facebook: {
         clientId: envVars.FACEBOOK_CLIENT_ID,
         clientSecret: envVars.FACEBOOK_CLIENT_SECRET,
@@ -154,5 +182,10 @@ export default {
         clientId: envVars.TWITTER_CLIENT_ID,
         clientSecret: envVars.TWITTER_CLIENT_SECRET,
         redirectUri: envVars.TWITTER_CALLBACK_URL,
-    }
+    },
+    spotify: {
+        clientId: envVars.SPOTIFY_CLIENT_ID,
+        clientSecret: envVars.SPOTIFY_CLIENT_SECRET,
+        redirectUri: envVars.SPOTIFY_CALLBACK_URL,
+    },
 }; 
