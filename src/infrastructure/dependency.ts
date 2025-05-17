@@ -1,4 +1,5 @@
 import _const from "../core/utils/const";
+import { DataProtectionKeyRepository } from "./repositories/dataProtectionKey.repository";
 import { LinkedAccountRepository } from "./repositories/linkedAccount.repository";
 import { RoleRepository } from "./repositories/role.repository";
 import { RoleClaimRepository } from "./repositories/roleClaim.repository";
@@ -36,6 +37,10 @@ export const dependency = {
   LinkedAccountRepository: {
     provide: _const.ILINKEDACCOUNT_REPOSITORY,
     useClass: LinkedAccountRepository,
+  },
+  DataProtectionKeyRepository: {
+    provide: _const.IDATAPROTECTIONKEY_REPOSITORY,
+    useClass: DataProtectionKeyRepository,
   },
   TokenService: {
     provide: _const.ITOKEN_SERVICE,

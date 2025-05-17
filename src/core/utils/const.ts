@@ -7,6 +7,7 @@ export default {
   IROLECLAIM_REPOSITORY: "IRoleClaimRepository",
   IUSERLOGIN_REPOSITORY: "IUserLoginRepository",
   ILINKEDACCOUNT_REPOSITORY: "ILinkedAccountRepository",
+  IDATAPROTECTIONKEY_REPOSITORY: "IDataProtectionKeyRepository",
 
   // Service Interfaces
   ITOKEN_SERVICE: "ITokenService",
