@@ -1,4 +1,5 @@
 import axios from "axios";
+import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
@@ -12,37 +13,82 @@ import { IUserRepository } from "../../../../domain/repositories/iuser.repositor
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 
 const PLATFORM = 'pinterest';
 const BASE_URL = 'https://api.pinterest.com/v5';
 
-export class PinterestConnectCommand {
+export class PinterestConnectCallbackQuery {
   model: {
     code: string;
+    state: string;
   }
 
-  constructor(request: Partial<PinterestConnectCommand> = {}) {
+  constructor(request: Partial<PinterestConnectCallbackQuery> = {}) {
     Object.assign(this, request);
+  }
+}
+
+export class PinterestConnectQuery {
+  model: {
+    state: string;
+  }
+
+  constructor(request: Partial<PinterestConnectQuery> = {}) {
+    Object.assign(this, request);
+  }
+}
+
+const pinterestConnectCallbackValidations = Joi.object({
+  code: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
+  state: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
+});
+
+@CommandHandler(PinterestConnectQuery)
+export class PinterestConnectQueryHandler implements ICommandHandler<PinterestConnectQuery> {
+
+  constructor(
+    @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
+    private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
+  ) { }
+
+  public async execute(command: PinterestConnectQuery): Promise<void> {
+
+    const { model } = command;
+
+    // expires in 15 minutes
+    const expiresIn = 15 * 60;
+    await this.dataProtectionKeyRepository.createAsync(
+      model.state,
+      "", // value is not used
+      HttpContext.user[Globals.ClaimTypes.UserId],
+      expiresIn
+    );
   }
 }
 
 /**
  * Important: Pinterest does not reviel the email address of the user
  */
-@CommandHandler(PinterestConnectHandler)
-export class PinterestConnectHandler implements ICommandHandler<PinterestConnectCommand> {
+@CommandHandler(PinterestConnectCallbackQuery)
+export class PinterestConnectCallbackQueryHandler implements ICommandHandler<PinterestConnectCallbackQuery> {
 
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
+    @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
+    private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
   ) { }
 
-  public async execute(command: PinterestConnectCommand): Promise<any> {
+  public async execute(command: PinterestConnectCallbackQuery):
+    Promise<{ accessToken: string; expiresIn: number; profile: PinterestUserData; }> {
     const { model } = command;
+    await pinterestConnectCallbackValidations.validateAsync(model);
+    await this.validateState(model.state);
 
     const { access_token, refresh_token, expires_in, refresh_token_expires_in } = await this.fetchToken(model.code);
 
@@ -104,8 +150,11 @@ export class PinterestConnectHandler implements ICommandHandler<PinterestConnect
       );
     }
 
-    // save content to db
-
+    return {
+      accessToken: access_token,
+      expiresIn: expires_in,
+      profile: userData
+    }
   }
 
   private async fetchToken(code: string)
@@ -143,6 +192,16 @@ export class PinterestConnectHandler implements ICommandHandler<PinterestConnect
     }
   }
 
+  private async validateState(state: string): Promise<void> {
+    const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
+    if (!dataProtectionKey) {
+      throw new ApplicationException('Invalid state parameter');
+    }
 
+    if (new Date(dataProtectionKey.createdOn.getTime() + dataProtectionKey.expiresIn * 1000) < new Date()) {
+      throw new ApplicationException('State parameter has expired');
+    }
 
+    await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
+  }
 }

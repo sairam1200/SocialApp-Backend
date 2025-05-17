@@ -4,7 +4,7 @@ import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { stringUtil } from "../../../../core/utils/string.util";
-import { PinterestConnectCommand } from "./pinterest-connect.handler";
+import { PinterestConnectCallbackQuery, PinterestConnectQuery } from "./pinterest-connect.handler";
 import { PermissionsGuard } from "../../../../core/passport/permissions.guard";
 import { Body, Controller, Get, HttpRedirectResponse, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 
@@ -34,13 +34,16 @@ export class PinterestConnectController {
       'read_board_groups'
     ].join(' ');
 
+    const state = stringUtil.generateRandomString(16);
     const authorizeURL = `https://www.pinterest.com/oauth/` + querystring.stringify({
       response_type: 'code',
       client_id: configs.pinterest.clientId,
       redirect_uri: configs.pinterest.redirectUri,
       scope: scopes,
-      state: stringUtil.generateRandomString(16),
+      state: state,
     });
+
+    await this.commandBus.execute(new PinterestConnectQuery({ model: { state } }));
 
     res.status(HttpStatus.FOUND).redirect(authorizeURL);
   }
@@ -52,12 +55,20 @@ export class PinterestConnectController {
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Callback(
     @Query('code') code: string,
-    @Res() res: Response): Promise<Response | void> {
-    if (!code) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid request' });
-    }
-
-    const result = await this.commandBus.execute(new PinterestConnectCommand({ model: { code } }));
-    return res.status(HttpStatus.OK).json(result);
+    @Query('state') state: string,
+    @Res() res: Response
+  ): Promise<Response | void> {
+    const result = await this.commandBus.execute(new PinterestConnectCallbackQuery({ model: { code, state } }));
+    res.cookie('pinterest_auth', {
+      accessToken: result.accessToken,
+      expiresIn: result.expiresIn,
+    },
+      {
+        maxAge: 0,
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+      });
+    return res.status(HttpStatus.OK).json(result.profile);
   }
 }
