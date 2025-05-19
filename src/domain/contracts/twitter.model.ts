@@ -24,3 +24,28 @@ export interface TwitterUserDataModel {
     };
   };
 }
+
+export interface TwitterProfileModel {
+  id: string;
+  name: string;
+  email: string;
+  userId: string;
+  userName: string;
+  twitterId: string;
+  description: string;
+  allowImport: boolean;
+  profileImage: string;
+  
+  countryCodes: string[];
+  followersCount: number;
+  followingCount: number;
+  pinnedTweetId: string;
+  listedCount: number;
+  tweetCount: string;
+  protected: boolean;
+  createdAt: string;
+  verified: boolean;
+  location: string;
+  entities: any;
+  url: string;
+}

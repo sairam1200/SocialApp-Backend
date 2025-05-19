@@ -6,6 +6,7 @@ export function mapToFacebookProfileModel(data: LinkedAccount, includeSensitiveF
     id: data.id,
     userId: data.userId,
     userName: data.userName,
+    name: data.metaData.name,
     facebookId: data.externalId,
     allowImport: data.allowImport,
     profileImage: data.profileImage,
@@ -14,4 +15,3 @@ export function mapToFacebookProfileModel(data: LinkedAccount, includeSensitiveF
     email: includeSensitiveFields ? data.email : null,
   } as FacebookProfileModel;
 }
-

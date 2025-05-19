@@ -1,4 +1,3 @@
-
 export interface FacebookUserDataModel {
   id: string;
   name: string;
