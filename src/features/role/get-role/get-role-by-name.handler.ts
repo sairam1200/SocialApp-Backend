@@ -1,11 +1,10 @@
 import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
-import { RoleModel } from "../../../domain/contracts/role.model";
 import _const from "../../../core/utils/const";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { RoleModel } from "../../../domain/contracts/role.model";
 import { IRoleRepository } from "../../../domain/repositories/irole.repository";
 import { RoleNotFoundException } from "../../../core/exceptions/role.exception";
-
 
 export class GetRoleByNameQuery {
     roleName: string;
@@ -37,13 +36,13 @@ export class GetRoleByNameHandler implements ICommandHandler<GetRoleByNameQuery>
             throw new RoleNotFoundException('', query.roleName);
         }
 
-        const result = new RoleModel({
+        const result = {
             id: role.id,
             name: role.name,
             type: role.type,
             description: role.description,
             permissionsCount: role.roleClaims?.length,
-        });
+        } as RoleModel;
 
         return result;
     }

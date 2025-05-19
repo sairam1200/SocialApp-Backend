@@ -62,12 +62,12 @@ export class UpdateRoleHandler implements ICommandHandler<UpdateRoleCommand, Rol
 
         await this.roleRepository.updateAsync(role);
 
-        const result = new RoleModel({
+        const result = {
             id: role.id,
             name: role.name,
             type: role.type,
             permissionsCount: role.roleClaims?.length
-        });
+        } as RoleModel;
 
         return result;
     }

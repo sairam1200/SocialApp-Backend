@@ -59,11 +59,11 @@ export class CreateRoleHandler implements ICommandHandler<CreateRoleCommand, Rol
             }));
 
 
-        const result = new RoleModel({
+        const result = {
             id: role.id,
             name: role.name,
             type: role.type,
-        });
+        } as RoleModel;
 
         return result;
     }

@@ -97,7 +97,7 @@ export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<Youtu
 
     let existingLinkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
     if (existingLinkedAccount) {
-      existingLinkedAccount.username = "";
+      existingLinkedAccount.userName = "";
       existingLinkedAccount.profileImage = userData.profile.picture;
       existingLinkedAccount.followersCount = Number.parseInt(userData.channel.items[0].statistics.subscriberCount),
         existingLinkedAccount.followingCount = 0; // TODO : retreive this 
@@ -121,7 +121,7 @@ export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<Youtu
         userId: user.id,
         email: userData.profile.email,
         externalId: userData.profile.sub,
-        username: "",
+        userName: "",
         profileImage: userData.profile.picture,
         followersCount: Number.parseInt(userData.channel.items[0].statistics.subscriberCount),
         followingCount: 0, // TODO : retreive this

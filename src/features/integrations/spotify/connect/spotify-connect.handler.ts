@@ -7,12 +7,13 @@ import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
-import { SpotifyUserData } from "../../../../domain/contracts/spotify.model";
+import { mapToSpotifyProfileModel } from "../../../../domain/mappers/spotify.mapper";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { SpotifyProfileModel, SpotifyUserDataModel } from "../../../../domain/contracts/spotify.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 
 const PLATFORM = 'spotify';
@@ -81,9 +82,11 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
     private readonly userRepository: IUserRepository,
   ) { }
 
-  public async execute(command: SpotifyConnectCallbackQuery): Promise<{ accessToken: string; expiresIn: number; profile: SpotifyUserData }> {
-    const { model } = command;
+  public async execute(query: SpotifyConnectCallbackQuery)
+    : Promise<{ accessToken: string; expiresIn: number; profile: SpotifyProfileModel }> {
+    const { model } = query;
     await spotifyConnectCallbackValidations.validateAsync(model);
+    await this.validateState(model.state);
 
     const { access_token, refresh_token, expires_in } = await this.fetchToken(model.code);
 
@@ -94,36 +97,42 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
       throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
-    let existingLinkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
-    if (existingLinkedAccount) {
-      existingLinkedAccount.username = userData.data.display_name;
-      existingLinkedAccount.profileImage = userData.data.images[0]?.url;
-      existingLinkedAccount.followersCount = userData.data.followers.total;
-      existingLinkedAccount.followingCount = userData.userfollowing;
-      existingLinkedAccount.metaData = {
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
+    if (linkedAccount) {
+      linkedAccount.userName = userData.data.display_name;
+      linkedAccount.profileImage = userData.data.images[0]?.url;
+      linkedAccount.followersCount = userData.data.followers.total;
+      linkedAccount.followingCount = userData.userfollowing;
+      linkedAccount.metaData = {
         name: userData.data.display_name,
         country: userData.data.country,
-        external_url: userData.data.external_urls.spotify,
+        spotifyUrl: userData.data.external_urls.spotify,
         product: userData.data.product,
-        type: userData.data.type,
+        accountType: userData.data.type,
+        uri: userData.data.uri,
+        explicitContentLocked: userData.data.explicit_content.filter_enabled,
+        explicitContentEnabled: userData.data.explicit_content.filter_locked,
       };
-      await this.linkedAccountRepository.updateAsync(existingLinkedAccount);
+      await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
-      await this.linkedAccountRepository.createAsync(new LinkedAccount({
+      linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
         platform: PLATFORM,
         userId: user.id,
         email: userData.data.email,
         externalId: userData.data.id,
-        username: userData.data.display_name,
+        userName: userData.data.display_name,
         profileImage: userData.data.images[0]?.url,
         followersCount: userData.data.followers.total,
         followingCount: userData.userfollowing,
         metaData: {
           name: userData.data.display_name,
           country: userData.data.country,
-          external_url: userData.data.external_urls.spotify,
+          spotifyUrl: userData.data.external_urls.spotify,
           product: userData.data.product,
-          type: userData.data.type,
+          accountType: userData.data.type,
+          uri: userData.data.uri,
+          explicitContentLocked: userData.data.explicit_content.filter_enabled,
+          explicitContentEnabled: userData.data.explicit_content.filter_locked,
         }
       }));
     }
@@ -149,7 +158,7 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
     return {
       accessToken: access_token,
       expiresIn: expires_in,
-      profile: userData.data
+      profile: mapToSpotifyProfileModel(linkedAccount, true),
     }
   }
 
@@ -173,9 +182,9 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<{ data: SpotifyUserData, userfollowing: number }> {
+  private async fetchUserData(accessToken: string): Promise<{ data: SpotifyUserDataModel, userfollowing: number }> {
     try {
-      const response = await axios.get<SpotifyUserData>(`${BASE_URL}/me`, {
+      const response = await axios.get<SpotifyUserDataModel>(`${BASE_URL}/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 

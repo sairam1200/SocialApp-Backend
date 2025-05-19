@@ -1,7 +1,7 @@
 import { Inject } from "@nestjs/common";
-import { RoleModel } from "../../../domain/contracts/role.model";
 import _const from "../../../core/utils/const";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { RoleModel } from "../../../domain/contracts/role.model";
 import { IRoleRepository } from "../../../domain/repositories/irole.repository";
 
 export class GetRolesQuery { }
@@ -18,11 +18,11 @@ export class GetRolesHandler implements ICommandHandler<GetRolesQuery> {
 
         if (roles?.length == 0) return [];
 
-        return roles.map(role => new RoleModel({
+        return roles.map(role => ({
             id: role.id,
             name: role.name,
             description: role.description,
             permissionsCount: role.roleClaims?.length
-        }));
+        }) as RoleModel);
     }
 } 

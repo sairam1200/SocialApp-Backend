@@ -24,7 +24,8 @@ export interface FacebookProfileModel {
   userId: string;
   userName: string;
   facebookId: string;
+  allowImport: boolean;
   profileImage: string;
-  followerCount: number;
+  followersCount: number;
   followingCount: number;
 }

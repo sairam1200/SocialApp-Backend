@@ -35,7 +35,7 @@ export class GetPermissionsHandler implements ICommandHandler<GetPermissionsQuer
 
         await getPermissionsQueryValidations.params.validateAsync(query);
 
-        let result = new PermissionModel();
+        let result = { } as PermissionModel;
 
         const role = await this.roleRepository.getByIdAsync(query.roleId)
             ?? (() => { throw new RoleNotFoundException('', query.roleId) })();
@@ -48,11 +48,11 @@ export class GetPermissionsHandler implements ICommandHandler<GetPermissionsQuer
         const roleClaimsValue: string[] = roleClaims.map((roleClaim) => roleClaim.claimValue);
 
         allPermissions.forEach((permission) => {
-            const roleClaim = new RoleClaimModel({
+            const roleClaim = {
                 claimType: Globals.ClaimTypes.Permission,
                 claimValue: permission,
                 selected: roleClaimsValue.includes(permission),
-            });
+            } as RoleClaimModel;
 
             result.roleClaims.push(roleClaim);
         });

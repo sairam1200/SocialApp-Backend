@@ -1,6 +1,6 @@
-import { RoleModel } from "../../../domain/contracts/role.model";
 import { CommandBus } from "@nestjs/cqrs";
 import { GetRolesQuery } from "./get-roles.handler";
+import { RoleModel } from "../../../domain/contracts/role.model";
 import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { PermissionsGuard } from "../../../core/passport/permissions.guard";

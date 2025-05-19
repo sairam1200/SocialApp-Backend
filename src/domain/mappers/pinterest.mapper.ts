@@ -12,6 +12,7 @@ export function mapToPinterestProfileModel(data: LinkedAccount, includeSensitive
     followingCount: data.followingCount,
     userName: data.userName,
     pinterestId: data.externalId,
+    allowImport: data.allowImport,
     monthlyViews: data.metaData.monthlyViews,
     profileImage: data.profileImage,
     websiteUrl: data.metaData.websiteUrl,

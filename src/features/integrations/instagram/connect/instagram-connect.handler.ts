@@ -7,12 +7,13 @@ import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
-import { InstagramUserData } from "../../../../domain/contracts/instagram.model";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
 import ApplicationException from "../../../../core/exceptions/application.exception";
+import { mapToInstagramProfileModel } from "../../../../domain/mappers/instagram.mapper";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { InstagramProfileModel, InstagramUserDataModel } from "../../../../domain/contracts/instagram.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 
 const PLATFORM = 'instagram';
@@ -84,9 +85,9 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     private readonly userRepository: IUserRepository,
   ) { }
 
-  public async execute(command: InstagramConnectCallbackQuery):
-    Promise<{ accessToken: string; expiresIn: number; profile: InstagramUserData; }> {
-    const { model } = command;
+  public async execute(query: InstagramConnectCallbackQuery):
+    Promise<{ accessToken: string; expiresIn: number; profile: InstagramProfileModel; }> {
+    const { model } = query;
     await instagramConnectCallbackValidations.validateAsync(model);
     await this.validateState(model.state);
 
@@ -100,47 +101,47 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
       throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
-    let existingLinkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
-    if (existingLinkedAccount) {
-      existingLinkedAccount.username = userData.username;
-      existingLinkedAccount.profileImage = userData.profile_picture_url;
-      existingLinkedAccount.followersCount = userData.followers_count;
-      existingLinkedAccount.followingCount = userData.follows_count;
-      existingLinkedAccount.metaData = {
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
+    if (linkedAccount) {
+      linkedAccount.userName = userData.username;
+      linkedAccount.profileImage = userData.profile_picture_url;
+      linkedAccount.followersCount = userData.followers_count;
+      linkedAccount.followingCount = userData.follows_count;
+      linkedAccount.metaData = {
         name: userData.name,
         biography: userData.biography,
-        website: userData.website,
-        media_count: userData.media_count,
+        websiteUrl: userData.website,
+        mediaCount: userData.media_count,
         accountType: userData.type,
       };
-      await this.linkedAccountRepository.updateAsync(existingLinkedAccount);
+      await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
-      await this.linkedAccountRepository.createAsync(new LinkedAccount({
+      linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
         platform: PLATFORM,
         userId: user.id,
         externalId: userData.id,
-        username: userData.username,
+        userName: userData.username,
         profileImage: userData.profile_picture_url,
         followersCount: userData.followers_count,
         followingCount: userData.follows_count,
         metaData: {
           name: userData.name,
           biography: userData.biography,
-          website: userData.website,
-          media_count: userData.media_count,
+          websiteUrl: userData.website,
+          mediaCount: userData.media_count,
           accountType: userData.type,
         }
       }));
     }
 
-    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(user.id, PLATFORM);
+    const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(user.id, PLATFORM);
     if (existingAccountLogin) {
       existingAccountLogin.tokenValue = access_token;
       existingAccountLogin.addedDateUtc = new Date();
       existingAccountLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
       await this.userLoginRepository.updateAsync(existingAccountLogin);
     } else {
-      existingAccountLogin = await this.userLoginRepository.createAysnc(
+      await this.userLoginRepository.createAysnc(
         PLATFORM,
         user.id,
         "", // deviceId
@@ -154,7 +155,7 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     return {
       accessToken: access_token,
       expiresIn: expires_in,
-      profile: userData
+      profile: mapToInstagramProfileModel(linkedAccount, true),
     }
   }
 
@@ -198,9 +199,9 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<InstagramUserData> {
+  private async fetchUserData(accessToken: string): Promise<InstagramUserDataModel> {
     try {
-      const response = await axios.get<InstagramUserData>(`${GRAPH_BASE}/me`, {
+      const response = await axios.get<InstagramUserDataModel>(`${GRAPH_BASE}/me`, {
         params: {
           access_token: accessToken,
           fields: 'id,name,username,email,profile_picture_url,biography,website,media_count,followers_count,follows_count',

@@ -1,10 +1,10 @@
 import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
-import { RoleClaimModel } from "../../../domain/contracts/role.model";
 import { Globals } from "../../../core/globals";
 import _const from "../../../core/utils/const";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { RoleClaimModel } from "../../../domain/contracts/role.model";
 import { RoleClaim } from "../../../domain/entities/roleClaim.entity";
 import { IRoleRepository } from "../../../domain/repositories/irole.repository";
 import { RoleNotFoundException } from "../../../core/exceptions/role.exception";

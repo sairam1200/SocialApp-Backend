@@ -28,9 +28,9 @@ export class FacebookProfileQueryHandler implements ICommandHandler<FacebookProf
     private readonly linkedAccountRepository: ILinkedAccountRepository,
   ) { }
 
-  public async execute(command: FacebookProfileQuery): Promise<FacebookProfileModel> {
+  public async execute(query: FacebookProfileQuery): Promise<FacebookProfileModel> {
 
-    const { model } = command;
+    const { model } = query;
 
     const account = model.userId ? await this.linkedAccountRepository.getByPlatformAndUserIdAsync(PLATFORM, model.userId)
       : model.userName ? await this.linkedAccountRepository.getByPlatformAndUserNameAsync(PLATFORM, model.userName)

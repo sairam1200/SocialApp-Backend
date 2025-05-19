@@ -56,7 +56,7 @@ export class LinkedAccountRepository implements ILinkedAccountRepository {
   }
 
   public async getByPlatformAndUserNameAsync(platform: string, username: string): Promise<LinkedAccount | null> {
-    return await this.linkedAccountContext.findOne({ where: { platform, username } });
+    return await this.linkedAccountContext.findOne({ where: { platform, userName: username } });
   }
 
   public async getByPlatformAndExternalIdAsync(platform: string, externalId: string): Promise<LinkedAccount | null> {

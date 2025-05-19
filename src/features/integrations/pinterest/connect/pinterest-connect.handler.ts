@@ -85,9 +85,9 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
     private readonly userRepository: IUserRepository,
   ) { }
 
-  public async execute(command: PinterestConnectCallbackQuery):
+  public async execute(query: PinterestConnectCallbackQuery):
     Promise<{ accessToken: string; expiresIn: number; profile: PinterestProfileModel; }> {
-    const { model } = command;
+    const { model } = query;
     await pinterestConnectCallbackValidations.validateAsync(model);
     await this.validateState(model.state);
 
@@ -154,7 +154,7 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
     return {
       accessToken: access_token,
       expiresIn: expires_in,
-      profile: mapToPinterestProfileModel(linkedAccount, true);
+      profile: mapToPinterestProfileModel(linkedAccount, true)
     }
   }
 

@@ -21,6 +21,7 @@ export interface PinterestProfileModel {
   followersCount: number;
   followingCount: number;
   monthlyViews: number;
+  allowImport: boolean;
   websiteUrl: string;
   pinCount: number;
   about: string;

@@ -6,13 +6,14 @@ export function mapToInstagramProfileModel(data: LinkedAccount, includeSensitive
     accountType: data.metaData.accountType,
     biography: data.metaData.biography,
     email: includeSensitiveFields ? data.email : null,
-    followerCount: data.followersCount,
+    followersCount: data.followersCount,
     followingCount: data.followingCount,
     userName: data.userName,
     instagramId: data.externalId,
     mediaCount: data.metaData.mediaCount,
     profileImage: data.profileImage,
-    websiteUrl: data.metaData.website,
+    allowImport: data.allowImport,
+    websiteUrl: data.metaData.websiteUrl,
 
   } as InstagramProfileModel;
 }

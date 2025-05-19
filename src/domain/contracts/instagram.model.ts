@@ -20,7 +20,8 @@ export interface InstagramProfileModel {
   websiteUrl: string;
   accountType: string;
   instagramId: string;
+  allowImport: boolean;
   profileImage: string;
-  followerCount: number;
+  followersCount: number;
   followingCount: number;
 }

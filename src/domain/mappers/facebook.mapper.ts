@@ -5,10 +5,11 @@ export function mapToFacebookProfileModel(data: LinkedAccount, includeSensitiveF
   return {
     id: data.id,
     userId: data.userId,
-    userName: data.username,
+    userName: data.userName,
     facebookId: data.externalId,
+    allowImport: data.allowImport,
     profileImage: data.profileImage,
-    followerCount: data.followersCount,
+    followersCount: data.followersCount,
     followingCount: data.followingCount,
     email: includeSensitiveFields ? data.email : null,
   } as FacebookProfileModel;

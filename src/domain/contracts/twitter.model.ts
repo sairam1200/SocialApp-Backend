@@ -1,4 +1,4 @@
-export interface TwitterUserData {
+export interface TwitterUserDataModel {
   data: {
     id: string;
     name: string;

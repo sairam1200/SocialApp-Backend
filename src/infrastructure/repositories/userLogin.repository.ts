@@ -4,7 +4,6 @@ import { Repository } from "typeorm";
 import { Injectable } from '@nestjs/common';
 import { Globals } from '../../core/globals';
 import { InjectRepository } from "@nestjs/typeorm";
-import { JwtPayload } from '../../core/passport/jwtPayload';
 import { addDurationToNow } from '../../core/utils/time.util';
 import { UserLogin } from "../../domain/entities/userLogin.entity";
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
@@ -13,14 +12,10 @@ import { IUserLoginRepository } from "../../domain/repositories/irefreshtoken.re
 @Injectable()
 export class UserLoginRepository implements IUserLoginRepository {
 
-    private readonly _currentUser: JwtPayload;
-
     constructor(
         @InjectRepository(UserLogin)
         private readonly userLoginContext: Repository<UserLogin>,
-    ) {
-        this._currentUser = HttpContext.user;
-    }
+    ) { }
 
     public async createAysnc(
         provider: string,
@@ -42,7 +37,10 @@ export class UserLoginRepository implements IUserLoginRepository {
             expiryDateUtc
         });
 
-        refreshToken.setCurrentUser(this._currentUser[Globals.ClaimTypes.UserId] ?? userId);
+        if (HttpContext.user) {
+            const userId = HttpContext.user[Globals.ClaimTypes.UserId];
+            refreshToken.setCurrentUser(userId);
+        }
         return await this.userLoginContext.save(refreshToken);
     }
 
@@ -63,6 +61,10 @@ export class UserLoginRepository implements IUserLoginRepository {
     }
 
     public async updateAsync(refreshToken: UserLogin): Promise<void> {
+        if (HttpContext.user) {
+            const userId = HttpContext.user[Globals.ClaimTypes.UserId];
+            refreshToken.setCurrentUser(userId);
+        }
         await this.userLoginContext.update(refreshToken.id, refreshToken);
     }
 

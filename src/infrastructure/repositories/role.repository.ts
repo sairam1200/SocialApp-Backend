@@ -14,13 +14,10 @@ import { HttpContext } from "../../core/middlewares/httpContext.middleware";
 @Injectable()
 export class RoleRepository implements IRoleRepository {
 
-    private readonly _currentUser: JwtPayload;
     constructor(
         @InjectRepository(Role) private readonly roleContext: Repository<Role>,
         @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository
-    ) {
-        this._currentUser = HttpContext.user;
-    }
+    ) { }
 
     public async getAsync(): Promise<Role[]> {
         return await this.roleContext.find();
@@ -57,17 +54,24 @@ export class RoleRepository implements IRoleRepository {
             throw new RoleAlreadyExistsException(role.name);
         }
 
-        role.setCurrentUser(this._currentUser[Globals.ClaimTypes.UserId]);
+        if (HttpContext.user) {
+            const userId = HttpContext.user[Globals.ClaimTypes.UserId];
+            role.setCurrentUser(userId);
+        }
+
         return await this.roleContext.save(role);
     }
 
     public async updateAsync(role: Role): Promise<void> {
-        role.setCurrentUser(this._currentUser[Globals.ClaimTypes.UserId]);
+        if (HttpContext.user) {
+            const userId = HttpContext.user[Globals.ClaimTypes.UserId];
+            role.setCurrentUser(userId);
+        }
+
         await this.roleContext.update(role.id, role);
     }
 
     public async deleteAsync(role: Role): Promise<void> {
-        role.setCurrentUser(this._currentUser[Globals.ClaimTypes.UserId]);
         await this.roleContext.remove(role);
     }
 }

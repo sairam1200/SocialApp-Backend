@@ -37,13 +37,13 @@ export class GetRoleByIdHandler implements ICommandHandler<GetRoleByIdQuery> {
             throw new RoleNotFoundException(query.roleId);
         }
 
-        const result = new RoleModel({
+        const result = {
             id: role.id,
             name: role.name,
             type: role.type,
             description: role.description,
             permissionsCount: role.roleClaims?.length,
-        });
+        } as RoleModel;
 
         return result;
     }

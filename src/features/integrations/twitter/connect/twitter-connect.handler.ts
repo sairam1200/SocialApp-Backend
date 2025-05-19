@@ -6,7 +6,7 @@ import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { TwitterUserData } from "../../../../domain/contracts/twitter.model";
+import { TwitterUserDataModel } from "../../../../domain/contracts/twitter.model";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
@@ -98,9 +98,9 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
       throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
-    let existingLinkedAccount = await this.linkedAccountRepository.getByPlatformAndIdAsync(PLATFORM, user.id);
+    let existingLinkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(PLATFORM, user.id);
     if (existingLinkedAccount) {
-      existingLinkedAccount.username = userData.data.username;
+      existingLinkedAccount.userName = userData.data.username;
       existingLinkedAccount.profileImage = userData.data.profile_image_url;
       existingLinkedAccount.followersCount = userData.data.public_metrics.followers_count;
       existingLinkedAccount.followingCount = userData.data.public_metrics.following_count;
@@ -124,7 +124,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
         platform: PLATFORM,
         userId: user.id,
         externalId: userData.data.id,
-        username: userData.data.username,
+        userName: userData.data.username,
         profileImage: userData.data.profile_image_url,
         followersCount: userData.data.public_metrics.followers_count,
         followingCount: userData.data.public_metrics.following_count,
@@ -190,9 +190,9 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<TwitterUserData> {
+  private async fetchUserData(accessToken: string): Promise<TwitterUserDataModel> {
     try {
-      const response = await axios.get<TwitterUserData>(`${BASE_URL}/users/me`, {
+      const response = await axios.get<TwitterUserDataModel>(`${BASE_URL}/users/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
         params: {
           'user.fields': [

@@ -53,9 +53,9 @@ export class FacebookConnectQueryHandler implements ICommandHandler<FacebookConn
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
   ) { }
 
-  public async execute(command: FacebookConnectQuery): Promise<void> {
+  public async execute(query: FacebookConnectQuery): Promise<void> {
 
-    const { model } = command;
+    const { model } = query;
 
     // expires in 15 minutes
     const expiresIn = 15 * 60;
@@ -82,10 +82,10 @@ export class FacebookConnectCallbackHandler implements ICommandHandler<FacebookC
     private readonly userRepository: IUserRepository,
   ) { }
 
-  public async execute(command: FacebookConnectCallbackQuery):
+  public async execute(query: FacebookConnectCallbackQuery):
     Promise<{ accessToken: string; expiresIn: number; profile: FacebookProfileModel }> {
 
-    const { model } = command;
+    const { model } = query;
     await facebookConnectCallbackValidations.validateAsync(model);
     await this.validateState(model.state);
 
@@ -102,7 +102,7 @@ export class FacebookConnectCallbackHandler implements ICommandHandler<FacebookC
 
     let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
     if (linkedAccount) {
-      linkedAccount.username = userData.username;
+      linkedAccount.userName = userData.username;
       linkedAccount.profileImage = userData.picture?.data?.url;
       linkedAccount.followersCount = userData.followers_count;
       linkedAccount.followingCount = userData.friends?.summary?.total_count;
@@ -116,7 +116,7 @@ export class FacebookConnectCallbackHandler implements ICommandHandler<FacebookC
         email: userData.email,
         userId: user.id,
         externalId: userData.id,
-        username: userData.username,
+        userName: userData.username,
         profileImage: userData.picture?.data?.url,
         followersCount: userData.followers_count,
         followingCount: userData.friends?.summary?.total_count,
