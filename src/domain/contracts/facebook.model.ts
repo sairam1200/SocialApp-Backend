@@ -23,7 +23,7 @@ export interface FacebookProfileModel {
   email: string;
   userId: string;
   userName: string;
-  faceboolId: string;
+  facebookId: string;
   profileImage: string;
   followerCount: number;
   followingCount: number;

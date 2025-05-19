@@ -6,7 +6,7 @@ export function mapToFacebookProfileModel(data: LinkedAccount, includeSensitiveF
     id: data.id,
     userId: data.userId,
     userName: data.username,
-    faceboolId: data.externalId,
+    facebookId: data.externalId,
     profileImage: data.profileImage,
     followerCount: data.followersCount,
     followingCount: data.followingCount,
