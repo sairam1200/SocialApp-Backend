@@ -14,6 +14,8 @@ import { YoutubeConnectController } from "../features/integrations/youtube/conne
 import { SpotifyConnectController } from "../features/integrations/spotify/connect/spotify-connect.endpoint";
 import { TwitterConnectController } from "../features/integrations/twitter/connect/twitter-connect.endpoint";
 import { FacebookImportController } from "../features/integrations/facebook/import/facebook-import.endpoint";
+import { SpotifyProfileController } from "../features/integrations/spotify/get-profile/get-profile.endpoint";
+import { SpotifyProfileQueryHandler } from "../features/integrations/spotify/get-profile/get-profile.handler";
 import { FacebookProfileController } from "../features/integrations/facebook/get-profile/get-profile.endpoint";
 import { FacebookConnectController } from "../features/integrations/facebook/connect/facebook-connect.endpoint";
 import { FacebookProfileQueryHandler } from "../features/integrations/facebook/get-profile/get-profile.handler";
@@ -42,6 +44,7 @@ import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } fr
   ],
   controllers: [
     SpotifyConnectController,
+    SpotifyProfileController,
 
     FacebookConnectController,
     FacebookProfileController,
@@ -60,6 +63,7 @@ import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } fr
     JwtService,
 
     SpotifyConnectQueryHandler,
+    SpotifyProfileQueryHandler,
     SpotifyConnectCallbackQueryHandler,
 
     InstagramConnectQueryHandler,

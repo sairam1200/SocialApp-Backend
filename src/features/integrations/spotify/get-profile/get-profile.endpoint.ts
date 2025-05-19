@@ -12,7 +12,7 @@ import { BadRequestException, Controller, Get, HttpStatus, Query, Res, UseGuards
   path: `/integrations/spotify`,
   version: '1',
 })
-export class PinterestProfileController {
+export class SpotifyProfileController {
 
   constructor(
     private readonly commandBus: CommandBus
