@@ -18,8 +18,8 @@ export class PermissionsGuard implements CanActivate {
         if (!access_token) {
             throw new UnauthorizedException('Unauthorized: You need to log in to access this resource.');
         }
-        
-        const user = await getUserFromAccessTokenAsync(access_token, response);
+
+        const user = await getUserFromAccessTokenAsync(access_token, response, this.jwtService);
         if (!user || user === undefined) {
             throw new UnauthorizedException('Unauthorized: Invalid or expired token.');
         }
