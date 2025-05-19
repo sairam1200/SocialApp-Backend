@@ -1,9 +1,10 @@
-import { Injectable, NestMiddleware } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { IncomingHttpHeaders } from 'http';
 import { AsyncLocalStorage } from 'async_hooks';
 import { JwtPayload } from 'core/passport/jwtPayload';
-import { extractTokenFromHeader, getUserFromAccessTokenAsync } from '../../core/utils/jwt.util';
 import { NextFunction, Request, Response } from 'express';
-import { IncomingHttpHeaders } from 'http';
+import { Injectable, NestMiddleware } from '@nestjs/common';
+import { extractTokenFromHeader, getUserFromAccessTokenAsync } from '../../core/utils/jwt.util';
 
 interface HttpContextStore {
   request: Request;
@@ -16,7 +17,7 @@ const asyncLocalStorage = new AsyncLocalStorage<HttpContextStore>();
 
 export class HttpContext {
   // Accessors to get the current request context
-  static get request(): Request | undefined {
+  static get request(): Request {
     return asyncLocalStorage.getStore()?.request;
   }
 
@@ -24,11 +25,11 @@ export class HttpContext {
     return asyncLocalStorage.getStore()?.response;
   }
 
-  static get user(): JwtPayload | undefined {
+  static get user(): JwtPayload {
     return asyncLocalStorage.getStore()?.user;
   }
 
-  static get headers(): IncomingHttpHeaders | undefined {
+  static get headers(): IncomingHttpHeaders {
     return asyncLocalStorage.getStore()?.headers;
   }
 
@@ -42,9 +43,18 @@ export class HttpContext {
 
 @Injectable()
 export class HttpContextMiddleware implements NestMiddleware {
+
+  constructor(
+    private jwtService: JwtService
+  ) { }
+
   async use(req: Request, res: Response, next: NextFunction) {
     const access_token = extractTokenFromHeader(req);
-    const user = await getUserFromAccessTokenAsync(access_token, res);
-    HttpContext.run(req, res, user, next);
+    if (!access_token) {
+      HttpContext.run(req, res, null, next);
+    } else {
+      const user = await getUserFromAccessTokenAsync(access_token, res, this.jwtService);
+      HttpContext.run(req, res, (user ?? null), next);
+    }
   }
 }
