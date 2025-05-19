@@ -6,14 +6,15 @@ import _const from "../../../../core/utils/const";
 import { Globals } from '../../../../core/globals';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { FacebookUserData } from '../../../../domain/contracts/facebook.model';
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import ApplicationException from '../../../../core/exceptions/application.exception';
+import { mapToFacebookProfileModel } from '../../../../domain/mappers/facebook.mapper';
 import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { IDataProtectionKeyRepository } from 'domain/repositories/idataProtectionKey.repository';
+import { FacebookProfileModel, FacebookUserDataModel } from '../../../../domain/contracts/facebook.model';
+import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
 
 const PLATFORM = 'facebook';
 const GRAPH_BASE = 'https://graph.facebook.com/v22.0';
@@ -82,7 +83,7 @@ export class FacebookConnectCallbackHandler implements ICommandHandler<FacebookC
   ) { }
 
   public async execute(command: FacebookConnectCallbackQuery):
-    Promise<{ accessToken: string; expiresIn: number; profile: FacebookUserData }> {
+    Promise<{ accessToken: string; expiresIn: number; profile: FacebookProfileModel }> {
 
     const { model } = command;
     await facebookConnectCallbackValidations.validateAsync(model);
@@ -99,18 +100,18 @@ export class FacebookConnectCallbackHandler implements ICommandHandler<FacebookC
       throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
-    let existingLinkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
-    if (existingLinkedAccount) {
-      existingLinkedAccount.username = userData.username;
-      existingLinkedAccount.profileImage = userData.picture?.data?.url;
-      existingLinkedAccount.followersCount = userData.followers_count;
-      existingLinkedAccount.followingCount = userData.friends?.summary?.total_count;
-      existingLinkedAccount.metaData = {
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
+    if (linkedAccount) {
+      linkedAccount.username = userData.username;
+      linkedAccount.profileImage = userData.picture?.data?.url;
+      linkedAccount.followersCount = userData.followers_count;
+      linkedAccount.followingCount = userData.friends?.summary?.total_count;
+      linkedAccount.metaData = {
         name: userData.name,
       };
-      await this.linkedAccountRepository.updateAsync(existingLinkedAccount);
+      await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
-      await this.linkedAccountRepository.createAsync(new LinkedAccount({
+      linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
         platform: PLATFORM,
         email: userData.email,
         userId: user.id,
@@ -125,14 +126,14 @@ export class FacebookConnectCallbackHandler implements ICommandHandler<FacebookC
       }));
     }
 
-    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(user.id, PLATFORM);
+    const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(user.id, PLATFORM);
     if (existingAccountLogin) {
       existingAccountLogin.tokenValue = access_token;
       existingAccountLogin.addedDateUtc = new Date();
       existingAccountLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
       await this.userLoginRepository.updateAsync(existingAccountLogin);
     } else {
-      existingAccountLogin = await this.userLoginRepository.createAysnc(
+      await this.userLoginRepository.createAysnc(
         PLATFORM,
         user.id,
         "",
@@ -146,7 +147,7 @@ export class FacebookConnectCallbackHandler implements ICommandHandler<FacebookC
     return {
       accessToken: access_token,
       expiresIn: expires_in,
-      profile: userData
+      profile: mapToFacebookProfileModel(linkedAccount, true)
     }
   }
 
@@ -189,9 +190,9 @@ export class FacebookConnectCallbackHandler implements ICommandHandler<FacebookC
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<FacebookUserData> {
+  private async fetchUserData(accessToken: string): Promise<FacebookUserDataModel> {
     try {
-      const response = await axios.get<FacebookUserData>(`${GRAPH_BASE}/me`, {
+      const response = await axios.get<FacebookUserDataModel>(`${GRAPH_BASE}/me`, {
         params: {
           access_token: accessToken,
           fields: 'id,name,username,email,picture,followers_count,friends',

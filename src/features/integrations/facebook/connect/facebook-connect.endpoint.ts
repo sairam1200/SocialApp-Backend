@@ -4,12 +4,12 @@ import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { stringUtil } from "../../../../core/utils/string.util";
-import { PermissionsGuard } from "../../../../core/passport/permissions.guard";
+import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Controller, Get, HttpStatus, Query, Req, Res, UseGuards } from "@nestjs/common";
 import { FacebookConnectCallbackQuery, FacebookConnectQuery } from "./facebook-connect.handler";
 
 @ApiTags('Integrations')
-// @UseGuards(PermissionsGuard)
+@UseGuards(UserAccoutGuard)
 @Controller({
   path: `/integrations/facebook`,
   version: '1',

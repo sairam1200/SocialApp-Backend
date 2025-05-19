@@ -1,5 +1,5 @@
 
-export interface FacebookUserData {
+export interface FacebookUserDataModel {
   id: string;
   name: string;
   email: string;
@@ -15,4 +15,16 @@ export interface FacebookUserData {
       total_count: number;
     };
   };
+}
+
+export interface FacebookProfileModel {
+  id: string;
+  name: string;
+  email: string;
+  userId: string;
+  userName: string;
+  faceboolId: string;
+  profileImage: string;
+  followerCount: number;
+  followingCount: number;
 }
