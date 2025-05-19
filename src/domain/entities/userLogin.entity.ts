@@ -31,5 +31,4 @@ export class UserLogin extends BaseEntity {
         super();
         Object.assign(this, partial);
     }
-
 }

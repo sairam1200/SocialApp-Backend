@@ -8,6 +8,8 @@ export interface ILinkedAccountRepository {
   getByEmailAsync(email: string): Promise<LinkedAccount | null>;
 
   deleteAsync(linkedAccount: LinkedAccount): Promise<LinkedAccount>;
-  getByPlatformAndIdAsync(platform: string, id: string): Promise<LinkedAccount | null>;
+  getByPlatformAndUserIdAsync(platform: string, id: string): Promise<LinkedAccount | null>;
+  getByPlatformAndUserNameAsync(platform: string, username: string): Promise<LinkedAccount | null>;
+  getByPlatformAndExternalIdAsync(platform: string, externalId: string): Promise<LinkedAccount | null>;
   getByPlatformAndEmailAsync(platform: string, email: string): Promise<LinkedAccount | null>;
 }

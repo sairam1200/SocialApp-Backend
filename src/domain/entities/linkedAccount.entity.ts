@@ -22,6 +22,9 @@ export class LinkedAccount extends BaseEntity {
   @Column()
   email: string;
 
+  @Column({ default: false })
+  allowImport: boolean;
+
   @Column({ default: 0 })
   followersCount: number;
 
