@@ -17,7 +17,15 @@ import { CreateUserController } from "../features/user/create-user/create-user.e
 import { UpdateUserController } from '../features/user/update-user/update-user.endpoint';
 
 @Module({
-  imports: [CqrsModule, TypeOrmModule.forFeature([User, Role, RoleClaim, UserRole])],
+  imports: [
+    CqrsModule,
+    TypeOrmModule.forFeature([
+      User,
+      Role,
+      RoleClaim,
+      UserRole
+    ])
+  ],
   controllers: [
     CreateUserController,
     UpdateUserController,
