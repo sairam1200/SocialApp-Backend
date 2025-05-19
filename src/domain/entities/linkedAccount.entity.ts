@@ -11,7 +11,7 @@ export class LinkedAccount extends BaseEntity {
   platform: string;
 
   @Column()
-  username: string;
+  userName: string;
 
   @Column({ nullable: true })
   profileImage?: string;
