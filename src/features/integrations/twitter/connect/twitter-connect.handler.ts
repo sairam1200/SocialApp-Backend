@@ -6,14 +6,15 @@ import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { TwitterUserDataModel } from "../../../../domain/contracts/twitter.model";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
 import ApplicationException from "../../../../core/exceptions/application.exception";
+import { mapToTwitterProfileModel } from "../../../../domain/mappers/twitter.mapper";
 import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey.entity";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { TwitterProfileModel, TwitterUserDataModel } from "../../../../domain/contracts/twitter.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 
 const PLATFORM = 'twitter';
@@ -54,9 +55,9 @@ export class TwiiterConnectQueryHandler implements ICommandHandler<TwitterConnec
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
   ) { }
 
-  public async execute(command: TwitterConnectQuery): Promise<void> {
+  public async execute(query: TwitterConnectQuery): Promise<void> {
 
-    const { model } = command;
+    const { model } = query;
 
     // expires in 15 minutes
     const expiresIn = 15 * 60;
@@ -83,9 +84,13 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     private readonly userRepository: IUserRepository,
   ) { }
 
-  public async execute(command: TwitterConnectCallbackQuery): Promise<any> {
+  public async execute(query: TwitterConnectCallbackQuery): Promise<{
+    accessToken: string,
+    expiresIn: number,
+    profile: TwitterProfileModel
+  }> {
 
-    const { model } = command;
+    const { model } = query;
     await twitterConnectValidations.validateAsync(model);
     const dataProtectionKey = await this.validateState(model.state);
 
@@ -98,13 +103,13 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
       throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
-    let existingLinkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(PLATFORM, user.id);
-    if (existingLinkedAccount) {
-      existingLinkedAccount.userName = userData.data.username;
-      existingLinkedAccount.profileImage = userData.data.profile_image_url;
-      existingLinkedAccount.followersCount = userData.data.public_metrics.followers_count;
-      existingLinkedAccount.followingCount = userData.data.public_metrics.following_count;
-      existingLinkedAccount.metaData = {
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(PLATFORM, user.id);
+    if (linkedAccount) {
+      linkedAccount.userName = userData.data.username;
+      linkedAccount.profileImage = userData.data.profile_image_url;
+      linkedAccount.followersCount = userData.data.public_metrics.followers_count;
+      linkedAccount.followingCount = userData.data.public_metrics.following_count;
+      linkedAccount.metaData = {
         name: userData.data.name,
         description: userData.data.description,
         countryCodes: userData.data.withheld.country_codes,
@@ -118,9 +123,9 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
         protected: userData.data.protected,
         entities: userData.data.entities,
       };
-      await this.linkedAccountRepository.updateAsync(existingLinkedAccount);
+      await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
-      await this.linkedAccountRepository.createAsync(new LinkedAccount({
+      linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
         platform: PLATFORM,
         userId: user.id,
         externalId: userData.data.id,
@@ -166,7 +171,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     return {
       accessToken: access_token,
       expiresIn: expires_in,
-      profile: userData.data
+      profile: mapToTwitterProfileModel(linkedAccount, true)
     }
   }
 
