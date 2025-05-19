@@ -4,12 +4,12 @@ import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { stringUtil } from "../../../../core/utils/string.util";
+import { UserAccoutGuard } from "../../../../core/passport/account.guard";
+import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 import { PinterestConnectCallbackQuery, PinterestConnectQuery } from "./pinterest-connect.handler";
-import { PermissionsGuard } from "../../../../core/passport/permissions.guard";
-import { Body, Controller, Get, HttpRedirectResponse, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 
 @ApiTags('Integrations')
-// @UseGuards(PermissionsGuard)
+@UseGuards(UserAccoutGuard)
 @Controller({
   path: `/integrations/pinterest`,
   version: '1',

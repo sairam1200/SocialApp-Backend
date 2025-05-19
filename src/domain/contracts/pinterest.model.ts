@@ -1,4 +1,4 @@
-export interface PinterestUserData {
+export interface PinterestUserDataModel {
   id: string;
   username: string;
   profile_image: string;
@@ -9,4 +9,19 @@ export interface PinterestUserData {
   follower_count: number;
   following_count: number;
   monthly_views: number;
+}
+
+export interface PinterestProfileModel {
+  id: string;
+  email: string;
+  userId: string;
+  userName: string;
+  pinterestId: string;
+  profileImage: string;
+  followersCount: number;
+  followingCount: number;
+  monthlyViews: number;
+  websiteUrl: string;
+  pinCount: number;
+  about: string;
 }
