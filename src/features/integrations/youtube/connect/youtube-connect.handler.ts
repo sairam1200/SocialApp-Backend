@@ -10,8 +10,9 @@ import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity"
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
 import ApplicationException from "../../../../core/exceptions/application.exception";
+import { mapToYoutubeProfileModel } from "../../../../domain/mappers/youtube.mapper";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
-import { GoogleUserDataModel, YoutubeChannelDataModel } from "../../../../domain/contracts/youtube.model";
+import { GoogleUserDataModel, YoutubeChannelDataModel, YoutubeProfileModel } from "../../../../domain/contracts/youtube.model";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 
@@ -81,8 +82,9 @@ export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<Youtu
     private readonly userRepository: IUserRepository,
   ) { }
 
-  public async execute(command: YoutubeConnectCallbackQuery): Promise<{ accessToken: string; expiresIn: number; profile: any }> {
-    const { model } = command;
+  public async execute(query: YoutubeConnectCallbackQuery)
+    : Promise<{ accessToken: string; expiresIn: number; profile: YoutubeProfileModel }> {
+    const { model } = query;
     await youtubeConnectCallbackValidations.validateAsync(model);
     await this.validateState(model.state);
 
@@ -95,13 +97,13 @@ export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<Youtu
       throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
-    let existingLinkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
-    if (existingLinkedAccount) {
-      existingLinkedAccount.userName = "";
-      existingLinkedAccount.profileImage = userData.profile.picture;
-      existingLinkedAccount.followersCount = Number.parseInt(userData.channel.items[0].statistics.subscriberCount),
-        existingLinkedAccount.followingCount = 0; // TODO : retreive this 
-      existingLinkedAccount.metaData = {
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
+    if (linkedAccount) {
+      linkedAccount.userName = "";
+      linkedAccount.profileImage = userData.profile.picture;
+      linkedAccount.followersCount = Number.parseInt(userData.channel.items[0].statistics.subscriberCount),
+        linkedAccount.followingCount = 0; // TODO : retreive this 
+      linkedAccount.metaData = {
         hd: userData.profile.hd,
         locale: userData.profile.locale,
         name: userData.profile.name,
@@ -114,9 +116,9 @@ export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<Youtu
           thumbthumbnail: userData.channel.items[0].snippet.thumbnails.default.url,
         }
       };
-      await this.linkedAccountRepository.updateAsync(existingLinkedAccount);
+      await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
-      await this.linkedAccountRepository.createAsync(new LinkedAccount({
+      linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
         platform: PLATFORM,
         userId: user.id,
         email: userData.profile.email,
@@ -162,21 +164,7 @@ export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<Youtu
     return {
       accessToken: access_token,
       expiresIn: expires_in,
-      profile: {
-        email: userData.profile.email,
-        id: userData.profile.sub,
-        profileImage: userData.profile.picture,
-        followersCount: Number.parseInt(userData.channel.items[0].statistics.subscriberCount),
-        followingCount: 0, // TODO : retreive this
-        channel: {
-          id: userData.channel.items[0].id,
-          title: userData.channel.items[0].snippet.title,
-          desciption: userData.channel.items[0].snippet.description,
-          viewCount: userData.channel.items[0].statistics.viewCount,
-          videoCount: userData.channel.items[0].statistics.videoCount,
-          thumbthumbnail: userData.channel.items[0].snippet.thumbnails.default.url,
-        }
-      }
+      profile: mapToYoutubeProfileModel(linkedAccount, true)
     }
   }
 

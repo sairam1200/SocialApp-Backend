@@ -4,12 +4,12 @@ import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { stringUtil } from "../../../../core/utils/string.util";
-import { PermissionsGuard } from "../../../../core/passport/permissions.guard";
+import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 import { YoutubeConnectCallbackQuery, YoutubeConnectQuery } from "./youtube-connect.handler";
 
 @ApiTags('Integrations')
-// @UseGuards(PermissionsGuard)
+@UseGuards(UserAccoutGuard)
 @Controller({
   path: `/integrations/youtube`,
   version: '1',
@@ -53,11 +53,10 @@ export class YoutubeConnectController {
     @Query('code') code: string,
     @Query('state') state: string,
     @Res() res: Response): Promise<Response | void> {
-    if (!code) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid request' });
-    }
 
-    const result = await this.commandBus.execute(new YoutubeConnectCallbackQuery({ model: { code, state } }));
+    const result = await this.commandBus.execute(new YoutubeConnectCallbackQuery({
+      model: { code, state }
+    }));
     res.cookie('youtube_auth', {
       accessToken: result.accessToken,
       expiresIn: result.expiresIn,
@@ -70,5 +69,4 @@ export class YoutubeConnectController {
       });
     return res.status(HttpStatus.OK).json(result.profile);
   }
-
 }

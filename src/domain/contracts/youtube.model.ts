@@ -45,3 +45,26 @@ interface YoutubeChannelModel {
     };
   };
 }
+
+export interface YoutubeProfileModel {
+  id: string;
+  hd: string;
+  name: string;
+  email: string;
+  userId: string;
+  locale: string;
+  userName: string;
+  facebookId: string;
+  allowImport: boolean;
+  profileImage: string;
+  followersCount: number;
+  followingCount: number;
+  channel: {
+    id: string;
+    title: string;
+    viewCount: number;
+    desciption: string;
+    videoCount: number;
+    thumbthumbnail: string;
+  }
+}
