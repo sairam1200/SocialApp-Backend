@@ -11,69 +11,49 @@ export const stringUtil = {
 
   capitalizeFirstLetter: (str: string): string => {
     const words = str.split(' ');
+    if (words.length === 0) return '';
     words[0] = words[0].charAt(0).toUpperCase() + words[0].slice(1);
     return words.join(' ');
   },
 
-  generateRandomString: (length: number): string => {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      result += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-    return result;
+  generateSlug: (title: string): string => {
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
   },
 
-  generateRandomNumber: (length: number): string => {
-    const characters = '0123456789';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      result += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-    return result;
+  generateRandomString: (length: number): string => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    return stringUtil.generateFromCharset(length, chars);
+  },
+
+  generateRandomNumberString: (length: number): string => {
+    const chars = '0123456789';
+    return stringUtil.generateFromCharset(length, chars);
   },
 
   generateRandomStringWithSpecialChars: (length: number): string => {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+[]{}|;:,.<>?';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+[]{}|;:,.<>?';
+    return stringUtil.generateFromCharset(length, chars);
+  },
+
+  generateFromCharset: (length: number, chars: string): string => {
     let result = '';
     for (let i = 0; i < length; i++) {
-      result += characters.charAt(Math.floor(Math.random() * characters.length));
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return result;
   },
 
-  generateRandomStringWithCustomChars: (length: number, customChars: string): string => {
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      result += customChars.charAt(Math.floor(Math.random() * customChars.length));
-    }
-    return result;
-  },
+  trimWithEllipsis(input: string, maxLength: number = 20): string {
+    if (!input) return '';
+    if (input.length <= maxLength) return input;
 
-  generateRandomStringWithCustomCharsAndLength: (length: number, customChars: string): string => {
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      result += customChars.charAt(Math.floor(Math.random() * customChars.length));
-    }
-    return result;
-  },
-
-  generateRandomStringWithCustomCharsAndLengthAndSpecialChars: (length: number, customChars: string): string => {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+[]{}|;:,.<>?';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      result += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-    return result;
-  },
-
-  generateRandomStringWithCustomCharsAndLengthAndSpecialCharsAndNumbers: (length: number, customChars: string): string => {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+[]{}|;:,.<>?';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      result += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-    return result;
-  },
-
-}
+    const ellipsis = '...';
+    const trimmedLength = maxLength - ellipsis.length;
+    return input.slice(0, trimmedLength) + ellipsis;
+  }
+};
