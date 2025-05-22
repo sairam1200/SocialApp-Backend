@@ -5,6 +5,7 @@ export interface INotificationRepository {
   updateAsync(notification: Notification): Promise<void>;
   deleteAsync(notification: Notification): Promise<void>;
 
+  getAllAsync(userId: string): Promise<Notification[]>;
   getByIdAsync(id: string): Promise<Notification>;
   getAsync(
     userId: string,

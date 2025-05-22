@@ -1,21 +1,30 @@
-import { InjectRepository } from "@nestjs/typeorm";
-import { INotificationRepository } from "../../domain/repositories/inotification.repository";
 import { Repository } from "typeorm";
-import { Notification } from "domain/entities/notification.entity";
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Notification } from "../../domain/entities/notification.entity";
+import { INotificationRepository } from "../../domain/repositories/inotification.repository";
 
+@Injectable()
 export class NotificationRepository implements INotificationRepository {
 
   constructor(
     @InjectRepository(Notification)
     private notificationContext: Repository<Notification>,
-  ) {}
+  ) { }
+
+  public async getAllAsync(userId: string): Promise<Notification[]> {
+    return await this.notificationContext.find({
+      where: { notifyId: userId },
+      order: { createdAt: "DESC" },
+    });
+  }
 
   public async createAsync(notification: Notification): Promise<Notification> {
     return await this.notificationContext.save(notification);
   }
 
   public async updateAsync(notification: Notification): Promise<void> {
-    await this.notificationContext.save(notification);
+    await this.notificationContext.update(notification.id, notification);
   }
 
   public async deleteAsync(notification: Notification): Promise<void> {
@@ -34,7 +43,7 @@ export class NotificationRepository implements INotificationRepository {
     order: "ASC" | "DESC"
   ): Promise<Notification[]> {
     return await this.notificationContext.find({
-      where: { receiverId: userId },
+      where: { notifyId: userId },
       order: { [orderBy]: order },
       skip: (page - 1) * pageSize,
       take: pageSize,
