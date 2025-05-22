@@ -13,12 +13,12 @@ export class UserContentRepository implements IUserContentRepository {
   ) { }
 
   public async createAsync(content: UserContent): Promise<UserContent> {
-    
+
     return await this.userContentContext.save(content);
   }
 
   public async updateAsync(content: UserContent): Promise<void> {
-    await this.userContentContext.save(content);
+    await this.userContentContext.update(content.id, content);
   }
 
   public async getByIdAsync(id: string): Promise<UserContent | null> {
