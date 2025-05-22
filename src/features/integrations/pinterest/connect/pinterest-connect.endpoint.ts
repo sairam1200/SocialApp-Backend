@@ -48,7 +48,7 @@ export class PinterestConnectController {
     res.status(HttpStatus.FOUND).redirect(authorizeURL);
   }
 
-  @Get('callback')
+  @Get('connect-callback')
   @ApiResponse({ status: 200, description: 'OK' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })

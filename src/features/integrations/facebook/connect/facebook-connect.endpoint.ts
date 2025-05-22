@@ -53,7 +53,7 @@ export class FacebookConnectController {
     res.status(HttpStatus.FOUND).redirect(authorizeURL);
   }
 
-  @Get('callback')
+  @Get('connect-callback')
   @ApiResponse({ status: 200, description: 'OK' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
@@ -65,16 +65,6 @@ export class FacebookConnectController {
   ): Promise<Response | void> {
 
     const result = await this.commandBus.execute(new FacebookConnectCallbackQuery({ model: { code, state } }));
-    res.cookie('facebook_auth', {
-      accessToken: result.accessToken,
-      expiresIn: result.expiresIn,
-    },
-      {
-        maxAge: 0,
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-      });
     return res.status(HttpStatus.OK).json(result.profile);
   }
 }
