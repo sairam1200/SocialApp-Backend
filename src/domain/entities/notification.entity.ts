@@ -11,9 +11,6 @@ export class Notification extends BaseEntity {
   @Column({ type: 'enum', enum: NotificationType })
   type: NotificationType;
 
-  @Column({ type: 'uuid' })
-  senderId: string;
-
   @Column()
   title: string;
 
@@ -21,11 +18,22 @@ export class Notification extends BaseEntity {
   body: string;
 
   @Column({ type: 'uuid' })
-  receiverId: string;
+  notifyId: string;
+
+  @Column({ type: 'boolean', default: false })
+  isLive: boolean;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
 
+  @Column({ default: false })
+  sound: boolean;
+
   @Column({ type: 'timestamp', nullable: true })
   readAt?: Date;
+
+  constructor(request: Partial<Notification> = {}) {
+    super();
+    Object.assign(this, request);
+  }
 }
