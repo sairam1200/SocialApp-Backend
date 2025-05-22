@@ -1,3 +1,5 @@
+import { ApiProperty } from '@nestjs/swagger';
+
 export interface InstagramUserDataModel {
   id: string;
   username: string;
@@ -11,17 +13,40 @@ export interface InstagramUserDataModel {
   follows_count?: number;
 }
 
-export interface InstagramProfileModel {
+export class InstagramProfileModel {
+  @ApiProperty()
   id: string;
+
+  @ApiProperty()
   email: string;
+
+  @ApiProperty()
   userName: string;
+
+  @ApiProperty()
   biography: string;
+
+  @ApiProperty()
   mediaCount: number;
+
+  @ApiProperty()
   websiteUrl: string;
+
+  @ApiProperty()
   accountType: string;
+
+  @ApiProperty()
   instagramId: string;
+
+  @ApiProperty()
   allowImport: boolean;
+
+  @ApiProperty()
   profileImage: string;
+
+  @ApiProperty()
   followersCount: number;
+
+  @ApiProperty()
   followingCount: number;
 }
