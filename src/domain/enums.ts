@@ -12,3 +12,9 @@ export enum RoleType {
 export enum NotificationType {
     Import = 'Import',
 }
+
+export enum NotificationStatus {
+    InProgress = 'in-progress',
+    Completed = 'completed',
+    Failed = 'failed'
+}

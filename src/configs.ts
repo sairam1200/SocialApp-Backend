@@ -109,6 +109,12 @@ const envVarsSchema = Joi.object()
             .description('Spotify client secret'),
         SPOTIFY_CALLBACK_URL: Joi.string()
             .description('Spotify callback url'),
+        REDIS_HOST: Joi.string()
+            .description("Redis host address"),
+        REDIS_PORT: Joi.number()
+            .description("Redis port"),
+        REDIS_PASSWORD: Joi.string()
+            .description("Redis password"),
 
         LOG_PATH: Joi.string()
             .default('logs')
@@ -188,4 +194,9 @@ export default {
         clientSecret: envVars.SPOTIFY_CLIENT_SECRET,
         redirectUri: envVars.SPOTIFY_CALLBACK_URL,
     },
+    Redis: {
+        host: envVars.REDIS_HOST,
+        port: envVars.REDIS_PORT,
+        password: envVars.REDIS_PASSWORD
+    }
 }; 
