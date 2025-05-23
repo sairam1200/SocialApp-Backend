@@ -1,11 +1,14 @@
 import _const from "../core/utils/const";
 import { DataProtectionKeyRepository } from "./repositories/dataProtectionKey.repository";
 import { LinkedAccountRepository } from "./repositories/linkedAccount.repository";
+import { NotificationRepository } from "./repositories/notification.repository";
 import { RoleRepository } from "./repositories/role.repository";
 import { RoleClaimRepository } from "./repositories/roleClaim.repository";
 import { UserRepository } from "./repositories/user.repository";
+import { UserContentRepository } from "./repositories/userContent.repository";
 import { UserLoginRepository } from "./repositories/userLogin.repository";
 import { UserRoleRepository } from "./repositories/userRole.repository";
+import { NotificationService } from "./services/notification.service";
 import { TokenService } from "./services/token.service";
 
 /* This is the dependency object that holds all the repositories & services
@@ -42,8 +45,20 @@ export const dependency = {
     provide: _const.IDATAPROTECTIONKEY_REPOSITORY,
     useClass: DataProtectionKeyRepository,
   },
+  NotificationRepository: {
+    provide: _const.INOTIFICATION_REPOSITORY,
+    useClass: NotificationRepository
+  },
+  UserContentRepository: {
+    provide: _const.IUSERCONTENT_REPOSITORY,
+    useClass: UserContentRepository
+  },
   TokenService: {
     provide: _const.ITOKEN_SERVICE,
     useClass: TokenService,
   },
+  NotificationService: {
+    provide: _const.INOTIFICATION_SERVICE,
+    useClass: NotificationService,
+  }
 };

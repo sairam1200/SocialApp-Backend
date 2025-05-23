@@ -2,14 +2,19 @@ import { Module } from "@nestjs/common";
 import _const from "../core/utils/const";
 import { JwtService } from "@nestjs/jwt";
 import { CqrsModule } from "@nestjs/cqrs";
+import { QueuesModule } from "./queues.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { User } from "../domain/entities/user.entity";
 import { Role } from "../domain/entities/role.entity";
 import { dependency } from "../infrastructure/dependency";
+import { NotificationModule } from "./notification.module";
 import { UserRole } from "../domain/entities/userRole.entity";
 import { UserLogin } from "../domain/entities/userLogin.entity";
+import { UserContent } from "../domain/entities/userContent.entity";
 import { LinkedAccount } from "../domain/entities/linkedAccount.entity";
 import { DataProtectionKey } from "../domain/entities/dataProtectionKey.entity";
+import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
+import { FacebookImportProcessor } from "../infrastructure/background/processors/facebook-import.processor";
 import { YoutubeConnectController } from "../features/integrations/youtube/connect/youtube-connect.endpoint";
 import { SpotifyConnectController } from "../features/integrations/spotify/connect/spotify-connect.endpoint";
 import { TwitterConnectController } from "../features/integrations/twitter/connect/twitter-connect.endpoint";
@@ -33,11 +38,14 @@ import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } fr
 @Module({
   imports: [
     CqrsModule,
+    NotificationModule,
+    QueuesModule.register(),
     TypeOrmModule.forFeature([
       User,
       UserRole,
       UserLogin,
       Role,
+      UserContent,
       LinkedAccount,
       DataProtectionKey
     ])
@@ -61,6 +69,7 @@ import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } fr
   ],
   providers: [
     JwtService,
+    ImportGateway,
 
     SpotifyConnectQueryHandler,
     SpotifyProfileQueryHandler,
@@ -73,6 +82,7 @@ import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } fr
     FacebookConnectCallbackHandler,
     FacebookConnectQueryHandler,
     FacebookProfileQueryHandler,
+    FacebookImportProcessor,
 
     PinterestConnectQueryHandler,
     PinterestConnectCallbackQueryHandler,
@@ -87,6 +97,7 @@ import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } fr
     dependency.UserRepository,
     dependency.UserRoleRepository,
     dependency.UserLoginRepository,
+    dependency.UserContentRepository,
     dependency.LinkedAccountRepository,
     dependency.DataProtectionKeyRepository,
   ],

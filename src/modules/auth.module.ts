@@ -7,6 +7,7 @@ import { User } from '../domain/entities/user.entity';
 import { Role } from '../domain/entities/role.entity';
 import { AuthGuardsModule } from './authGuard.module';
 import { dependency } from '../infrastructure/dependency';
+import { NotificationModule } from './notification.module';
 import { UserRole } from '../domain/entities/userRole.entity';
 import { RoleClaim } from '../domain/entities/roleClaim.entity';
 import { UserLogin } from '../domain/entities/userLogin.entity';
@@ -21,6 +22,7 @@ import { RefreshTokenController } from '../features/auth/refresh-token/refresh-t
   imports: [
     CqrsModule,
     AuthGuardsModule,
+    NotificationModule,
     TypeOrmModule.forFeature([
       UserLogin,
       User,
