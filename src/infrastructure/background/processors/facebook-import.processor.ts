@@ -4,11 +4,16 @@ import { Inject } from "@nestjs/common";
 import _const from "../../../core/utils/const";
 import { InjectQueue, Processor } from "@nestjs/bull";
 import logger from "../../../core/utils/winston.util";
+import { NotificationStatus } from "../../../domain/enums";
 import { stringUtil } from "../../../core/utils/string.util";
 import { UserContent } from "../../../domain/entities/userContent.entity";
 import { LinkedAccount } from "../../../domain/entities/linkedAccount.entity";
+import { NotificationModel } from "../../../domain/contracts/notification.model";
 import { IUserContentRepository } from "domain/repositories/iuserContent.repository";
+import { mapToNotificationModel } from "../../../domain/mappers/notification.mapper";
+import { INotificationService } from "../../../domain/services/inotification.service";
 import { ImportGateway } from "../../../infrastructure/websocket/gateways/import.gateway";
+import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
 
 interface CursorMap {
   [key: string]: string | null;
@@ -23,6 +28,10 @@ export class FacebookImportProcessor {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
+    @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
+    private readonly linkedAccountRepository: ILinkedAccountRepository,
+    @Inject(_const.INOTIFICATION_SERVICE)
+    private readonly notificationService: INotificationService,
     private readonly gateway: ImportGateway,
   ) { }
 
@@ -31,15 +40,32 @@ export class FacebookImportProcessor {
     const { account, accessToken } = job.data
     const lastCursors: CursorMap = {};
 
-    const fields = {
-      posts: '/me/posts',
-      likes: '/me/likes',
-      events: '/me/events',
-      // groups: '/me/groups',
+    const fields: Record<string, { endpoint: string; type: string }> = {
+      posts: { endpoint: '/me/posts', type: 'Posts' },
+      likes: { endpoint: '/me/likes', type: 'Likes' },
+      events: { endpoint: '/me/events', type: 'Events' },
+      // events: { endpoint: '/me/group', type: 'Groups' },
     };
 
-    for (const [key, endpoint] of Object.entries(fields)) {
+    const progressReports: {
+      [type: string]: {
+        totalItem: number;
+        itemProcessed: number;
+        progressPercent: number;
+      };
+    } = {};
+
+    let notification: NotificationModel;
+    let encounteredError = false;
+
+    for (const [key, { endpoint, type }] of Object.entries(fields)) {
       let cursor: string | null = null;
+
+      progressReports[type] = {
+        totalItem: 0,
+        itemProcessed: 0,
+        progressPercent: 0,
+      };
 
       try {
         while (true) {
@@ -56,6 +82,10 @@ export class FacebookImportProcessor {
           const paging = data.paging;
           const summary = data.summary;
 
+          if (summary?.total_count) {
+            progressReports[type].totalItem = summary.total_count;
+          }
+
           console.log(`Fetched ${items.length} items from ${key}`);
 
           for (const item of items) {
@@ -65,7 +95,7 @@ export class FacebookImportProcessor {
               platform: _const.PLATFORMS.FACEBOOK
             });
 
-            if (key === '/me/posts') {
+            if (type === 'Posts') {
               content.type = "post";
               content.title = item.name ?? stringUtil.trimWithEllipsis(item.message);
               content.metaData = {
@@ -88,7 +118,7 @@ export class FacebookImportProcessor {
                 picture: item.picture,
                 via: item.via,
               };
-            } else if (key === '/me/likes') {
+            } else if (key === 'Likes') {
               content.type = "likes";
               content.title = item.name;
               content.metaData = {
@@ -96,7 +126,7 @@ export class FacebookImportProcessor {
                 category: item.category,
                 createdAt: item.created_time,
               }
-            } else if (key === '/me/events') {
+            } else if (key === 'Events') {
               content.type = "events";
               content.title = item.name;
               content.metaData = {
@@ -122,8 +152,40 @@ export class FacebookImportProcessor {
 
             content = await this.userContentRepository.createAsync(content);
             this.gateway.emitNewImportContent(account.userId, _const.PLATFORMS.FACEBOOK, content);
-            // add notification
 
+            // Update progress counts
+            progressReports[type].itemProcessed++;
+            progressReports[type].progressPercent = progressReports[type].totalItem
+              ? Math.round((progressReports[type].itemProcessed / progressReports[type].totalItem) * 100)
+              : 0;
+
+            // Convert object to array for metadata
+            const reportArray = Object.entries(progressReports).map(([type, report]) => ({
+              type,
+              ...report,
+            }));
+
+            if (!notification) {
+              const notificationResult = await this.notificationService.notifyAsync(
+                account.userId,
+                "📥 Importing your Facebook data...",
+                "",
+                true,
+                {
+                  status: NotificationStatus.InProgress,
+                  reports: reportArray
+                }
+              );
+
+              notification = mapToNotificationModel(notificationResult);
+            } else {
+              await this.notificationService.updateAsync(notification.id, true, {
+                metaData: {
+                  status: NotificationStatus.InProgress,
+                  reports: reportArray,
+                },
+              });
+            }
           }
 
           if (paging?.cursors?.after) {
@@ -134,12 +196,55 @@ export class FacebookImportProcessor {
           }
         }
       } catch (err: any) {
+        encounteredError = true;
         logger.error(`Error occured while importing ${key}:`, err.message);
         if (cursor) {
           lastCursors[key] = cursor;
         }
         continue;
       }
+    }
+
+    const finalReportArray = Object.entries(progressReports).map(([type, report]) => ({
+      type,
+      ...report,
+    }));
+
+    if (notification) {
+
+      if (encounteredError) {
+        await this.notificationService.updateAsync(notification.id,
+          false,
+          {
+            status: NotificationStatus.Completed,
+            reports: finalReportArray,
+          },
+          "⚠️ Facebook import completed with issues",
+        );
+      } else {
+        await this.notificationService.updateAsync(notification.id,
+          false,
+          {
+            status: NotificationStatus.Completed,
+            reports: finalReportArray,
+          },
+          "✅ Facebook import completed!",
+        );
+      }
+
+      account.allowImport = true;
+      await this.linkedAccountRepository.updateAsync(account);
+
+    } else {
+      // # TODO #: Handle failed
+      await this.notificationService.updateAsync(notification.id,
+          false,
+          {
+            status: NotificationStatus.Cancelled,
+            reports: finalReportArray,
+          },
+          "⚠️ Facebook import could not start",
+        );
     }
   }
 

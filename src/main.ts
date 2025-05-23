@@ -22,7 +22,6 @@ async function bootstrap() {
   await dataSource.initialize();
   app.enableShutdownHooks();
 
-
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
   const port = configs.port || 3000;

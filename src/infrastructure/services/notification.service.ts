@@ -62,11 +62,15 @@ export class NotificationService implements INotificationService {
     }
   }
 
-  public async updateAsync(id: string, isLive: boolean, metaData?: any): Promise<void> {
+  public async updateAsync(id: string, isLive: boolean, metaData?: any, title?: string): Promise<void> {
 
     const notification = await this.notificationRepository.getByIdAsync(id);
     notification.isLive = isLive;
     notification.metaData = metaData;
+
+    if (title) {
+      notification.title = title;
+    }
 
     await this.notificationRepository.updateAsync(notification);
     this.gateway.emitNotificationUpdated(notification.notifyId, mapToNotificationModel(notification));

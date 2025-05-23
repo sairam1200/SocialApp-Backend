@@ -31,7 +31,7 @@ export class FacebookImportCommandHandler implements ICommandHandler<FacebookImp
     private readonly importQueue: Queue
   ) { }
 
-  public async execute(query: FacebookImportCommand): Promise<void> {
+  public async execute(command: FacebookImportCommand): Promise<void> {
 
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
 
