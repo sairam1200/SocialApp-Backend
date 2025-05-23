@@ -23,9 +23,6 @@ export class Notification extends BaseEntity {
   @Column({ type: 'boolean', default: false })
   isLive: boolean;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  createdAt: Date;
-
   @Column({ default: false })
   sound: boolean;
 

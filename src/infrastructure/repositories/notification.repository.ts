@@ -15,7 +15,7 @@ export class NotificationRepository implements INotificationRepository {
   public async getAllAsync(userId: string): Promise<Notification[]> {
     return await this.notificationContext.find({
       where: { notifyId: userId },
-      order: { createdAt: "DESC" },
+      order: { createdOn: "DESC" },
     });
   }
 

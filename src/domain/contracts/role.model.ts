@@ -1,22 +1,44 @@
 import { RoleType } from "../enums";
+import { ApiProperty } from '@nestjs/swagger';
 
-export interface RoleModel {
+export class RoleModel {
+    @ApiProperty()
     id: string;
+
+    @ApiProperty()
     name: string;
+
+    @ApiProperty()
     description: string;
+
+    @ApiProperty({ enum: RoleType })
     type: RoleType;
+
+    @ApiProperty()
     permissionsCount: number;
 }
 
-export interface PermissionModel {
+export class RoleClaimModel {
+    @ApiProperty()
     roleId: string;
-    roleName: string;
-    roleClaims: RoleClaimModel[];
+
+    @ApiProperty()
+    claimType: string;
+
+    @ApiProperty()
+    claimValue: string;
+
+    @ApiProperty()
+    selected: boolean;
 }
 
-export interface RoleClaimModel {
+export class PermissionModel {
+    @ApiProperty()
     roleId: string;
-    claimType: string;
-    claimValue: string;
-    selected: boolean;
+
+    @ApiProperty()
+    roleName: string;
+
+    @ApiProperty({ type: [RoleClaimModel] })
+    roleClaims: RoleClaimModel[];
 }
