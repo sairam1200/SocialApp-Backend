@@ -19,7 +19,7 @@ services:
     container_name: pg-database
     environment:
       - POSTGRES_USER=root
-      - POSTGRES_PASSWORD=gaddr-development
+      - POSTGRES_PASSWORD=dockerpg
       - POSTGRES_DB=postgres
     ports:
       - "5433:5432"            
