@@ -75,7 +75,7 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
                 type: UserType.Admin,
             }), command.model.password);
 
-
+        // TODO: Send Email  
         return new UserModel({ ...user });
     }
 } 
