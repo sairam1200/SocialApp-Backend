@@ -2,6 +2,7 @@ import configs from './configs';
 import { NestFactory } from '@nestjs/core';
 import logger from './core/utils/winston.util';
 import { AppModule } from './modules/app.module';
+import dataSource from './infrastructure/persistence/data.source';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { addScalarApiDocs, addSwaggerApiDocs } from './core/utils/apiDocs.util';
 import { ErrorHandlersFilter } from './core/exceptions/exceptionHandler.filter';
@@ -18,7 +19,9 @@ async function bootstrap() {
   });
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  await dataSource.initialize();
   app.enableShutdownHooks();
+
 
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);

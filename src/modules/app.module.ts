@@ -4,15 +4,14 @@ import _const from '../core/utils/const';
 import { UserModule } from './user.module';
 import { RoleModule } from './role.module';
 import { AuthModule } from './auth.module';
-import { QueuesModule } from './queues.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PassportModule } from '@nestjs/passport';
 import { IntegrationsModule } from './integrations.module';
+import { NotificationModule } from './notification.module';
 import { DataSeeder } from '../infrastructure/services/data.seeder';
 import { postgresOptions } from '../infrastructure/persistence/data.source';
 import { HttpContextMiddleware } from '../core/middlewares/httpContext.middleware';
 import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '@nestjs/common';
-import { NotificationModule } from './notification.module';
 
 @Module({
   imports: [PassportModule,
@@ -26,7 +25,6 @@ import { NotificationModule } from './notification.module';
     AuthModule,
     NotificationModule,
     IntegrationsModule,
-    QueuesModule.register(),
   ],
 })
 export class AppModule implements OnApplicationBootstrap, NestModule {
