@@ -65,6 +65,6 @@ export class FacebookConnectController {
   ): Promise<Response | void> {
 
     const result = await this.commandBus.execute(new FacebookConnectCallbackQuery({ model: { code, state } }));
-    return res.status(HttpStatus.OK).json(result.profile);
+    return res.status(HttpStatus.OK).json(result);
   }
 }

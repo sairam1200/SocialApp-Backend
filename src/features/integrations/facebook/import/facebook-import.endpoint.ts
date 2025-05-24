@@ -1,9 +1,9 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
+import { ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { FacebookImportCommand } from "./facebook-import.handler";
+import { UserAccoutGuard } from "../../../../core/passport/account.guard";
+import { Controller, HttpStatus, Post, Query, Res, UseGuards } from "@nestjs/common";
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
@@ -22,12 +22,13 @@ export class FacebookImportController {
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
+  @ApiQuery({ name: 'accessToken', required: false })
   public async Import(
     @Res() res: Response,
+    @Query('accessToken') accessToken: string,
   ): Promise<Response | void> {
 
-    await this.commandBus.execute(new FacebookImportCommand());
-    return res.status(HttpStatus.OK).json({ message: "Facebook import has begun." });
+    const result = await this.commandBus.execute(new FacebookImportCommand());
+    return res.status(HttpStatus.OK).json({ message: "Facebook import has begun.", ...result });
   }
-
 }
