@@ -14,21 +14,23 @@ import { UserContent } from "../domain/entities/userContent.entity";
 import { LinkedAccount } from "../domain/entities/linkedAccount.entity";
 import { DataProtectionKey } from "../domain/entities/dataProtectionKey.entity";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
-import { FacebookImportProcessor } from "../infrastructure/background/processors/facebook-import.processor";
+import { YoutubeImportController } from "../features/integrations/youtube/import/youtube-import.endpoint";
 import { YoutubeConnectController } from "../features/integrations/youtube/connect/youtube-connect.endpoint";
 import { SpotifyConnectController } from "../features/integrations/spotify/connect/spotify-connect.endpoint";
 import { TwitterConnectController } from "../features/integrations/twitter/connect/twitter-connect.endpoint";
 import { FacebookImportController } from "../features/integrations/facebook/import/facebook-import.endpoint";
 import { SpotifyProfileController } from "../features/integrations/spotify/get-profile/get-profile.endpoint";
+import { YoutubeImportCommandHandler } from "../features/integrations/youtube/import/youtube-import.handler";
 import { SpotifyProfileQueryHandler } from "../features/integrations/spotify/get-profile/get-profile.handler";
 import { FacebookProfileController } from "../features/integrations/facebook/get-profile/get-profile.endpoint";
 import { FacebookConnectController } from "../features/integrations/facebook/connect/facebook-connect.endpoint";
 import { FacebookProfileQueryHandler } from "../features/integrations/facebook/get-profile/get-profile.handler";
+import { FacebookImportCommandHandler } from "../features/integrations/facebook/import/facebook-import.handler";
 import { InstagramProfileController } from "../features/integrations/instagram/get-profile/get-profile.endpoint";
 import { InstagramProfileQueryHandler } from "../features/integrations/instagram/get-profile/get-profile.handler";
 import { PinterestConnectController } from "../features/integrations/pinterest/connect/pinterest-connect.endpoint";
 import { InstagramConnectController } from "../features/integrations/instagram/connect/instagram-connect.endpoint";
-import { FacebookConnectCallbackHandler, FacebookConnectQueryHandler } from "../features/integrations/facebook/connect/facebook-connect.handler";
+import { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "../features/integrations/facebook/connect/facebook-connect.handler";
 import { SpotifyConnectCallbackQueryHandler, SpotifyConnectQueryHandler } from "../features/integrations/spotify/connect/spotify-connect.handler";
 import { TwiiterConnectQueryHandler, TwitterConnectCallbackQueryHandler } from "../features/integrations/twitter/connect/twitter-connect.handler";
 import { YoutubeConnectCallbackQueryHandler, YoutubeConnectQueryHandler } from "../features/integrations/youtube/connect/youtube-connect.handler";
@@ -66,32 +68,34 @@ import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } fr
     TwitterConnectController,
 
     YoutubeConnectController,
+    YoutubeImportController,
   ],
   providers: [
-    JwtService,
     ImportGateway,
+    JwtService,
 
     SpotifyConnectQueryHandler,
     SpotifyProfileQueryHandler,
     SpotifyConnectCallbackQueryHandler,
 
+    InstagramConnectCallbackQueryHandler,
     InstagramConnectQueryHandler,
     InstagramProfileQueryHandler,
-    InstagramConnectCallbackQueryHandler,
 
-    FacebookConnectCallbackHandler,
     FacebookConnectQueryHandler,
     FacebookProfileQueryHandler,
-    FacebookImportProcessor,
+    FacebookImportCommandHandler,
+    FacebookConnectCallbackQueryHandler,
 
-    PinterestConnectQueryHandler,
     PinterestConnectCallbackQueryHandler,
+    PinterestConnectQueryHandler,
 
     TwiiterConnectQueryHandler,
     TwitterConnectCallbackQueryHandler,
 
-    YoutubeConnectQueryHandler,
     YoutubeConnectCallbackQueryHandler,
+    YoutubeConnectQueryHandler,
+    YoutubeImportCommandHandler,
 
     dependency.RoleRepository,
     dependency.UserRepository,

@@ -16,6 +16,7 @@ export default {
 
   BULL_QUEUES: {
     FACEBOOK_IMPORT: "facebook-import",
+    YOUTUBE_IMPORT: "youtube-import",
     INSTAGRAM_IMPORT: "instagram-import",
     TWITTER_IMPORT: "twitter-import",
   },

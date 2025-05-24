@@ -1,6 +1,7 @@
 import configs from "../configs";
 import { Queue } from "bullmq";
 import _const from "../core/utils/const";
+import { JwtService } from "@nestjs/jwt";
 import { BullModule } from '@nestjs/bullmq';
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { createBullBoard } from '@bull-board/api';
@@ -14,13 +15,21 @@ import { LinkedAccount } from "../domain/entities/linkedAccount.entity";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
 import { BullBoardAuthMiddleware } from "../core/middlewares/bullBoardAuth.middleware";
 import { DynamicModule, MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
+import { InjectYoutubeImportQueue, YoutubeImportProcessor } from "../infrastructure/background/processors/youtube-import.processor";
 import { FacebookImportProcessor, InjectFacebookImportQueue } from "../infrastructure/background/processors/facebook-import.processor";
-import { JwtService } from "@nestjs/jwt";
 
 @Module({})
 export class QueuesModule implements NestModule {
   static register(): DynamicModule {
     const { host, port, password } = configs.Redis;
+    const queues = BullModule.registerQueue(
+      {
+        name: _const.BULL_QUEUES.FACEBOOK_IMPORT,
+      },
+      {
+        name: _const.BULL_QUEUES.YOUTUBE_IMPORT,
+      }
+    );
 
     return {
       module: QueuesModule,
@@ -42,26 +51,30 @@ export class QueuesModule implements NestModule {
             },
           },
         }),
-        BullModule.registerQueue({
-          name: _const.BULL_QUEUES.FACEBOOK_IMPORT,
-        }),
+        queues
       ],
       providers: [
         JwtService,
+        ...queues.providers,
 
         FacebookImportProcessor,
+        YoutubeImportProcessor,
         ImportGateway,
 
         dependency.UserContentRepository,
+        dependency.LinkedAccountRepository,
       ],
       exports: [
         FacebookImportProcessor,
+        YoutubeImportProcessor,
+        ...queues.exports
       ],
     };
   }
 
   constructor(
     @InjectFacebookImportQueue() private readonly facebookImportQueue: Queue,
+    @InjectYoutubeImportQueue() private readonly youtubeImportQueue: Queue,
   ) { }
 
   configure(consumer: MiddlewareConsumer) {
@@ -71,6 +84,7 @@ export class QueuesModule implements NestModule {
     createBullBoard({
       queues: [
         new BullMQAdapter(this.facebookImportQueue),
+        new BullMQAdapter(this.youtubeImportQueue),
       ],
       serverAdapter,
     });
