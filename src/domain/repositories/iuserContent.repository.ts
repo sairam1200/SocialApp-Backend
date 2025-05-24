@@ -5,8 +5,12 @@ export interface IUserContentRepository {
   createAsync(content: UserContent): Promise<UserContent>;
   updateAsync(content: UserContent): Promise<void>;
 
-  getByIdAsync(id: string): Promise<UserContent>;
   deleteAsync(content: UserContent): Promise<void>;
+  getByIdAsync(id: string): Promise<UserContent>;
+  getByPlatformAndContentIdAsync(
+    platform: string,
+    contentId: string
+  ): Promise<UserContent>;
 
   getByUserIdAsync(
     userId: string,
