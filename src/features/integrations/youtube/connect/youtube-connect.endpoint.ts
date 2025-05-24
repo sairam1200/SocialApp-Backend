@@ -57,16 +57,7 @@ export class YoutubeConnectController {
     const result = await this.commandBus.execute(new YoutubeConnectCallbackQuery({
       model: { code, state }
     }));
-    res.cookie('youtube_auth', {
-      accessToken: result.accessToken,
-      expiresIn: result.expiresIn,
-    },
-      {
-        maxAge: 0,
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-      });
-    return res.status(HttpStatus.OK).json(result.profile);
+
+    return res.status(HttpStatus.OK).json(result);
   }
 }

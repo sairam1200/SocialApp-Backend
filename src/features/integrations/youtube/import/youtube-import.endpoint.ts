@@ -1,8 +1,9 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiBody, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { YoutubeImportCommand } from "./youtube-import.handler";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Controller, Get, HttpStatus, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
@@ -21,12 +22,13 @@ export class YoutubeImportController {
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
+  @ApiBody({ type: 'accessToken', required: false })
   public async Import(
+    @Body() accessToken: string,
     @Res() res: Response
   ): Promise<Response | void> {
 
-
-
+    const result = await this.commandBus.execute(new YoutubeImportCommand({ model: { accessToken } }));
+    return res.status(HttpStatus.OK).json({ message: "Youtube import has begun.", ...result });
   }
-
 }
