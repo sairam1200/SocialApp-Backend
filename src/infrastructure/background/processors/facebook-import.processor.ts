@@ -1,9 +1,10 @@
-import { Job } from "bull";
 import axios from "axios";
+import { Job } from "bullmq";
 import { Inject } from "@nestjs/common";
 import _const from "../../../core/utils/const";
 import { InjectQueue, Processor } from "@nestjs/bull";
 import logger from "../../../core/utils/winston.util";
+import { OnWorkerEvent, WorkerHost } from "@nestjs/bullmq";
 import { NotificationStatus } from "../../../domain/enums";
 import { stringUtil } from "../../../core/utils/string.util";
 import { UserContent } from "../../../domain/entities/userContent.entity";
@@ -23,7 +24,7 @@ export const InjectFacebookImportQueue = (): ParameterDecorator =>
   InjectQueue(_const.BULL_QUEUES.FACEBOOK_IMPORT);
 
 @Processor(_const.BULL_QUEUES.FACEBOOK_IMPORT)
-export class FacebookImportProcessor {
+export class FacebookImportProcessor extends WorkerHost {
 
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
@@ -33,9 +34,9 @@ export class FacebookImportProcessor {
     @Inject(_const.INOTIFICATION_SERVICE)
     private readonly notificationService: INotificationService,
     private readonly gateway: ImportGateway,
-  ) { }
+  ) { super() }
 
-  async process(job: Job<{ account: LinkedAccount, accessToken: string }>) {
+  async process(job: Job<{ account: LinkedAccount, accessToken: string }>): Promise<void> {
 
     const { account, accessToken } = job.data
     const lastCursors: CursorMap = {};
@@ -238,14 +239,29 @@ export class FacebookImportProcessor {
     } else {
       // # TODO #: Handle failed
       await this.notificationService.updateAsync(notification.id,
-          false,
-          {
-            status: NotificationStatus.Cancelled,
-            reports: finalReportArray,
-          },
-          "⚠️ Facebook import could not start",
-        );
+        false,
+        {
+          status: NotificationStatus.Cancelled,
+          reports: finalReportArray,
+        },
+        "⚠️ Facebook import could not start",
+      );
     }
+  }
+
+  @OnWorkerEvent('active')
+  onActive(job: Job) {
+    logger.info(`Active ${job.id}`);
+  }
+
+  @OnWorkerEvent('completed')
+  onCompleted(job: Job) {
+    logger.info(`Completed ${job.id}`);
+  }
+
+  @OnWorkerEvent('failed')
+  onFailed(job: Job) {
+    logger.info(`Failed ${job.id}`);
   }
 
 }

@@ -107,9 +107,9 @@ export class FacebookImportCommandHandler implements ICommandHandler<FacebookImp
       logger.error(`An error occurred while processing the Facebook import command: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
 
-      throw new ApplicationException("Something went wrong while verifying the Facebook access token. Please try again later.");
+      return false;
+      // throw new ApplicationException("Something went wrong while verifying the Facebook access token. Please try again later.");
     }
-
   }
 
   private async getUserLoginAsync(userId: string): Promise<UserLogin> {

@@ -28,7 +28,7 @@ export class FacebookImportController {
     @Query('accessToken') accessToken: string,
   ): Promise<Response | void> {
 
-    const result = await this.commandBus.execute(new FacebookImportCommand());
+    const result = await this.commandBus.execute(new FacebookImportCommand({ model: { accessToken } }));
     return res.status(HttpStatus.OK).json({ message: "Facebook import has begun.", ...result });
   }
 }

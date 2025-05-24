@@ -69,7 +69,7 @@ export class FacebookConnectQueryHandler implements ICommandHandler<FacebookConn
 }
 
 @CommandHandler(FacebookConnectCallbackQuery)
-export class FacebookConnectCallbackHandler implements ICommandHandler<FacebookConnectCallbackQuery> {
+export class FacebookConnectCallbackQueryHandler implements ICommandHandler<FacebookConnectCallbackQuery> {
 
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
