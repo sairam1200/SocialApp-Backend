@@ -5,9 +5,9 @@ import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { RefreshTokenCommand, RefreshTokenRequestModel } from "./refresh-token.handler";
 
 @ApiBearerAuth()
-@ApiTags('Token')
+@ApiTags('Authentication')
 @Controller({
-    path: `/token`,
+    path: `/auth`,
     version: '1',
 })
 export class RefreshTokenController {
