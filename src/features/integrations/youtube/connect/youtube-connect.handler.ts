@@ -102,7 +102,7 @@ export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<Youtu
       linkedAccount.userName = "";
       linkedAccount.profileImage = userData.profile.picture;
       linkedAccount.followersCount = Number.parseInt(userData.channel.items[0].statistics.subscriberCount),
-        linkedAccount.followingCount = 0; // TODO : retreive this 
+      linkedAccount.followingCount = 0; // TODO : retreive this 
       linkedAccount.metaData = {
         hd: userData.profile.hd,
         locale: userData.profile.locale,

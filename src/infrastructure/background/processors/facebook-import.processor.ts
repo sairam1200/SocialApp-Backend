@@ -52,6 +52,7 @@ export class FacebookImportProcessor extends WorkerHost {
       [type: string]: {
         totalItem: number;
         itemProcessed: number;
+        status: NotificationStatus;
         progressPercent: number;
       };
     } = {};
@@ -66,6 +67,7 @@ export class FacebookImportProcessor extends WorkerHost {
         totalItem: 0,
         itemProcessed: 0,
         progressPercent: 0,
+        status: NotificationStatus.InProgress,
       };
 
       try {
@@ -87,7 +89,7 @@ export class FacebookImportProcessor extends WorkerHost {
             progressReports[type].totalItem = summary.total_count;
           }
 
-          console.log(`Fetched ${items.length} items from ${key}`);
+          console.log(`Fetched ${items.length} items from ${type}`);
 
           for (const item of items) {
 
@@ -189,16 +191,17 @@ export class FacebookImportProcessor extends WorkerHost {
 
           if (paging?.cursors?.after) {
             cursor = paging.cursors.after;
-            lastCursors[key] = cursor;
           } else {
+            progressReports[type].status = NotificationStatus.Completed;
             break; // no more pages
           }
         }
       } catch (err: any) {
         encounteredError = true;
-        logger.error(`Error occured while importing ${key}:`, err.message);
+        progressReports[type].status = NotificationStatus.Cancelled;
+        logger.error(`Error occured while importing Facebook user ${type}:`, err.message);
         if (cursor) {
-          lastCursors[key] = cursor;
+          lastCursors[type] = cursor;
         }
         continue;
       }
