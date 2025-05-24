@@ -16,6 +16,9 @@ export class UserContent extends BaseEntity {
   @Column({ nullable: false })
   platform: string;
 
+  @Column({ nullable: false })
+  externalId: string;
+
   @Column({ type: 'json', nullable: true })
   metaData?: Record<string, any>;
 

@@ -93,14 +93,14 @@ export class FacebookImportProcessor extends WorkerHost {
 
             let content = new UserContent({
               userId: account.userId,
-              platform: _const.PLATFORMS.FACEBOOK
+              platform: _const.PLATFORMS.FACEBOOK,
+              externalId: item.id,
             });
 
             if (type === 'Posts') {
               content.type = "post";
               content.title = item.name ?? stringUtil.trimWithEllipsis(item.message);
               content.metaData = {
-                contentId: item.id,
                 from: item.from,
                 link: item.link,
                 type: item.type,
@@ -123,7 +123,6 @@ export class FacebookImportProcessor extends WorkerHost {
               content.type = "likes";
               content.title = item.name;
               content.metaData = {
-                contentId: item.id,
                 category: item.category,
                 createdAt: item.created_time,
               }
@@ -131,7 +130,6 @@ export class FacebookImportProcessor extends WorkerHost {
               content.type = "events";
               content.title = item.name;
               content.metaData = {
-                contentId: item.id,
                 startDate: item.start_time,
                 endDate: item.end_time,
                 description: item.description,
