@@ -16,12 +16,15 @@ export default {
 
   BULL_QUEUES: {
     FACEBOOK_IMPORT: "facebook-import",
+    SPOTIFY_IMPORT: "spotify-import",
     YOUTUBE_IMPORT: "youtube-import",
     INSTAGRAM_IMPORT: "instagram-import",
+    PINTEREST_IMPORT: "pinterest-import",
     TWITTER_IMPORT: "twitter-import",
   },
 
   PLATFORMS: {
+    PINTEREST: "pinterest",
     INSTAGRAM: "instagram",
     FACEBOOK: "facebook",
     TWITTER: "twitter",
