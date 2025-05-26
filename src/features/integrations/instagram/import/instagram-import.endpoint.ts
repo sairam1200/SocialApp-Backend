@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Controller, Get, Res, UseGuards } from "@nestjs/common";
+import { Controller, Post, Res, UseGuards } from "@nestjs/common";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 
 
@@ -17,7 +17,7 @@ export class InstagramImportController {
     private readonly commandBus: CommandBus
   ) { }
 
-  @Get('import')
+  @Post('import')
   @ApiResponse({ status: 200, description: 'OK' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })

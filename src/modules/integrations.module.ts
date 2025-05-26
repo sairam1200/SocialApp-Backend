@@ -26,9 +26,11 @@ import { FacebookProfileController } from "../features/integrations/facebook/get
 import { FacebookConnectController } from "../features/integrations/facebook/connect/facebook-connect.endpoint";
 import { FacebookProfileQueryHandler } from "../features/integrations/facebook/get-profile/get-profile.handler";
 import { FacebookImportCommandHandler } from "../features/integrations/facebook/import/facebook-import.handler";
+import { PinterestImportController } from "../features/integrations/pinterest/import/pinterest-import.endpoint";
 import { InstagramProfileController } from "../features/integrations/instagram/get-profile/get-profile.endpoint";
 import { InstagramProfileQueryHandler } from "../features/integrations/instagram/get-profile/get-profile.handler";
 import { PinterestConnectController } from "../features/integrations/pinterest/connect/pinterest-connect.endpoint";
+import { PinterestImportCommandHandler } from "../features/integrations/pinterest/import/pinterest-import.handler";
 import { InstagramConnectController } from "../features/integrations/instagram/connect/instagram-connect.endpoint";
 import { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "../features/integrations/facebook/connect/facebook-connect.handler";
 import { SpotifyConnectCallbackQueryHandler, SpotifyConnectQueryHandler } from "../features/integrations/spotify/connect/spotify-connect.handler";
@@ -64,6 +66,7 @@ import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } fr
     InstagramProfileController,
 
     PinterestConnectController,
+    PinterestImportController,
 
     TwitterConnectController,
 
@@ -88,6 +91,7 @@ import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } fr
     FacebookConnectCallbackQueryHandler,
 
     PinterestConnectCallbackQueryHandler,
+    PinterestImportCommandHandler,
     PinterestConnectQueryHandler,
 
     TwiiterConnectQueryHandler,
