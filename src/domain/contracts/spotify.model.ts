@@ -44,3 +44,65 @@ export interface SpotifyProfileModel {
   name: string;
   uri: string;
 }
+
+
+export interface SpotifyPlaylistModel {
+  id: string;
+  name: string;
+  type: 'playlist';
+  owner: {
+    name: string;
+    id: string;
+    type: string;
+    href: string;
+    externalUrl: string;
+  };
+  public: boolean;
+  imageUrl: string;
+  createdAt: string;
+  updatedAt: string;
+  trackCount: number;
+  playListId: string;
+  description: string;
+}
+
+export interface SpotifyTrackModel {
+  id: string;
+  type: 'track';
+  name: string;
+  url: string;
+  releaseDate: Date;
+  durationMs: number;
+  artists: Array<{
+    name: string;
+    type: string;
+    href: string;
+  }>;
+  album: {
+    id: string;
+    name: string;
+    href: string;
+    imageUrl: string;
+  };
+  duration: number;
+  explicit: boolean;
+  popularity: number;
+  previewUrl: string;
+}
+
+export interface SpotifyAlbumModel {
+  id: string;
+  type: 'album';
+  name: string;
+  href: string;
+  imageUrl: string;
+  releaseDate: Date;
+  url: string;
+  totalTracks: number;
+  artists: Array<{
+    name: string;
+    type: string;
+    href: string;
+  }>;
+  albumId: string;
+}

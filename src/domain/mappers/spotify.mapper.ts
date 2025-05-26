@@ -1,5 +1,6 @@
-import { SpotifyProfileModel } from "../contracts/spotify.model";
+import { UserContent } from "../entities/userContent.entity";
 import { LinkedAccount } from "../entities/linkedAccount.entity";
+import { SpotifyAlbumModel, SpotifyPlaylistModel, SpotifyProfileModel, SpotifyTrackModel } from "../contracts/spotify.model";
 
 export function mapToSpotifyProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): SpotifyProfileModel {
   return {
@@ -21,4 +22,65 @@ export function mapToSpotifyProfileModel(data: LinkedAccount, includeSensitiveFi
     spotifyUrl: data.metaData.spotifyUrl,
     uri: data.metaData.uri,
   } as SpotifyProfileModel;
+}
+
+export function mapToSpotifyPlaylistModel(data: UserContent): SpotifyPlaylistModel {
+  return {
+    id: data.id,
+    name: data.title,
+    type: 'playlist',
+    owner: data.metaData.owner,
+    public: data.metaData.public,
+    imageUrl: data.metaData.imageUrl,
+    createdAt: data.metaData.createdAt,
+    updatedAt: data.metaData.updatedAt,
+    trackCount: data.metaData.trackCount,
+    playListId: data.externalId,
+    description: data.metaData.description,
+
+  } as SpotifyPlaylistModel;
+}
+
+export function mapToSpotifyTrackModel(data: UserContent): SpotifyTrackModel {
+  return {
+    id: data.id,
+    name: data.title,
+    type: 'track',
+    releaseDate: data.metaData.releaseDate,
+    popularity: data.metaData.popularity,
+    durationMs: data.metaData.durationMs,
+    previewUrl: data.metaData.previewUrl,
+    explicit: data.metaData.explicit,
+    album: data.metaData.album.map(album => ({
+      id: album.id,
+      name: album.name,
+      href: album.href,
+      imageUrl: album.imageUrl,
+    })),
+    artists: data.metaData.artists.map(artist => ({
+      name: artist.name,
+      type: artist.type,
+      href: artist.href,
+    })),
+    url: data.metaData.url,
+
+  } as SpotifyTrackModel;
+}
+
+export function mapToSpotifyAlbumModel(data: UserContent): SpotifyAlbumModel {
+  return {
+    id: data.id,
+    albumId: data.externalId,
+    type: 'album',
+    name: data.title,
+    artists: data.metaData.artists.map(artist => ({
+      name: artist.name,
+      type: artist.type,
+      href: artist.href,
+    })),
+    releaseDate: data.metaData.releaseDate,
+    totalTracks: data.metaData.totalTracks,
+    imageUrl: data.metaData.imageUrl,
+    url: data.metaData.url,
+  } as SpotifyAlbumModel;
 }
