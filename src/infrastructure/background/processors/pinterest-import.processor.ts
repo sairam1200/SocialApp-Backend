@@ -218,6 +218,5 @@ export class PinterestImportProcessor extends WorkerHost {
         "⚠️ Pinterest import could not start",
       );
     }
-
   }
 }
