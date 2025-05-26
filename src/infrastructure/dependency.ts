@@ -2,6 +2,7 @@ import _const from "../core/utils/const";
 import { DataProtectionKeyRepository } from "./repositories/dataProtectionKey.repository";
 import { LinkedAccountRepository } from "./repositories/linkedAccount.repository";
 import { NotificationRepository } from "./repositories/notification.repository";
+import { RateLimitRepository } from "./repositories/rateLimit.repository";
 import { RoleRepository } from "./repositories/role.repository";
 import { RoleClaimRepository } from "./repositories/roleClaim.repository";
 import { UserRepository } from "./repositories/user.repository";
@@ -52,6 +53,10 @@ export const dependency = {
   UserContentRepository: {
     provide: _const.IUSERCONTENT_REPOSITORY,
     useClass: UserContentRepository
+  },
+  RateLimitRepository: {
+    provide: _const.IRATELIMIT_REPOSITORY,
+    useClass: RateLimitRepository
   },
   TokenService: {
     provide: _const.ITOKEN_SERVICE,

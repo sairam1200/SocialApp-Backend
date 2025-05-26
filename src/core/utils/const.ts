@@ -3,6 +3,7 @@ export default {
   IUSER_REPOSITORY: "IUserRepository",
   IROLE_REPOSITORY: "IRoleRepository",
   IUSERROLE_REPOSITORY: "IUserRoleRepository",
+  IRATELIMIT_REPOSITORY: "IRateLimitRepository",
   IROLECLAIM_REPOSITORY: "IRoleClaimRepository",
   IUSERLOGIN_REPOSITORY: "IUserLoginRepository",
   IUSERCONTENT_REPOSITORY: "IUserContentRepository",
