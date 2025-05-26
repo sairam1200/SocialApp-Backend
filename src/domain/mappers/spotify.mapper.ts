@@ -1,6 +1,6 @@
 import { UserContent } from "../entities/userContent.entity";
 import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { SpotifyAlbumModel, SpotifyPlaylistModel, SpotifyProfileModel, SpotifyTrackModel } from "../contracts/spotify.model";
+import { SpotifyAlbumModel, SpotifyPlaylistModel, SpotifyProfileModel, SpotifyShowModel, SpotifyTrackModel } from "../contracts/spotify.model";
 
 export function mapToSpotifyProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): SpotifyProfileModel {
   return {
@@ -83,4 +83,28 @@ export function mapToSpotifyAlbumModel(data: UserContent): SpotifyAlbumModel {
     imageUrl: data.metaData.imageUrl,
     url: data.metaData.url,
   } as SpotifyAlbumModel;
+}
+
+export function mapToSpotifyShowModel(data: UserContent): SpotifyShowModel {
+  return {
+    id: data.id,
+    showId: data.externalId,
+    type: 'show',
+    name: data.title,
+    description: data.metaData.description,
+    htmlDescription: data.metaData.htmlDescription,
+    languages: data.metaData.languages,
+    publisher: data.metaData.publisher,
+    imageUrl: data.metaData.imageUrl,
+    addedOn: data.metaData.addedOn,
+    totalEpisodes: data.metaData.totalEpisodes,
+    mediaType: data.metaData.mediaType,
+    show: {
+      availableMarkets: data.metaData.availableMarkets,
+      copyRights: data.metaData.copyRights.map(credit => ({
+        text: credit.text,
+        type: credit.type,
+      })),
+    },
+  } as SpotifyShowModel;
 }

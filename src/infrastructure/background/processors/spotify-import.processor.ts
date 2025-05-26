@@ -13,7 +13,7 @@ import { INotificationService } from "../../../domain/services/inotification.ser
 import { ImportGateway } from "../../../infrastructure/websocket/gateways/import.gateway";
 import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
 import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
-import { mapToSpotifyAlbumModel, mapToSpotifyPlaylistModel, mapToSpotifyTrackModel } from "../../../domain/mappers/spotify.mapper";
+import { mapToSpotifyAlbumModel, mapToSpotifyPlaylistModel, mapToSpotifyShowModel, mapToSpotifyTrackModel } from "../../../domain/mappers/spotify.mapper";
 
 interface CursorMap {
   [key: string]: string | null;
@@ -171,7 +171,30 @@ export class SpotifyImportProcessor extends WorkerHost {
               const album = mapToSpotifyAlbumModel(content);
               this.gateway.emitNewImportContent(account.userId, _const.PLATFORMS.SPOTIFY, album);
             } else if (type === 'Shows') {
-              
+              content.type = 'show';
+              content.title = item.name;
+              content.externalId = item.id,
+                content.metaData = {
+                  description: item.description,
+                  explicit: item.explicit,
+                  htmlDescription: item.html_description,
+                  show: {
+                    availableMarkets: item.show.available_markets,
+                    copyRights: item.show.copyrights,
+                  },
+                  languages: item.languages,
+                  mediaType: item.media_type,
+                  publisher: item.publisher,
+                  addedOn: item.added_at,
+                  externalUrl: item.external_urls.spotify,
+                  imageUrl: item.images[0].url,
+                  totalEpisodes: item.total_episodes,
+                }
+
+              content = await this.userContentRepository.createAsync(content);
+
+              const show = mapToSpotifyShowModel(content);
+              this.gateway.emitNewImportContent(account.userId, _const.PLATFORMS.SPOTIFY, show);
             }
 
             // Update progress counts

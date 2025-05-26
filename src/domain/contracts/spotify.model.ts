@@ -106,3 +106,26 @@ export interface SpotifyAlbumModel {
   }>;
   albumId: string;
 }
+
+export interface SpotifyShowModel {
+  id: string;
+  showId: string;
+  type: 'show';
+  name: string;
+  description: string;
+  explicit: boolean;
+  htmlDescription: string;
+  languages: string[];
+  publisher: string;
+  imageUrl: string;
+  addedOn: string;
+  totalEpisodes: string;
+  mediaType: string;
+  show: {
+    availableMarkets: string[];
+    copyRights: Array<{
+      text: string;
+      type: string;
+    }>;
+  }
+}
