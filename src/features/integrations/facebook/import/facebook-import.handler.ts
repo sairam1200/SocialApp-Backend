@@ -2,6 +2,7 @@ import axios from "axios";
 import { Queue } from "bull";
 import configs from "../../../../configs";
 import { InjectQueue } from "@nestjs/bull";
+import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
@@ -13,11 +14,14 @@ import ApplicationException from "../../../../core/exceptions/application.except
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 
+export class FacebookImportRequestModel {
+  @ApiProperty()
+  facebookAccessToken: string;
+}
+
 export class FacebookImportCommand {
 
-  model: {
-    accessToken: string;
-  }
+  model: FacebookImportRequestModel;
 
   constructor(request: Partial<FacebookImportCommand> = {}) {
     Object.assign(this, request);
@@ -40,12 +44,12 @@ export class FacebookImportCommandHandler implements ICommandHandler<FacebookImp
 
     let expiresIn: number;
     const now = new Date();
-    const { model } = command;
+    const { facebookAccessToken } = command.model;
     let accessToken: string | undefined;
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
 
-    if (model.accessToken) {
-      const isTokenValid = await this.verifyAccessTokenAsync(model.accessToken);
+    if (facebookAccessToken) {
+      const isTokenValid = await this.verifyAccessTokenAsync(facebookAccessToken);
       if (!isTokenValid) {
         const userLogin = await this.getUserLoginAsync(userId);
         const isTokenValid = await this.verifyAccessTokenAsync(accessToken);
@@ -58,7 +62,7 @@ export class FacebookImportCommandHandler implements ICommandHandler<FacebookImp
         accessToken = userLogin.tokenValue;
         expiresIn = Math.floor((userLogin.expiryDateUtc.getTime() - now.getTime()) / 1000);
       } else {
-        accessToken = model.accessToken;
+        accessToken = facebookAccessToken;
       }
     } else {
       const userLogin = await this.getUserLoginAsync(userId);

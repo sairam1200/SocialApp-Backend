@@ -1,9 +1,9 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
-import { ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { FacebookImportCommand } from "./facebook-import.handler";
+import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Controller, HttpStatus, Post, Query, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
+import { FacebookImportCommand, FacebookImportRequestModel } from "./facebook-import.handler";
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
@@ -22,13 +22,17 @@ export class FacebookImportController {
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-  @ApiQuery({ name: 'accessToken', required: false })
+  @ApiBody({ type: FacebookImportRequestModel, required: false })
   public async Import(
+    @Body() model: FacebookImportRequestModel,
     @Res() res: Response,
-    @Query('accessToken') accessToken: string,
   ): Promise<Response | void> {
 
-    const result = await this.commandBus.execute(new FacebookImportCommand({ model: { accessToken } }));
+    const result = await this.commandBus.execute(new FacebookImportCommand({ model }));
+    if (model.facebookAccessToken) {
+      return res.status(HttpStatus.OK).json({ message: "Facebook import has begun." });
+    }
+
     return res.status(HttpStatus.OK).json({ message: "Facebook import has begun.", ...result });
   }
 }
