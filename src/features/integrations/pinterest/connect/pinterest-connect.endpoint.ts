@@ -59,16 +59,6 @@ export class PinterestConnectController {
     @Res() res: Response
   ): Promise<Response | void> {
     const result = await this.commandBus.execute(new PinterestConnectCallbackQuery({ model: { code, state } }));
-    res.cookie('pinterest_auth', {
-      accessToken: result.accessToken,
-      expiresIn: result.expiresIn,
-    },
-      {
-        maxAge: 0,
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-      });
-    return res.status(HttpStatus.OK).json(result.profile);
+    return res.status(HttpStatus.OK).json(result);
   }
 }

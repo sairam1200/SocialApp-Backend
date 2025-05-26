@@ -16,7 +16,6 @@ import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinke
 import { PinterestProfileModel, PinterestUserDataModel } from "../../../../domain/contracts/pinterest.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 
-const PLATFORM = 'pinterest';
 const BASE_URL = 'https://api.pinterest.com/v5';
 
 export class PinterestConnectCallbackQuery {
@@ -100,7 +99,7 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
       throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(_const.PLATFORMS.PINTEREST, user.email);
     if (linkedAccount) {
       linkedAccount.userName = userData.username;
       linkedAccount.profileImage = userData.profile_image;
@@ -116,7 +115,7 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
-        platform: PLATFORM,
+        platform: _const.PLATFORMS.PINTEREST,
         userId: user.id,
         externalId: userData.id,
         userName: userData.username,
@@ -133,7 +132,7 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
       }));
     }
 
-    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(user.id, PLATFORM);
+    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(user.id, _const.PLATFORMS.PINTEREST);
     if (existingAccountLogin) {
       existingAccountLogin.tokenValue = refresh_token;
       existingAccountLogin.addedDateUtc = new Date();
@@ -141,7 +140,7 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
       await this.userLoginRepository.updateAsync(existingAccountLogin);
     } else {
       existingAccountLogin = await this.userLoginRepository.createAysnc(
-        PLATFORM,
+        _const.PLATFORMS.PINTEREST,
         user.id,
         "",
         "",
@@ -167,6 +166,7 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
           redirect_uri: configs.pinterest.redirectUri,
           client_id: configs.pinterest.clientId,
           grant_type: 'authorization_code',
+          continuous_refresh: true,
           code: code,
         },
       });
