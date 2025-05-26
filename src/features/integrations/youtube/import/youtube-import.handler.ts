@@ -1,22 +1,27 @@
 import axios from "axios";
 import { Queue } from "bull";
+import configs from "../../../../configs";
 import { InjectQueue } from "@nestjs/bull";
+import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
-import { Inject, NotFoundException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { UserLogin } from "../../../../domain/entities/userLogin.entity";
+import { Inject, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 
+export class YoutubeImportRequestModel {
+  @ApiProperty()
+  youtubeAccessToken: string;
+}
+
 export class YoutubeImportCommand {
 
-  model: {
-    accessToken: string;
-  }
+  model: YoutubeImportRequestModel
 
   constructor(request: Partial<YoutubeImportCommand> = {}) {
     Object.assign(this, request);
@@ -39,12 +44,12 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     : Promise<{ accessToken: string, expiresIn: number }> {
 
     let expiresIn: number;
-    const { model } = command;
+    const { youtubeAccessToken } = command.model;
     let accessToken: string | undefined;
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
 
-    if (model.accessToken) {
-      const isTokenValid = await this.verifyAccessTokenAsync(model.accessToken);
+    if (youtubeAccessToken) {
+      const isTokenValid = await this.verifyAccessTokenAsync(youtubeAccessToken);
       if (!isTokenValid) {
         const userLogin = await this.getUserLoginAsync(userId);
         const { access_token, expires_in } = await this.refreshTokenAsync(userLogin.tokenValue);
@@ -52,7 +57,7 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
         accessToken = access_token;
         expiresIn = expires_in;
       } else {
-        accessToken = model.accessToken;
+        accessToken = youtubeAccessToken;
       }
     } else {
       const userLogin = await this.getUserLoginAsync(userId);
@@ -81,15 +86,11 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
   private async refreshTokenAsync(refreshToken: string)
     : Promise<{ access_token: string, expires_in: number }> {
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const tokenUrl = 'https://oauth2.googleapis.com/token';
-
     try {
 
-      const response = await axios.post(tokenUrl, new URLSearchParams({
-        client_id: clientId!,
-        client_secret: clientSecret!,
+      const response = await axios.post('https://oauth2.googleapis.com/token', new URLSearchParams({
+        client_id: configs.youtube.clientId,
+        client_secret: configs.youtube.clientSecret,
         refresh_token: refreshToken,
         grant_type: 'refresh_token',
       }).toString(), {
@@ -112,7 +113,9 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
       logger.error(`An error occurred while processing the Youtube import command: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
 
-      throw new Error(`Unable to refresh YouTube access token: ${(error as Error).message}`);
+      throw new UnauthorizedException(
+        'Your Youtube session has expired or the access token is invalid. Please log in to Youtube again to continue.'
+      );
     }
   }
 
@@ -139,17 +142,17 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     const now = new Date();
     const userLogin = await this.userLoginRepository.getByUserIdAndProvider(
       userId,
-      _const.PLATFORMS.FACEBOOK
+      _const.PLATFORMS.YOUTUBE
     );
 
     if (!userLogin) {
-      throw new ApplicationException(
+      throw new UnauthorizedException(
         'No Youtube account linked to your user profile. Please link your Youtube account to proceed.'
       );
     }
 
     if (now > userLogin.expiryDateUtc) {
-      throw new ApplicationException(
+      throw new UnauthorizedException(
         'Your Youtube session has expired or the access token is invalid. Please log in to Youtube again to continue.'
       );
     }
