@@ -1,5 +1,4 @@
 import { Response } from "express";
-import querystring from 'querystring';
 import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
@@ -23,7 +22,7 @@ export class YoutubeConnectController {
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-  public async Connect(@Res() res: Response): Promise<void> {
+  public async Connect(@Res() res: Response): Promise<Response | void> {
 
     const scopes = [
       'https://www.googleapis.com/auth/userinfo.profile',
@@ -32,16 +31,17 @@ export class YoutubeConnectController {
     ].join(' ');
 
     const state = stringUtil.generateRandomString(16);
-    const authorizeURL = `https://accounts.google.com/o/oauth2/v2/auth?` + querystring.stringify({
+    const params = new URLSearchParams({
       response_type: 'code',
       client_id: configs.youtube.clientId,
       redirect_uri: configs.youtube.callbackUrl,
       scope: scopes,
       state: state,
     });
+    const authorizeURL = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
     await this.commandBus.execute(new YoutubeConnectQuery({ model: { state } }));
-    res.status(HttpStatus.FOUND).redirect(authorizeURL);
+    return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
   }
 
   @Get('connect-callback')

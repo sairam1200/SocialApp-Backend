@@ -1,5 +1,4 @@
 import { Response } from "express";
-import querystring from 'querystring';
 import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
@@ -23,7 +22,7 @@ export class TwitterConnectController {
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-  public async Connect(@Res() res: Response): Promise<void> {
+  public async Connect(@Res() res: Response): Promise<Response | void> {
 
     const scopes = [
       'tweet.read',
@@ -35,7 +34,7 @@ export class TwitterConnectController {
     const codeVerifier = cryptoUtils.generateEncryptionKey();
     const challenge = cryptoUtils.encodeSHA256ToBase64(codeVerifier);
 
-    const authorizeURL = `https://twitter.com/i/oauth2/authorize?` + querystring.stringify({
+    const params = new URLSearchParams({
       response_type: 'code',
       client_id: configs.twitter.clientId,
       redirect_uri: configs.twitter.redirectUri,
@@ -44,9 +43,10 @@ export class TwitterConnectController {
       code_challenge: challenge,
       code_challenge_method: 'S256'
     });
+    const authorizeURL = `https://twitter.com/i/oauth2/authorize?${params.toString()}`;
 
     await this.commandBus.execute(new TwitterConnectQuery({ model: { state, codeVerifier } }));
-    res.status(HttpStatus.FOUND).redirect(authorizeURL);
+    return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
   }
 
   @Get('connect-callback')
@@ -58,10 +58,6 @@ export class TwitterConnectController {
     @Query('code') code: string,
     @Query('state') state: string,
     @Res() res: Response): Promise<Response | void> {
-    if (!code) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid request' });
-    }
-
     const result = await this.commandBus.execute(new TwitterConnectCallbackQuery({
       model: { code, state }
     }));

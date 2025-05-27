@@ -24,10 +24,7 @@ export class RefreshTokenRequestModel {
     deviceId: string;
 
     @ApiProperty()
-    access_token: string;
-
-    @ApiProperty()
-    refresh_token: string;
+    refreshToken: string;
 
     constructor(request: Partial<RefreshTokenRequestModel> = {}) {
         Object.assign(this, request);
@@ -46,8 +43,7 @@ const refreshTokenValidations = Joi.object({
     userAgent: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
     ipAddress: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
     deviceId: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
-    access_token: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
-    refresh_token: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+    refreshToken: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
 });
 
 @CommandHandler(RefreshTokenCommand)
@@ -60,45 +56,45 @@ export class RefreshTokenHandler implements ICommandHandler<RefreshTokenCommand>
 
     public async execute(command: RefreshTokenCommand): Promise<TokenResponseModel> {
 
-        await refreshTokenValidations.validateAsync(command.model);
+        const { model } = command;
 
-        const userPrincipal = await this.tokenService.getPrincipalFromToken(command.model.access_token);
-        const user = await this.userRepository.getUserByIdAsync(userPrincipal[Globals.ClaimTypes.UserId]);
+        await refreshTokenValidations.validateAsync(command.model);
+        const userLogin = await this.userLoginRepository.getByTokenValueAndDeviceId(
+            model.refreshToken,
+            model.deviceId
+        );
+
+        if (!userLogin) {
+            throw new Error("Invalid refresh token or device mismatch.");
+        }
+
+        const user = await this.userRepository.getUserByIdAsync(userLogin.userId);
         if (!user) {
             throw new Error("User associated with the token does not exist.");
         }
 
-        const refreshToken = await this.userLoginRepository.getByTokenValueAndDeviceId(
-            command.model.refresh_token,
-            command.model.deviceId
-        );
-
-        if (!refreshToken) {
-            throw new Error("Invalid refresh token or device mismatch.");
-        }
-
         const currentUtcDate = new Date();
-        if (refreshToken.expiryDateUtc < currentUtcDate) {
+        if (userLogin.expiryDateUtc < currentUtcDate) {
             throw new Error("Refresh token has expired. Please log in again.");
         }
 
         const jwt = await this.tokenService.generateJwtAsync(user);
-        refreshToken.tokenValue = this.userLoginRepository.GenerateToken();
-        refreshToken.expiryDateUtc = addDurationToNow(configs.jwt.refreshTokenExpiration);
+        userLogin.tokenValue = this.userLoginRepository.GenerateToken();
+        userLogin.expiryDateUtc = addDurationToNow(configs.jwt.refreshTokenExpiration);
 
-        const hasChanged = hasIpChanged(command.model.ipAddress, refreshToken.ipAddress);
+        const hasChanged = hasIpChanged(model.ipAddress, userLogin.ipAddress);
 
         if (hasChanged) {
             // TODO: Send email notification of account access with new ipAddress  
         }
 
-        await this.userLoginRepository.updateAsync(refreshToken);
+        await this.userLoginRepository.updateAsync(userLogin);
 
         return new TokenResponseModel({
             access_token: jwt,
-            refresh_token: refreshToken.tokenValue,
+            refresh_token: userLogin.tokenValue,
             succeeded: true,
-            refreshTokenExpiryTime: refreshToken.expiryDateUtc.toDateString(),
+            refreshTokenExpiryTime: userLogin.expiryDateUtc.toDateString(),
         });
     }
 } 

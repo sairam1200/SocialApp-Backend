@@ -1,5 +1,4 @@
 import { Response } from "express";
-import querystring from 'querystring';
 import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
@@ -23,7 +22,7 @@ export class SpotifyConnectController {
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-  public async Connect(@Res() res: Response): Promise<void> {
+  public async Connect(@Res() res: Response): Promise<Response | void> {
 
     const scopes = [
       'user-read-email',
@@ -40,16 +39,18 @@ export class SpotifyConnectController {
     ].join(',');
 
     const state = stringUtil.generateRandomString(16);
-    const authorizeURL = `https://accounts.spotify.com/authorize/` + querystring.stringify({
+    const params = new URLSearchParams({
       response_type: 'code',
       client_id: configs.pinterest.clientId,
       redirect_uri: configs.pinterest.redirectUri,
       scope: scopes,
       state: state,
     });
+    const authorizeURL = `https://accounts.spotify.com/authorize?${params.toString()}`;
 
     await this.commandBus.execute(new SpotifyConnectQuery({ model: { state } }));
-    res.status(HttpStatus.FOUND).redirect(authorizeURL);
+
+    return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
   }
 
   @Get('connect-callback')
@@ -63,16 +64,6 @@ export class SpotifyConnectController {
     @Res() res: Response): Promise<Response | void> {
 
     const result = await this.commandBus.execute(new SpotifyConnectCallbackQuery({ model: { code, state } }));
-    res.cookie('spotify_auth', {
-      accessToken: result.accessToken,
-      expiresIn: result.expiresIn,
-    },
-      {
-        maxAge: result.expiresIn * 1000,
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-      });
-    return res.status(HttpStatus.OK).json(result.profile);
+    return res.status(HttpStatus.OK).json(result);
   }
 }
