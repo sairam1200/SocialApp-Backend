@@ -126,7 +126,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       }));
     }
 
-    const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(user.id, PLATFORM);
+    const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(user.id, _const.PLATFORMS.FACEBOOK);
     if (existingAccountLogin) {
       existingAccountLogin.tokenValue = access_token;
       existingAccountLogin.addedDateUtc = new Date();
