@@ -53,12 +53,11 @@ const youtubeConnectCallbackValidations = Joi.object({
 
 @CommandHandler(YoutubeConnectQuery)
 export class YoutubeConnectQueryHandler
-  implements ICommandHandler<YoutubeConnectQuery>
-{
+  implements ICommandHandler<YoutubeConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-  ) {}
+  ) { }
 
   public async execute(command: YoutubeConnectQuery): Promise<void> {
     const { model } = command;
@@ -77,8 +76,7 @@ export class YoutubeConnectQueryHandler
 
 @CommandHandler(YoutubeConnectCallbackQuery)
 export class YoutubeConnectCallbackQueryHandler
-  implements ICommandHandler<YoutubeConnectCallbackQuery>
-{
+  implements ICommandHandler<YoutubeConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
@@ -88,7 +86,7 @@ export class YoutubeConnectCallbackQueryHandler
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-  ) {}
+  ) { }
 
   public async execute(query: YoutubeConnectCallbackQuery): Promise<{
     accessToken: string;
@@ -273,7 +271,7 @@ export class YoutubeConnectCallbackQueryHandler
       throw new ApplicationException('State parameter has expired');
     }
 
-    // await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
+    await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
     return dataProtectionKey;
   }
 }
