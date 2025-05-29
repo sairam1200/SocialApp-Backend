@@ -11,12 +11,12 @@ import { IUserRepository } from '../../../../domain/repositories/iuser.repositor
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { mapToFacebookProfileModel } from '../../../../domain/mappers/facebook.mapper';
+import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
 import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { FacebookProfileModel, FacebookUserDataModel } from '../../../../domain/contracts/facebook.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
 
-const PLATFORM = 'facebook';
 const GRAPH_BASE = 'https://graph.facebook.com/v22.0';
 
 export class FacebookConnectQuery {
@@ -58,7 +58,7 @@ export class FacebookConnectQueryHandler implements ICommandHandler<FacebookConn
     const { model } = query;
 
     // expires in 15 minutes
-    const expiresIn = 15 * 60;
+    const expiresIn = Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       "",
@@ -87,20 +87,19 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
 
     const { model } = query;
     await facebookConnectCallbackValidations.validateAsync(model);
-    await this.validateState(model.state);
+    const dataProtectionKey = await this.validateState(model.state);
 
     const exchangeToken = await this.fetchShortLivedToken(model.code);
     const { access_token, expires_in } = await this.fetchLongLivedToken(exchangeToken);
 
     const userData = await this.fetchUserData(access_token);
-    const user = await this.userRepository.getUserByEmailAsync(userData.email)
-      ?? await this.userRepository.getUserByIdAsync(HttpContext.user[Globals.ClaimTypes.UserId]);
+    const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
 
     if (!user) {
       throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(_const.PLATFORMS.FACEBOOK, user.email);
     if (linkedAccount) {
       linkedAccount.userName = userData.username;
       linkedAccount.profileImage = userData.picture?.data?.url;
@@ -112,7 +111,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
-        platform: PLATFORM,
+        platform: _const.PLATFORMS.FACEBOOK,
         email: userData.email,
         userId: user.id,
         externalId: userData.id,
@@ -134,7 +133,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       await this.userLoginRepository.updateAsync(existingAccountLogin);
     } else {
       await this.userLoginRepository.createAysnc(
-        PLATFORM,
+        _const.PLATFORMS.FACEBOOK,
         user.id,
         "",
         "",
@@ -206,16 +205,17 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     }
   }
 
-  private async validateState(state: string): Promise<void> {
+  private async validateState(state: string): Promise<DataProtectionKey> {
     const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
     }
 
-    if (new Date(dataProtectionKey.createdOn.getTime() + dataProtectionKey.expiresIn * 1000) < new Date()) {
+    if (dataProtectionKey.expiresIn < Math.floor(Date.now() / 1000)) {
       throw new ApplicationException('State parameter has expired');
     }
 
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
+    return dataProtectionKey;
   }
 }

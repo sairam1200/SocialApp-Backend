@@ -11,12 +11,12 @@ import { HttpContext } from "../../../../core/middlewares/httpContext.middleware
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { mapToYoutubeProfileModel } from "../../../../domain/mappers/youtube.mapper";
+import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey.entity";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { GoogleUserDataModel, YoutubeChannelDataModel, YoutubeProfileModel } from "../../../../domain/contracts/youtube.model";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 
-const PLATFORM = 'spotify';
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
 
 export class YoutubeConnectQuery {
@@ -58,7 +58,7 @@ export class YoutubeConnectQueryHandler implements ICommandHandler<YoutubeConnec
     const { model } = command;
 
     // expires in 15 minutes
-    const expiresIn = 15 * 60;
+    const expiresIn = Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       "", // value is not used
@@ -97,12 +97,12 @@ export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<Youtu
       throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(_const.PLATFORMS.YOUTUBE, user.email);
     if (linkedAccount) {
       linkedAccount.userName = "";
       linkedAccount.profileImage = userData.profile.picture;
       linkedAccount.followersCount = Number.parseInt(userData.channel.items[0].statistics.subscriberCount),
-      linkedAccount.followingCount = 0; // TODO : retreive this 
+        linkedAccount.followingCount = 0; // TODO : retreive this 
       linkedAccount.metaData = {
         hd: userData.profile.hd,
         locale: userData.profile.locale,
@@ -119,7 +119,7 @@ export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<Youtu
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
-        platform: PLATFORM,
+        platform: _const.PLATFORMS.YOUTUBE,
         userId: user.id,
         email: userData.profile.email,
         externalId: userData.profile.sub,
@@ -143,7 +143,11 @@ export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<Youtu
       }));
     }
 
-    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(user.id, PLATFORM);
+    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(
+      user.id,
+      _const.PLATFORMS.YOUTUBE
+    );
+
     if (existingAccountLogin) {
       existingAccountLogin.tokenValue = refresh_token;
       existingAccountLogin.addedDateUtc = new Date();
@@ -151,7 +155,7 @@ export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<Youtu
       await this.userLoginRepository.updateAsync(existingAccountLogin);
     } else {
       existingAccountLogin = await this.userLoginRepository.createAysnc(
-        PLATFORM,
+        _const.PLATFORMS.YOUTUBE,
         user.id,
         "",
         "",
@@ -171,14 +175,12 @@ export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<Youtu
   private async fetchToken(code: string)
     : Promise<{ access_token: string; token_type: string; expires_in: number; refresh_token: string; }> {
     try {
-      const response = await axios.get(`https://oauth2.googleapis.com/token`, {
-        params: {
-          client_secret: configs.youtube.clientSecret,
-          redirect_uri: configs.youtube.callbackUrl,
-          client_id: configs.youtube.clientId,
-          grant_type: 'authorization_code',
-          code: code,
-        },
+      const response = await axios.post(`https://oauth2.googleapis.com/token`, {
+        client_secret: configs.youtube.clientSecret,
+        redirect_uri: configs.youtube.callbackUrl,
+        client_id: configs.youtube.clientId,
+        grant_type: 'authorization_code',
+        code: code,
       });
 
       return response.data;
@@ -217,16 +219,17 @@ export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<Youtu
     }
   }
 
-  private async validateState(state: string): Promise<void> {
+  private async validateState(state: string): Promise<DataProtectionKey> {
     const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
     }
 
-    if (new Date(dataProtectionKey.createdOn.getTime() + dataProtectionKey.expiresIn * 1000) < new Date()) {
+    if (dataProtectionKey.expiresIn < Math.floor(Date.now() / 1000)) {
       throw new ApplicationException('State parameter has expired');
     }
 
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
+    return dataProtectionKey;
   }
 }

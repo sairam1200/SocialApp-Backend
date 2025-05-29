@@ -79,7 +79,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
         await this.userRepository.updateAsync(user);
 
         const access_token = await this.tokenService.generateJwtAsync(user);
-        const refreshToken = await this.userLoginRepository.createAysnc(
+        const userToken = await this.userLoginRepository.createAysnc(
             "Gaddr",
             user.id,
             model.deviceId,
@@ -91,9 +91,9 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
 
         return new TokenResponseModel({
             access_token,
-            refresh_token: refreshToken.tokenValue,
+            refresh_token: userToken.tokenValue,
             succeeded: true,
-            refreshTokenExpiryTime: refreshToken.expiryDateUtc.toDateString(),
+            refreshTokenExpiryTime: userToken.expiryDateUtc.toDateString(),
         });
     }
 

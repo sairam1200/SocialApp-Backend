@@ -22,6 +22,7 @@ export class TokenService implements ITokenService {
         return this.generateEncryptedToken(claims);
     }
 
+
     public async getPrincipalFromToken(token: string): Promise<JwtPayload> {
         try {
             const payload: JwtPayload = this.jwtService.decode(token);
@@ -35,7 +36,7 @@ export class TokenService implements ITokenService {
         }
     }
 
-    private generateEncryptedToken(claims: any): string {
+    public generateEncryptedToken(claims: any): string {
         const token = this.jwtService.sign(claims, {
             secret: configs.jwt.secret,
             expiresIn: configs.jwt.accessTokenExpiration,

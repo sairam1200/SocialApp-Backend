@@ -21,6 +21,9 @@ export class UserLogin extends BaseEntity {
     @Column()
     deviceId?: string;
 
+    @Column({ default: false })
+    isValid: boolean;
+
     @Column({ type: 'timestamp', nullable: true })
     addedDateUtc?: Date;
 

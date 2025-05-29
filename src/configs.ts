@@ -117,6 +117,9 @@ const envVarsSchema = Joi.object()
             .description("Redis password"),
         REDIS_USERNAME: Joi.string()
             .description("Redis username"),
+        TOKEN_EXPIRATION_TIME: Joi.number()
+            .default(900000)
+            .description("Token expiration time"),
 
         LOG_PATH: Joi.string()
             .default('logs')
@@ -169,7 +172,6 @@ export default {
         clientId: envVars.YOUTUBE_CLIENT_ID,
         clientSecret: envVars.YOUTUBE_CLIENT_SECRET,
         callbackUrl: envVars.YOUTUBE_CALLBACK_URL,
-        apiKey: envVars.YOUTUBE_API_KEY,
     },
     facebook: {
         clientId: envVars.FACEBOOK_CLIENT_ID,
@@ -201,5 +203,8 @@ export default {
         port: envVars.REDIS_PORT,
         username: envVars.REDIS_USERNAME,
         password: envVars.REDIS_PASSWORD
-    }
+    },
+    Token: {
+        expirationTime: envVars.TOKEN_EXPIRATION_TIME
+    },
 }; 

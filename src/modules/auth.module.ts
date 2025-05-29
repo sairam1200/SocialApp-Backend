@@ -14,9 +14,12 @@ import { UserLogin } from '../domain/entities/userLogin.entity';
 import { LoginHandler } from '../features/auth/login/login.handler';
 import { LoginController } from '../features/auth/login/login.endpoint';
 import { RegisterHandler } from '../features/auth/register/register.handler';
+import { DataProtectionKey } from '../domain/entities/dataProtectionKey.entity';
 import { RegisterController } from '../features/auth/register/register.endpoint';
 import { RefreshTokenHandler } from '../features/auth/refresh-token/refresh-token.handler';
 import { RefreshTokenController } from '../features/auth/refresh-token/refresh-token.endpoint';
+import { ResetPasswordController } from '../features/auth/reset-password/reset-password.endpoint';
+import { ResetPasswordCommandHandler } from '../features/auth/reset-password/reset-password.handler';
 
 @Module({
   imports: [
@@ -28,21 +31,29 @@ import { RefreshTokenController } from '../features/auth/refresh-token/refresh-t
       User,
       Role,
       RoleClaim,
-      UserRole
+      UserRole,
+      DataProtectionKey,
     ])
   ],
   providers: [
     JwtService,
-    RegisterHandler,
     LoginHandler,
+    RegisterHandler,
     RefreshTokenHandler,
+    ResetPasswordCommandHandler,
     dependency.TokenService,
     dependency.UserRepository,
     dependency.RoleRepository,
     dependency.UserRoleRepository,
     dependency.UserLoginRepository,
+    dependency.DataProtectionKeyRepository,
   ],
-  controllers: [RegisterController, LoginController, RefreshTokenController],
+  controllers: [
+    LoginController,
+    RegisterController,
+    RefreshTokenController,
+    ResetPasswordController,
+  ],
   exports: [],
 })
 export class AuthModule { }
