@@ -8,7 +8,6 @@ import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/comm
 import { YoutubeConnectCallbackQuery, YoutubeConnectQuery } from "./youtube-connect.handler";
 
 @ApiTags('Integrations')
-@UseGuards(UserAccoutGuard)
 @Controller({
   path: `/integrations/youtube`,
   version: '1',
@@ -18,6 +17,7 @@ export class YoutubeConnectController {
   constructor(private readonly commandBus: CommandBus) { }
 
   @Get('connect')
+  @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 302, description: 'FOUND' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
@@ -37,6 +37,9 @@ export class YoutubeConnectController {
       redirect_uri: configs.youtube.callbackUrl,
       scope: scopes,
       state: state,
+      access_type: 'offline',
+      include_granted_scopes: 'true',
+      prompt: 'consent',
     });
     const authorizeURL = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 

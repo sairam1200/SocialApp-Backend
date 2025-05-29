@@ -8,7 +8,6 @@ import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/comm
 import { SpotifyConnectCallbackQuery, SpotifyConnectQuery } from "./spotify-connect.handler";
 
 @ApiTags('Integrations')
-@UseGuards(UserAccoutGuard)
 @Controller({
   path: `/integrations/spotify`,
   version: '1',
@@ -18,6 +17,7 @@ export class SpotifyConnectController {
   constructor(private readonly commandBus: CommandBus) { }
 
   @Get('connect')
+  @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 302, description: 'FOUND' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
