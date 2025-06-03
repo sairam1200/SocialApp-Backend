@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import _const from '../core/utils/const';
 import { CqrsModule } from '@nestjs/cqrs';
+import { EmailModule } from './email.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../domain/entities/user.entity';
 import { Role } from '../domain/entities/role.entity';
@@ -13,6 +14,7 @@ import { RoleClaim } from '../domain/entities/roleClaim.entity';
 import { UserLogin } from '../domain/entities/userLogin.entity';
 import { LoginHandler } from '../features/auth/login/login.handler';
 import { LoginController } from '../features/auth/login/login.endpoint';
+import { LinkedAccount } from '../domain/entities/linkedAccount.entity';
 import { RegisterHandler } from '../features/auth/register/register.handler';
 import { DataProtectionKey } from '../domain/entities/dataProtectionKey.entity';
 import { RegisterController } from '../features/auth/register/register.endpoint';
@@ -20,16 +22,13 @@ import { RefreshTokenHandler } from '../features/auth/refresh-token/refresh-toke
 import { RefreshTokenController } from '../features/auth/refresh-token/refresh-token.endpoint';
 import { ResetPasswordController } from '../features/auth/reset-password/reset-password.endpoint';
 import { ResetPasswordCommandHandler } from '../features/auth/reset-password/reset-password.handler';
-import {
-  GoogleConnectQueryHandler,
-  GoogleConnectCallbackQueryHandler,
-} from '../features/auth/external/google-auth/google-auth.handler';
 import { GoogleAuthenticationController } from '../features/auth/external/google-auth/google-auth.endpoint';
-import { LinkedAccount } from '../domain/entities/linkedAccount.entity';
+import { GoogleConnectQueryHandler, GoogleConnectCallbackQueryHandler } from '../features/auth/external/google-auth/google-auth.handler';
 
 @Module({
   imports: [
     CqrsModule,
+    EmailModule,
     AuthGuardsModule,
     NotificationModule,
     TypeOrmModule.forFeature([
@@ -67,4 +66,4 @@ import { LinkedAccount } from '../domain/entities/linkedAccount.entity';
   ],
   exports: [],
 })
-export class AuthModule {}
+export class AuthModule { }
