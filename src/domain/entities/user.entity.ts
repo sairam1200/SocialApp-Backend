@@ -60,6 +60,9 @@ export class User extends BaseEntity {
     })
     type: UserType;
 
+    @Column({ nullable: true })
+    profileImage?: string;
+
     constructor(request: Partial<User> = {}) {
         super();
         Object.assign(this, request);
