@@ -36,6 +36,15 @@ import { TwiiterConnectQueryHandler, TwitterConnectCallbackQueryHandler } from "
 import { YoutubeConnectCallbackQueryHandler, YoutubeConnectQueryHandler } from "../features/integrations/youtube/connect/youtube-connect.handler";
 import { PinterestConnectCallbackQueryHandler, PinterestConnectQueryHandler } from "../features/integrations/pinterest/connect/pinterest-connect.handler";
 import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } from "../features/integrations/instagram/connect/instagram-connect.handler";
+import { InstagramImportCommandHandler } from "features/integrations/instagram/import/instagram-import.handler";
+import { RedditConnectController } from "../features/integrations/reddit/connect/reddit-connect.endpoint";
+import { RedditProfileController } from "../features/integrations/reddit/get-profile/get-profile.endpoint";
+import { RedditImportController } from "../features/integrations/reddit/import/reddit-import.endpoint";
+
+import { RedditConnectQueryHandler } from "../features/integrations/reddit/connect/reddit-connect.handler";
+import { RedditProfileQueryHandler } from "../features/integrations/reddit/get-profile/get-profile.handler";
+import { RedditImportCommandHandler } from "../features/integrations/reddit/import/reddit-import.handler";
+
 
 @Module({
   imports: [
@@ -69,6 +78,10 @@ import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } fr
 
     YoutubeConnectController,
     YoutubeImportController,
+
+    RedditConnectController,
+    RedditProfileController,
+    RedditImportController,
   ],
   providers: [
     ImportGateway,
@@ -96,6 +109,10 @@ import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } fr
     YoutubeConnectCallbackQueryHandler,
     YoutubeConnectQueryHandler,
     YoutubeImportCommandHandler,
+
+    RedditConnectQueryHandler,
+    RedditProfileQueryHandler,
+    RedditImportCommandHandler,
 
     dependency.RoleRepository,
     dependency.UserRepository,

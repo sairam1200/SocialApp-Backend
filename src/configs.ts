@@ -117,6 +117,15 @@ const envVarsSchema = Joi.object()
             .description("Redis password"),
         REDIS_USERNAME: Joi.string()
             .description("Redis username"),
+        REDDIT_CLIENT_ID: Joi.string()
+            .description('Reddit client ID'),
+        REDDIT_CLIENT_SECRET: Joi.string()
+            .description('Reddit client secret'),
+        REDDIT_CALLBACK_URL: Joi.string()
+            .description('Reddit callback URL'),
+        TOKEN_EXPIRATION_TIME: Joi.number()
+            .default(900000)
+            .description("Token expiration time"),
 
         LOG_PATH: Joi.string()
             .default('logs')
@@ -201,5 +210,14 @@ export default {
         port: envVars.REDIS_PORT,
         username: envVars.REDIS_USERNAME,
         password: envVars.REDIS_PASSWORD
-    }
+    },
+    reddit: {
+        clientId: envVars.REDDIT_CLIENT_ID,
+        clientSecret: envVars.REDDIT_CLIENT_SECRET,
+        redirectUri: envVars.REDDIT_CALLBACK_URL,
+    },
+
+    Token: {
+        expirationTime: envVars.TOKEN_EXPIRATION_TIME
+    },
 }; 
