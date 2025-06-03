@@ -7,7 +7,6 @@ import { HttpContext } from "../../../../core/middlewares/httpContext.middleware
 import { mapToYoutubeProfileModel } from "../../../../domain/mappers/youtube.mapper";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 
-const PLATFORM = 'youtube';
 export class YoutubeProfileQuery {
   model: {
     userId?: string;
@@ -32,9 +31,9 @@ export class YoutubeProfileQueryHandler implements ICommandHandler<YoutubeProfil
 
     const { model } = query;
 
-    const account = model.userId ? await this.linkedAccountRepository.getByPlatformAndUserIdAsync(PLATFORM, model.userId)
-      : model.userName ? await this.linkedAccountRepository.getByPlatformAndUserNameAsync(PLATFORM, model.userName)
-        : await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(PLATFORM, model.youtubeId);
+    const account = model.userId ? await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.YOUTUBE, model.userId)
+      : model.userName ? await this.linkedAccountRepository.getByPlatformAndUserNameAsync(_const.PLATFORMS.YOUTUBE, model.userName)
+        : await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(_const.PLATFORMS.YOUTUBE, model.youtubeId);
 
     if (!account) {
       throw new NotFoundException("No matching Youtube profile was found based on the provided information.");
