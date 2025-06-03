@@ -1,5 +1,5 @@
 export interface GoogleUserDataModel {
-  sub: string;
+  id: string;
   name: string;
   given_name: string;
   family_name: string;
@@ -66,5 +66,5 @@ export interface YoutubeProfileModel {
     desciption: string;
     videoCount: number;
     thumbthumbnail: string;
-  }
+  };
 }

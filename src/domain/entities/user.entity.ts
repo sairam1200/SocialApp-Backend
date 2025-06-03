@@ -47,12 +47,21 @@ export class User extends BaseEntity {
     @Column({ default: 0 })
     accessFailedCount: number;
 
+    @Column({ nullable: true })
+    concurrencyStamp?: string;
+
+    @Column({ nullable: true })
+    securityStamp?: string;
+
     @Column({
         type: 'enum',
         enum: UserType,
         default: UserType.User,
     })
     type: UserType;
+
+    @Column({ nullable: true })
+    profileImage?: string;
 
     constructor(request: Partial<User> = {}) {
         super();

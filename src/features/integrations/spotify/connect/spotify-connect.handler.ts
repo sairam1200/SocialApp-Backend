@@ -7,16 +7,16 @@ import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
-import { mapToSpotifyProfileModel } from "../../../../domain/mappers/spotify.mapper";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
+import { mapToSpotifyProfileModel } from "../../../../domain/mappers/spotify.mapper";
 import ApplicationException from "../../../../core/exceptions/application.exception";
+import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey.entity";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { SpotifyProfileModel, SpotifyUserDataModel } from "../../../../domain/contracts/spotify.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 
-const PLATFORM = 'spotify';
 const BASE_URL = 'https://api.spotify.com/v1';
 
 export class SpotifyConnectQuery {
@@ -58,7 +58,7 @@ export class SpotifyConnectQueryHandler implements ICommandHandler<SpotifyConnec
     const { model } = command;
 
     // expires in 15 minutes
-    const expiresIn = 15 * 60;
+    const expiresIn = Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       "", // value is not used
@@ -97,7 +97,11 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
       throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(
+      _const.PLATFORMS.SPOTIFY,
+      user.email
+    );
+
     if (linkedAccount) {
       linkedAccount.userName = userData.data.display_name;
       linkedAccount.profileImage = userData.data.images[0]?.url;
@@ -116,7 +120,7 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
-        platform: PLATFORM,
+        platform: _const.PLATFORMS.SPOTIFY,
         userId: user.id,
         email: userData.data.email,
         externalId: userData.data.id,
@@ -137,7 +141,11 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
       }));
     }
 
-    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(user.id, PLATFORM);
+    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(
+      user.id,
+      _const.PLATFORMS.SPOTIFY
+    );
+
     if (existingAccountLogin) {
       existingAccountLogin.tokenValue = refresh_token;
       existingAccountLogin.addedDateUtc = new Date();
@@ -145,7 +153,7 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
       await this.userLoginRepository.updateAsync(existingAccountLogin);
     } else {
       existingAccountLogin = await this.userLoginRepository.createAysnc(
-        PLATFORM,
+        _const.PLATFORMS.SPOTIFY,
         user.id,
         "",
         "",
@@ -202,16 +210,17 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
     }
   }
 
-  private async validateState(state: string): Promise<void> {
+  private async validateState(state: string): Promise<DataProtectionKey> {
     const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
     }
 
-    if (new Date(dataProtectionKey.createdOn.getTime() + dataProtectionKey.expiresIn * 1000) < new Date()) {
+    if (dataProtectionKey.expiresIn < Math.floor(Date.now() / 1000)) {
       throw new ApplicationException('State parameter has expired');
     }
 
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
+    return dataProtectionKey;
   }
 }

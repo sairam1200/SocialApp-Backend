@@ -59,8 +59,7 @@ export class TwiiterConnectQueryHandler implements ICommandHandler<TwitterConnec
 
     const { model } = query;
 
-    // expires in 15 minutes
-    const expiresIn = 15 * 60;
+    const expiresIn = Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       model.codeVerifier,
@@ -231,7 +230,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
       throw new ApplicationException('Invalid state parameter');
     }
 
-    if (new Date(dataProtectionKey.createdOn.getTime() + dataProtectionKey.expiresIn * 1000) < new Date()) {
+    if (dataProtectionKey.expiresIn < Math.floor(Date.now() / 1000)) {
       throw new ApplicationException('State parameter has expired');
     }
 

@@ -33,10 +33,12 @@ export class DataProtectionKeyRepository implements IDataProtectionKeyRepository
   }
 
   public async createAsync(key: string, value: string, userId: string, expiresIn = 604800): Promise<DataProtectionKey> {
-    const newKey = new DataProtectionKey();
-    newKey.key = key;
-    newKey.value = value;
-    newKey.userId = userId;
+    const newKey = new DataProtectionKey({
+      key,
+      value,
+      expiresIn,
+      userId
+    });
 
     if (HttpContext.user) {
       const userId = HttpContext.user[Globals.ClaimTypes.UserId];

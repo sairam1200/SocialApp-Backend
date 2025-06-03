@@ -12,7 +12,6 @@ import configs from "../../../configs";
 import { Server, Socket } from 'socket.io';
 import { Globals } from "../../../core/globals";
 import logger from "../../../core/utils/winston.util";
-import { UserContent } from '../../../domain/entities/userContent.entity';
 
 @Injectable()
 @WebSocketGateway({ namespace: '/imports' })
@@ -50,7 +49,7 @@ export class ImportGateway implements OnGatewayConnection{
     }
   }
 
-  emitNewImportContent(userId: string, platform: string, payload: UserContent) {
+  emitNewImportContent(userId: string, platform: string, payload: any) {
     this.server.to(userId).emit('new-content', { platform, ...payload });
   }
 }

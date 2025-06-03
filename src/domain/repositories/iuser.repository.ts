@@ -15,6 +15,9 @@ export interface IUserRepository {
   isInRoleAsync(user: User, roleName: string): Promise<UserRole | null>;
   addToRoleAsync(user: User, roleName: string): Promise<UserRole | null>;
 
+  updatePassword(user: User, newPassword: string): Promise<boolean>;
+  changePasswordAsync(user: User, currentPassword: string, newPassword: string): Promise<boolean>;
+
   getEntries(
     page: number,
     pageSize: number,

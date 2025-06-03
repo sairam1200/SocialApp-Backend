@@ -27,5 +27,5 @@ export interface IUserLoginRepository {
     ): Promise<UserLogin[]>;
 
     GenerateToken(): string;
-    updateAsync(refreshToken: UserLogin): Promise<void>;
+    updateAsync(userLogin: UserLogin): Promise<void>;
 }

@@ -43,6 +43,7 @@ export class QueuesModule implements NestModule {
       },
       {
         name: _const.BULL_QUEUES.TWITTER_IMPORT,
+
       },
       {
         name: _const.BULL_QUEUES.REDDIT_IMPORT,

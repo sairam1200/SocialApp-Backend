@@ -9,6 +9,7 @@ import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { ITokenService } from "../../../domain/services/itoken.service";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 import { IUserLoginRepository } from "../../../domain/repositories/irefreshtoken.repository";
+import configs from "../../../configs";
 
 export class TokenRequestModel {
     @ApiProperty()
@@ -78,8 +79,8 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
         await this.userRepository.updateAsync(user);
 
         const access_token = await this.tokenService.generateJwtAsync(user);
-        const refreshToken = await this.userLoginRepository.createAysnc(
-            access_token,
+        const userToken = await this.userLoginRepository.createAysnc(
+            "Gaddr",
             user.id,
             model.deviceId,
             model.userAgent,
@@ -90,9 +91,9 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
 
         return new TokenResponseModel({
             access_token,
-            refresh_token: refreshToken.tokenValue,
+            refresh_token: userToken.tokenValue,
             succeeded: true,
-            refreshTokenExpiryTime: refreshToken.expiryDateUtc.toDateString(),
+            refreshTokenExpiryTime: userToken.expiryDateUtc.toDateString(),
         });
     }
 
