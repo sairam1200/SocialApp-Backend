@@ -120,6 +120,8 @@ const envVarsSchema = Joi.object()
         TOKEN_EXPIRATION_TIME: Joi.number()
             .default(900000)
             .description("Token expiration time"),
+        GOOGLE_REDIRECT_URI: Joi.string()
+            .description("Google redirect uri"),
 
         LOG_PATH: Joi.string()
             .default('logs')
@@ -172,6 +174,9 @@ export default {
         clientId: envVars.YOUTUBE_CLIENT_ID,
         clientSecret: envVars.YOUTUBE_CLIENT_SECRET,
         callbackUrl: envVars.YOUTUBE_CALLBACK_URL,
+    },
+    google: {
+        callbackUrl: envVars.GOOGLE_CALLBACK_URL,
     },
     facebook: {
         clientId: envVars.FACEBOOK_CLIENT_ID,
