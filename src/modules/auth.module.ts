@@ -20,6 +20,12 @@ import { RefreshTokenHandler } from '../features/auth/refresh-token/refresh-toke
 import { RefreshTokenController } from '../features/auth/refresh-token/refresh-token.endpoint';
 import { ResetPasswordController } from '../features/auth/reset-password/reset-password.endpoint';
 import { ResetPasswordCommandHandler } from '../features/auth/reset-password/reset-password.handler';
+import {
+  GoogleConnectQueryHandler,
+  GoogleConnectCallbackQueryHandler,
+} from '../features/auth/external/google-auth/google-auth.handler';
+import { GoogleAuthenticationController } from '../features/auth/external/google-auth/google-auth.endpoint';
+import { LinkedAccount } from '../domain/entities/linkedAccount.entity';
 
 @Module({
   imports: [
@@ -33,7 +39,8 @@ import { ResetPasswordCommandHandler } from '../features/auth/reset-password/res
       RoleClaim,
       UserRole,
       DataProtectionKey,
-    ])
+      LinkedAccount,
+    ]),
   ],
   providers: [
     JwtService,
@@ -41,19 +48,23 @@ import { ResetPasswordCommandHandler } from '../features/auth/reset-password/res
     RegisterHandler,
     RefreshTokenHandler,
     ResetPasswordCommandHandler,
+    GoogleConnectQueryHandler,
     dependency.TokenService,
     dependency.UserRepository,
     dependency.RoleRepository,
     dependency.UserRoleRepository,
     dependency.UserLoginRepository,
+    GoogleConnectCallbackQueryHandler,
     dependency.DataProtectionKeyRepository,
+    dependency.LinkedAccountRepository,
   ],
   controllers: [
     LoginController,
     RegisterController,
+    GoogleAuthenticationController,
     RefreshTokenController,
     ResetPasswordController,
   ],
   exports: [],
 })
-export class AuthModule { }
+export class AuthModule {}
