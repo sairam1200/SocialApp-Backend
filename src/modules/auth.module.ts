@@ -14,9 +14,18 @@ import { UserLogin } from '../domain/entities/userLogin.entity';
 import { LoginHandler } from '../features/auth/login/login.handler';
 import { LoginController } from '../features/auth/login/login.endpoint';
 import { RegisterHandler } from '../features/auth/register/register.handler';
+import { DataProtectionKey } from '../domain/entities/dataProtectionKey.entity';
 import { RegisterController } from '../features/auth/register/register.endpoint';
 import { RefreshTokenHandler } from '../features/auth/refresh-token/refresh-token.handler';
 import { RefreshTokenController } from '../features/auth/refresh-token/refresh-token.endpoint';
+import { ResetPasswordController } from '../features/auth/reset-password/reset-password.endpoint';
+import { ResetPasswordCommandHandler } from '../features/auth/reset-password/reset-password.handler';
+import {
+  GoogleConnectQueryHandler,
+  GoogleConnectCallbackQueryHandler,
+} from '../features/auth/external/google-auth/google-auth.handler';
+import { GoogleAuthenticationController } from '../features/auth/external/google-auth/google-auth.endpoint';
+import { LinkedAccount } from '../domain/entities/linkedAccount.entity';
 
 @Module({
   imports: [
@@ -28,21 +37,34 @@ import { RefreshTokenController } from '../features/auth/refresh-token/refresh-t
       User,
       Role,
       RoleClaim,
-      UserRole
-    ])
+      UserRole,
+      DataProtectionKey,
+      LinkedAccount,
+    ]),
   ],
   providers: [
     JwtService,
-    RegisterHandler,
     LoginHandler,
+    RegisterHandler,
     RefreshTokenHandler,
+    ResetPasswordCommandHandler,
+    GoogleConnectQueryHandler,
     dependency.TokenService,
     dependency.UserRepository,
     dependency.RoleRepository,
     dependency.UserRoleRepository,
     dependency.UserLoginRepository,
+    GoogleConnectCallbackQueryHandler,
+    dependency.DataProtectionKeyRepository,
+    dependency.LinkedAccountRepository,
   ],
-  controllers: [RegisterController, LoginController, RefreshTokenController],
+  controllers: [
+    LoginController,
+    RegisterController,
+    GoogleAuthenticationController,
+    RefreshTokenController,
+    ResetPasswordController,
+  ],
   exports: [],
 })
-export class AuthModule { }
+export class AuthModule {}

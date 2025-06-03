@@ -117,15 +117,20 @@ const envVarsSchema = Joi.object()
             .description("Redis password"),
         REDIS_USERNAME: Joi.string()
             .description("Redis username"),
+
         REDDIT_CLIENT_ID: Joi.string()
             .description('Reddit client ID'),
         REDDIT_CLIENT_SECRET: Joi.string()
             .description('Reddit client secret'),
         REDDIT_CALLBACK_URL: Joi.string()
             .description('Reddit callback URL'),
+
         TOKEN_EXPIRATION_TIME: Joi.number()
             .default(900000)
             .description("Token expiration time"),
+        GOOGLE_REDIRECT_URI: Joi.string()
+            .description("Google redirect uri"),
+
 
         LOG_PATH: Joi.string()
             .default('logs')
@@ -178,7 +183,9 @@ export default {
         clientId: envVars.YOUTUBE_CLIENT_ID,
         clientSecret: envVars.YOUTUBE_CLIENT_SECRET,
         callbackUrl: envVars.YOUTUBE_CALLBACK_URL,
-        apiKey: envVars.YOUTUBE_API_KEY,
+    },
+    google: {
+        callbackUrl: envVars.GOOGLE_CALLBACK_URL,
     },
     facebook: {
         clientId: envVars.FACEBOOK_CLIENT_ID,
@@ -211,6 +218,7 @@ export default {
         username: envVars.REDIS_USERNAME,
         password: envVars.REDIS_PASSWORD
     },
+
     reddit: {
         clientId: envVars.REDDIT_CLIENT_ID,
         clientSecret: envVars.REDDIT_CLIENT_SECRET,

@@ -1,8 +1,8 @@
- import {
-     BadRequestException,
-     ConflictException,
-       NotFoundException,
- } from '@nestjs/common';
+import {
+    BadRequestException,
+    ConflictException,
+    NotFoundException,
+} from '@nestjs/common';
 
 export class UserAlreadyExistsException extends ConflictException {
     constructor(email: string, id: string = '') {
@@ -25,10 +25,10 @@ export class UserAlreadyInRoleException extends ConflictException {
 }
 
 export class UserNotFoundException extends NotFoundException {
-    constructor(email: string, id: string = '') {
+    constructor(email?: string, id: string = '') {
         const message = email
-            ? `No user found with the email "${email}".`
-            : `No user found with the ID "${id}".`;
+            ? `No user found with the email "${email}".` :
+            id ? `No user found with the ID "${id}".` : "No user found";
         super(message);
         this.name = 'UserNotFoundException';
     }

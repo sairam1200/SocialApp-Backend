@@ -60,9 +60,11 @@ export class PinterestImportCommandHandler implements ICommandHandler<PinterestI
           refresh_token_expires_in
         } = await this.refreshTokenAsync(userLogin.tokenValue);
 
-        userLogin.tokenValue = refresh_token;
-        userLogin.expiryDateUtc = new Date(Date.now() + refresh_token_expires_in * 1000);
-        this.userLoginRepository.updateAsync(userLogin);
+        if (refresh_token) {
+          userLogin.tokenValue = refresh_token;
+          userLogin.expiryDateUtc = new Date(Date.now() + refresh_token_expires_in * 1000);
+          this.userLoginRepository.updateAsync(userLogin);
+        }
 
         accessToken = access_token;
         expiresIn = expires_in;

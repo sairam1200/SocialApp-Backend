@@ -1,15 +1,13 @@
 import { Response } from "express";
-import querystring from 'querystring';
 import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { stringUtil } from "../../../../core/utils/string.util";
-import { PermissionsGuard } from "../../../../core/passport/permissions.guard";
+import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 import { InstagramConnectCallbackQuery, InstagramConnectQuery } from "./instagram-connect.handler";
 
 @ApiTags('Integrations')
-// @UseGuards(PermissionsGuard)
 @Controller({
   path: `/integrations/instagram`,
   version: '1',
@@ -19,11 +17,12 @@ export class InstagramConnectController {
   constructor(private readonly commandBus: CommandBus) { }
 
   @Get('connect')
+  @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 302, description: 'FOUND' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-  public async Connect(@Res() res: Response): Promise<void> {
+  public async Connect(@Res() res: Response): Promise<Response | void> {
 
     const scopes = [
       'user_profile',
@@ -31,17 +30,18 @@ export class InstagramConnectController {
     ].join(',');
 
     const state = stringUtil.generateRandomString(16);
-    const authorizeURL = `https://api.instagram.com/oauth/authorize?` + querystring.stringify({
+    const params = new URLSearchParams({
       response_type: 'code',
       client_id: configs.Instagram.clientId,
       redirect_uri: configs.Instagram.redirectUri,
       scope: scopes,
       state: state,
-      show_dialog: true, // Always show the login page
+      show_dialog: 'true', // Always show the login page
     });
+    const authorizeURL = `https://api.instagram.com/oauth/authorize?${params.toString()}`;
 
     await this.commandBus.execute(new InstagramConnectQuery({ model: { state } }));
-    res.status(HttpStatus.FOUND).redirect(authorizeURL);
+    return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
   }
 
   @Get('connect-callback')
@@ -53,22 +53,8 @@ export class InstagramConnectController {
     @Query('code') code: string,
     @Query('state') state: string,
     @Res() res: Response): Promise<Response | void> {
-    if (!code) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid request' });
-    }
 
     const result = await this.commandBus.execute(new InstagramConnectCallbackQuery({ model: { code, state } }));
-    res.cookie('instagram_auth', {
-      accessToken: result.accessToken,
-      expiresIn: result.expiresIn,
-    },
-      {
-        maxAge: 0,
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-      });
-    return res.status(HttpStatus.OK).json(result.profile);
+    return res.status(HttpStatus.OK).json(result);
   }
-
 }

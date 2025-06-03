@@ -1,6 +1,6 @@
 import { Injectable, NestMiddleware } from "@nestjs/common";
-import logger from "core/utils/winston.util";
 import { NextFunction, Request, Response } from "express";
+import logger from "../utils/winston.util";
 
 @Injectable()
 export class BullBoardAuthMiddleware implements NestMiddleware {

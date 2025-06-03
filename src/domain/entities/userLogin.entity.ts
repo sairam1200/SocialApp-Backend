@@ -21,8 +21,11 @@ export class UserLogin extends BaseEntity {
     @Column()
     deviceId?: string;
 
-    @Column({ type: 'timestamp' })
-    addedDateUtc: Date;
+    @Column({ default: false })
+    isValid: boolean;
+
+    @Column({ type: 'timestamp', nullable: true })
+    addedDateUtc?: Date;
 
     @Column({ type: 'timestamp' })
     expiryDateUtc: Date;
