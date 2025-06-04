@@ -36,7 +36,7 @@ export class RedditImportCommandHandler implements ICommandHandler<RedditImportC
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    @InjectQueue(_const.BULL_QUEUES.PINTEREST_IMPORT) // ✅ Replace with a new Reddit queue in const.ts
+    @InjectQueue(_const.BULL_QUEUES.PINTEREST_IMPORT)
     private readonly importQueue: Queue
   ) {}
 
@@ -44,14 +44,12 @@ export class RedditImportCommandHandler implements ICommandHandler<RedditImportC
     const { redditAccessToken } = command.model;
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
 
-    // Example logic for validation or future token refresh handling
     if (!redditAccessToken) {
       throw new UnauthorizedException("Reddit access token is required.");
     }
 
     logger.info(`Starting Reddit import for user ${userId}`);
 
-    // Add Reddit import job to queue (replace with actual logic as needed)
     await this.importQueue.add("reddit-import-job", {
       userId,
       accessToken: redditAccessToken
@@ -59,7 +57,7 @@ export class RedditImportCommandHandler implements ICommandHandler<RedditImportC
 
     return {
       accessToken: redditAccessToken,
-      expiresIn: 3600 // Example, replace with actual token expiration if applicable
+      expiresIn: 3600
     };
   }
 }
