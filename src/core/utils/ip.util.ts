@@ -1,6 +1,6 @@
 import * as geoip from 'geoip-lite';
 
-export interface GeoLocationDetails {
+interface GeoLocationDetails {
     country: string | null;
     region: string | null;
     city: string | null;
@@ -10,7 +10,7 @@ export interface GeoLocationDetails {
     ipAddress: string;
 }
 
-export function hasIpChanged(sourceIp: string, targetIp: string): boolean {
+function hasIpChanged(sourceIp: string, targetIp: string): boolean {
     const sourceGeoInfo = geoip.lookup(sourceIp);
     const targetGeoInfo = geoip.lookup(targetIp);
 
@@ -24,7 +24,7 @@ export function hasIpChanged(sourceIp: string, targetIp: string): boolean {
     // return isInDifferentCountry || isInDifferentCity;
 }
 
-export function getGeolocationDetails(ipAddress: string): GeoLocationDetails | null {
+function getGeolocationDetails(ipAddress: string): GeoLocationDetails | null {
     const geoData = geoip.lookup(ipAddress);
 
     if (geoData) {
@@ -42,3 +42,7 @@ export function getGeolocationDetails(ipAddress: string): GeoLocationDetails | n
     return null;
 }
 
+export default {
+    hasIpChanged,
+    getGeolocationDetails
+}

@@ -34,6 +34,7 @@ import { InstagramProfileController } from "../features/integrations/instagram/g
 import { InstagramProfileQueryHandler } from "../features/integrations/instagram/get-profile/get-profile.handler";
 import { PinterestConnectController } from "../features/integrations/pinterest/connect/pinterest-connect.endpoint";
 import { PinterestImportCommandHandler } from "../features/integrations/pinterest/import/pinterest-import.handler";
+import { InstagramImportCommandHandler } from "../features/integrations/instagram/import/instagram-import.handler";
 import { InstagramConnectController } from "../features/integrations/instagram/connect/instagram-connect.endpoint";
 import { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "../features/integrations/facebook/connect/facebook-connect.handler";
 import { SpotifyConnectCallbackQueryHandler, SpotifyConnectQueryHandler } from "../features/integrations/spotify/connect/spotify-connect.handler";
@@ -41,7 +42,6 @@ import { TwiiterConnectQueryHandler, TwitterConnectCallbackQueryHandler } from "
 import { YoutubeConnectCallbackQueryHandler, YoutubeConnectQueryHandler } from "../features/integrations/youtube/connect/youtube-connect.handler";
 import { PinterestConnectCallbackQueryHandler, PinterestConnectQueryHandler } from "../features/integrations/pinterest/connect/pinterest-connect.handler";
 import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } from "../features/integrations/instagram/connect/instagram-connect.handler";
-import { InstagramImportCommandHandler } from "features/integrations/instagram/import/instagram-import.handler";
 
 import { RedditConnectController } from "../features/integrations/reddit/connect/reddit-connect.endpoint";
 import { RedditProfileController } from "../features/integrations/reddit/get-profile/get-profile.endpoint";

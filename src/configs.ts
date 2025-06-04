@@ -12,129 +12,138 @@ dotenv.config({ override: true })
 const envVarsSchema = Joi.object()
     .keys({
         NODE_ENV: Joi.string()
-            .required(),
-        PROJECT_NAME: Joi.string(),
-        PORT: Joi.number().default(3000),
+            .required()
+            .description('Node environment (development, production, etc.)'),
+        PROJECT_NAME: Joi.string()
+            .description('Project name'),
+        PORT: Joi.number().default(3000)
+            .description('Application port'),
         ENCRYPTION_KEY: Joi.string()
             .default('this is my custom Secret key for encryption')
-            .description('Encryption key'),
+            .description('Encryption key for data encryption'),
         ENCRYPTION_ALGORITHM: Joi.string()
             .default('aes-256-cbc')
-            .description('Encryption algorithm'),
+            .description('Algorithm used for encryption'),
         ENCRYPTION_IV: Joi.string()
             .default('this is my custom IV for encryption')
-            .description('Encryption IV'),
+            .description('Initialization vector for encryption'),
         JWT_SECRET: Joi.string()
             .default('this is my custom Secret key for authentication')
             .required()
-            .description('JWT secret key'),
+            .description('Secret key for signing JWT tokens'),
         JWT_AUDIENCE: Joi.string()
             .default('https://localhost:80')
             .required()
-            .description('JWT Audience'),
+            .description('Audience claim for JWT tokens'),
         JWT_ISSUER: Joi.string()
             .default('https://localhost:80')
             .required()
-            .description('JWT Issuer'),
+            .description('Issuer claim for JWT tokens'),
         JWT_ACCESS_EXPIRATION_MINUTES: Joi.string()
             .default('1m')
-            .description('minutes after which access tokens expire'),
+            .description('Access token expiration time (e.g., 1m, 10m)'),
         JWT_REFRESH_EXPIRATION_HOURS: Joi.string()
             .default('1h')
-            .description('hours after which refresh tokens expire'),
+            .description('Refresh token expiration time (e.g., 1h, 24h)'),
         POSTGRES_HOST: Joi.string()
             .default('localhost')
-            .description('Postgres host'),
+            .description('PostgreSQL database host'),
         POSTGRES_PORT: Joi.number()
             .default(5432)
-            .description('Postgres host'),
+            .description('PostgreSQL database port'),
         POSTGRES_USERNAME: Joi.string()
             .default('postgres')
-            .description('Postgres username'),
+            .description('PostgreSQL username'),
         POSTGRES_PASSWORD: Joi.string()
             .default('postgres')
-            .description('Postgres password'),
+            .description('PostgreSQL password'),
         POSTGRES_DATABASE: Joi.string()
             .default('default_database')
-            .description('Postgres database name'),
+            .description('PostgreSQL database name'),
         POSTGRES_SYNCHRONIZE: Joi.boolean()
             .default(false)
-            .description('Synchronize if true it dosent use migrations'),
+            .description('If true, synchronize schema without migrations'),
         POSTGRES_AUTO_LOAD_ENTITIES: Joi.boolean()
             .default(true)
-            .description('For loading all entities automatically'),
-        POSTGRES_ENTITIES: Joi.string().description('Postgres entities'),
-        POSTGRES_MIGRATIONS: Joi.string().description('Postgres migrations'),
+            .description('Automatically load all entities'),
+        POSTGRES_ENTITIES: Joi.string()
+            .description('Path to PostgreSQL entities'),
+        POSTGRES_MIGRATIONS: Joi.string()
+            .description('Path to PostgreSQL migrations'),
         POSTGRES_LOGGING: Joi.boolean()
             .default(false)
-            .description('Postgres logging'),
+            .description('Enable PostgreSQL query logging'),
         POSTGRES_MIGRATIONS_RUN: Joi.boolean()
             .default(true)
-            .description('Run migrations after running project'),
+            .description('Run migrations on application start'),
         FACEBOOK_CLIENT_ID: Joi.string()
-            .description('Facebook client id'),
+            .description('Facebook OAuth client ID'),
         FACEBOOK_CLIENT_SECRET: Joi.string()
-            .description('Facebook client secret'),
+            .description('Facebook OAuth client secret'),
         FACEBOOK_CALLBACK_URL: Joi.string()
-            .description('Facebook callback url'),
+            .description('Facebook OAuth callback URL'),
         INSTAGRAM_CLIENT_ID: Joi.string()
-            .description('Instagram client id'),
+            .description('Instagram OAuth client ID'),
         INSTAGRAM_CLIENT_SECRET: Joi.string()
-            .description('Instagram client secret'),
+            .description('Instagram OAuth client secret'),
         INSTAGRAM_CALLBACK_URL: Joi.string()
-            .description('Instagram callback url'),
+            .description('Instagram OAuth callback URL'),
         PINTEREST_CLIENT_ID: Joi.string()
-            .description('Pinterest client id'),
+            .description('Pinterest OAuth client ID'),
         PINTEREST_CLIENT_SECRET: Joi.string()
-            .description("Pinterest client secret"),
+            .description('Pinterest OAuth client secret'),
         PINTEREST_CALLBACK_URL: Joi.string()
-            .description('Pinterest callback url'),
+            .description('Pinterest OAuth callback URL'),
         TWITTER_CLIENT_ID: Joi.string()
-            .description('Twitter client id'),
+            .description('Twitter OAuth client ID'),
         TWITTER_CLIENT_SECRET: Joi.string()
-            .description('Twitter client secret'),
+            .description('Twitter OAuth client secret'),
         TWITTER_CALLBACK_URL: Joi.string()
-            .description('Twitter callback url'),
+            .description('Twitter OAuth callback URL'),
         YOUTUBE_CLIENT_ID: Joi.string()
-            .description('Youtube client id'),
+            .description('YouTube OAuth client ID'),
         YOUTUBE_CLIENT_SECRET: Joi.string()
-            .description('Youtube client secret'),
+            .description('YouTube OAuth client secret'),
         YOUTUBE_CALLBACK_URL: Joi.string()
-            .description('Youtube callback url'),
+            .description('YouTube OAuth callback URL'),
         YOUTUBE_API_KEY: Joi.string()
-            .description('Youtube api key'),
+            .description('YouTube API key'),
         SPOTIFY_CLIENT_ID: Joi.string()
-            .description('Spotify client id'),
+            .description('Spotify OAuth client ID'),
         SPOTIFY_CLIENT_SECRET: Joi.string()
-            .description('Spotify client secret'),
+            .description('Spotify OAuth client secret'),
         SPOTIFY_CALLBACK_URL: Joi.string()
-            .description('Spotify callback url'),
+            .description('Spotify OAuth callback URL'),
         REDIS_HOST: Joi.string()
-            .description("Redis host address"),
+            .description('Redis server host'),
         REDIS_PORT: Joi.number()
-            .description("Redis port"),
+            .description('Redis server port'),
         REDIS_PASSWORD: Joi.string()
-            .description("Redis password"),
+            .description('Redis server password'),
         REDIS_USERNAME: Joi.string()
-            .description("Redis username"),
-
+            .description('Redis server username'),
         REDDIT_CLIENT_ID: Joi.string()
             .description('Reddit client ID'),
         REDDIT_CLIENT_SECRET: Joi.string()
             .description('Reddit client secret'),
         REDDIT_CALLBACK_URL: Joi.string()
             .description('Reddit callback URL'),
-
         TOKEN_EXPIRATION_TIME: Joi.number()
             .default(900000)
-            .description("Token expiration time"),
+            .description('Token expiration time in milliseconds'),
         GOOGLE_REDIRECT_URI: Joi.string()
-            .description("Google redirect uri"),
-
-
+            .description('Google OAuth redirect URI'),
+        SMTP_HOST: Joi.string()
+            .description('SMTP server host'),
+        SMTP_PORT: Joi.number()
+            .description('SMTP server port'),
+        SMTP_USER: Joi.string()
+            .description('SMTP username'),
+        SMTP_PASSWORD: Joi.string()
+            .description('SMTP password'),
         LOG_PATH: Joi.string()
             .default('logs')
-            .description('Path to the log file'),
+            .description('Directory path for log files'),
     })
     .unknown();
 
@@ -228,4 +237,10 @@ export default {
     Token: {
         expirationTime: envVars.TOKEN_EXPIRATION_TIME
     },
+    SMTP: {
+        host: envVars.SMTP_HOST,
+        port: envVars.SMTP_PORT,
+        user: envVars.SMTP_USER,
+        password: envVars.SMTP_PASSWORD
+    }
 }; 

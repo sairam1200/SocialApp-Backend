@@ -2,7 +2,7 @@ import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { cryptoUtils } from "../../../../core/utils/crypto.utils";
+import { cryptoUtils } from "../../../../core/utils/crypto.util";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 import { TwitterConnectCallbackQuery, TwitterConnectQuery } from "./twitter-connect.handler";

@@ -3,11 +3,11 @@ import configs from "../../../configs";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
 import { Globals } from "../../../core/globals";
-import { hasIpChanged } from "../../../core/utils/ip.util";
+import ipUtil from "../../../core/utils/ip.util";
 import { TokenResponseModel } from "../tokenResponse.model";
 import { Inject, UnauthorizedException } from "@nestjs/common";
-import { addDurationToNow } from "../../../core/utils/time.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { addDurationToNow } from "../../../core/utils/time.util";
 import { ITokenService } from "../../../domain/services/itoken.service";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 import { IUserLoginRepository } from "../../../domain/repositories/irefreshtoken.repository";
@@ -100,7 +100,7 @@ export class RefreshTokenHandler implements ICommandHandler<RefreshTokenCommand>
         userLogin.tokenValue = this.userLoginRepository.GenerateToken();
         userLogin.expiryDateUtc = addDurationToNow(configs.jwt.refreshTokenExpiration);
 
-        const hasChanged = hasIpChanged(model.ipAddress, userLogin.ipAddress);
+        const hasChanged = ipUtil.hasIpChanged(model.ipAddress, userLogin.ipAddress);
 
         if (hasChanged) {
             // TODO: Send email notification of account access with new ipAddress  

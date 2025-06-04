@@ -3,7 +3,7 @@ import _const from '../../core/utils/const';
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, SelectQueryBuilder } from "typeorm";
 import { User } from "../../domain/entities/user.entity";
-import { cryptoUtils } from '../../core/utils/crypto.utils';
+import { cryptoUtils } from '../../core/utils/crypto.util';
 import { forwardRef, Inject, Injectable } from "@nestjs/common";
 import { UserRole } from '../../domain/entities/userRole.entity';
 import { generateTimestampUUID } from '../../core/utils/time.util';

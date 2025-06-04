@@ -19,8 +19,8 @@ export class LinkedAccount extends BaseEntity {
   @Column()
   externalId: string;
 
-  @Column()
-  email: string;
+  @Column({ nullable: true })
+  email?: string;
 
   @Column({ default: false })
   allowImport: boolean;

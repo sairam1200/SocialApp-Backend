@@ -4,6 +4,7 @@ import _const from '../core/utils/const';
 import { UserModule } from './user.module';
 import { RoleModule } from './role.module';
 import { AuthModule } from './auth.module';
+import { QueuesModule } from './queues.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PassportModule } from '@nestjs/passport';
 import { IntegrationsModule } from './integrations.module';
@@ -23,6 +24,7 @@ import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '
     UserModule,
     RoleModule,
     AuthModule,
+    QueuesModule.register(),
     NotificationModule,
     IntegrationsModule,
   ],
