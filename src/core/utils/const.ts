@@ -12,10 +12,12 @@ export default {
   IDATAPROTECTIONKEY_REPOSITORY: "IDataProtectionKeyRepository",
 
   // Service Interfaces
+  IEMAIL_SERVICE: "IEmailService",
   ITOKEN_SERVICE: "ITokenService",
   INOTIFICATION_SERVICE: "INotificationService",
 
   BULL_QUEUES: {
+    EMAIL: "email",
     FACEBOOK_IMPORT: "facebook-import",
     SPOTIFY_IMPORT: "spotify-import",
     YOUTUBE_IMPORT: "youtube-import",
@@ -23,6 +25,16 @@ export default {
     PINTEREST_IMPORT: "pinterest-import",
     TWITTER_IMPORT: "twitter-import",
     REDDIT_IMPORT: "reddit-import",
+  },
+
+  EMAILTEMPLATES: {
+    ACCOUNT: {
+      EMAIL_CONFIRMATION: 'account/email-confirmation',
+      PASSWORD_RESET: 'account/password-reset',
+    },
+    NOTIFICATION: {
+      WEEKLY_DIGEST: 'notification/weekly-digest',
+    },
   },
 
   PLATFORMS: {
