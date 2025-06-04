@@ -70,15 +70,15 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
     : Promise<{ accessToken: string; expiresIn: number; profile: any }> {
     const { model } = query;
     await redditConnectCallbackValidations.validateAsync(model);
-    await this.validateState(model.state);
+    const dataProtectionKey = await this.validateState(model.state);
 
     const { access_token, refresh_token, expires_in } = await this.fetchToken(model.code);
     const userData = await this.fetchUserData(access_token);
-    const user = await this.userRepository.getUserByEmailAsync(userData.data.email);
+    const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
 
-    if (!user || user.id !== HttpContext.user[Globals.ClaimTypes.UserId]) {
-      throw new ApplicationException('Prevented: Alduterated Request Received!');
-    }
+    if (!user) {
+          throw new ApplicationException('Prevented: User not found!');
+        }
 
     let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(
       _const.PLATFORMS.REDDIT,
@@ -97,7 +97,7 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
         platform: _const.PLATFORMS.REDDIT,
         userId: user.id,
-        email: userData.data.email,
+        email: user.email,//to fix nullable
         externalId: userData.data.id,
         userName: userData.data.name,
         profileImage: '',

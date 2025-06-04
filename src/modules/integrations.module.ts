@@ -47,7 +47,7 @@ import { RedditConnectController } from "../features/integrations/reddit/connect
 import { RedditProfileController } from "../features/integrations/reddit/get-profile/get-profile.endpoint";
 import { RedditImportController } from "../features/integrations/reddit/import/reddit-import.endpoint";
 
-import { RedditConnectQueryHandler } from "../features/integrations/reddit/connect/reddit-connect.handler";
+import { RedditConnectQueryHandler,RedditConnectCallbackQueryHandler } from "../features/integrations/reddit/connect/reddit-connect.handler";
 import { RedditProfileQueryHandler } from "../features/integrations/reddit/get-profile/get-profile.handler";
 import { RedditImportCommandHandler } from "../features/integrations/reddit/import/reddit-import.handler";
 
@@ -123,6 +123,7 @@ import { RedditImportCommandHandler } from "../features/integrations/reddit/impo
     YoutubeImportCommandHandler,
 
     RedditConnectQueryHandler,
+    RedditConnectCallbackQueryHandler,
     RedditProfileQueryHandler,
     RedditImportCommandHandler,
 
