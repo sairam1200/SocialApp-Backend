@@ -53,6 +53,7 @@ export class RedditConnectQueryHandler implements ICommandHandler<RedditConnectQ
     );
   }
 }
+
 @CommandHandler(RedditConnectCallbackQuery)
 export class RedditConnectCallbackQueryHandler implements ICommandHandler<RedditConnectCallbackQuery> {
   constructor(
@@ -69,45 +70,61 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
   public async execute(query: RedditConnectCallbackQuery)
     : Promise<{ accessToken: string; expiresIn: number; profile: any }> {
     const { model } = query;
+
+    // Validate incoming request
     await redditConnectCallbackValidations.validateAsync(model);
+
+    // Validate state parameter
     const dataProtectionKey = await this.validateState(model.state);
 
+    // Fetch access and refresh tokens from Reddit
     const { access_token, refresh_token, expires_in } = await this.fetchToken(model.code);
+
+    // Fetch Reddit user profile data
     const userData = await this.fetchUserData(access_token);
+
+    // Get local user by ID
     const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
-
     if (!user) {
-          throw new ApplicationException('Prevented: User not found!');
-        }
+      throw new ApplicationException('Prevented: User not found!');
+    }
 
+    // Find existing linked account or create a new one
     let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(
       _const.PLATFORMS.REDDIT,
       user.email
     );
 
     if (linkedAccount) {
-      linkedAccount.userName = userData.data.name;
-      linkedAccount.profileImage = ''; // Reddit doesn't return profile image in /me
+      linkedAccount.userName = userData.name;
+      linkedAccount.profileImage = userData.snoovatar_img || userData.icon_img || '';
       linkedAccount.metaData = {
-        karma: userData.data.total_karma,
-        isEmployee: userData.data.is_employee,
+        karma: userData.total_karma,
+        isEmployee: userData.is_employee,
+        isGold: userData.is_gold,
+        verified: userData.verified,
+        created: userData.created,
       };
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
         platform: _const.PLATFORMS.REDDIT,
         userId: user.id,
-        email: user.email,//to fix nullable
-        externalId: userData.data.id,
-        userName: userData.data.name,
-        profileImage: '',
+        email: user.email, // to fix nullable if needed
+        externalId: userData.id,
+        userName: userData.name,
+        profileImage: userData.snoovatar_img || userData.icon_img || '',
         metaData: {
-          karma: userData.data.total_karma,
-          isEmployee: userData.data.is_employee,
+          karma: userData.total_karma,
+          isEmployee: userData.is_employee,
+          isGold: userData.is_gold,
+          verified: userData.verified,
+          created: userData.created,
         }
       }));
     }
 
+    // Manage user login token refresh or create new login
     let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(
       user.id,
       _const.PLATFORMS.REDDIT
@@ -134,9 +151,13 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
       accessToken: access_token,
       expiresIn: expires_in,
       profile: {
-        username: userData.data.name,
-        karma: userData.data.total_karma,
-        isEmployee: userData.data.is_employee
+        username: userData.name,
+        karma: userData.total_karma,
+        isEmployee: userData.is_employee,
+        isGold: userData.is_gold,
+        verified: userData.verified,
+        created: userData.created,
+        profileImage: userData.snoovatar_img || userData.icon_img || ''
       }
     };
   }
@@ -167,7 +188,19 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
       headers: { Authorization: `Bearer ${accessToken}` }
     });
 
-    return { data: response.data };
+    const data = response.data;
+
+    return {
+      id: data.id,
+      name: data.name,
+      total_karma: data.total_karma ?? (data.link_karma + data.comment_karma),
+      is_employee: data.is_employee,
+      is_gold: data.is_gold,
+      verified: data.verified,
+      created: data.created,
+      icon_img: data.icon_img,
+      snoovatar_img: data.snoovatar_img,
+    };
   }
 
   private async validateState(state: string): Promise<DataProtectionKey> {

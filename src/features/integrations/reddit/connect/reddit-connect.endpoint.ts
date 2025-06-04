@@ -35,6 +35,13 @@ export class RedditConnectController {
     });
 
     const authorizeURL = `https://www.reddit.com/api/v1/authorize?${params.toString()}`;
+    
+    console.log('Initiating Reddit OAuth:', {
+    clientId: configs.reddit.clientId,
+    redirectUri: configs.reddit.redirectUri,
+    state,
+    authorizeURL
+  });
 
     await this.commandBus.execute(new RedditConnectQuery({ model: { state } }));
 
@@ -51,6 +58,8 @@ export class RedditConnectController {
     @Query('state') state: string,
     @Res() res: Response
   ): Promise<Response | void> {
+    console.log('Reddit callback received:', { code, state });
+    
     const result = await this.commandBus.execute(new RedditConnectCallbackQuery({ model: { code, state } }));
     return res.status(HttpStatus.OK).json(result);
   }
