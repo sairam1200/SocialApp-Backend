@@ -25,7 +25,7 @@ import { InjectInstagramImportQueue, InstagramImportProcessor } from "../infrast
 @Module({})
 export class QueuesModule implements NestModule {
   static register(): DynamicModule {
-    const { host, port, password } = configs.Redis;
+    const { host, port, password } = configs.redis;
     const queues = BullModule.registerQueue(
       {
         name: _const.BULL_QUEUES.FACEBOOK_IMPORT,

@@ -138,6 +138,29 @@ const envVarsSchema = Joi.object()
         LOG_PATH: Joi.string()
             .default('logs')
             .description('Directory path for log files'),
+        SYSTEM_ADMIN_EMAIL: Joi.string()
+            .default('team@gaddr.com'),
+        SYSTEM_ADMIN_PASSWORD: Joi.string()
+            .default('@Admin@123'),
+        SYSTEM_ADMIN_FIRST_NAME: Joi.string()
+            .default('System'),
+        SYSTEM_ADMIN_LAST_NAME: Joi.string()
+            .default('Admin'),
+        GUEST_USER_EMAIL: Joi.string()
+            .default('johndoe@gaddr.com'),
+        GUEST_USER_PASSWORD: Joi.string()
+            .default('@Abc@123'),
+        GUEST_USER_FIRST_NAME: Joi.string()
+            .default('John'),
+        GUEST_USER_LAST_NAME: Joi.string()
+            .default('Doe'),
+        
+        CLOUDINARY_CLOUD_NAME: Joi.string()
+            .description('Cloudinary cloud name for media storage'),
+        CLOUDINARY_API_KEY: Joi.string()
+            .description('Cloudinary API key for media storage'),
+        CLOUDINARY_API_SECRET: Joi.string()
+            .description('Cloudinary API secret for media storage'),
     })
     .unknown();
 
@@ -215,7 +238,7 @@ export default {
         clientSecret: envVars.SPOTIFY_CLIENT_SECRET,
         redirectUri: envVars.SPOTIFY_CALLBACK_URL,
     },
-    Redis: {
+    redis: {
         host: envVars.REDIS_HOST,
         port: envVars.REDIS_PORT,
         username: envVars.REDIS_USERNAME,
@@ -224,10 +247,27 @@ export default {
     Token: {
         expirationTime: envVars.TOKEN_EXPIRATION_TIME
     },
-    SMTP: {
+    smtp: {
         host: envVars.SMTP_HOST,
         port: envVars.SMTP_PORT,
         user: envVars.SMTP_USER,
         password: envVars.SMTP_PASSWORD
-    }
-}; 
+    },
+    cloudinary: {
+        cloudName: envVars.CLOUDINARY_CLOUD_NAME,
+        apiKey: envVars.CLOUDINARY_API_KEY,
+        apiSecret: envVars.CLOUDINARY_API_SECRET,
+    },
+    systemAdmin: {
+        email: envVars.SYSTEM_ADMIN_EMAIL,
+        password: envVars.SYSTEM_ADMIN_PASSWORD,
+        firstName: envVars.SYSTEM_ADMIN_FIRST_NAME,
+        lastName: envVars.SYSTEM_ADMIN_LAST_NAME,
+    },
+    guestUser: {
+        email: envVars.GUEST_USER_EMAIL,
+        password: envVars.GUEST_USER_PASSWORD,
+        firstName: envVars.GUEST_USER_FIRST_NAME,
+        lastName: envVars.GUEST_USER_LAST_NAME,
+    },
+}
