@@ -55,5 +55,22 @@ export const stringUtil = {
     const ellipsis = '...';
     const trimmedLength = maxLength - ellipsis.length;
     return input.slice(0, trimmedLength) + ellipsis;
+  },
+
+  extractInitialsFromName(name: string): string {
+    const FORMAL_TITLES = ["Sir", "Ma'am", "Madam", "Mr", "Mrs", "Ms", "Miss", "Dr", "Professor"];
+    let cleaned = name;
+
+    for (const title of FORMAL_TITLES) {
+      const regex = new RegExp(`\\b${title}\\.?\\s*`, 'gi');
+      cleaned = cleaned.replace(regex, '');
+    }
+
+    cleaned = cleaned.replace(/\s+/g, ' ').replace(/,/g, '').trim();
+    const words = cleaned.split(' ');
+
+    let initials = words.map(word => word.charAt(0).toUpperCase()).join('');
+    return initials.slice(0, 2);
   }
+
 };
