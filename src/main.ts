@@ -42,7 +42,7 @@ async function bootstrap() {
 
   await redis.connectToRedis();
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   logger.info(`🚀 Application is running on: http://localhost:${port}`);
 }
