@@ -2,6 +2,7 @@ import configs from "../configs";
 import { Queue } from "bullmq";
 import _const from "../core/utils/const";
 import { JwtService } from "@nestjs/jwt";
+import redis from "core/utils/redis.util";
 import { BullModule } from '@nestjs/bullmq';
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { createBullBoard } from '@bull-board/api';
@@ -56,11 +57,7 @@ export class QueuesModule implements NestModule {
         NotificationModule,
         TypeOrmModule.forFeature([Notification, UserContent, LinkedAccount]),
         BullModule.forRoot({
-          connection: {
-            host,
-            port: parseInt(port),
-            password,
-          },
+          connection: redis.instance,
           prefix: 'gaddr-backend',
           defaultJobOptions: {
             attempts: 3,
