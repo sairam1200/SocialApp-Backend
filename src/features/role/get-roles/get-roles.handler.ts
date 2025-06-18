@@ -1,0 +1,28 @@
+import { Inject } from "@nestjs/common";
+import _const from "../../../core/utils/const";
+import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { RoleModel } from "../../../domain/contracts/role.model";
+import { IRoleRepository } from "../../../domain/repositories/irole.repository";
+
+export class GetRolesQuery { }
+
+@CommandHandler(GetRolesQuery)
+export class GetRolesHandler implements ICommandHandler<GetRolesQuery> {
+    constructor(
+        @Inject(_const.IROLE_REPOSITORY) private readonly roleRepository: IRoleRepository) {
+    }
+
+    async execute(query: GetRolesQuery): Promise<RoleModel[]> {
+
+        const roles = await this.roleRepository.getAsync();
+
+        if (roles?.length == 0) return [];
+
+        return roles.map(role => ({
+            id: role.id,
+            name: role.name,
+            description: role.description,
+            permissionsCount: role.roleClaims?.length
+        }) as RoleModel);
+    }
+} 
