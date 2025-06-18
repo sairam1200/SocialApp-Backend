@@ -73,7 +73,7 @@ export class ResetPasswordCommandHandler implements ICommandHandler<ResetPasswor
       throw new ApplicationException('Invalid code parameter');
     }
 
-    if (new Date(dataProtectionKey.createdOn.getTime() + dataProtectionKey.expiresIn * 1000) < new Date()) {
+    if (dataProtectionKey.expiresIn < Math.floor(Date.now() / 1000)) {
       throw new ApplicationException('code parameter has expired');
     }
 
