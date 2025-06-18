@@ -119,6 +119,7 @@ const envVarsSchema = Joi.object()
         REDIS_PORT: Joi.number()
             .description('Redis server port'),
         REDIS_PASSWORD: Joi.string()
+            .optional()
             .description('Redis server password'),
         REDIS_USERNAME: Joi.string()
             .description('Redis server username'),
