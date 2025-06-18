@@ -119,8 +119,8 @@ const envVarsSchema = Joi.object()
         REDIS_PORT: Joi.number()
             .description('Redis server port'),
         REDIS_PASSWORD: Joi.string()
-            .optional()
-            .description('Redis server password'),
+            .description('Redis server password')
+            .optional(),
         REDIS_USERNAME: Joi.string()
             .description('Redis server username'),
         TOKEN_EXPIRATION_TIME: Joi.number()
@@ -155,7 +155,7 @@ const envVarsSchema = Joi.object()
             .default('John'),
         GUEST_USER_LAST_NAME: Joi.string()
             .default('Doe'),
-        
+
         CLOUDINARY_CLOUD_NAME: Joi.string()
             .description('Cloudinary cloud name for media storage'),
         CLOUDINARY_API_KEY: Joi.string()
