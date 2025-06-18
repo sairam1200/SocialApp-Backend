@@ -1,5 +1,6 @@
 import configs from './configs';
 import { NestFactory } from '@nestjs/core';
+import redis from './core/utils/redis.util';
 import logger from './core/utils/winston.util';
 import { AppModule } from './modules/app.module';
 import dataSource from './infrastructure/persistence/data.source';
@@ -38,6 +39,8 @@ async function bootstrap() {
   // app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.use(ApiDocRedirectMiddleware);
   app.useGlobalFilters(new ErrorHandlersFilter());
+
+  await redis.connectToRedis();
 
   await app.listen(port);
 
