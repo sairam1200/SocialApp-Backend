@@ -1,6 +1,7 @@
 import configs from '../../configs';
 import _const from '../../core/utils/const';
 import { Globals } from '../../core/globals';
+import logger from '../../core/utils/winston.util';
 import { Injectable, Inject } from '@nestjs/common';
 import { RoleType, UserType } from '../../domain/enums';
 import { User } from '../../domain/entities/user.entity';
@@ -46,11 +47,18 @@ export class DataSeeder {
 
     if (!(await this.userRepository.getUserByEmailAsync(SYSTEM_ADMIN.email))) {
 
-      const initials = stringUtil.extractInitialsFromName(`${SYSTEM_ADMIN.firstName} ${SYSTEM_ADMIN.lastName}`);
-      const base64Image = generateInitialImage(initials);
-
-      const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
-      SYSTEM_ADMIN.profileImage = avatar.secure_url;
+      try {
+        // Generate initials from the system admin's name
+        // and create a base64 image for the avatar
+        const initials = stringUtil.extractInitialsFromName(`${SYSTEM_ADMIN.firstName} ${SYSTEM_ADMIN.lastName}`);
+        const base64Image = generateInitialImage(initials);
+        // Upload the base64 image to Cloudinary and set the profile image URL
+        // Note: Ensure that the uploadBase64ToCloudinaryAsync function is defined in your
+        const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
+        SYSTEM_ADMIN.profileImage = avatar.secure_url;
+      } catch (error) {
+        logger.error(`Failed to upload avatar for user ${SYSTEM_ADMIN.email}: ${error.message}`);
+      }
 
       await this.userRepository.createAsync(SYSTEM_ADMIN, configs.systemAdmin.password);
 
@@ -70,6 +78,16 @@ export class DataSeeder {
     });
 
     if (!(await this.userRepository.getUserByEmailAsync(JOHN_DOE.email))) {
+      try {
+        const initials = stringUtil.extractInitialsFromName(`${JOHN_DOE.firstName} ${JOHN_DOE.lastName}`);
+        const base64Image = generateInitialImage(initials);
+        // Upload the base64 image to Cloudinary and set the profile image URL
+        // Note: Ensure that the uploadBase64ToCloudinaryAsync function is defined in your
+        const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
+        JOHN_DOE.profileImage = avatar.secure_url;
+      } catch (error) {
+        logger.error(`Failed to upload avatar for user ${JOHN_DOE.email}: ${error.message}`);
+      }
       await this.userRepository.createAsync(JOHN_DOE, "@Abc@123");
     }
   }
