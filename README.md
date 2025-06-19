@@ -14,7 +14,7 @@ Welcome to the backend of **Gaddr** — a NestJS project implementing a clean ar
 ### `staging` Branch
 
 * Used for **testing features** and validating merged changes.
-* Endpoint for testing: [https://testing.gaddr.com](https://testing.gaddr.com)
+* Endpoint for testing: [https://gaddr-backend-api.onrender.com](https://gaddr-backend-api.onrender.com/)
 
 ### `develop` Branch
 
