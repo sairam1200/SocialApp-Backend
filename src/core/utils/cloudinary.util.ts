@@ -5,7 +5,7 @@ cloudinary.config({
   cloud_name: configs.cloudinary.cloudName,
   api_key: configs.cloudinary.apiKey,
   api_secret: configs.cloudinary.apiSecret,
-  secure: true,
+  // secure: true,
 });
 
 interface UploadResult {
