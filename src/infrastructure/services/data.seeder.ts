@@ -24,10 +24,10 @@ export class DataSeeder {
     @Inject(_const.IROLECLAIM_REPOSITORY) private readonly roleClaimRepository: IRoleClaimRepository,
   ) { }
 
-  async initializeAsync(): Promise<void> {
+  public async initializeAsync(): Promise<void> {
     await this.addAdministratorUserAndRoleAsync();
 
-    if (configs.env === 'development') {
+    if (configs.env !== 'production') {
       await this.addGuestUserAsync();
     }
   }

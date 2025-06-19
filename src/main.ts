@@ -25,7 +25,6 @@ async function bootstrap() {
 
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
-  const port = configs.port || 3000;
 
   app.enableVersioning({
     type: VersioningType.URI,
@@ -42,10 +41,9 @@ async function bootstrap() {
 
   await redis.connectToRedis();
 
-  logger.info("Port: " + port)
-  await app.listen(port, '0.0.0.0');
+  await app.listen(configs.port);
 
-  logger.info(`🚀 Application is running on: http://localhost:${port}`);
+  logger.info(`🚀 Application is running on: http://localhost:${configs.port}`);
 }
 bootstrap().catch((error) => {
   logger.error(`Failed to start server: ERROR = ${error.message}`);

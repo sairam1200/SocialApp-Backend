@@ -83,7 +83,7 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
         firstName: model.firstName,
         lastName: model.lastName,
         email: model.email,
-        type: UserType.Admin,
+        type: UserType.User,
         profileImage: avatar.secure_url,
       }), model.password);
 
