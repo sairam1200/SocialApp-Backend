@@ -24,6 +24,7 @@ export default {
     INSTAGRAM_IMPORT: "instagram-import",
     PINTEREST_IMPORT: "pinterest-import",
     TWITTER_IMPORT: "twitter-import",
+    REDDIT_IMPORT: "reddit-import",
   },
 
   EMAILTEMPLATES: {
@@ -43,5 +44,6 @@ export default {
     TWITTER: "twitter",
     YOUTUBE: "youtube",
     SPOTIFY: "spotify",
+    REDDIT: "reddit",
   }
 }

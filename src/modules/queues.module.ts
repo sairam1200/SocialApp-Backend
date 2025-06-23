@@ -21,6 +21,7 @@ import { InjectYoutubeImportQueue, YoutubeImportProcessor } from "../infrastruct
 import { FacebookImportProcessor, InjectFacebookImportQueue } from "../infrastructure/background/processors/facebook-import.processor";
 import { InjectPinterestImportQueue, PinterestImportProcessor } from "../infrastructure/background/processors/pinterest-import.processor";
 import { InjectInstagramImportQueue, InstagramImportProcessor } from "../infrastructure/background/processors/instagram-import.processor";
+import { RedditImportProcessor, InjectRedditImportQueue } from "../infrastructure/background/processors/reddit-import.processor";
 
 @Module({})
 export class QueuesModule implements NestModule {
@@ -46,6 +47,9 @@ export class QueuesModule implements NestModule {
       },
       {
         name: _const.BULL_QUEUES.EMAIL,
+      },
+      {
+        name: _const.BULL_QUEUES.REDDIT_IMPORT,
       }
     );
 
@@ -74,8 +78,8 @@ export class QueuesModule implements NestModule {
         PinterestImportProcessor,
         InstagramImportProcessor,
         FacebookImportProcessor,
-        SpotifyImportProcessor,
         YoutubeImportProcessor,
+        RedditImportProcessor,
         EmailProcessor,
         ImportGateway,
 
@@ -86,8 +90,8 @@ export class QueuesModule implements NestModule {
         InstagramImportProcessor,
         PinterestImportProcessor,
         FacebookImportProcessor,
-        SpotifyImportProcessor,
         YoutubeImportProcessor,
+        RedditImportProcessor,
         ...queues.exports,
         EmailProcessor,
       ],
@@ -100,6 +104,7 @@ export class QueuesModule implements NestModule {
     @InjectFacebookImportQueue() private readonly facebookImportQueue: Queue,
     @InjectYoutubeImportQueue() private readonly youtubeImportQueue: Queue,
     @InjectSpotifyImportQueue() private readonly spotifyImportQueue: Queue,
+    @InjectRedditImportQueue() private readonly redditImportQueue: Queue,
     @InjectEmailQueue() private readonly emailQueue: Queue,
   ) { }
 
@@ -109,12 +114,10 @@ export class QueuesModule implements NestModule {
 
     createBullBoard({
       queues: [
-        new BullMQAdapter(this.pinterestImportQueue),
         new BullMQAdapter(this.facebookImportQueue),
-        new BullMQAdapter(this.spotifyImportQueue),
         new BullMQAdapter(this.youtubeImportQueue),
         new BullMQAdapter(this.instagramImportQueue),
-
+        new BullMQAdapter(this.redditImportQueue),
         new BullMQAdapter(this.emailQueue),
       ],
       serverAdapter,
