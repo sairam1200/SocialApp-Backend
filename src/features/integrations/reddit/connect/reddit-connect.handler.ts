@@ -77,8 +77,8 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
     // Validate state parameter
     const dataProtectionKey = await this.validateState(model.state);
 
-    // Fetch access and refresh tokens from Reddit
-    const { access_token, refresh_token, expires_in } = await this.fetchToken(model.code);
+    // Fetch access token from Reddit
+    const { access_token, expires_in } = await this.fetchToken(model.code);
 
     // Fetch Reddit user profile data
     const userData = await this.fetchUserData(access_token);
@@ -110,7 +110,7 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
         platform: _const.PLATFORMS.REDDIT,
         userId: user.id,
-        email: user.email, // to fix nullable if needed
+        email: user.email,
         externalId: userData.id,
         userName: userData.name,
         profileImage: userData.snoovatar_img || userData.icon_img || '',
@@ -124,16 +124,15 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
       }));
     }
 
-    // Manage user login token refresh or create new login
     let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(
       user.id,
       _const.PLATFORMS.REDDIT
     );
 
     if (existingAccountLogin) {
-      existingAccountLogin.tokenValue = refresh_token;
+      existingAccountLogin.tokenValue = access_token;
       existingAccountLogin.addedDateUtc = new Date();
-      existingAccountLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000);
+      existingAccountLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
       await this.userLoginRepository.updateAsync(existingAccountLogin);
     } else {
       existingAccountLogin = await this.userLoginRepository.createAysnc(
@@ -142,8 +141,8 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
         "",
         "",
         "",
-        refresh_token,
-        new Date(Date.now() + 100 * 24 * 60 * 60 * 1000)
+        access_token,
+        new Date(Date.now() + expires_in * 1000)
       );
     }
 
@@ -206,8 +205,11 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
   private async validateState(state: string): Promise<DataProtectionKey> {
     const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
     if (!dataProtectionKey) throw new ApplicationException('Invalid state parameter');
-    if (dataProtectionKey.expiresIn < Math.floor(Date.now() / 1000)) throw new ApplicationException('State expired');
+    if (new Date(dataProtectionKey.createdOn.getTime() + dataProtectionKey.expiresIn * 1000) < new Date()) {
+      throw new ApplicationException('State parameter has expired');
+    }
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
     return dataProtectionKey;
   }
+
 }
