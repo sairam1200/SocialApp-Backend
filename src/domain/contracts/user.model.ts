@@ -6,6 +6,7 @@ export class UserModel {
     isEmailVerified: boolean;
     gender: string;
     phoneNumber: string;
+    photo: string;
 
     constructor(partial?: Partial<UserModel>) {
         Object.assign(this, partial);

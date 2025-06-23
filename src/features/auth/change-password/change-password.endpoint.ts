@@ -21,7 +21,7 @@ export class ChangePasswordController {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   @ApiBody({ type: ChangePasswordRequestModel, required: false })
-  public async ForgotPassword(
+  public async ChangePassword(
     @Body() model: ChangePasswordRequestModel,
     @Res() res: Response,
   ): Promise<Response | void> {

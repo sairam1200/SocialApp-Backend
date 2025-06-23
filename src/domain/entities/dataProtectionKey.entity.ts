@@ -1,5 +1,5 @@
 import { Column, Entity } from "typeorm";
-import { BaseEntity } from "../BaseEntity";
+import { BaseEntity } from "../baseEntity";
 
 @Entity({ name: 'dataProtectionKeys' })
 export class DataProtectionKey extends BaseEntity {

@@ -1,5 +1,6 @@
 import configs from './configs';
 import { NestFactory } from '@nestjs/core';
+import redis from './core/utils/redis.util';
 import logger from './core/utils/winston.util';
 import { AppModule } from './modules/app.module';
 import dataSource from './infrastructure/persistence/data.source';
@@ -24,7 +25,6 @@ async function bootstrap() {
 
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
-  const port = configs.port || 3000;
 
   app.enableVersioning({
     type: VersioningType.URI,
@@ -39,9 +39,11 @@ async function bootstrap() {
   app.use(ApiDocRedirectMiddleware);
   app.useGlobalFilters(new ErrorHandlersFilter());
 
-  await app.listen(port);
+  await redis.connectToRedis();
 
-  logger.info(`🚀 Application is running on: http://localhost:${port}`);
+  await app.listen(configs.port);
+
+  logger.info(`🚀 Application is running on: http://localhost:${configs.port}`);
 }
 bootstrap().catch((error) => {
   logger.error(`Failed to start server: ERROR = ${error.message}`);
