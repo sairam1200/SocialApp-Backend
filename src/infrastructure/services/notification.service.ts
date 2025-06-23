@@ -1,5 +1,6 @@
 import _const from "../../core/utils/const";
 import { Globals } from "../../core/globals";
+import { NotificationType } from "../../domain/enums";
 import { forwardRef, Inject, Injectable } from "@nestjs/common";
 import { Notification } from "../../domain/entities/notification.entity";
 import { HttpContext } from "../../core/middlewares/httpContext.middleware";
@@ -18,9 +19,10 @@ export class NotificationService implements INotificationService {
     private readonly gateway: NotificationGateway,
   ) { }
 
-  public async notifyAsync(userId: string, title: string, body: string, isLive: boolean, metaData?: any): Promise<Notification> {
+  public async notifyAsync(userId: string, type: NotificationType, title: string, body: string, isLive: boolean, metaData?: any): Promise<Notification> {
     const notification = await this.notificationRepository.createAsync(new Notification({
       body: body,
+      type: type,
       title: title,
       isLive: isLive,
       notifyId: userId,

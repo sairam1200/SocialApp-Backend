@@ -5,9 +5,9 @@ import _const from "../../../core/utils/const";
 import { InjectQueue, Processor } from "@nestjs/bull";
 import logger from "../../../core/utils/winston.util";
 import { OnWorkerEvent, WorkerHost } from "@nestjs/bullmq";
-import { NotificationStatus } from "../../../domain/enums";
 import { stringUtil } from "../../../core/utils/string.util";
 import { UserContent } from "../../../domain/entities/userContent.entity";
+import { NotificationStatus, NotificationType } from "../../../domain/enums";
 import { LinkedAccount } from "../../../domain/entities/linkedAccount.entity";
 import { NotificationModel } from "../../../domain/contracts/notification.model";
 import { IUserContentRepository } from "domain/repositories/iuserContent.repository";
@@ -169,6 +169,7 @@ export class FacebookImportProcessor extends WorkerHost {
             if (!notification) {
               const notificationResult = await this.notificationService.notifyAsync(
                 account.userId,
+                NotificationType.Import,
                 "📥 Importing your Facebook data...",
                 "",
                 true,

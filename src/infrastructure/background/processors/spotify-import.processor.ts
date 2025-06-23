@@ -3,9 +3,9 @@ import { Job } from "bullmq";
 import { Inject } from "@nestjs/common";
 import _const from "../../../core/utils/const";
 import logger from "../../../core/utils/winston.util";
-import { NotificationStatus } from "../../../domain/enums";
 import { InjectQueue, Processor, WorkerHost } from "@nestjs/bullmq";
 import { UserContent } from "../../../domain/entities/userContent.entity";
+import { NotificationStatus, NotificationType } from "../../../domain/enums";
 import { LinkedAccount } from "../../../domain/entities/linkedAccount.entity";
 import { NotificationModel } from "../../../domain/contracts/notification.model";
 import { mapToNotificationModel } from "../../../domain/mappers/notification.mapper";
@@ -213,6 +213,7 @@ export class SpotifyImportProcessor extends WorkerHost {
             if (!notification) {
               const notificationResult = await this.notificationService.notifyAsync(
                 account.userId,
+                NotificationType.Import,
                 "📥 Importing your Spotify data...",
                 "",
                 true,

@@ -8,7 +8,7 @@ import { UserNotFoundException } from "../../../core/exceptions/user.exception";
 import ApplicationException from "../../../core/exceptions/application.exception";
 import { DataProtectionKey } from "../../../domain/entities/dataProtectionKey.entity";
 import { IUserLoginRepository } from "../../../domain/repositories/irefreshtoken.repository";
-import { IDataProtectionKeyRepository } from "domain/repositories/idataProtectionKey.repository";
+import { IDataProtectionKeyRepository } from "../../../domain/repositories/idataProtectionKey.repository";
 
 export class ResetPasswordRequestModel {
   code: string;
@@ -63,7 +63,7 @@ export class ResetPasswordCommandHandler implements ICommandHandler<ResetPasswor
       throw new ApplicationException('Failed to update password. Please try again later.');
     }
 
-    
+
 
   }
 
@@ -73,7 +73,7 @@ export class ResetPasswordCommandHandler implements ICommandHandler<ResetPasswor
       throw new ApplicationException('Invalid code parameter');
     }
 
-    if (new Date(dataProtectionKey.createdOn.getTime() + dataProtectionKey.expiresIn * 1000) < new Date()) {
+    if (dataProtectionKey.expiresIn < Math.floor(Date.now() / 1000)) {
       throw new ApplicationException('code parameter has expired');
     }
 

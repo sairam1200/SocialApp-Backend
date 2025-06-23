@@ -30,12 +30,12 @@ export class EmailProcessor extends WorkerHost {
   }>): Promise<void> {
 
     const transporter = nodemailer.createTransport({
-      host: configs.SMTP.host,
-      port: +configs.SMTP.port,
+      host: configs.smtp.host,
+      port: +configs.smtp.port,
       secure: false,
       auth: {
-        user: configs.SMTP.user,
-        pass: configs.SMTP.password,
+        user: configs.smtp.user,
+        pass: configs.smtp.password,
       },
     });
 

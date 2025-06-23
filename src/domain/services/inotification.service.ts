@@ -1,7 +1,8 @@
+import { NotificationType } from "../enums";
 import { Notification } from "../entities/notification.entity";
 
 export interface INotificationService {
-  notifyAsync(userId: string, title: string, body: string, isLive: boolean, metaData?: any): Promise<Notification>;
+  notifyAsync(userId: string, type: NotificationType, title: string, body: string, isLive: boolean, metaData?: any): Promise<Notification>;
   markAsReadAsync(id: string, userId?: string): Promise<void>;
   markAllAsRead(userId?: string): Promise<void>;
 
