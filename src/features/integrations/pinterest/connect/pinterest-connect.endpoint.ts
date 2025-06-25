@@ -1,11 +1,26 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { stringUtil } from "../../../../core/utils/string.util";
+import { ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
+import { PinterestProfileModel } from "../../../../domain/contracts/pinterest.model";
 import { PinterestConnectCallbackQuery, PinterestConnectQuery } from "./pinterest-connect.handler";
+
+class PinterestConnectCallbackResponseModel {
+  @ApiProperty()
+  accessToken: string;
+  @ApiProperty()
+  expiresIn: string;
+  @ApiProperty()
+  profile: PinterestProfileModel;
+}
+
+class ConnectResponseModel {
+  @ApiProperty()
+  authorizeURL: string;
+}
 
 @ApiTags('Integrations')
 @Controller({
@@ -18,7 +33,7 @@ export class PinterestConnectController {
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
-  @ApiResponse({ status: 302, description: 'FOUND' })
+  @ApiResponse({ status: 302, description: 'FOUND', type: ConnectResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -49,7 +64,7 @@ export class PinterestConnectController {
   }
 
   @Get('connect-callback')
-  @ApiResponse({ status: 200, description: 'OK' })
+  @ApiResponse({ status: 200, description: 'OK', type: PinterestConnectCallbackResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })

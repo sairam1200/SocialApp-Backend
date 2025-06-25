@@ -37,15 +37,15 @@ export class FacebookProfileModel {
   @ApiProperty()
   facebookId: string;
 
-  @ApiProperty()
+  @ApiProperty({ default: false })
   allowImport: boolean;
 
   @ApiProperty()
   profileImage: string;
 
-  @ApiProperty()
+  @ApiProperty({ default: 0 })
   followersCount: number;
 
-  @ApiProperty()
+  @ApiProperty({ default: 0 })
   followingCount: number;
 }

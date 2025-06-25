@@ -1,11 +1,16 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { stringUtil } from "../../../../core/utils/string.util";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 import { RedditConnectQuery, RedditConnectCallbackQuery } from "./reddit-connect.handler";
+
+class ConnectResponseModel {
+  @ApiProperty()
+  authorizeURL: string;
+}
 
 @ApiTags('Integrations')
 @Controller({
@@ -18,7 +23,7 @@ export class RedditConnectController {
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
-  @ApiResponse({ status: 302, description: 'FOUND' })
+  @ApiResponse({ status: 302, description: 'FOUND', type: ConnectResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -35,13 +40,13 @@ export class RedditConnectController {
     });
 
     const authorizeURL = `https://www.reddit.com/api/v1/authorize?${params.toString()}`;
-    
+
     console.log('Initiating Reddit OAuth:', {
-    clientId: configs.reddit.clientId,
-    redirectUri: configs.reddit.redirectUri,
-    state,
-    authorizeURL
-  });
+      clientId: configs.reddit.clientId,
+      redirectUri: configs.reddit.redirectUri,
+      state,
+      authorizeURL
+    });
 
     await this.commandBus.execute(new RedditConnectQuery({ model: { state } }));
 
@@ -59,7 +64,7 @@ export class RedditConnectController {
     @Res() res: Response
   ): Promise<Response | void> {
     console.log('Reddit callback received:', { code, state });
-    
+
     const result = await this.commandBus.execute(new RedditConnectCallbackQuery({ model: { code, state } }));
     return res.status(HttpStatus.OK).json(result);
   }
