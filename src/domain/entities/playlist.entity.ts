@@ -10,6 +10,7 @@ import { nanoid } from 'nanoid';
 import { User } from './user.entity';
 import { BaseEntity } from '../baseEntity';
 import { PlaylistMember } from './playlistMember.entity';
+import { PlaylistContent } from './playlistContent.entity';
 
 @Entity('playlists')
 export class Playlist extends BaseEntity {
@@ -29,12 +30,16 @@ export class Playlist extends BaseEntity {
   @OneToMany(
     () => PlaylistMember,
     entry => entry.playlist,
-    { cascade: ['insert'] }
+    { cascade: ['insert'], onDelete: 'CASCADE' }
   )
   members: PlaylistMember[];
 
-  @Column({ type: 'json', nullable: true })
-  metadata?: Record<string, any>;
+  @OneToMany(
+    () => PlaylistContent,
+    content => content.playlist,
+    { cascade: ['insert'], onDelete: 'CASCADE' }
+  )
+  contents: PlaylistContent[];
 
   @BeforeInsert()
   private generateReferenceId() {

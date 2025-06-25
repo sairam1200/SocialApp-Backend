@@ -2,9 +2,9 @@ import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../core/passport/account.guard";
-import { PlaylistMemberModel } from "../../../domain/contracts/playlist.model";
-import { AddPlaylistMemberCommand, AddPlaylistMemberModel } from "./add-member.handler";
+import { PlaylistContentModel } from "../../../domain/contracts/playlist.model";
 import { Body, Controller, HttpStatus, Param, Put, Res, UseGuards } from "@nestjs/common";
+import { AddPlaylistContentContent, AddPlaylistContentModel } from "./add-content.handler";
 
 @ApiTags('Playlists')
 @UseGuards(UserAccoutGuard)
@@ -12,22 +12,25 @@ import { Body, Controller, HttpStatus, Param, Put, Res, UseGuards } from "@nestj
   path: `/playlist`,
   version: '1',
 })
-export class AddPlaylistMemberController {
+export class AddPlaylistContentController {
 
   constructor(private readonly commandBus: CommandBus) { }
 
-  @Put(':id/member/add')
+  @Put(":id/content/add")
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   @ApiResponse({ status: 409, description: 'CONFLICT' })
-  @ApiResponse({ status: 200, description: 'OK', type: PlaylistMemberModel })
-  public async addMember(@Param('id') id: string, @Body() request: AddPlaylistMemberModel, @Res() res: Response
+  @ApiResponse({ status: 200, description: 'OK', type: PlaylistContentModel })
+  public async Add(
+    @Param('id') playlistReferenceId: string,
+    @Body() data: AddPlaylistContentModel,
+    @Res() res: Response
   ): Promise<Response> {
 
-    const result = await this.commandBus.execute(new AddPlaylistMemberCommand({
-      model: request,
-      playlistReferenceId: id
+    const result = await this.commandBus.execute(new AddPlaylistContentContent({
+      model: data,
+      playlistReferenceId: playlistReferenceId,
     }));
 
     res.status(HttpStatus.OK).send(result);

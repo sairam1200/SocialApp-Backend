@@ -1,15 +1,21 @@
 import { Repository } from "typeorm";
 import { Injectable } from "@nestjs/common";
 import { Globals } from "../../core/globals";
+import {
+  PlaylistAlreadyExistsException,
+  PlaylistMemberNotFoundException,
+  PlaylistNotFoundException,
+  PlaylistUpdateNotAllowedException
+} from "../../core/exceptions/playlist.exception";
 import { InjectRepository } from "@nestjs/typeorm";
-import { User } from "../../domain/entities/user.entity";
 import { PlaylistMemberRole } from "../../domain/enums";
-import { HttpContext } from "../../core/middlewares/httpContext.middleware";
+import { User } from "../../domain/entities/user.entity";
 import { Playlist } from "../../domain/entities/playlist.entity";
+import { HttpContext } from "../../core/middlewares/httpContext.middleware";
 import { UserNotFoundException } from "../../core/exceptions/user.exception";
 import { PlaylistMember } from "../../domain/entities/playlistMember.entity";
+import { PlaylistContent } from "../../domain/entities/playlistContent.entity";
 import { IPlaylistRepository } from "../../domain/repositories/iplaylist.repository";
-import { PlaylistAlreadyExistsException, PlaylistMemberNotFoundException, PlaylistNotFoundException, PlaylistUpdateNotAllowedException } from "../../core/exceptions/playlist.exception";
 
 @Injectable()
 export class PlaylistRepository implements IPlaylistRepository {
@@ -19,6 +25,8 @@ export class PlaylistRepository implements IPlaylistRepository {
     private readonly userContext: Repository<User>,
     @InjectRepository(Playlist)
     private readonly playlistContext: Repository<Playlist>,
+    @InjectRepository(PlaylistContent)
+    private readonly playlistContentContext: Repository<PlaylistContent>,
     @InjectRepository(PlaylistMember)
     private readonly playlistMemberContext: Repository<PlaylistMember>,
   ) { }
@@ -33,7 +41,7 @@ export class PlaylistRepository implements IPlaylistRepository {
       relations: ['owner', 'members'],
     });
 
-    const collabEntries = await this.playlistMemberContext.find({
+    const memberEntries = await this.playlistMemberContext.find({
       where: [
         { user: { id: userNameOrId } },
         { user: { userName: userNameOrId } }
@@ -46,7 +54,7 @@ export class PlaylistRepository implements IPlaylistRepository {
       ],
     })
 
-    const memberPlaylists = collabEntries.map(e => e.playlist);
+    const memberPlaylists = memberEntries.map(e => e.playlist);
 
     const all = [...ownedPlaylists, ...memberPlaylists];
     const dedupedMap = new Map<string, Playlist>();
@@ -61,6 +69,67 @@ export class PlaylistRepository implements IPlaylistRepository {
       where: { referenceId },
       relations: ['owner', 'members'],
     });
+  }
+  
+  public async getContentsAsync(referenceId: string): Promise<PlaylistContent[]> {
+    return await this.playlistContentContext.find({
+      where: { playlist: { referenceId } },
+      relations: ['playlist', 'addedBy'],
+    });
+  }
+
+  public async getContentAsync(referenceId: string, contentId: string): Promise<PlaylistContent | null> {
+    return await this.playlistContentContext.findOne({
+      where: { id: contentId, playlist: { referenceId } },
+      relations: ['playlist', 'addedBy'],
+    });
+  }
+
+  public async addContentAsync(referenceId: string, content: PlaylistContent): Promise<PlaylistContent> {
+
+    const loggedInUserId = HttpContext.getCurrentUserId;
+    const member = await this.playlistMemberContext.findOne({
+      where: {
+        playlist: { referenceId },
+        user: { id: loggedInUserId },
+      },
+      relations: ['playlist', 'user'],
+    });
+
+    if (!member) {
+      throw new PlaylistUpdateNotAllowedException();
+    }
+
+    if (member.role === PlaylistMemberRole.Viewer) {
+      throw new PlaylistUpdateNotAllowedException();
+    }
+
+    content.playlist = member.playlist;
+    content.addedBy = member;
+
+    return await this.playlistContentContext.save(content);
+  }
+
+  public async removeContentAsync(referenceId: string, content: PlaylistContent): Promise<void> {
+
+    const loggedInUserId = HttpContext.getCurrentUserId;
+    const member = await this.playlistMemberContext.findOne({
+      where: {
+        playlist: { referenceId },
+        user: { id: loggedInUserId },
+      },
+      relations: ['playlist', 'user'],
+    });
+
+    if (!member) {
+      throw new PlaylistUpdateNotAllowedException(referenceId, "not-member");
+    }
+
+    if (member.role === PlaylistMemberRole.Viewer) {
+      throw new PlaylistUpdateNotAllowedException(referenceId, "viewer");
+    }
+
+    await this.playlistContentContext.remove(content);
   }
 
   public async getByNameAsync(userNameOrId: string, playlistName: string): Promise<Playlist | null> {
@@ -106,7 +175,7 @@ export class PlaylistRepository implements IPlaylistRepository {
 
     const loggedInUserId = HttpContext.user[Globals.ClaimTypes.UserId];
     if (existing.owner.id !== loggedInUserId) {
-      throw new PlaylistUpdateNotAllowedException(playlist.id);
+      throw new PlaylistUpdateNotAllowedException(playlist.referenceId, 'not-owner');
     }
 
     Object.assign(existing, playlist);
@@ -114,19 +183,11 @@ export class PlaylistRepository implements IPlaylistRepository {
     return result.affected > 0;
   }
 
-  public async deleteAsync(referenceId: string): Promise<void> {
-    const playlist = await this.playlistContext.findOne({
-      where: { referenceId },
-      relations: ['owner', 'members'],
-    });
-
-    if (!playlist) {
-      throw new PlaylistNotFoundException(referenceId);
-    }
+  public async deleteAsync(playlist: Playlist): Promise<void> {
 
     const loggedInUserId = HttpContext.user[Globals.ClaimTypes.UserId];
     if (playlist.owner.id !== loggedInUserId) {
-      throw new PlaylistUpdateNotAllowedException(referenceId);
+      throw new PlaylistUpdateNotAllowedException(playlist.referenceId);
     }
 
     await this.playlistContext.remove(playlist);
@@ -146,7 +207,7 @@ export class PlaylistRepository implements IPlaylistRepository {
     }
 
     if (playlist.owner.id !== loggedInUserId) {
-      throw new PlaylistUpdateNotAllowedException(referenceId);
+      throw new PlaylistUpdateNotAllowedException(referenceId, 'not-owner');
     }
 
     const userToAdd = await this.userContext.findOne({
@@ -165,7 +226,7 @@ export class PlaylistRepository implements IPlaylistRepository {
     });
 
     if (existing) {
-      throw new PlaylistAlreadyExistsException(referenceId, userId);
+      throw new PlaylistAlreadyExistsException(referenceId);
     }
 
     const entry = this.playlistMemberContext.create({
@@ -177,32 +238,25 @@ export class PlaylistRepository implements IPlaylistRepository {
     return this.playlistMemberContext.save(entry);
   }
 
-  public async removeMemberAsync(referenceId: string, memberId: string): Promise<void> {
+  public async removeMemberAsync(referenceId: string, member: PlaylistMember): Promise<void> {
 
     const loggedInUserId = HttpContext.user[Globals.ClaimTypes.UserId];
 
-    const collection = await this.playlistContext.findOne({
+    const playlist = await this.playlistContext.findOne({
       where: { referenceId },
       relations: ['owner', 'members'],
     });
 
-    if (!collection) {
+    if (!playlist) {
       throw new PlaylistNotFoundException(referenceId);
     }
 
-    if (collection.owner.id !== loggedInUserId) {
-      throw new PlaylistUpdateNotAllowedException(referenceId);
+    if (playlist.owner.id !== loggedInUserId) {
+      throw new PlaylistUpdateNotAllowedException(referenceId, 'not-owner');
     }
 
-    const member = await this.playlistMemberContext.findOne({
-      where: {
-        playlist: { id: collection.id },
-        user: { id: memberId },
-      },
-    });
-
-    if (!member) {
-      throw new PlaylistMemberNotFoundException(referenceId, memberId);
+    if (member.user.id === loggedInUserId) {
+      throw new PlaylistUpdateNotAllowedException();
     }
 
     await this.playlistMemberContext.remove(member);

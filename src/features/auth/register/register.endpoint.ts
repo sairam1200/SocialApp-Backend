@@ -16,7 +16,7 @@ export class RegisterController {
     constructor(private readonly commandBus: CommandBus) { }
 
     @Post('register')
-    @ApiResponse({ status: 200, description: 'OK' })
+    @ApiResponse({ status: 200, description: 'OK', type: UserModel })
     @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
     @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
     @ApiResponse({ status: 403, description: 'FORBIDDEN' })

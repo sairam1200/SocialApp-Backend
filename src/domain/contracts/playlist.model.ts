@@ -1,33 +1,44 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { PlaylistMemberRole } from "../enums";
 
-export class PlaylistModel {
+export class PlaylistContentModel {
   @ApiProperty()
   id: string;
 
   @ApiProperty()
-  name: string;
+  playlistReferenceId: string;
+
+  @ApiProperty()
+  contentId: string;
+
+  @ApiProperty()
+  type: string;
+
+  @ApiProperty()
+  title: string;
+
+  @ApiProperty()
+  platform: string;
 
   @ApiProperty({ required: false })
   description?: string;
 
-  @ApiProperty({ type: [Object], required: false })
-  content?: {
-    [key: string]: any;
-  };
+  @ApiProperty()
+  thumbnailUrl: string;
+
+  @ApiProperty({ type: Object, required: false })
+  metadata?: Record<string, any>;
 
   @ApiProperty()
-  owner: {
+  contentUrl: string;
+
+  @ApiProperty()
+  addedBy: {
     id: string;
-    displayName: string;
+    role: PlaylistMemberRole;
     userName: string;
+    displayName: string;
   };
-
-  @ApiProperty({ type: [Object], required: false })
-  members?: PlaylistMemberModel[];
-
-  @ApiProperty()
-  referenceId: string;
 }
 
 export class PlaylistMemberModel {
@@ -39,7 +50,7 @@ export class PlaylistMemberModel {
   userId: string;
 
   @ApiProperty()
-  playlistId: string;
+  playlistReferenceId: string;
 
   @ApiProperty()
   userName: string;
@@ -49,4 +60,38 @@ export class PlaylistMemberModel {
 
   @ApiProperty({ enum: PlaylistMemberRole })
   role: PlaylistMemberRole;
+}
+
+export class PlaylistModel {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty({ required: false })
+  description?: string;
+
+  @ApiProperty({ type: [PlaylistContentModel], required: false })
+  contents?: PlaylistContentModel[]
+
+  @ApiProperty({
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+      displayName: { type: 'string' },
+      userName: { type: 'string' }
+    }
+  })
+  owner: {
+    id: string;
+    displayName: string;
+    userName: string;
+  };
+
+  @ApiProperty({ type: [PlaylistMemberModel], required: false })
+  members?: PlaylistMemberModel[];
+
+  @ApiProperty()
+  referenceId: string;
 }
