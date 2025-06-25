@@ -1,10 +1,11 @@
+import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import { GetPlaylistByIdQuery } from "./get-playlist-by-id.handler";
 import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../core/passport/account.guard";
 import { GetPlaylistByNameQuery } from "./get-playlist-by-name.handler";
 import { PlaylistModel } from "../../../domain/contracts/playlist.model";
-import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, HttpStatus, Param, Query, Res, UseGuards } from "@nestjs/common";
 
 @ApiBearerAuth()
 @ApiTags('Playlists')
@@ -41,8 +42,9 @@ export class GetPlaylistController {
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async GetByName(
     @Param('userNameOrId') userNameOrId: string,
-    @Query('playlistName') playlistName: string
-  ): Promise<PlaylistModel> {
+    @Query('playlistName') playlistName: string,
+    @Res() res: Response
+  ): Promise<Response> {
 
     const result = await this.queryBus.execute(new GetPlaylistByNameQuery({
       model: {
@@ -51,6 +53,7 @@ export class GetPlaylistController {
       }
     }));
 
-    return result;
+    res.status(HttpStatus.NO_CONTENT).send(result);
+    return res;
   }
 }

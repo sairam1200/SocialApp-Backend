@@ -1,0 +1,39 @@
+import * as Joi from "joi";
+import _const from "../../../core/utils/const";
+import { Inject, NotFoundException } from "@nestjs/common";
+import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { IPlaylistRepository } from "../../../domain/repositories/iplaylist.repository";
+
+export class DeletePlaylistCommand {
+  model: {
+    playlistReferenceId: string;
+  };
+
+  constructor(request: Partial<DeletePlaylistCommand> = {}) {
+    Object.assign(this, request);
+  }
+}
+
+const removePlaylistContentValidation = Joi.object({
+  playlistReferenceId: Joi.string().required(),
+});
+
+@CommandHandler(DeletePlaylistCommand)
+export class DeletePlaylistCommandHandler implements ICommandHandler<DeletePlaylistCommand, void> {
+  constructor(
+    @Inject(_const.IPLAYLIST_REPOSITORY) private readonly playlistRepository: IPlaylistRepository,
+  ) { }
+
+  public async execute(command: DeletePlaylistCommand): Promise<void> {
+
+    const { model } = command;
+    await removePlaylistContentValidation.validateAsync(model);
+
+    const playlist = await this.playlistRepository.getByIdAsync(model.playlistReferenceId);
+    if (!playlist) {
+      throw new NotFoundException("Content not found");
+    }
+
+    await this.playlistRepository.deleteAsync(playlist);
+  }
+}

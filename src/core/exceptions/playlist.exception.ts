@@ -11,16 +11,29 @@ export class PlaylistNotFoundException extends NotFoundException {
 }
 
 export class PlaylistAlreadyExistsException extends ConflictException {
-  constructor(name: string, userName: string) {
-    const message = `A playlist with the name "${name}" already exists for user "${userName}".`;
+  constructor(name: string) {
+    const message = `A playlist with the name "${name}" already exists".`;
     super(message);
     this.name = 'PlaylistAlreadyExistsException';
   }
 }
 
 export class PlaylistUpdateNotAllowedException extends UnauthorizedException {
-  constructor(referenceId: string) {
-    const message = `Updating the playlist with reference ID "${referenceId}" is not allowed.`;
+  constructor(referenceId?: string, reason?: 'not-member' | 'viewer' | 'not-owner') {
+    let message = 'Updating the playlist is not allowed.';
+
+    if (referenceId) {
+      message = `Updating the playlist with reference ID "${referenceId}" is not allowed.`;
+    }
+
+    if (reason === 'not-member') {
+      message = `You are not a member of the playlist with reference ID "${referenceId}".`;
+    } else if (reason === 'viewer') {
+      message = `You are a viewer in the playlist with reference ID "${referenceId}", and you do not have permission to edit.`;
+    } else if (reason === 'not-owner') {
+      message = `Only the owner can edit the playlist with reference ID "${referenceId}".`;
+    }
+
     super(message);
     this.name = 'PlaylistUpdateNotAllowedException';
   }

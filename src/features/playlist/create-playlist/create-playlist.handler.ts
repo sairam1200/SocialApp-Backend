@@ -16,17 +16,11 @@ export class CreatePlaylistModel {
 
   @ApiProperty({ required: false })
   description?: string;
-
-  @ApiProperty({ required: false })
-  content?: {
-    [key: string]: any;
-  };
 }
 
 const createPlaylistValidations = Joi.object({
   name: Joi.string().required(),
   description: Joi.string().optional(),
-  content: Joi.object().optional(),
 });
 
 export class CreatePlaylistCommand {
@@ -52,14 +46,13 @@ export class CreatePlaylistCommandHandler implements ICommandHandler<CreatePlayl
     let playlist = await this.playlistRepository.getByNameAsync(loggedInUserId, model.name);
 
     if (playlist) {
-      throw new PlaylistAlreadyExistsException(model.name, "");
+      throw new PlaylistAlreadyExistsException(model.name);
     }
 
     playlist = await this.playlistRepository.createAsync(
       new Playlist({
         name: model.name,
         description: model.description,
-        metadata: model.content,
       })
     );
 
