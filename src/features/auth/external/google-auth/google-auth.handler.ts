@@ -22,7 +22,7 @@ import { IDataProtectionKeyRepository } from '../../../../domain/repositories/id
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
 
-export class TokenResponseModel {
+export class GoogleCallbaclTokenResponseModel {
   @ApiProperty()
   accessToken: string;
 
@@ -50,7 +50,7 @@ export class TokenResponseModel {
   @ApiProperty()
   refreshTokenExpiryTime: string;
 
-  constructor(request: Partial<TokenResponseModel> = {}) {
+  constructor(request: Partial<GoogleCallbaclTokenResponseModel> = {}) {
     Object.assign(this, request);
   }
 }
@@ -353,7 +353,7 @@ export class GoogleConnectCallbackQueryHandler
       userAgent: string;
       ipAddress: string;
     },
-  ): Promise<TokenResponseModel> {
+  ): Promise<GoogleCallbaclTokenResponseModel> {
     user.accessFailedCount = 0;
     await this.userRepository.updateAsync(user);
 
@@ -368,7 +368,7 @@ export class GoogleConnectCallbackQueryHandler
 
     // TODO: Send email notification of login with new ipAddress and deviceInfo
 
-    return new TokenResponseModel({
+    return new GoogleCallbaclTokenResponseModel({
       accessToken: access_token,
       refreshToken: userToken.tokenValue,
       message: 'Login successful',
@@ -383,7 +383,7 @@ export class GoogleConnectCallbackQueryHandler
     return user.isLockedOut || !user.isActive;
   }
 
-  private handleLockedOrInactiveAccount(user: User): TokenResponseModel {
+  private handleLockedOrInactiveAccount(user: User): GoogleCallbaclTokenResponseModel {
     const message = this.getAccountLockMessage(user);
     return this.createErrorResponse(message);
   }
@@ -398,7 +398,7 @@ export class GoogleConnectCallbackQueryHandler
       : 'Your account has been locked due to suspicious activity.';
   }
 
-  private createErrorResponse(message: string): TokenResponseModel {
-    return new TokenResponseModel({ message, succeeded: false });
+  private createErrorResponse(message: string): GoogleCallbaclTokenResponseModel {
+    return new GoogleCallbaclTokenResponseModel({ message, succeeded: false });
   }
 }

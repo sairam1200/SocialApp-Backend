@@ -1,13 +1,20 @@
 import { Response } from 'express';
 import { CommandBus } from '@nestjs/cqrs';
 import configs from '../../../../configs';
-import { ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiProperty, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { stringUtil } from '../../../../core/utils/string.util';
 import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
 import {
+  GoogleCallbaclTokenResponseModel,
   GoogleConnectCallbackQuery,
   GoogleConnectQuery,
 } from './google-auth.handler';
+
+class ConnectResponseModel {
+
+  @ApiProperty()
+  authorizeURL: string;
+}
 
 @ApiTags('Authentication')
 @Controller({
@@ -15,10 +22,10 @@ import {
   version: '1',
 })
 export class GoogleAuthenticationController {
-  constructor(private readonly commandBus: CommandBus) {}
+  constructor(private readonly commandBus: CommandBus) { }
 
   @Get('connect')
-  @ApiResponse({ status: 302, description: 'FOUND' })
+  @ApiResponse({ status: 302, description: 'FOUND', type: ConnectResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -48,7 +55,7 @@ export class GoogleAuthenticationController {
       include_granted_scopes: 'true',
       prompt: 'consent',
     });
-    const authorizeURL = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;    
+    const authorizeURL = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
     await this.commandBus.execute(
       new GoogleConnectQuery({
@@ -59,7 +66,7 @@ export class GoogleAuthenticationController {
   }
 
   @Get('connect-callback')
-  @ApiResponse({ status: 200, description: 'OK' })
+  @ApiResponse({ status: 200, description: 'OK', type: GoogleCallbaclTokenResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })

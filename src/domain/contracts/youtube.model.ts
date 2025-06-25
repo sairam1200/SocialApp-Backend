@@ -1,4 +1,6 @@
-export interface GoogleUserDataModel {
+import { ApiProperty } from "@nestjs/swagger";
+
+export class GoogleUserDataModel {
   id: string;
   name: string;
   given_name: string;
@@ -46,19 +48,42 @@ interface YoutubeChannelModel {
   };
 }
 
-export interface YoutubeProfileModel {
+export class YoutubeProfileModel {
+  @ApiProperty()
   id: string;
+  @ApiProperty()
   hd: string;
+  @ApiProperty()
   name: string;
+  @ApiProperty()
   email: string;
+  @ApiProperty()
   userId: string;
+  @ApiProperty()
   locale: string;
+  @ApiProperty()
   userName: string;
+  @ApiProperty()
   facebookId: string;
+  @ApiProperty({ default: false })
   allowImport: boolean;
+  @ApiProperty()
   profileImage: string;
+  @ApiProperty({ default: 0 })
   followersCount: number;
+  @ApiProperty({ default: 0 })
   followingCount: number;
+  @ApiProperty({
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+      title: { type: 'string' },
+      viewCount: { type: 'number', default: 0 },
+      desciption: { type: 'string' },
+      videoCount: { type: 'number', default: 0 },
+      thumbthumbnail: { type: 'string' },
+    },
+  })
   channel: {
     id: string;
     title: string;

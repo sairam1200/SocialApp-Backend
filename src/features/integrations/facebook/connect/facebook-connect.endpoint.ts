@@ -1,11 +1,26 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { stringUtil } from "../../../../core/utils/string.util";
+import { ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
+import { FacebookProfileModel } from "../../../../domain/contracts/facebook.model";
 import { Controller, Get, HttpStatus, Query, Req, Res, UseGuards } from "@nestjs/common";
 import { FacebookConnectCallbackQuery, FacebookConnectQuery } from "./facebook-connect.handler";
+
+class ConnectResponseModel {
+  @ApiProperty()
+  authorizeURL: string;
+}
+
+class FacebookConnectCallbackResponseModel {
+  @ApiProperty({ description: "Access token from facebook" })
+  accessToken: string;
+  @ApiProperty()
+  expiresIn: string;
+  @ApiProperty()
+  profile: FacebookProfileModel;
+}
 
 @ApiTags('Integrations')
 @Controller({
@@ -18,7 +33,7 @@ export class FacebookConnectController {
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
-  @ApiResponse({ status: 302, description: 'FOUND' })
+  @ApiResponse({ status: 302, description: 'FOUND', type: ConnectResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -55,7 +70,7 @@ export class FacebookConnectController {
   }
 
   @Get('connect-callback')
-  @ApiResponse({ status: 200, description: 'OK' })
+  @ApiResponse({ status: 200, description: 'OK', type: FacebookConnectCallbackResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
