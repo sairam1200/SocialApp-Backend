@@ -1,10 +1,11 @@
+import { Globals } from '../globals';
 import { JwtService } from '@nestjs/jwt';
 import { IncomingHttpHeaders } from 'http';
 import { AsyncLocalStorage } from 'async_hooks';
-import { JwtPayload } from 'core/passport/jwtPayload';
+import { JwtPayload } from '../passport/jwtPayload';
 import { NextFunction, Request, Response } from 'express';
 import { Injectable, NestMiddleware } from '@nestjs/common';
-import { extractTokenFromHeader, getUserFromAccessTokenAsync } from '../../core/utils/jwt.util';
+import { extractTokenFromHeader, getUserFromAccessTokenAsync } from '../utils/jwt.util';
 
 interface HttpContextStore {
   request: Request;
@@ -31,6 +32,10 @@ export class HttpContext {
 
   static get headers(): IncomingHttpHeaders {
     return asyncLocalStorage.getStore()?.headers;
+  }
+
+  static get getCurrentUserId(): string {
+    return this.user ? this.user[Globals.ClaimTypes.UserId] : null;
   }
 
   // Internal method to run the context — called from middleware

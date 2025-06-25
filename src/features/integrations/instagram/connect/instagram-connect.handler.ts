@@ -134,7 +134,7 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
       }));
     }
 
-    const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(user.id, PLATFORM);
+    const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, PLATFORM);
     if (existingAccountLogin) {
       existingAccountLogin.tokenValue = access_token;
       existingAccountLogin.addedDateUtc = new Date();

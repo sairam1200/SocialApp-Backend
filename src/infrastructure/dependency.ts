@@ -11,6 +11,7 @@ import { UserLoginRepository } from "./repositories/userLogin.repository";
 import { UserContentRepository } from "./repositories/userContent.repository";
 import { NotificationRepository } from "./repositories/notification.repository";
 import { LinkedAccountRepository } from "./repositories/linkedAccount.repository";
+import { PlaylistRepository } from "./repositories/playlist.repository";
 import { DataProtectionKeyRepository } from "./repositories/dataProtectionKey.repository";
 
 /* This is the dependency object that holds all the repositories & services
@@ -58,6 +59,10 @@ export const dependency = {
   RateLimitRepository: {
     provide: _const.IRATELIMIT_REPOSITORY,
     useClass: RateLimitRepository
+  },
+  PlaylistRepository: {
+    provide: _const.IPLAYLIST_REPOSITORY,
+    useClass: PlaylistRepository
   },
   TokenService: {
     provide: _const.ITOKEN_SERVICE,

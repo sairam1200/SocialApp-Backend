@@ -149,7 +149,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
       }));
     }
 
-    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(user.id, PLATFORM);
+    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, PLATFORM);
     if (existingAccountLogin) {
       existingAccountLogin.tokenValue = refresh_token;
       existingAccountLogin.addedDateUtc = new Date();

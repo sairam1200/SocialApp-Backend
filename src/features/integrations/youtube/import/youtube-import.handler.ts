@@ -140,7 +140,7 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
   private async getUserLoginAsync(userId: string): Promise<UserLogin> {
 
     const now = new Date();
-    const userLogin = await this.userLoginRepository.getByUserIdAndProvider(
+    const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(
       userId,
       _const.PLATFORMS.YOUTUBE
     );

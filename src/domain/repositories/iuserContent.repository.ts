@@ -18,7 +18,7 @@ export interface IUserContentRepository {
     cursor: string
   ): Promise<[UserContent[], string]>;
 
-  getEntries(
+  getEntriesAsync(
     page: number,
     pageSize: number,
     orderBy: string,

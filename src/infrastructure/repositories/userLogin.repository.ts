@@ -44,19 +44,19 @@ export class UserLoginRepository implements IUserLoginRepository {
         return await this.userLoginContext.save(refreshToken);
     }
 
-    public async getByUserIdAndProvider(userId: string, provider: string): Promise<UserLogin> {
+    public async getByUserIdAndProviderAsync(userId: string, provider: string): Promise<UserLogin> {
         return await this.userLoginContext.findOne({ where: { userId, provider } });
     }
 
-    public async getByUserId(userId: string): Promise<UserLogin[]> {
+    public async getByUserIdAsync(userId: string): Promise<UserLogin[]> {
         return await this.userLoginContext.find({ where: { userId } });
     }
 
-    public async getByUserIdAndDeviceId(userId: string, deviceId: string): Promise<UserLogin> {
+    public async getByUserIdAndDeviceIdAsync(userId: string, deviceId: string): Promise<UserLogin> {
         return await this.userLoginContext.findOne({ where: { userId, deviceId } });
     }
 
-    public async getByTokenValueAndDeviceId(tokenValue: string, deviceId: string): Promise<UserLogin> {
+    public async getByTokenValueAndDeviceIdAsync(tokenValue: string, deviceId: string): Promise<UserLogin> {
         return await this.userLoginContext.findOne({ where: { tokenValue, deviceId } });
     }
 

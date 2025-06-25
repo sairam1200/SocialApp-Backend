@@ -19,7 +19,7 @@ export class GetRoleController {
     ) { }
 
     @Get('get-by-id')
-    @ApiResponse({ status: 200, description: 'OK' })
+    @ApiResponse({ status: 200, description: 'OK', type: RoleModel })
     @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
     @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
     @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -31,7 +31,7 @@ export class GetRoleController {
     }
 
     @Get('get-by-name')
-    @ApiResponse({ status: 200, description: 'OK' })
+    @ApiResponse({ status: 200, description: 'OK', type: RoleModel })
     @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
     @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
     @ApiResponse({ status: 403, description: 'FORBIDDEN' })
