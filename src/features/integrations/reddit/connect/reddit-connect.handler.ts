@@ -39,7 +39,7 @@ export class RedditConnectQueryHandler implements ICommandHandler<RedditConnectQ
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-  ) {}
+  ) { }
 
   public async execute(command: RedditConnectQuery): Promise<void> {
     const { model } = command;
@@ -65,7 +65,7 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-  ) {}
+  ) { }
 
   public async execute(query: RedditConnectCallbackQuery)
     : Promise<{ accessToken: string; expiresIn: number; profile: any }> {
@@ -124,7 +124,7 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
       }));
     }
 
-    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(
+    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(
       user.id,
       _const.PLATFORMS.REDDIT
     );

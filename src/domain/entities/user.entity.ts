@@ -1,6 +1,8 @@
-import { Entity, Column } from "typeorm";
-import { BaseEntity } from "../baseEntity";
 import { UserType } from "../enums";
+import { BaseEntity } from "../baseEntity";
+import { Entity, Column, OneToMany } from "typeorm";
+import { Playlist } from "./playlist.entity";
+import { PlaylistMember } from "./playlistMember.entity";
 
 @Entity({ name: 'users', schema: 'identity' })
 export class User extends BaseEntity {
@@ -62,6 +64,15 @@ export class User extends BaseEntity {
 
     @Column({ nullable: true })
     profileImage?: string;
+
+    @OneToMany(() => Playlist, playlist => playlist.owner)
+    ownedPlaylists: Playlist[];
+
+    @OneToMany(
+        () => PlaylistMember,
+        entry => entry.user
+    )
+    playlistMemberships: PlaylistMember[];
 
     constructor(request: Partial<User> = {}) {
         super();

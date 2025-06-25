@@ -69,7 +69,7 @@ export class RefreshTokenHandler implements ICommandHandler<RefreshTokenCommand>
             throw new Error("User associated with the token does not exist.");
         }
 
-        const userLogin = await this.userLoginRepository.getByTokenValueAndDeviceId(
+        const userLogin = await this.userLoginRepository.getByTokenValueAndDeviceIdAsync(
             model.refreshToken,
             model.deviceId
         );

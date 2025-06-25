@@ -20,7 +20,7 @@ export class CreateUserController {
     @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
     @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
     @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-    @ApiResponse({ status: 201, description: 'CREATED' })
+    @ApiResponse({ status: 201, description: 'CREATED', type: UserModel })
     public async Create(@Body() request: CreateUserModel, @Res() res: Response
     ): Promise<UserModel> {
 

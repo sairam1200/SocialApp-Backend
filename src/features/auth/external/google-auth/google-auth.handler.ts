@@ -103,12 +103,11 @@ const googleConnectCallbackValidations = Joi.object({
 
 @CommandHandler(GoogleConnectQuery)
 export class GoogleConnectQueryHandler
-  implements ICommandHandler<GoogleConnectQuery>
-{
+  implements ICommandHandler<GoogleConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-  ) {}
+  ) { }
 
   public async execute(command: GoogleConnectQuery): Promise<void> {
     const { model } = command;
@@ -134,8 +133,7 @@ export class GoogleConnectQueryHandler
 
 @CommandHandler(GoogleConnectCallbackQuery)
 export class GoogleConnectCallbackQueryHandler
-  implements ICommandHandler<GoogleConnectCallbackQuery>
-{
+  implements ICommandHandler<GoogleConnectCallbackQuery> {
   constructor(
     @Inject(_const.ITOKEN_SERVICE)
     private readonly tokenService: ITokenService,
@@ -147,7 +145,7 @@ export class GoogleConnectCallbackQueryHandler
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-  ) {}
+  ) { }
 
   public async execute(query: GoogleConnectCallbackQuery): Promise<any> {
     const { model } = query;
@@ -250,7 +248,7 @@ export class GoogleConnectCallbackQueryHandler
     }
 
     let existingAccountLogin =
-      await this.userLoginRepository.getByUserIdAndProvider(
+      await this.userLoginRepository.getByUserIdAndProviderAsync(
         user.id,
         _const.PLATFORMS.YOUTUBE,
       );

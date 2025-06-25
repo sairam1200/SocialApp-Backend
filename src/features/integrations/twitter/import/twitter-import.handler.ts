@@ -146,7 +146,7 @@ export class TwitterImportCommandHandler implements ICommandHandler<TwitterImpor
   private async getUserLoginAsync(userId: string): Promise<UserLogin> {
 
     const now = new Date();
-    const userLogin = await this.userLoginRepository.getByUserIdAndProvider(
+    const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(
       userId,
       _const.PLATFORMS.TWITTER
     );

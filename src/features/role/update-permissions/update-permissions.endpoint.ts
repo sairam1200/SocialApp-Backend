@@ -19,7 +19,7 @@ export class UpdatePermissionsController {
     @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
     @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
     @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-    @ApiResponse({ status: 200, description: 'OK' })
+    @ApiResponse({ status: 204, description: 'NO_CONTENT' })
     public async UpdatePermissions(@Body() request: UpdatePermissionsModel, @Res() res: Response
     ): Promise<void> {
 

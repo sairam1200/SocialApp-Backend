@@ -141,7 +141,7 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
       }));
     }
 
-    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(
+    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(
       user.id,
       _const.PLATFORMS.SPOTIFY
     );

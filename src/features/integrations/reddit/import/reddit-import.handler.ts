@@ -44,7 +44,7 @@ export class RedditImportCommandHandler implements ICommandHandler<RedditImportC
     const { redditAccessToken } = command.model;
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
     //logger.info(`[RedditImport] Started import for user ${userId}`);
-    
+
     let accessToken: string;
     let expiresIn: number;
 
@@ -108,7 +108,7 @@ export class RedditImportCommandHandler implements ICommandHandler<RedditImportC
   private async verifyAccessTokenAsync(accessToken: string): Promise<boolean> {
     try {
       //logger.debug(`[RedditImport] Verifying Reddit token`);
-      
+
       if (!accessToken || accessToken.trim() === '') {
         //logger.debug(`[RedditImport] Empty or null access token provided`);
         return false;
@@ -120,19 +120,19 @@ export class RedditImportCommandHandler implements ICommandHandler<RedditImportC
         },
       });
 
-      const isValid = response.status === 200 && 
-                     !!response.data?.id && 
-                     !!response.data?.name;
+      const isValid = response.status === 200 &&
+        !!response.data?.id &&
+        !!response.data?.name;
 
       return isValid;
     } catch (error) {
       // Enhanced error logging with different error types
       const tokenPreview = accessToken?.slice(0, 8) + '...';
-      
+
       if (error.response) {
         const status = error.response.status;
         const redditError = error.response.data;
-        
+
         logger.error(`[RedditImport] Reddit API error: ${status}`, {
           tokenPreview,
           status,
@@ -168,8 +168,8 @@ export class RedditImportCommandHandler implements ICommandHandler<RedditImportC
 
   private async getUserLoginAsync(userId: string): Promise<UserLogin> {
     //logger.debug(`[RedditImport] Fetching stored login for user ${userId}`);
-    
-    const userLogin = await this.userLoginRepository.getByUserIdAndProvider(
+
+    const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(
       userId,
       _const.PLATFORMS.REDDIT
     );
@@ -193,23 +193,5 @@ export class RedditImportCommandHandler implements ICommandHandler<RedditImportC
     //logger.debug(`[RedditImport] Found valid stored token. Expires in ${timeToExpiry} seconds`);
 
     return userLogin;
-  }
-
-  private async getRedditUserInfo(accessToken: string): Promise<any> {
-    try {
-      //logger.debug(`[RedditImport] Fetching Reddit user information`);
-      
-      const response = await axios.get("https://oauth.reddit.com/api/v1/me", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        },
-      });
-      
-      //logger.debug(`[RedditImport] Retrieved user info for: ${response.data.name}`);
-      return response.data;
-    } catch (error) {
-      logger.error(`[RedditImport] Failed to get Reddit user info: ${error.message}`);
-      throw new ApplicationException('Failed to retrieve Reddit user information.');
-    }
   }
 }
