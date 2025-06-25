@@ -1,7 +1,7 @@
 import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import _const from "../../../core/utils/const";
-import { ICommandHandler } from "@nestjs/cqrs";
+import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { PlaylistModel } from "../../../domain/contracts/playlist.model";
 import { mapToPlaylistModel } from "../../../domain/mappers/playlist.mpper";
 import { PlaylistNotFoundException } from "../../../core/exceptions/playlist.exception";
@@ -22,6 +22,7 @@ const getPlaylistByIdValidations = Joi.object({
   playlistReferenceId: Joi.string().required(),
 });
 
+@CommandHandler(GetPlaylistByIdQuery)
 export class GetPlaylistByIdQueryHandler implements ICommandHandler<GetPlaylistByIdQuery, PlaylistModel> {
   constructor(
     @Inject(_const.IPLAYLIST_REPOSITORY) private readonly playlistRepository: IPlaylistRepository,

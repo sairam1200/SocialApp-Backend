@@ -4,9 +4,9 @@ import { PlaylistMember } from "../entities/playlistMember.entity";
 
 export interface IPlaylistRepository {
 
-  getAsync(userId: string): Promise<Playlist[]>;
+  getAsync(userNameOrId: string): Promise<Playlist[]>;
   getByIdAsync(referenceId: string): Promise<Playlist | null>;
-  getByNameAsync(userName: string, playlistName: string): Promise<Playlist | null>;
+  getByNameAsync(userNameOrId: string, playlistName: string): Promise<Playlist | null>;
   createAsync(playlist: Playlist): Promise<Playlist>;
   updateAsync(playlist: Playlist): Promise<boolean>;
   deleteAsync(referenceId: string): Promise<void>;

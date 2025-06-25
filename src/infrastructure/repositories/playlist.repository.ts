@@ -23,15 +23,21 @@ export class PlaylistRepository implements IPlaylistRepository {
     private readonly playlistMemberContext: Repository<PlaylistMember>,
   ) { }
 
-  public async getAsync(userId: string): Promise<Playlist[]> {
+  public async getAsync(userNameOrId: string): Promise<Playlist[]> {
 
     const ownedPlaylists = await this.playlistContext.find({
-      where: { owner: { id: userId } },
+      where: [
+        { owner: { id: userNameOrId } },
+        { owner: { userName: userNameOrId } }
+      ],
       relations: ['owner', 'members'],
     });
 
     const collabEntries = await this.playlistMemberContext.find({
-      where: { user: { id: userId } },
+      where: [
+        { user: { id: userNameOrId } },
+        { user: { userName: userNameOrId } }
+      ],
       relations: [
         'playlist',
         'playlist.owner',
@@ -57,13 +63,13 @@ export class PlaylistRepository implements IPlaylistRepository {
     });
   }
 
-  public async getByNameAsync(userName: string, playlistName: string): Promise<Playlist | null> {
+  public async getByNameAsync(userNameOrId: string, playlistName: string): Promise<Playlist | null> {
 
     return await this.playlistContext.findOne({
-      where: {
-        owner: { userName: userName },
-        name: playlistName,
-      },
+      where: [
+        { owner: { userName: userNameOrId }, name: playlistName },
+        { owner: { id: userNameOrId }, name: playlistName }
+      ],
       relations: ['owner', 'members'],
     });
   }

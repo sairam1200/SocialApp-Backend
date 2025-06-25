@@ -9,6 +9,8 @@ import { Playlist } from "../domain/entities/playlist.entity";
 import { PlaylistMember } from "../domain/entities/playlistMember.entity";
 import { GetPlaylistController } from "../features/playlist/get-playlist/get-playlist.endpoint";
 import { AddPlaylistMemberController } from "../features/playlist/add-member/add-member.endpoint";
+import { GetPlaylistsController } from "../features/playlist/get-playlists/get-playlists.endpoint";
+import { GetPlaylistsQueryHandler } from "../features/playlist/get-playlists/get-playlists.handler";
 import { AddPlaylistMemberCommandHandler } from "../features/playlist/add-member/add-member.handler";
 import { CreatePlaylistController } from "../features/playlist/create-playlist/create-playlist.endpoint";
 import { GetPlaylistByIdQueryHandler } from "../features/playlist/get-playlist/get-playlist-by-id.handler";
@@ -28,6 +30,7 @@ import { GetPlaylistByNameQueryHandler } from "../features/playlist/get-playlist
   controllers: [
     CreatePlaylistController,
     GetPlaylistController,
+    GetPlaylistsController,
     AddPlaylistMemberController,
   ],
   providers: [
@@ -36,6 +39,7 @@ import { GetPlaylistByNameQueryHandler } from "../features/playlist/get-playlist
     CreatePlaylistCommandHandler,
     GetPlaylistByIdQueryHandler,
     GetPlaylistByNameQueryHandler,
+    GetPlaylistsQueryHandler,
     AddPlaylistMemberCommandHandler,
     dependency.PlaylistRepository,
   ],

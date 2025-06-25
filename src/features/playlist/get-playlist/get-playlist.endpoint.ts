@@ -34,20 +34,20 @@ export class GetPlaylistController {
     return result;
   }
 
-  @Get(':userName/get-by-name')
+  @Get(':userNameOrId/get-by-name')
   @ApiResponse({ status: 200, description: 'OK', type: PlaylistModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async GetByName(
-    @Param('userName') userName: string,
+    @Param('userNameOrId') userNameOrId: string,
     @Query('playlistName') playlistName: string
   ): Promise<PlaylistModel> {
 
     const result = await this.queryBus.execute(new GetPlaylistByNameQuery({
       model: {
         playlistName,
-        userName
+        userNameOrId
       }
     }));
 
