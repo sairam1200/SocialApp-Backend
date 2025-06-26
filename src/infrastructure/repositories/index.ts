@@ -1,0 +1,11 @@
+export { UserRepository } from './user.repository';
+export { RoleRepository } from './role.repository';
+export { UserRoleRepository } from './userRole.repository';
+export { PlaylistRepository } from './playlist.repository';
+export { RateLimitRepository } from './rateLimit.repository';
+export { UserLoginRepository } from './userLogin.repository';
+export { RoleClaimRepository } from './roleClaim.repository';
+export { UserContentRepository } from './userContent.repository';
+export { NotificationRepository } from './notification.repository';
+export { LinkedAccountRepository } from './linkedAccount.repository';
+export { DataProtectionKeyRepository } from './dataProtectionKey.repository';

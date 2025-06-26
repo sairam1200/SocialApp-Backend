@@ -1,0 +1,11 @@
+export { IRoleRepository } from './irole.repository';
+export { IUserRepository } from './iuser.repository';
+export { IUserRoleRepository } from './iuserRole.repository';
+export { IPlaylistRepository } from './iplaylist.repository';
+export { IRateLimitRepository } from './irateLimit.repository';
+export { IRoleClaimRepository } from './iroleClaim.repository';
+export { IUserLoginRepository } from './irefreshtoken.repository';
+export { IUserContentRepository } from './iuserContent.repository';
+export { INotificationRepository } from './inotification.repository';
+export { ILinkedAccountRepository } from './ilinkedAccount.repository';
+export { IDataProtectionKeyRepository } from './idataProtectionKey.repository';

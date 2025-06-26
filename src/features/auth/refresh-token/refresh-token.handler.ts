@@ -51,7 +51,7 @@ const refreshTokenValidations = Joi.object({
 });
 
 @CommandHandler(RefreshTokenCommand)
-export class RefreshTokenHandler implements ICommandHandler<RefreshTokenCommand> {
+export class RefreshTokenCommandHandler implements ICommandHandler<RefreshTokenCommand> {
     constructor(
         @Inject(_const.ITOKEN_SERVICE) private readonly tokenService: ITokenService,
         @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,

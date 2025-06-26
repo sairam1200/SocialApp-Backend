@@ -34,6 +34,9 @@ export class User extends BaseEntity {
     @Column({ nullable: true })
     normalizedEmail?: string;
 
+    @Column({ nullable: true })
+    normalizedUserName?: string;
+
     @Column({ default: false })
     emailConfirmed: boolean;
 

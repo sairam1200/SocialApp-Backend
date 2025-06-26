@@ -5,10 +5,9 @@ import {
 } from '@nestjs/common';
 
 export class UserAlreadyExistsException extends ConflictException {
-    constructor(email: string, id: string = '') {
-        const message = email
-            ? `A user with the email "${email}" already exists.`
-            : `A user with the ID "${id}" already exists.`;
+    constructor(value: string, purpose: 'email' | 'username') {
+        let message: string;
+        message = `A user with the ${purpose} "${value}" already exists.`;
         super(message);
         this.name = 'UserAlreadyExistsException';
     }

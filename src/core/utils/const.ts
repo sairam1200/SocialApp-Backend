@@ -46,5 +46,12 @@ export default {
     YOUTUBE: "youtube",
     SPOTIFY: "spotify",
     REDDIT: "reddit",
+  },
+
+  TOKEN: {
+    PURPOSE: {
+      RESET_PASSWORD: 'resetpassword',
+      CONFIRM_EMAIL: 'emailconfirmation'
+    }
   }
 }
