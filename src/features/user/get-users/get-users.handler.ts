@@ -36,7 +36,7 @@ export class GetUsersHandler implements ICommandHandler<GetUsersQuery> {
     async execute(command: GetUsersQuery): Promise<PagedResult<UserModel[]>> {
         await getUsersValidations.validateAsync(command);
 
-        const [usersEntity, total] = await this.userRepository.getEntries(
+        const [usersEntity, total] = await this.userRepository.getEntriesAsync(
             command.page,
             command.pageSize,
             command.orderBy,

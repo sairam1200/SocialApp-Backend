@@ -15,6 +15,7 @@ import { UpdateUserHandler } from '../features/user/update-user/update-user.hand
 import { CreateUserHandler } from "../features/user/create-user/create-user.handler";
 import { CreateUserController } from "../features/user/create-user/create-user.endpoint";
 import { UpdateUserController } from '../features/user/update-user/update-user.endpoint';
+import { UserClaim } from 'domain/entities';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UpdateUserController } from '../features/user/update-user/update-user.e
       User,
       Role,
       RoleClaim,
+      UserClaim,
       UserRole
     ])
   ],

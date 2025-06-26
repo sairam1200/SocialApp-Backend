@@ -49,7 +49,7 @@ export class LoginCommand {
 }
 
 @CommandHandler(LoginCommand)
-export class LoginHandler implements ICommandHandler<LoginCommand> {
+export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
 
     constructor(
         @Inject(_const.ITOKEN_SERVICE) private readonly tokenService: ITokenService,

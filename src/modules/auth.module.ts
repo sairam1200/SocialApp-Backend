@@ -4,26 +4,11 @@ import _const from '../core/utils/const';
 import { CqrsModule } from '@nestjs/cqrs';
 import { EmailModule } from './email.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../domain/entities/user.entity';
-import { Role } from '../domain/entities/role.entity';
 import { AuthGuardsModule } from './authGuard.module';
 import { dependency } from '../infrastructure/dependency';
 import { NotificationModule } from './notification.module';
-import { UserRole } from '../domain/entities/userRole.entity';
-import { RoleClaim } from '../domain/entities/roleClaim.entity';
-import { UserLogin } from '../domain/entities/userLogin.entity';
-import { LoginHandler } from '../features/auth/login/login.handler';
-import { LoginController } from '../features/auth/login/login.endpoint';
-import { LinkedAccount } from '../domain/entities/linkedAccount.entity';
-import { RegisterHandler } from '../features/auth/register/register.handler';
-import { DataProtectionKey } from '../domain/entities/dataProtectionKey.entity';
-import { RegisterController } from '../features/auth/register/register.endpoint';
-import { RefreshTokenHandler } from '../features/auth/refresh-token/refresh-token.handler';
-import { RefreshTokenController } from '../features/auth/refresh-token/refresh-token.endpoint';
-import { ResetPasswordController } from '../features/auth/reset-password/reset-password.endpoint';
-import { ResetPasswordCommandHandler } from '../features/auth/reset-password/reset-password.handler';
-import { GoogleAuthenticationController } from '../features/auth/external/google-auth/google-auth.endpoint';
-import { GoogleConnectQueryHandler, GoogleConnectCallbackQueryHandler } from '../features/auth/external/google-auth/google-auth.handler';
+import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, DataProtectionKey } from '../domain/entities';
+import { GoogleAuthenticationController, GoogleConnectQueryHandler, GoogleConnectCallbackQueryHandler, ResetPasswordController, ResetPasswordCommandHandler, RegisterController, RegisterCommandHandler, LoginController, LoginCommandHandler, RefreshTokenController, RefreshTokenCommandHandler } from '../features/auth';
 
 @Module({
   imports: [
@@ -36,6 +21,7 @@ import { GoogleConnectQueryHandler, GoogleConnectCallbackQueryHandler } from '..
       User,
       Role,
       RoleClaim,
+      UserClaim,
       UserRole,
       DataProtectionKey,
       LinkedAccount,
@@ -43,9 +29,9 @@ import { GoogleConnectQueryHandler, GoogleConnectCallbackQueryHandler } from '..
   ],
   providers: [
     JwtService,
-    LoginHandler,
-    RegisterHandler,
-    RefreshTokenHandler,
+    LoginCommandHandler,
+    RegisterCommandHandler,
+    RefreshTokenCommandHandler,
     ResetPasswordCommandHandler,
     GoogleConnectQueryHandler,
     dependency.TokenService,
