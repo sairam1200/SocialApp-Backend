@@ -12,17 +12,17 @@ export interface IUserLoginRepository {
         expiryDateUtc?: Date
     ): Promise<UserLogin>;
 
-    getByTokenValueAndDeviceId(
+    getByTokenValueAndDeviceIdAsync(
         tokenValue: string,
         deviceId: string
     ): Promise<UserLogin>;
 
-    getByUserIdAndProvider(
+    getByUserIdAndProviderAsync(
         userId: string,
         provider: string
     ): Promise<UserLogin>;
 
-    getByUserId(
+    getByUserIdAsync(
         userId: string
     ): Promise<UserLogin[]>;
 

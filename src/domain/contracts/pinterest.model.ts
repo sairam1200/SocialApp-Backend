@@ -32,22 +32,22 @@ export class PinterestProfileModel {
   @ApiProperty()
   profileImage: string;
 
-  @ApiProperty()
+  @ApiProperty({ default: 0 })
   followersCount: number;
 
-  @ApiProperty()
+  @ApiProperty({ default: 0 })
   followingCount: number;
 
-  @ApiProperty()
+  @ApiProperty({default: 0})
   monthlyViews: number;
 
-  @ApiProperty()
+  @ApiProperty({ default: false})
   allowImport: boolean;
 
   @ApiProperty()
   websiteUrl: string;
 
-  @ApiProperty()
+  @ApiProperty({ default: 0 })
   pinCount: number;
 
   @ApiProperty()

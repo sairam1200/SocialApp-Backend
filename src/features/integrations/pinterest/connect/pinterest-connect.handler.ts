@@ -132,7 +132,7 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
       }));
     }
 
-    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProvider(user.id, _const.PLATFORMS.PINTEREST);
+    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.PINTEREST);
     if (existingAccountLogin) {
       existingAccountLogin.tokenValue = refresh_token;
       existingAccountLogin.addedDateUtc = new Date();

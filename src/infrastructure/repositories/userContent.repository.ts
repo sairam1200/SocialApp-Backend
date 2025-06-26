@@ -14,7 +14,7 @@ export class UserContentRepository implements IUserContentRepository {
 
   public async createAsync(content: UserContent): Promise<UserContent> {
 
-    const existingContent = await this.getByPlatformAndContentIdAsync( content.platform, content.externalId);
+    const existingContent = await this.getByPlatformAndContentIdAsync(content.platform, content.externalId);
     if (existingContent) {
       existingContent.title = content.title;
       existingContent.metaData = content.metaData;
@@ -31,7 +31,7 @@ export class UserContentRepository implements IUserContentRepository {
   }
 
   public async getByPlatformAndContentIdAsync(platform: string, contentId: string): Promise<UserContent | null> {
-    return await this.userContentContext.findOne({ where: { platform,  externalId: contentId } });
+    return await this.userContentContext.findOne({ where: { platform, externalId: contentId } });
   }
 
   public async getByIdAsync(id: string): Promise<UserContent | null> {
@@ -57,7 +57,7 @@ export class UserContentRepository implements IUserContentRepository {
     return [result, nextCursor];
   }
 
-  async getEntries(
+  async getEntriesAsync(
     page: number,
     pageSize: number,
     orderBy: string,

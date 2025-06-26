@@ -28,11 +28,13 @@ import { GetPermissionsController } from '../features/role/get-permissions/get-p
 import { DeactivateRoleController } from '../features/role/deactivate-role/deactivate-role.endpoint';
 import { UpdatePermissionsHandler } from '../features/role/update-permissions/update-permissions.handler';
 import { UpdatePermissionsController } from '../features/role/update-permissions/update-permissions.endpoint';
+import { UserClaim } from 'domain/entities';
 
 @Module({
   imports: [CqrsModule, TypeOrmModule.forFeature([
     User,
     Role,
+    UserClaim,
     RoleClaim,
     UserRole
   ])],

@@ -26,7 +26,7 @@ export class InstagramProfileModel {
   @ApiProperty()
   biography: string;
 
-  @ApiProperty()
+  @ApiProperty({ default: 0})
   mediaCount: number;
 
   @ApiProperty()
@@ -38,15 +38,15 @@ export class InstagramProfileModel {
   @ApiProperty()
   instagramId: string;
 
-  @ApiProperty()
+  @ApiProperty({ default: false })
   allowImport: boolean;
 
   @ApiProperty()
   profileImage: string;
 
-  @ApiProperty()
+  @ApiProperty({ default: 0 })
   followersCount: number;
 
-  @ApiProperty()
+  @ApiProperty({ default: 0 })
   followingCount: number;
 }

@@ -1,17 +1,6 @@
 import _const from "../core/utils/const";
-import { TokenService } from "./services/token.service";
-import { EmailService } from "./services/email.service";
-import { UserRepository } from "./repositories/user.repository";
-import { RoleRepository } from "./repositories/role.repository";
-import { NotificationService } from "./services/notification.service";
-import { UserRoleRepository } from "./repositories/userRole.repository";
-import { RateLimitRepository } from "./repositories/rateLimit.repository";
-import { RoleClaimRepository } from "./repositories/roleClaim.repository";
-import { UserLoginRepository } from "./repositories/userLogin.repository";
-import { UserContentRepository } from "./repositories/userContent.repository";
-import { NotificationRepository } from "./repositories/notification.repository";
-import { LinkedAccountRepository } from "./repositories/linkedAccount.repository";
-import { DataProtectionKeyRepository } from "./repositories/dataProtectionKey.repository";
+import { DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, UserContentRepository, UserLoginRepository, UserRepository, UserRoleRepository } from "./repositories";
+import { EmailService, NotificationService, TokenService } from "./services";
 
 /* This is the dependency object that holds all the repositories & services
 * used in the application. It is used to provide the dependencies to the
@@ -58,6 +47,10 @@ export const dependency = {
   RateLimitRepository: {
     provide: _const.IRATELIMIT_REPOSITORY,
     useClass: RateLimitRepository
+  },
+  PlaylistRepository: {
+    provide: _const.IPLAYLIST_REPOSITORY,
+    useClass: PlaylistRepository
   },
   TokenService: {
     provide: _const.ITOKEN_SERVICE,

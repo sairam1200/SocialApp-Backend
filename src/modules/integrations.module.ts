@@ -4,15 +4,8 @@ import { JwtService } from "@nestjs/jwt";
 import { CqrsModule } from "@nestjs/cqrs";
 import { QueuesModule } from "./queues.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { User } from "../domain/entities/user.entity";
-import { Role } from "../domain/entities/role.entity";
 import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
-import { UserRole } from "../domain/entities/userRole.entity";
-import { UserLogin } from "../domain/entities/userLogin.entity";
-import { UserContent } from "../domain/entities/userContent.entity";
-import { LinkedAccount } from "../domain/entities/linkedAccount.entity";
-import { DataProtectionKey } from "../domain/entities/dataProtectionKey.entity";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
 import { YoutubeImportController } from "../features/integrations/youtube/import/youtube-import.endpoint";
 import { TwitterImportController } from "../features/integrations/twitter/import/twitter-import.endpoint";
@@ -43,6 +36,16 @@ import { YoutubeConnectCallbackQueryHandler, YoutubeConnectQueryHandler } from "
 import { PinterestConnectCallbackQueryHandler, PinterestConnectQueryHandler } from "../features/integrations/pinterest/connect/pinterest-connect.handler";
 import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } from "../features/integrations/instagram/connect/instagram-connect.handler";
 
+import { RedditConnectController } from "../features/integrations/reddit/connect/reddit-connect.endpoint";
+import { RedditProfileController } from "../features/integrations/reddit/get-profile/get-profile.endpoint";
+import { RedditImportController } from "../features/integrations/reddit/import/reddit-import.endpoint";
+
+import { RedditConnectQueryHandler, RedditConnectCallbackQueryHandler } from "../features/integrations/reddit/connect/reddit-connect.handler";
+import { RedditProfileQueryHandler } from "../features/integrations/reddit/get-profile/get-profile.handler";
+import { RedditImportCommandHandler } from "../features/integrations/reddit/import/reddit-import.handler";
+import { DataProtectionKey, LinkedAccount, Role, User, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
+
+
 @Module({
   imports: [
     CqrsModule,
@@ -53,6 +56,7 @@ import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } fr
       UserRole,
       UserLogin,
       Role,
+      UserClaim,
       UserContent,
       LinkedAccount,
       DataProtectionKey
@@ -78,6 +82,10 @@ import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } fr
 
     YoutubeConnectController,
     YoutubeImportController,
+
+    RedditConnectController,
+    RedditProfileController,
+    RedditImportController,
   ],
   providers: [
     ImportGateway,
@@ -108,6 +116,11 @@ import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } fr
     YoutubeConnectCallbackQueryHandler,
     YoutubeConnectQueryHandler,
     YoutubeImportCommandHandler,
+
+    RedditConnectQueryHandler,
+    RedditConnectCallbackQueryHandler,
+    RedditProfileQueryHandler,
+    RedditImportCommandHandler,
 
     dependency.RoleRepository,
     dependency.UserRepository,

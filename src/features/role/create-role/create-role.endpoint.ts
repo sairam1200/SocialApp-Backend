@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
-import { RoleModel } from "../../../domain/contracts/role.model";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
+import { RoleModel } from "../../../domain/contracts/role.model";
 import { CreateRoleCommand, CreateRoleModel } from "./create-role.handler";
 import { PermissionsGuard } from "../../../core/passport/permissions.guard";
 import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
@@ -20,7 +20,8 @@ export class CreateRoleController {
     @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
     @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
     @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-    @ApiResponse({ status: 201, description: 'CREATED' })
+    @ApiResponse({ status: 409, description: 'CONFLICT' })
+    @ApiResponse({ status: 201, description: 'CREATED', type: RoleModel })
     public async Create(@Body() request: CreateRoleModel, @Res() res: Response
     ): Promise<RoleModel> {
 

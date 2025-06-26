@@ -51,7 +51,7 @@ const refreshTokenValidations = Joi.object({
 });
 
 @CommandHandler(RefreshTokenCommand)
-export class RefreshTokenHandler implements ICommandHandler<RefreshTokenCommand> {
+export class RefreshTokenCommandHandler implements ICommandHandler<RefreshTokenCommand> {
     constructor(
         @Inject(_const.ITOKEN_SERVICE) private readonly tokenService: ITokenService,
         @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
@@ -69,7 +69,7 @@ export class RefreshTokenHandler implements ICommandHandler<RefreshTokenCommand>
             throw new Error("User associated with the token does not exist.");
         }
 
-        const userLogin = await this.userLoginRepository.getByTokenValueAndDeviceId(
+        const userLogin = await this.userLoginRepository.getByTokenValueAndDeviceIdAsync(
             model.refreshToken,
             model.deviceId
         );

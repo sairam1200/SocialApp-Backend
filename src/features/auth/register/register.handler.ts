@@ -56,7 +56,7 @@ const createUserValidations = Joi.object({
 });
 
 @CommandHandler(RegisterCommand)
-export class RegisterHandler implements ICommandHandler<RegisterCommand> {
+export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> {
   constructor(
     @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
   ) { }
@@ -70,7 +70,7 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
     const existUser = await this.userRepository.getUserByEmailAsync(model.email);
 
     if (existUser) {
-      throw new UserAlreadyExistsException(model.email);
+      throw new UserAlreadyExistsException(model.email, "email");
     }
 
     const initials = stringUtil.extractInitialsFromName(`${model.firstName} ${model.lastName}`);

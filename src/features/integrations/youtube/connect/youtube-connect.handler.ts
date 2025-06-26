@@ -172,7 +172,7 @@ export class YoutubeConnectCallbackQueryHandler
     }
 
     let existingAccountLogin =
-      await this.userLoginRepository.getByUserIdAndProvider(
+      await this.userLoginRepository.getByUserIdAndProviderAsync(
         user.id,
         _const.PLATFORMS.YOUTUBE,
       );

@@ -7,6 +7,7 @@ import { AuthModule } from './auth.module';
 import { QueuesModule } from './queues.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PassportModule } from '@nestjs/passport';
+import { PlaylistModule } from './playlist.module';
 import { IntegrationsModule } from './integrations.module';
 import { NotificationModule } from './notification.module';
 import { DataSeeder } from '../infrastructure/services/data.seeder';
@@ -24,6 +25,7 @@ import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '
     UserModule,
     RoleModule,
     AuthModule,
+    PlaylistModule,
     QueuesModule.register(),
     NotificationModule,
     IntegrationsModule,

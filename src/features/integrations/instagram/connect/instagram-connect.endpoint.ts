@@ -1,11 +1,26 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { stringUtil } from "../../../../core/utils/string.util";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
+import { InstagramProfileModel } from "../../../../domain/contracts/instagram.model";
 import { InstagramConnectCallbackQuery, InstagramConnectQuery } from "./instagram-connect.handler";
+
+class ConnectResponseModel {
+  @ApiProperty()
+  authorizeURL: string;
+}
+
+class InstagramConnectCallbackResponseModel {
+  @ApiProperty()
+  accessToken: string;
+  @ApiProperty()
+  expiresIn: string;
+  @ApiProperty()
+  profile: InstagramProfileModel;
+}
 
 @ApiTags('Integrations')
 @Controller({
@@ -18,7 +33,7 @@ export class InstagramConnectController {
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
-  @ApiResponse({ status: 302, description: 'FOUND' })
+  @ApiResponse({ status: 302, description: 'FOUND', type: ConnectResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -45,7 +60,7 @@ export class InstagramConnectController {
   }
 
   @Get('connect-callback')
-  @ApiResponse({ status: 200, description: 'OK' })
+  @ApiResponse({ status: 200, description: 'OK', type: InstagramConnectCallbackResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })

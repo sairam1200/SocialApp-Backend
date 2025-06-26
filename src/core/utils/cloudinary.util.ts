@@ -15,6 +15,11 @@ interface UploadResult {
   resource_type: string;
 }
 
+function makeFolderPath(folder?: string) {
+  const prefix = configs.env;    
+  return folder ? `${prefix}/${folder}` : prefix;
+}
+
 /**
  * Uploads an image or file to Cloudinary.
  * @param filePath Local path or remote URL.
@@ -27,7 +32,7 @@ export async function uploadToCloudinaryAsync(
   options: object = {}
 ): Promise<UploadResult> {
   const uploadOptions = {
-    folder,
+    folder: makeFolderPath(folder),
     ...options,
   };
 
@@ -68,7 +73,7 @@ export async function uploadBase64ToCloudinaryAsync(
   folder?: string
 ): Promise<UploadResult> {
   return await cloudinary.uploader.upload(base64Data, {
-    folder,
+    folder: makeFolderPath(folder),
   });
 }
 

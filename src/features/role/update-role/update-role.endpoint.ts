@@ -20,7 +20,7 @@ export class UpdateRoleController {
     @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
     @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
     @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-    @ApiResponse({ status: 200, description: 'OK' })
+    @ApiResponse({ status: 200, description: 'OK', type: RoleModel })
     public async Update(@Body() request: UpdateRoleModel, @Res() res: Response
     ): Promise<RoleModel> {
 

@@ -63,20 +63,21 @@ export class CreateUserHandler implements ICommandHandler<CreateUserCommand, Use
 
     public async execute(command: CreateUserCommand): Promise<UserModel> {
 
-        await createUserValidations.validateAsync(command.model);
+        const { model } = command;
+        await createUserValidations.validateAsync(model);
 
-        let user = await this.userRepository.getUserByEmailAsync(command.model.email)
-            ?? (() => { throw new UserAlreadyExistsException(command.model.email) })();
+        let user = await this.userRepository.getUserByEmailAsync(model.email)
+            ?? (() => { throw new UserAlreadyExistsException(model.email, "email") })();
 
         user = await this.userRepository.createAsync(
             new User({
-                firstName: command.model.firstName,
-                lastName: command.model.lastName,
-                email: command.model.email,
-                gender: command.model.gender,
-            }), command.model.password);
+                firstName: model.firstName,
+                lastName: model.lastName,
+                email: model.email,
+                gender: model.gender,
+            }), model.password);
 
-        await this.userRepository.addToRoleAsync(user, command.model.role)
+        await this.userRepository.addToRoleAsync(user, model.role)
 
         const result = new UserModel({
             id: user.id,

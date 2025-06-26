@@ -3,6 +3,7 @@ export default {
   IUSER_REPOSITORY: "IUserRepository",
   IROLE_REPOSITORY: "IRoleRepository",
   IUSERROLE_REPOSITORY: "IUserRoleRepository",
+  IPLAYLIST_REPOSITORY: "IPlaylistRepository",
   IRATELIMIT_REPOSITORY: "IRateLimitRepository",
   IROLECLAIM_REPOSITORY: "IRoleClaimRepository",
   IUSERLOGIN_REPOSITORY: "IUserLoginRepository",
@@ -24,6 +25,7 @@ export default {
     INSTAGRAM_IMPORT: "instagram-import",
     PINTEREST_IMPORT: "pinterest-import",
     TWITTER_IMPORT: "twitter-import",
+    REDDIT_IMPORT: "reddit-import",
   },
 
   EMAILTEMPLATES: {
@@ -43,5 +45,13 @@ export default {
     TWITTER: "twitter",
     YOUTUBE: "youtube",
     SPOTIFY: "spotify",
+    REDDIT: "reddit",
+  },
+
+  TOKEN: {
+    PURPOSE: {
+      RESET_PASSWORD: 'resetpassword',
+      CONFIRM_EMAIL: 'emailconfirmation'
+    }
   }
 }
