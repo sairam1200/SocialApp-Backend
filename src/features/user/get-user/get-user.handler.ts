@@ -10,7 +10,6 @@ import { UserNotFoundException } from "../../../core/exceptions/user.exception";
 export class GetUserQuery {
     userId: string;
 
-
     constructor(request: Partial<GetUserQuery> = {}) {
         Object.assign(this, request);
     }
