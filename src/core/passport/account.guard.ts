@@ -22,12 +22,16 @@ function createAccountGuard(type: UserType) {
         throw new UnauthorizedException('Unauthorized: You need to log in to access this resource.');
       }
 
-      const user = await getUserFromAccessTokenAsync(access_token, response, this.jwtService);
-      if (!user || user === undefined) {
+      const claimsPrinciple = await getUserFromAccessTokenAsync(access_token, response, this.jwtService);
+      if (!claimsPrinciple || claimsPrinciple === undefined) {
         throw new UnauthorizedException('Unauthorized: Invalid or expired token.');
       }
 
-      const hasType = user[Globals.ClaimTypes.UserType] as UserType === type;
+      if (claimsPrinciple[Globals.ClaimTypes.TwoFARequired]) {
+        throw new UnauthorizedException('Unauthorized: Two-factor authentication code is required');
+      }
+
+      const hasType = claimsPrinciple[Globals.ClaimTypes.UserType] as UserType === type;
       if (hasType) {
         return true;
       } else {

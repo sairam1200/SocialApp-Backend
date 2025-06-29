@@ -18,3 +18,15 @@ export { RegisterCommandHandler } from "./register/register.handler";
 
 export { ResetPasswordController } from "./reset-password/reset-password.endpoint";
 export { ResetPasswordCommandHandler } from "./reset-password/reset-password.handler";
+
+export { Setup2FAController } from "./2fa/setup/2fa-setup.endpoint";
+export { Setup2FACommandHandler } from "./2fa/setup/2fa-setup.handler";
+
+export { Disbale2FACommandHandler } from "./2fa/disable/2fa-disable.handler";
+export { Disable2FAController } from "./2fa/disable/2fa-disable.endpoint";
+
+export { Verify2FAController } from "./2fa/verify/2fa-verify.endpoint"
+export { Verify2FACommandHandler as Verfiy2FACommandHandler } from "./2fa/verify/2fa-verify.handler"
+
+export { Enable2FAController } from "./2fa/enable/2fa-enable.endpoint"
+export { Enable2FACommandHandler } from "./2fa/enable/2fa-enable.handler"
