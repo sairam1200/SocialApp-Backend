@@ -1,12 +1,13 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import { Disable2FACommand } from "./2fa-disable.handler";
-import { Body, Controller, HttpStatus, Post, Res } from "@nestjs/common";
+import { AuthenticatedAccountGuard } from "../../../../core/passport";
 import { ApiBody, ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 
 class Disable2FAResponseModel {
-  @ApiProperty()
-  message: "Two-factor authentication disabled successfully."
+  @ApiProperty({ default: "Two-factor authentication disabled successfully." })
+  message: string;
 }
 
 @ApiTags('Account')
@@ -21,6 +22,7 @@ export class Disable2FAController {
   ) { }
 
   @Post('2fa/disable')
+  @UseGuards(AuthenticatedAccountGuard)
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })

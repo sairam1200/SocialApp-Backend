@@ -2,8 +2,9 @@ import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { TokenResponseModel } from "../../tokenResponse.model";
-import { Body, Controller, HttpStatus, Post, Res } from "@nestjs/common";
+import { TwoFAVerificationGuard } from "../../../../core/passport";
 import { Verify2FACommand, Verify2FARequestModel } from "./2fa-verify.handler";
+import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 
 @ApiTags('Account')
 @Controller({
@@ -17,6 +18,7 @@ export class Verify2FAController {
   ) { }
 
   @Post('2fa/verify')
+  @UseGuards(TwoFAVerificationGuard)
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })

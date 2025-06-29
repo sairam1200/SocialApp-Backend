@@ -1,7 +1,8 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Body, Controller, HttpStatus, Post, Res } from "@nestjs/common";
+import { AuthenticatedAccountGuard } from "../../../core/passport";
+import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 import { ChangePasswordCommand, ChangePasswordRequestModel } from "./change-password.handler";
 
 @ApiTags('Account')
@@ -16,6 +17,7 @@ export class ChangePasswordController {
   ) { }
 
   @Post('change-password')
+  @UseGuards(AuthenticatedAccountGuard)
   @ApiResponse({ status: 200, description: 'OK' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })

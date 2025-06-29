@@ -9,6 +9,7 @@ import { Inject, UnauthorizedException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { addDurationToNow } from "../../../core/utils/time.util";
 import { ITokenService } from "../../../domain/services/itoken.service";
+import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 import { IUserLoginRepository } from "../../../domain/repositories/irefreshtoken.repository";
 
@@ -63,8 +64,7 @@ export class RefreshTokenCommandHandler implements ICommandHandler<RefreshTokenC
         const { model } = command;
         await refreshTokenValidations.validateAsync(command.model);
 
-        const userPrincipal = await this.tokenService.getPrincipalFromToken(model.accessToken);
-        const user = await this.userRepository.getUserByIdAsync(userPrincipal[Globals.ClaimTypes.UserId]);
+        const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
         if (!user) {
             throw new Error("User associated with the token does not exist.");
         }
@@ -83,7 +83,7 @@ export class RefreshTokenCommandHandler implements ICommandHandler<RefreshTokenC
             throw new Error("Refresh token has expired. Please log in again.");
         }
 
-        if (user.securityStamp !== userPrincipal[Globals.ClaimTypes.SecurityStamp]) {
+        if (user.securityStamp !== HttpContext.user[Globals.ClaimTypes.SecurityStamp]) {
             userLogin.isValid = false;
             userLogin.expiryDateUtc = currentUtcDate;
             await this.userLoginRepository.updateAsync(userLogin);
@@ -91,8 +91,8 @@ export class RefreshTokenCommandHandler implements ICommandHandler<RefreshTokenC
         }
 
         let accessToken: string;
-        if (user.concurrencyStamp === userPrincipal[Globals.ClaimTypes.ConcurrencyStamp]) {
-            accessToken = this.tokenService.generateEncryptedToken(userPrincipal);
+        if (user.concurrencyStamp === HttpContext.user[Globals.ClaimTypes.ConcurrencyStamp]) {
+            accessToken = this.tokenService.generateEncryptedToken(HttpContext.user);
         } else {
             accessToken = await this.tokenService.generateJwtAsync(user);
         }

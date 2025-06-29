@@ -1,12 +1,13 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
+import { AuthenticatedAccountGuard } from "../../../../core/passport";
 import { Enable2FACommand, Enable2FAModel } from "./2fa-enable.handler";
-import { Body, Controller, HttpStatus, Post, Res } from "@nestjs/common";
 import { ApiBody, ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 
 class Enable2FAResponseModel {
-  @ApiProperty()
-  message: "Two-factor authentication enabled successfully."
+  @ApiProperty({ default: "Two-factor authentication enabled successfully." })
+  message: string
 }
 
 @ApiTags('Account')
@@ -21,6 +22,7 @@ export class Enable2FAController {
   ) { }
 
   @Post('2fa/enable')
+  @UseGuards(AuthenticatedAccountGuard)
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })

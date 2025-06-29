@@ -2,7 +2,6 @@ import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
-import { Globals } from "../../../core/globals";
 import logger from "../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
@@ -55,7 +54,7 @@ export class ChangePasswordCommandHandler implements ICommandHandler<ChangePassw
 
     try {
 
-      const user = await this.userRepository.getUserByEmailAsync(HttpContext.user[Globals.ClaimTypes.UserId]);
+      const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
       if (!user) {
         throw new UserNotFoundException();
       }
