@@ -28,7 +28,7 @@ const getUsersValidations = Joi.object<GetUsersQuery>({
 
 
 @CommandHandler(GetUsersQuery)
-export class GetUsersHandler implements ICommandHandler<GetUsersQuery> {
+export class GetUsersQueryHandler implements ICommandHandler<GetUsersQuery> {
     constructor(
         @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository) {
     }

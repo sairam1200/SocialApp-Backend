@@ -1,9 +1,6 @@
 export { LoginController } from "./login/login.endpoint";
 export { LoginCommandHandler } from "./login/login.handler";
 
-export { ChangePasswordController } from "./change-password/change-password.endpoint";
-export { ChangePasswordCommandHandler } from "./change-password/change-password.handler";
-
 export { GoogleAuthenticationController } from "./external/google-auth/google-auth.endpoint";
 export { GoogleConnectCallbackQueryHandler, GoogleConnectQueryHandler } from "./external/google-auth/google-auth.handler";
 
