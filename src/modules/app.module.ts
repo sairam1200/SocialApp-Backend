@@ -14,7 +14,7 @@ import { DataSeeder } from '../infrastructure/services/data.seeder';
 import { postgresOptions } from '../infrastructure/persistence/data.source';
 import { HttpContextMiddleware } from '../core/middlewares/httpContext.middleware';
 import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '@nestjs/common';
-import { ProfileModule } from 'modules/profile.module';
+
 @Module({
   imports: [PassportModule,
     JwtModule.register({
@@ -29,7 +29,7 @@ import { ProfileModule } from 'modules/profile.module';
     QueuesModule.register(),
     NotificationModule,
     IntegrationsModule,
-    ProfileModule
+   
   ],
 })
 export class AppModule implements OnApplicationBootstrap, NestModule {

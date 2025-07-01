@@ -1,5 +1,6 @@
 import { User } from "../../domain/entities/user.entity";
-import { UserModel } from "../../domain/contracts/user.model";
+import { LinkedAccountModel, UserModel } from "../../domain/contracts/user.model";
+import { LinkedAccount } from "domain/entities";
 
 export function mapToUserModel(user: User): UserModel {
   return {
@@ -12,4 +13,14 @@ export function mapToUserModel(user: User): UserModel {
     phoneNumber: user.phoneNumber,
     isEmailVerified: user.emailConfirmed,
   } as UserModel;
+}
+
+export function mapToLinkedAccountsModel(linkedAccount: LinkedAccount): LinkedAccountModel {
+  return {
+    id:linkedAccount.id,
+    username:linkedAccount.userName,
+    isImported:linkedAccount.allowImport,
+
+
+  } as LinkedAccountModel;
 }
