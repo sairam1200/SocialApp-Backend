@@ -31,6 +31,10 @@ export class LinkedAccount extends BaseEntity {
   @Column({ default: 0 })
   followingCount: number;
 
+  /*@Column({ default: false})
+  verified: boolean;
+  */
+  
   @Column({ type: 'json', nullable: true })
   metaData?: Record<string, any>;
 
@@ -39,3 +43,20 @@ export class LinkedAccount extends BaseEntity {
     Object.assign(this, request);
   }
 }
+
+/*
+{
+    [
+            {
+                "platform": "Instagram", 
+                "username": "john_doe",
+                "verified": true
+            }, 
+            {
+                "platform": "Twitter", 
+                "username": "john_doe", 
+                "verified": false
+            }
+    ]
+}
+*/

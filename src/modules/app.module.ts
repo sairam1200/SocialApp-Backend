@@ -29,6 +29,7 @@ import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '
     QueuesModule.register(),
     NotificationModule,
     IntegrationsModule,
+   
   ],
 })
 export class AppModule implements OnApplicationBootstrap, NestModule {
