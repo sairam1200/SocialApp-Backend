@@ -2,9 +2,8 @@ import { Module } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { CqrsModule } from "@nestjs/cqrs";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { Role } from "../domain/entities/role.entity";
-import { User } from "../domain/entities/user.entity";
 import { dependency } from '../infrastructure/dependency';
+<<<<<<< HEAD
 import { UserRole } from "../domain/entities/userRole.entity";
 import { RoleClaim } from "../domain/entities/roleClaim.entity";
 import { GetUserHandler } from "../features/user/get-user/get-user.handler";
@@ -16,6 +15,10 @@ import { CreateUserHandler } from "../features/user/create-user/create-user.hand
 import { CreateUserController } from "../features/user/create-user/create-user.endpoint";
 import { UpdateUserController } from '../features/user/update-user/update-user.endpoint';
 import { UserClaim } from 'domain/entities';
+=======
+import { Role, RoleClaim, User, UserClaim, UserRole } from '../domain/entities';
+import { ChangePasswordController, CreateUserController, CreateUserCommandHandler, GetUserController, GetUserQueryHandler, GetUsersController, GetUsersQueryHandler, UpdateUserCommandHandler, UpdateUserController } from '../features/user';
+>>>>>>> 2458c3f3fe1f01e2edaba253cd77f7ecd0d3353f
 
 @Module({
   imports: [
@@ -32,14 +35,15 @@ import { UserClaim } from 'domain/entities';
     CreateUserController,
     UpdateUserController,
     GetUsersController,
+    ChangePasswordController,
     GetUserController
   ],
   providers: [
     JwtService,
-    CreateUserHandler,
-    UpdateUserHandler,
-    GetUsersHandler,
-    GetUserHandler,
+    CreateUserCommandHandler,
+    UpdateUserCommandHandler,
+    GetUsersQueryHandler,
+    GetUserQueryHandler,
     dependency.UserRepository,
     dependency.RoleRepository,
     dependency.UserRoleRepository,

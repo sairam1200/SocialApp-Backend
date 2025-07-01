@@ -8,7 +8,7 @@ import { AuthGuardsModule } from './authGuard.module';
 import { dependency } from '../infrastructure/dependency';
 import { NotificationModule } from './notification.module';
 import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, DataProtectionKey } from '../domain/entities';
-import { GoogleAuthenticationController, GoogleConnectQueryHandler, GoogleConnectCallbackQueryHandler, ResetPasswordController, ResetPasswordCommandHandler, RegisterController, RegisterCommandHandler, LoginController, LoginCommandHandler, RefreshTokenController, RefreshTokenCommandHandler } from '../features/auth';
+import { GoogleAuthenticationController, GoogleConnectQueryHandler, GoogleConnectCallbackQueryHandler, ResetPasswordController, ResetPasswordCommandHandler, RegisterController, RegisterCommandHandler, LoginController, LoginCommandHandler, RefreshTokenController, RefreshTokenCommandHandler, Verfiy2FACommandHandler, Enable2FACommandHandler, Setup2FACommandHandler, Disbale2FACommandHandler, Setup2FAController, Enable2FAController, Verify2FAController, Disable2FAController } from '../features/auth';
 
 @Module({
   imports: [
@@ -30,6 +30,10 @@ import { GoogleAuthenticationController, GoogleConnectQueryHandler, GoogleConnec
   providers: [
     JwtService,
     LoginCommandHandler,
+    Verfiy2FACommandHandler,
+    Enable2FACommandHandler,
+    Setup2FACommandHandler,
+    Disbale2FACommandHandler,
     RegisterCommandHandler,
     RefreshTokenCommandHandler,
     ResetPasswordCommandHandler,
@@ -49,6 +53,10 @@ import { GoogleAuthenticationController, GoogleConnectQueryHandler, GoogleConnec
     GoogleAuthenticationController,
     RefreshTokenController,
     ResetPasswordController,
+    Setup2FAController,
+    Enable2FAController,
+    Verify2FAController,
+    Disable2FAController
   ],
   exports: [],
 })

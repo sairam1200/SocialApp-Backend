@@ -40,6 +40,12 @@ export class User extends BaseEntity {
     @Column({ default: false })
     emailConfirmed: boolean;
 
+    @Column({ default: false })
+    twoFactorEnabled: boolean;
+
+    @Column({ nullable: true })
+    twoFactorSecret?: string;
+
     @Column({ nullable: true })
     passwordHash: string;
 
