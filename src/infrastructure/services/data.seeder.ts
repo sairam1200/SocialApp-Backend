@@ -43,8 +43,7 @@ export class DataSeeder {
       emailConfirmed: true,
       type: UserType.Admin,
       createdBy: configs.systemAdmin.email,
-      userName:"",
-
+      userName: "",
     });
 
     if (!(await this.userRepository.getUserByEmailAsync(SYSTEM_ADMIN.email))) {
@@ -75,9 +74,9 @@ export class DataSeeder {
       lastName: configs.guestUser.lastName,
       email: configs.guestUser.email,
       emailConfirmed: true,
-      type: UserType.Guest,
+      type: UserType.User,
       createdBy: configs.systemAdmin.email,
-      userName:""
+      userName: ""
     });
 
     if (!(await this.userRepository.getUserByEmailAsync(JOHN_DOE.email))) {
