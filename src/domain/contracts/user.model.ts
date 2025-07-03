@@ -46,6 +46,9 @@ export class LinkedAccountModel {
     externalId:string;
 
     @ApiProperty()
+    externalUrl:string;
+
+    @ApiProperty()
     followersCount:number;
 
     @ApiProperty()

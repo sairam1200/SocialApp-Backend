@@ -16,6 +16,7 @@ import { IUserLoginRepository } from "../../../../domain/repositories/irefreshto
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { SpotifyProfileModel, SpotifyUserDataModel } from "../../../../domain/contracts/spotify.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
+import { UserNotFoundException } from "core/exceptions";
 
 const BASE_URL = 'https://api.spotify.com/v1';
 
@@ -96,7 +97,7 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
     const user = configs.env !== "production" ? await this.userRepository.getUserByIdAsync(dataProtectionKey.userId) : await this.userRepository.getUserByEmailAsync(userData.data.email);
 
     if (!user || user.id !== dataProtectionKey.userId) {
-      throw new ApplicationException('Prevented: Alduterated Request Received!');
+      throw new UserNotFoundException(userData.data.email);
     }
 
     let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(
@@ -110,6 +111,7 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
       linkedAccount.followersCount = userData.data.followers.total;
       linkedAccount.followingCount = userData.userfollowing;
       linkedAccount.externalUrl = userData.data.external_urls.spotify,
+      linkedAccount.email = userData.data.email,
       linkedAccount.metaData = {
         name: userData.data.display_name,
         country: userData.data.country,

@@ -102,7 +102,6 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
         karma: userData.total_karma,
         isEmployee: userData.is_employee,
         isGold: userData.is_gold,
-        verified: userData.verified,
         created: userData.created,
       };
       await this.linkedAccountRepository.updateAsync(linkedAccount);
@@ -118,7 +117,6 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
           karma: userData.total_karma,
           isEmployee: userData.is_employee,
           isGold: userData.is_gold,
-          verified: userData.verified,
           created: userData.created,
         }
       }));

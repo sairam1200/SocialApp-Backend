@@ -5,7 +5,7 @@ import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 @ApiBearerAuth()
-@ApiTags('User')
+@ApiTags('Users')
 @UseGuards()
 @Controller({
     path: `/user`,

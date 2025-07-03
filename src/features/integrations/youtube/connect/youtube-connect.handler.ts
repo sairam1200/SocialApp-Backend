@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as Joi from 'joi';
-import { Inject } from '@nestjs/common';
+import { Inject, NotFoundException } from '@nestjs/common';
 import configs from '../../../../configs';
 import _const from '../../../../core/utils/const';
 import { Globals } from '../../../../core/globals';
@@ -20,6 +20,7 @@ import {
 } from '../../../../domain/contracts/youtube.model';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
+import { UserNotFoundException } from 'core/exceptions';
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
 
@@ -104,23 +105,24 @@ export class YoutubeConnectCallbackQueryHandler
     const userData = await this.fetchUserData(access_token);
     console.log(userData);
 
-    const user = await this.userRepository.getUserByIdAsync(
-      dataProtectionKey.userId,
-    );
+    const user = configs.env !== "production" ? await this.userRepository.getUserByIdAsync(dataProtectionKey.userId) : await this.userRepository.getUserByEmailAsync(userData.profile.email);
 
-    if (!user) {
-      throw new ApplicationException('Prevented: User not found!');
+    if (!user || user.id !== dataProtectionKey.userId) {
+      throw new UserNotFoundException(userData.profile.email);
     }
 
+    
+
     let linkedAccount =
-      await this.linkedAccountRepository.getByPlatformAndEmailAsync(
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
         _const.PLATFORMS.YOUTUBE,
-        user.email,
+        user.id,
       );
     if (linkedAccount) {
       console.log(linkedAccount);
       linkedAccount.userName = '';
       linkedAccount.profileImage = userData.profile.picture;
+      linkedAccount.externalUrl= `https://www.youtube.com/channel/${userData.channel.items[0].id}`;
       (linkedAccount.followersCount = Number.parseInt(
         userData.channel.items[0].statistics.subscriberCount,
       )),
@@ -149,6 +151,7 @@ export class YoutubeConnectCallbackQueryHandler
           externalId: userData.profile.id,
           userName: '',
           profileImage: userData.profile.picture,
+          externalUrl:  `https://www.youtube.com/channel/${userData.channel.items[0].id}`,
           followersCount: Number.parseInt(
             userData.channel.items[0].statistics.subscriberCount,
           ),
