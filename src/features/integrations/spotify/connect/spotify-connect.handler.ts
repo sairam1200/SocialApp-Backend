@@ -62,7 +62,7 @@ export class SpotifyConnectQueryHandler implements ICommandHandler<SpotifyConnec
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       "", // value is not used
-      HttpContext.user[Globals.ClaimTypes.UserId],
+      HttpContext.getCurrentUserId,
       expiresIn
     );
   }
@@ -86,14 +86,16 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
     : Promise<{ accessToken: string; expiresIn: number; profile: SpotifyProfileModel }> {
     const { model } = query;
     await spotifyConnectCallbackValidations.validateAsync(model);
-    await this.validateState(model.state);
+    const dataProtectionKey=await this.validateStateAsync(model.state);
 
     const { access_token, refresh_token, expires_in } = await this.fetchToken(model.code);
 
     const userData = await this.fetchUserData(access_token);
-    const user = await this.userRepository.getUserByEmailAsync(userData.data.email);
 
-    if (!user || user.id !== HttpContext.user[Globals.ClaimTypes.UserId]) {
+    console.log(userData.data);
+    const user = configs.env !== "production" ? await this.userRepository.getUserByIdAsync(dataProtectionKey.userId) : await this.userRepository.getUserByEmailAsync(userData.data.email);
+
+    if (!user || user.id !== dataProtectionKey.userId) {
       throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
@@ -107,10 +109,10 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
       linkedAccount.profileImage = userData.data.images[0]?.url;
       linkedAccount.followersCount = userData.data.followers.total;
       linkedAccount.followingCount = userData.userfollowing;
+      linkedAccount.externalUrl = userData.data.external_urls.spotify,
       linkedAccount.metaData = {
         name: userData.data.display_name,
         country: userData.data.country,
-        spotifyUrl: userData.data.external_urls.spotify,
         product: userData.data.product,
         accountType: userData.data.type,
         uri: userData.data.uri,
@@ -128,10 +130,10 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
         profileImage: userData.data.images[0]?.url,
         followersCount: userData.data.followers.total,
         followingCount: userData.userfollowing,
+        externalUrl: userData.data.external_urls.spotify,
         metaData: {
           name: userData.data.display_name,
           country: userData.data.country,
-          spotifyUrl: userData.data.external_urls.spotify,
           product: userData.data.product,
           accountType: userData.data.type,
           uri: userData.data.uri,
@@ -172,15 +174,19 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
 
   private async fetchToken(code: string)
     : Promise<{ access_token: string; token_type: string; expires_in: number; refresh_token: string; }> {
+    const basicAuth = Buffer.from(`${configs.spotify.clientId}:${configs.spotify.clientSecret}`).toString('base64');
     try {
-      const response = await axios.get(`https://accounts.spotify.com/api/token`, {
-        params: {
-          client_secret: configs.spotify.clientSecret,
-          redirect_uri: configs.spotify.redirectUri,
-          client_id: configs.spotify.clientId,
-          grant_type: 'authorization_code',
-          code: code,
-        },
+      const response = await axios.post(
+        `https://accounts.spotify.com/api/token`,
+          `redirect_uri=${encodeURIComponent(configs.spotify.redirectUri)}` +
+          `&grant_type=authorization_code`+
+          `&code=${encodeURIComponent(code)}`,
+          {
+    
+          headers: {
+            'content-type': 'application/x-www-form-urlencoded',
+            'Authorization': 'Basic ' + basicAuth
+          },
       });
 
       return response.data;
@@ -210,7 +216,7 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
     }
   }
 
-  private async validateState(state: string): Promise<DataProtectionKey> {
+  private async validateStateAsync(state: string): Promise<DataProtectionKey> {
     const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
