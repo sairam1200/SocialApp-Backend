@@ -6,7 +6,7 @@ import { stringUtil } from "../../../../core/utils/string.util";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 import { YoutubeConnectCallbackQuery, YoutubeConnectQuery } from "./youtube-connect.handler";
-import { YoutubeProfileModel } from "domain/contracts/youtube.model";
+import { YoutubeProfileModel } from "../../../../domain/contracts/youtube.model";
 
 class ConnectResponseModel {
   @ApiProperty()

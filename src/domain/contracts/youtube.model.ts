@@ -64,7 +64,7 @@ export class YoutubeProfileModel {
   @ApiProperty()
   userName: string;
   @ApiProperty()
-  facebookId: string;
+  youtubeId: string;
   @ApiProperty({ default: false })
   allowImport: boolean;
   @ApiProperty()

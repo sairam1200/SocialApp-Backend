@@ -20,7 +20,8 @@ export function mapToLinkedAccountsModel(linkedAccount: LinkedAccount): LinkedAc
     id:linkedAccount.id,
     username:linkedAccount.userName,
     isImported:linkedAccount.allowImport,
-
-
+    externalUrl: linkedAccount.externalUrl,
+    isVerified: linkedAccount.verified,
+    platform: linkedAccount.platform,
   } as LinkedAccountModel;
 }
