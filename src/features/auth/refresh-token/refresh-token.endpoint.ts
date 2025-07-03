@@ -1,8 +1,9 @@
 import { Response } from "express"
 import { CommandBus } from "@nestjs/cqrs";
 import { TokenResponseModel } from "../tokenResponse.model";
+import { RefreshTokenGuard } from "../../../core/passport";
 import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Body, Controller, HttpStatus, Post, Res } from "@nestjs/common";
+import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 import { RefreshTokenCommand, RefreshTokenRequestModel } from "./refresh-token.handler";
 
 @ApiBearerAuth()
@@ -17,10 +18,11 @@ export class RefreshTokenController {
   }
 
   @Post('refresh-access-token')
-  @ApiResponse({ status: 200, description: 'OK', type: TokenResponseModel })
+  @UseGuards(RefreshTokenGuard)
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
+  @ApiResponse({ status: 200, description: 'OK', type: TokenResponseModel })
   public async RefreshAccessToken(@Body() request: RefreshTokenRequestModel, @Res() res: Response): Promise<Response> {
 
     const result = await this.commandBus.execute(new RefreshTokenCommand({

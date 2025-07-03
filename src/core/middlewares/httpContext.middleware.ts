@@ -58,7 +58,7 @@ export class HttpContextMiddleware implements NestMiddleware {
     if (!access_token) {
       HttpContext.run(req, res, null, next);
     } else {
-      const user = await getUserFromAccessTokenAsync(access_token, res, this.jwtService);
+      const user = await getUserFromAccessTokenAsync(access_token, res, this.jwtService, true);
       HttpContext.run(req, res, (user ?? null), next);
     }
   }

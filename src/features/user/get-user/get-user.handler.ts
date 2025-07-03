@@ -10,7 +10,6 @@ import { UserNotFoundException } from "../../../core/exceptions/user.exception";
 export class GetUserQuery {
     userId: string;
 
-
     constructor(request: Partial<GetUserQuery> = {}) {
         Object.assign(this, request);
     }
@@ -24,7 +23,7 @@ const getUserQueryValidations = {
 
 
 @CommandHandler(GetUserQuery)
-export class GetUserHandler implements ICommandHandler<GetUserQuery> {
+export class GetUserQueryHandler implements ICommandHandler<GetUserQuery> {
     constructor(
         @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
     ) { }

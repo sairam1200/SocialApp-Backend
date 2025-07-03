@@ -41,8 +41,8 @@ export class SpotifyConnectController {
     const state = stringUtil.generateRandomString(16);
     const params = new URLSearchParams({
       response_type: 'code',
-      client_id: configs.pinterest.clientId,
-      redirect_uri: configs.pinterest.redirectUri,
+      client_id: configs.spotify.clientId,
+      redirect_uri: configs.spotify.redirectUri,
       scope: scopes,
       state: state,
     });
@@ -53,7 +53,7 @@ export class SpotifyConnectController {
     return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
   }
 
-  @Get('connect-callback')
+  @Get('connect/callback')
   @ApiResponse({ status: 200, description: 'OK' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })

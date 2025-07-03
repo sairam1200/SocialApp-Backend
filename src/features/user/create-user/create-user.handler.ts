@@ -56,7 +56,7 @@ const createUserValidations = Joi.object({
 });
 
 @CommandHandler(CreateUserCommand)
-export class CreateUserHandler implements ICommandHandler<CreateUserCommand, UserModel> {
+export class CreateUserCommandHandler implements ICommandHandler<CreateUserCommand, UserModel> {
     constructor(
         @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
     ) { }

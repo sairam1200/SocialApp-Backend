@@ -1,18 +1,19 @@
 import { Response } from "express";
 import configs from "../../configs";
-import { UnauthorizedException } from "@nestjs/common";
 import { JwtService, TokenExpiredError } from "@nestjs/jwt";
 
 export async function getUserFromAccessTokenAsync(
   access_token: string,
   response: Response,
-  jwtService: JwtService
+  jwtService: JwtService,
+  ignoreExpiration: boolean = false
 ): Promise<any> {
   try {
     return await jwtService.verifyAsync(access_token, {
       secret: configs.jwt.secret,
       issuer: configs.jwt.issuer,
-      audience: configs.jwt.audience
+      audience: configs.jwt.audience,
+      ignoreExpiration
     });
 
   } catch (error) {

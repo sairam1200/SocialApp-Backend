@@ -7,44 +7,8 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
-import { YoutubeImportController } from "../features/integrations/youtube/import/youtube-import.endpoint";
-import { TwitterImportController } from "../features/integrations/twitter/import/twitter-import.endpoint";
-import { YoutubeConnectController } from "../features/integrations/youtube/connect/youtube-connect.endpoint";
-import { SpotifyConnectController } from "../features/integrations/spotify/connect/spotify-connect.endpoint";
-import { TwitterConnectController } from "../features/integrations/twitter/connect/twitter-connect.endpoint";
-import { FacebookImportController } from "../features/integrations/facebook/import/facebook-import.endpoint";
-import { SpotifyProfileController } from "../features/integrations/spotify/get-profile/get-profile.endpoint";
-import { TwitterImportCommandHandler } from "../features/integrations/twitter/import/twitter-import.handler";
-import { YoutubeImportCommandHandler } from "../features/integrations/youtube/import/youtube-import.handler";
-import { SpotifyProfileQueryHandler } from "../features/integrations/spotify/get-profile/get-profile.handler";
-import { FacebookProfileController } from "../features/integrations/facebook/get-profile/get-profile.endpoint";
-import { FacebookConnectController } from "../features/integrations/facebook/connect/facebook-connect.endpoint";
-import { FacebookProfileQueryHandler } from "../features/integrations/facebook/get-profile/get-profile.handler";
-import { FacebookImportCommandHandler } from "../features/integrations/facebook/import/facebook-import.handler";
-import { PinterestImportController } from "../features/integrations/pinterest/import/pinterest-import.endpoint";
-import { InstagramImportController } from "../features/integrations/instagram/import/instagram-import.endpoint";
-import { InstagramProfileController } from "../features/integrations/instagram/get-profile/get-profile.endpoint";
-import { InstagramProfileQueryHandler } from "../features/integrations/instagram/get-profile/get-profile.handler";
-import { PinterestConnectController } from "../features/integrations/pinterest/connect/pinterest-connect.endpoint";
-import { PinterestImportCommandHandler } from "../features/integrations/pinterest/import/pinterest-import.handler";
-import { InstagramImportCommandHandler } from "../features/integrations/instagram/import/instagram-import.handler";
-import { InstagramConnectController } from "../features/integrations/instagram/connect/instagram-connect.endpoint";
-import { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "../features/integrations/facebook/connect/facebook-connect.handler";
-import { SpotifyConnectCallbackQueryHandler, SpotifyConnectQueryHandler } from "../features/integrations/spotify/connect/spotify-connect.handler";
-import { TwiiterConnectQueryHandler, TwitterConnectCallbackQueryHandler } from "../features/integrations/twitter/connect/twitter-connect.handler";
-import { YoutubeConnectCallbackQueryHandler, YoutubeConnectQueryHandler } from "../features/integrations/youtube/connect/youtube-connect.handler";
-import { PinterestConnectCallbackQueryHandler, PinterestConnectQueryHandler } from "../features/integrations/pinterest/connect/pinterest-connect.handler";
-import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } from "../features/integrations/instagram/connect/instagram-connect.handler";
-
-import { RedditConnectController } from "../features/integrations/reddit/connect/reddit-connect.endpoint";
-import { RedditProfileController } from "../features/integrations/reddit/get-profile/get-profile.endpoint";
-import { RedditImportController } from "../features/integrations/reddit/import/reddit-import.endpoint";
-
-import { RedditConnectQueryHandler, RedditConnectCallbackQueryHandler } from "../features/integrations/reddit/connect/reddit-connect.handler";
-import { RedditProfileQueryHandler } from "../features/integrations/reddit/get-profile/get-profile.handler";
-import { RedditImportCommandHandler } from "../features/integrations/reddit/import/reddit-import.handler";
 import { DataProtectionKey, LinkedAccount, Role, User, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
-
+import { FacebookConnectCallbackQueryHandler, FacebookConnectController, FacebookConnectQueryHandler, FacebookImportCommandHandler, FacebookImportController, FacebookProfileController, FacebookProfileQueryHandler, InstagramConnectCallbackQueryHandler, InstagramConnectController, InstagramConnectQueryHandler, InstagramImportCommandHandler, InstagramImportController, InstagramProfileController, InstagramProfileQueryHandler, PinterestConnectCallbackQueryHandler, PinterestConnectController, PinterestConnectQueryHandler, PinterestImportCommandHandler, PinterestImportController, RedditConnectCallbackQueryHandler, RedditConnectController, RedditConnectQueryHandler, RedditImportCommandHandler, RedditImportController, RedditProfileController, RedditProfileQueryHandler, SpotifyConnectCallbackQueryHandler, SpotifyConnectController, SpotifyConnectQueryHandler, SpotifyProfileController, SpotifyProfileQueryHandler, TwiiterConnectQueryHandler, TwitterConnectCallbackQueryHandler, TwitterConnectController, TwitterImportCommandHandler, TwitterImportController, YoutubeConnectCallbackQueryHandler, YoutubeConnectController, YoutubeConnectQueryHandler, YoutubeImportCommandHandler, YoutubeImportController } from "../features/integrations";
 
 @Module({
   imports: [

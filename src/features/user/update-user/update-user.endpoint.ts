@@ -12,7 +12,6 @@ import { Body, Controller, HttpStatus, Put, Res, UseGuards } from "@nestjs/commo
     version: '1',
 })
 export class UpdateUserController {
-
     constructor(private readonly commandBus: CommandBus) { }
 
     @Put()

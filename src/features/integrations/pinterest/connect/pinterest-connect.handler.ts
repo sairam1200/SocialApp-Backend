@@ -15,6 +15,7 @@ import { IUserLoginRepository } from "../../../../domain/repositories/irefreshto
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { PinterestProfileModel, PinterestUserDataModel } from "../../../../domain/contracts/pinterest.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
+import { DataProtectionKey } from "../../../../domain/entities";
 
 const BASE_URL = 'https://api.pinterest.com/v5';
 
@@ -61,7 +62,7 @@ export class PinterestConnectQueryHandler implements ICommandHandler<PinterestCo
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       "", // value is not used
-      HttpContext.user[Globals.ClaimTypes.UserId],
+      HttpContext.getCurrentUserId,
       expiresIn
     );
   }
@@ -88,12 +89,12 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
     Promise<{ accessToken: string; expiresIn: number; profile: PinterestProfileModel; }> {
     const { model } = query;
     await pinterestConnectCallbackValidations.validateAsync(model);
-    await this.validateState(model.state);
+    const dataProtectionKey= await this.validateStateAsync(model.state);
 
     const { access_token, refresh_token, expires_in, refresh_token_expires_in } = await this.fetchToken(model.code);
 
     const userData = await this.fetchUserData(access_token);
-    const user = await this.userRepository.getUserByIdAsync(HttpContext.user[Globals.ClaimTypes.UserId]);
+    const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
 
     if (!user) {
       throw new ApplicationException('Prevented: Alduterated Request Received!');
@@ -105,6 +106,7 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
       linkedAccount.profileImage = userData.profile_image;
       linkedAccount.followersCount = userData.follower_count;
       linkedAccount.followingCount = userData.following_count;
+      linkedAccount.externalUrl =`https://www.pinterest.com/${userData.username}/`;
       linkedAccount.metaData = {
         monthly_views: userData.monthly_views,
         board_count: userData.board_count,
@@ -122,6 +124,7 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
         profileImage: userData.profile_image,
         followersCount: userData.follower_count,
         followingCount: userData.following_count,
+        externalUrl: `https://www.pinterest.com/${userData.username}/`,
         metaData: {
           monthlyViews: userData.monthly_views,
           boardCount: userData.board_count,
@@ -159,41 +162,46 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
 
   private async fetchToken(code: string)
     : Promise<{ access_token: string; token_type: string; expires_in: number; refresh_token: string; refresh_token_expires_in: number }> {
+     
+    const basicAuth = Buffer.from(`${configs.pinterest.clientId}:${configs.pinterest.clientSecret}`).toString('base64'); 
     try {
-      const response = await axios.get(`${BASE_URL}/oauth/token`, {
-        params: {
-          client_secret: configs.pinterest.clientSecret,
-          redirect_uri: configs.pinterest.redirectUri,
-          client_id: configs.pinterest.clientId,
-          grant_type: 'authorization_code',
-          continuous_refresh: true,
-          code: code,
-        },
-      });
+      const response = await axios.post(
+        `${BASE_URL}/oauth/token`, 
+        `grant_type=authorization_code` +
+        `&code=${encodeURIComponent(code)}` +
+        `&redirect_uri=${encodeURIComponent(configs.pinterest.redirectUri)}` +
+        `&continuous_refresh=${encodeURIComponent(String(true))}`, 
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${basicAuth}`
+          }
+        })
 
+      console.log('Access token response:', response.data);
       return response.data;
     } catch (error) {
-      logger.error('Error fetching token from Pinterest', error);
+      //console.log('Error fetching token from Pinterest', error);
       throw new Error('Unexpected error during authentication with Pinterest');
     }
   }
 
   private async fetchUserData(accessToken: string): Promise<PinterestUserDataModel> {
     try {
-      const response = await axios.get<PinterestUserDataModel>(`${BASE_URL}/me`, {
-        params: {
-          access_token: accessToken,
+      const response = await axios.get<PinterestUserDataModel>(`${BASE_URL}/user_account`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
         },
       });
-
+      console.log('User data response:', response.data);
       return response.data;
     } catch (error) {
-      logger.error('Error fetching user data from Pinterest', error);
+      console.log('Error fetching user data from Pinterest', error);
       throw new Error('Unexpected error during authentication with Pinterest');
     }
   }
 
-  private async validateState(state: string): Promise<void> {
+  private async validateStateAsync(state: string): Promise<DataProtectionKey> {
     const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
@@ -204,5 +212,6 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
     }
 
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
+    return dataProtectionKey
   }
 }

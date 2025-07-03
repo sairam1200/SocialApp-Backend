@@ -31,11 +31,36 @@ export class LinkedAccount extends BaseEntity {
   @Column({ default: 0 })
   followingCount: number;
 
+  @Column({ default: false})
+  verified: boolean;
+  
+  @Column({ nullable:true  })
+  externalUrl?: string;
+  
   @Column({ type: 'json', nullable: true })
   metaData?: Record<string, any>;
+
+  
 
   constructor(request: Partial<LinkedAccount> = {}) {
     super();
     Object.assign(this, request);
   }
 }
+
+/*
+{
+    [
+            {
+                "platform": "Instagram", 
+                "username": "john_doe",
+                "verified": true
+            }, 
+            {
+                "platform": "Twitter", 
+                "username": "john_doe", 
+                "verified": false
+            }
+    ]
+}
+*/
