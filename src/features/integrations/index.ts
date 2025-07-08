@@ -1,3 +1,46 @@
+import { FacebookConnectController } from "./facebook/connect/facebook-connect.endpoint";
+import { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./facebook/connect/facebook-connect.handler";
+import { FacebookProfileController } from "./facebook/get-profile/get-profile.endpoint";
+import { FacebookProfileQueryHandler } from "./facebook/get-profile/get-profile.handler";
+import { FacebookImportController } from "./facebook/import/facebook-import.endpoint";
+import { FacebookImportCommandHandler } from "./facebook/import/facebook-import.handler";
+import { InstagramConnectController } from "./instagram/connect/instagram-connect.endpoint";
+import { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } from "./instagram/connect/instagram-connect.handler";
+import { InstagramProfileController } from "./instagram/get-profile/get-profile.endpoint";
+import { InstagramProfileQueryHandler } from "./instagram/get-profile/get-profile.handler";
+import { InstagramImportController } from "./instagram/import/instagram-import.endpoint";
+import { InstagramImportCommandHandler } from "./instagram/import/instagram-import.handler";
+import { PinterestConnectController } from "./pinterest/connect/pinterest-connect.endpoint";
+import { PinterestConnectCallbackQueryHandler, PinterestConnectQueryHandler } from "./pinterest/connect/pinterest-connect.handler";
+import { PinterestProfileController } from "./pinterest/get-profile/get-profile.endpoint";
+import { PinterestProfileQueryHandler } from "./pinterest/get-profile/get-profile.handler";
+import { PinterestImportController } from "./pinterest/import/pinterest-import.endpoint";
+import { PinterestImportCommandHandler } from "./pinterest/import/pinterest-import.handler";
+import { RedditConnectController } from "./reddit/connect/reddit-connect.endpoint";
+import { RedditConnectCallbackQueryHandler, RedditConnectQueryHandler } from "./reddit/connect/reddit-connect.handler";
+import { RedditProfileController } from "./reddit/get-profile/get-profile.endpoint";
+import { RedditProfileQueryHandler } from "./reddit/get-profile/get-profile.handler";
+import { RedditImportController } from "./reddit/import/reddit-import.endpoint";
+import { RedditImportCommandHandler } from "./reddit/import/reddit-import.handler";
+import { SpotifyConnectController } from "./spotify/connect/spotify-connect.endpoint";
+import { SpotifyConnectCallbackQueryHandler, SpotifyConnectQueryHandler } from "./spotify/connect/spotify-connect.handler";
+import { SpotifyProfileController } from "./spotify/get-profile/get-profile.endpoint";
+import { SpotifyProfileQueryHandler } from "./spotify/get-profile/get-profile.handler";
+import { SpotifyImportController } from "./spotify/import/spotify-import.endpoint";
+import { SpotifyImportCommandHandler } from "./spotify/import/spotify-import.handler";
+import { TwitterConnectController } from "./twitter/connect/twitter-connect.endpoint";
+import { TwiiterConnectQueryHandler, TwitterConnectCallbackQueryHandler } from "./twitter/connect/twitter-connect.handler";
+import { TwitterProfileController } from "./twitter/get-profile/get-profile.endpoint";
+import { TwitterProfileQueryHandler } from "./twitter/get-profile/get-profile.handler";
+import { TwitterImportController } from "./twitter/import/twitter-import.endpoint";
+import { TwitterImportCommandHandler } from "./twitter/import/twitter-import.handler";
+import { YoutubeConnectController } from "./youtube/connect/youtube-connect.endpoint";
+import { YoutubeConnectCallbackQueryHandler, YoutubeConnectQueryHandler } from "./youtube/connect/youtube-connect.handler";
+import { YoutubeProfileController } from "./youtube/get-profile/get-profile.endpoint";
+import { YoutubeProfileQueryHandler } from "./youtube/get-profile/get-profile.handler";
+import { YoutubeImportController } from "./youtube/import/youtube-import.endpoint";
+import { YoutubeImportCommandHandler } from "./youtube/import/youtube-import.handler";
+
 export { FacebookConnectController } from "./facebook/connect/facebook-connect.endpoint"
 export { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./facebook/connect/facebook-connect.handler";
 
@@ -63,4 +106,58 @@ export { YoutubeImportCommandHandler } from "./youtube/import/youtube-import.han
 
 export { } from "./";
 export { } from "./";
-export { } from "./";
+
+const controllers = [
+  FacebookConnectController,
+  FacebookImportController,
+  FacebookProfileController,
+  InstagramConnectController,
+  InstagramProfileController,
+  InstagramImportController,
+  PinterestConnectController,
+  PinterestProfileController,
+  PinterestImportController,
+  RedditConnectController,
+  RedditProfileController,
+  RedditImportController,
+  SpotifyConnectController,
+  SpotifyProfileController,
+  SpotifyImportController,
+  TwitterConnectController,
+  TwitterProfileController,
+  TwitterImportController,
+  YoutubeConnectController,
+  YoutubeProfileController,
+  YoutubeImportController,
+];
+
+const handlers = [
+  FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler,
+  FacebookImportCommandHandler,
+  FacebookProfileQueryHandler,
+  InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler,
+  InstagramProfileQueryHandler,
+  InstagramImportCommandHandler,
+  PinterestConnectCallbackQueryHandler, PinterestConnectQueryHandler,
+  PinterestProfileQueryHandler,
+  PinterestImportCommandHandler,
+  RedditConnectCallbackQueryHandler, RedditConnectQueryHandler,
+  RedditProfileQueryHandler,
+  RedditImportCommandHandler,
+  SpotifyConnectCallbackQueryHandler, SpotifyConnectQueryHandler,
+  SpotifyProfileQueryHandler,
+  SpotifyImportCommandHandler,
+  TwitterConnectCallbackQueryHandler, TwiiterConnectQueryHandler,
+  TwitterProfileQueryHandler,
+  TwitterImportCommandHandler,
+  YoutubeConnectCallbackQueryHandler, YoutubeConnectQueryHandler,
+  YoutubeProfileQueryHandler,
+  YoutubeImportCommandHandler,
+];
+
+const integrations = {
+  addControllers: () => controllers,
+  addHandlers: () => handlers,
+};
+
+export default integrations;

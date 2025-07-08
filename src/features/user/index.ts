@@ -13,5 +13,20 @@ export { GetUserQueryHandler } from "./get-user/get-user.handler"
 export { UpdateUserController } from "./update-user/update-user.endpoint"
 export { UpdateUserCommandHandler } from "./update-user/update-user.handler"
 
-export {GetUserLinkedAccountsController}  from "./get-linked-accounts/get-linked-accounts.endpoint"
-export {GetUserLinkedAccountsQueryHandler}  from "./get-linked-accounts/get-linked-accounts.handler"
+export { GetUserLinkedAccountsController } from "./get-linked-accounts/get-linked-accounts.endpoint"
+export { GetUserLinkedAccountsQueryHandler } from "./get-linked-accounts/get-linked-accounts.handler"
+
+const controllers = [
+
+];
+
+const handlers = [
+
+];
+
+const users = {
+  addControllers: () => controllers,
+  addHandlers: () => handlers,
+};
+
+export default users;

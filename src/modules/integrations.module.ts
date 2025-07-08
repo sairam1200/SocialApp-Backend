@@ -4,11 +4,11 @@ import { JwtService } from "@nestjs/jwt";
 import { CqrsModule } from "@nestjs/cqrs";
 import { QueuesModule } from "./queues.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import integrations from "../features/integrations";
 import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
 import { DataProtectionKey, LinkedAccount, Role, User, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
-import { FacebookConnectCallbackQueryHandler, FacebookConnectController, FacebookConnectQueryHandler, FacebookImportCommandHandler, FacebookImportController, FacebookProfileController, FacebookProfileQueryHandler, InstagramConnectCallbackQueryHandler, InstagramConnectController, InstagramConnectQueryHandler, InstagramImportCommandHandler, InstagramImportController, InstagramProfileController, InstagramProfileQueryHandler, PinterestConnectCallbackQueryHandler, PinterestConnectController, PinterestConnectQueryHandler, PinterestImportCommandHandler, PinterestImportController, RedditConnectCallbackQueryHandler, RedditConnectController, RedditConnectQueryHandler, RedditImportCommandHandler, RedditImportController, RedditProfileController, RedditProfileQueryHandler, SpotifyConnectCallbackQueryHandler, SpotifyConnectController, SpotifyConnectQueryHandler, SpotifyProfileController, SpotifyProfileQueryHandler, TwiiterConnectQueryHandler, TwitterConnectCallbackQueryHandler, TwitterConnectController, TwitterImportCommandHandler, TwitterImportController, YoutubeConnectCallbackQueryHandler, YoutubeConnectController, YoutubeConnectQueryHandler, YoutubeImportCommandHandler, YoutubeImportController } from "../features/integrations";
 
 @Module({
   imports: [
@@ -27,64 +27,13 @@ import { FacebookConnectCallbackQueryHandler, FacebookConnectController, Faceboo
     ])
   ],
   controllers: [
-    SpotifyConnectController,
-    SpotifyProfileController,
-
-    FacebookConnectController,
-    FacebookProfileController,
-    FacebookImportController,
-
-    InstagramConnectController,
-    InstagramProfileController,
-    InstagramImportController,
-
-    PinterestConnectController,
-    PinterestImportController,
-
-    TwitterConnectController,
-    TwitterImportController,
-
-    YoutubeConnectController,
-    YoutubeImportController,
-
-    RedditConnectController,
-    RedditProfileController,
-    RedditImportController,
+    ...integrations.addControllers(),
   ],
   providers: [
     ImportGateway,
     JwtService,
 
-    SpotifyConnectQueryHandler,
-    SpotifyProfileQueryHandler,
-    SpotifyConnectCallbackQueryHandler,
-
-    InstagramConnectCallbackQueryHandler,
-    InstagramImportCommandHandler,
-    InstagramConnectQueryHandler,
-    InstagramProfileQueryHandler,
-
-    FacebookConnectQueryHandler,
-    FacebookProfileQueryHandler,
-    FacebookImportCommandHandler,
-    FacebookConnectCallbackQueryHandler,
-
-    PinterestConnectCallbackQueryHandler,
-    PinterestImportCommandHandler,
-    PinterestConnectQueryHandler,
-
-    TwiiterConnectQueryHandler,
-    TwitterImportCommandHandler,
-    TwitterConnectCallbackQueryHandler,
-
-    YoutubeConnectCallbackQueryHandler,
-    YoutubeConnectQueryHandler,
-    YoutubeImportCommandHandler,
-
-    RedditConnectQueryHandler,
-    RedditConnectCallbackQueryHandler,
-    RedditProfileQueryHandler,
-    RedditImportCommandHandler,
+    ...integrations.addHandlers(),
 
     dependency.RoleRepository,
     dependency.UserRepository,
