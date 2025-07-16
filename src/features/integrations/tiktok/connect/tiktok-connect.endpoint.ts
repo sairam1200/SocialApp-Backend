@@ -2,6 +2,7 @@ import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { stringUtil } from "../../../../core/utils/string.util";
+import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { ApiProperty, ApiTags, ApiResponse, ApiOperation, ApiQuery } from "@nestjs/swagger";
 import { Controller, Get, HttpStatus, Query, Req, Res, UseGuards } from "@nestjs/common";
 import { TikTokConnectCallbackQuery, TikTokConnectQuery } from "./tiktok-connect.handler";
@@ -78,7 +79,11 @@ export class TikTokConnectController {
   }
 
   @Get('connect')
+  @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 302, description: 'FOUND', type: ConnectResponseModel })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
+  @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Connect(@Res() res: Response): Promise<Response | void> {
     const scopes = [
       'user.info.basic',

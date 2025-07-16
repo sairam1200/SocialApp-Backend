@@ -87,6 +87,7 @@ export class User extends BaseEntity {
         super();
         Object.assign(this, request);
         this.normalizedEmail = request.email?.toUpperCase();
+        this.normalizedUserName = request.userName?.toUpperCase();
         this.registeredOn = new Date();
     }
 }
