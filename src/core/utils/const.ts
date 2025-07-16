@@ -26,6 +26,7 @@ export default {
     PINTEREST_IMPORT: "pinterest-import",
     TWITTER_IMPORT: "twitter-import",
     REDDIT_IMPORT: "reddit-import",
+    TIKTOK_IMPORT: "tiktok-import",
   },
 
   EMAILTEMPLATES: {
@@ -46,6 +47,7 @@ export default {
     YOUTUBE: "youtube",
     SPOTIFY: "spotify",
     REDDIT: "reddit",
+    TIKTOK: "tiktok",
   },
 
   TOKEN: {
