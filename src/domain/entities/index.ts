@@ -10,6 +10,7 @@ export { UserContent } from './userContent.entity';
 export { RateLimitLog } from './rateLimitLog.entity';
 export { Notification } from './notification.entity';
 export { ContentStream } from './contentStream.entity';
+export { ManualProfile } from './manualProfile.entity';
 export { LinkedAccount } from './linkedAccount.entity';
 export { PlaylistMember } from './playlistMember.entity';
 export { PlaylistContent } from './playlistContent.entity';

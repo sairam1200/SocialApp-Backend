@@ -97,7 +97,7 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
     const user = configs.env !== "production" ? await this.userRepository.getUserByIdAsync(dataProtectionKey.userId) : await this.userRepository.getUserByEmailAsync(userData.data.email);
 
     if (!user || user.id !== dataProtectionKey.userId) {
-      throw new UserNotFoundException(userData.data.email);
+      throw new UserNotFoundException(userData.data.email, 'email');
     }
 
     let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(

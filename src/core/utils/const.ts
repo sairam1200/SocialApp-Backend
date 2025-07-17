@@ -9,6 +9,7 @@ export default {
   IUSERLOGIN_REPOSITORY: "IUserLoginRepository",
   IUSERCONTENT_REPOSITORY: "IUserContentRepository",
   INOTIFICATION_REPOSITORY: "INotificationRepository",
+  IMANUALPROFILE_REPOSITORY: "IManualProfileRepository",
   ILINKEDACCOUNT_REPOSITORY: "ILinkedAccountRepository",
   IDATAPROTECTIONKEY_REPOSITORY: "IDataProtectionKeyRepository",
 

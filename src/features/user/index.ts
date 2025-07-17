@@ -2,8 +2,8 @@ import { ChangePasswordController } from "./change-password/change-password.endp
 import { ChangePasswordCommandHandler } from "./change-password/change-password.handler";
 import { CreateUserController } from "./create-user/create-user.endpoint";
 import { CreateUserCommandHandler } from "./create-user/create-user.handler";
-import { GetUserLinkedAccountsController } from "./get-linked-accounts/get-linked-accounts.endpoint";
-import { GetUserLinkedAccountsQueryHandler } from "./get-linked-accounts/get-linked-accounts.handler";
+import { GetUserLinkedAccountsController } from "../profile/get-linked-accounts/get-linked-accounts.endpoint";
+import { GetUserLinkedAccountsQueryHandler } from "../profile/get-linked-accounts/get-linked-accounts.handler";
 import { GetUserController } from "./get-user/get-user.endpoint";
 import { GetUserQueryHandler } from "./get-user/get-user.handler";
 import { GetUsersController } from "./get-users/get-users.endpoint";
@@ -29,8 +29,6 @@ export { GetUserQueryHandler } from "./get-user/get-user.handler"
 export { UpdateUserController } from "./update-user/update-user.endpoint"
 export { UpdateUserCommandHandler } from "./update-user/update-user.handler"
 
-export { GetUserLinkedAccountsController } from "./get-linked-accounts/get-linked-accounts.endpoint"
-export { GetUserLinkedAccountsQueryHandler } from "./get-linked-accounts/get-linked-accounts.handler"
 
 export { SuggestUserNameController } from "./suggest-username/suggest-username.endpoint";
 export { SuggestUserNameCommandHandler } from "./suggest-username/suggest-username.handler";

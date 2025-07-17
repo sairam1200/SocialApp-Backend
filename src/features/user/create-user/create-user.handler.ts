@@ -66,9 +66,11 @@ export class CreateUserCommandHandler implements ICommandHandler<CreateUserComma
         const { model } = command;
         await createUserValidations.validateAsync(model);
 
-        let user = await this.userRepository.getUserByEmailAsync(model.email)
-            ?? (() => { throw new UserAlreadyExistsException(model.email, "email") })();
-
+        let user = await this.userRepository.getUserByEmailAsync(model.email);
+        if (user) {
+            throw new UserAlreadyExistsException(model.email, "email");
+        }
+        
         user = await this.userRepository.createAsync(
             new User({
                 firstName: model.firstName,

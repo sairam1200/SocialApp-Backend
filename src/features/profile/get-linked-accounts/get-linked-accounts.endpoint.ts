@@ -1,11 +1,11 @@
-import { UserModel } from "../../../domain/contracts/user.model";
+import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
-import { GetUserLinkedAccountsQuery } from "./get-linked-accounts.handler";
-import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { GetUserLinkedAccountsQuery } from "./get-linked-accounts.handler";
+import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 
 @ApiBearerAuth()
-@ApiTags('Users')
+@ApiTags('Profiles')
 @UseGuards()
 @Controller({
     path: `/user`,
@@ -21,10 +21,10 @@ export class GetUserLinkedAccountsController {
     @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
     @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
     @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-    public async GetById(@Query('userId') userId: string): Promise<UserModel> {
+    public async GetById(@Query('userName') userName: string, @Res() res: Response): Promise<Response> {
 
-        const result = await this.queryBus.execute(new GetUserLinkedAccountsQuery({ userId }));
-
-        return result;
+        const result = await this.queryBus.execute(new GetUserLinkedAccountsQuery({ userName }));
+        res.status(HttpStatus.OK).send(result);
+        return res;
     }
 }

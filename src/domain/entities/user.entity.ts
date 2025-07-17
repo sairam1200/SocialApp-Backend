@@ -1,7 +1,7 @@
 import { UserType } from "../enums";
 import { BaseEntity } from "../baseEntity";
-import { Entity, Column, OneToMany } from "typeorm";
 import { Playlist } from "./playlist.entity";
+import { Entity, Column, OneToMany } from "typeorm";
 import { PlaylistMember } from "./playlistMember.entity";
 
 @Entity({ name: 'users', schema: 'identity' })

@@ -161,6 +161,8 @@ const envVarsSchema = Joi.object()
             .default('John'),
         GUEST_USER_LAST_NAME: Joi.string()
             .default('Doe'),
+        GUEST_USERNAME: Joi.string()
+            .default('Doe'),
 
         CLOUDINARY_CLOUD_NAME: Joi.string()
             .description('Cloudinary cloud name for media storage'),
@@ -283,5 +285,6 @@ export default {
         password: envVars.GUEST_USER_PASSWORD,
         firstName: envVars.GUEST_USER_FIRST_NAME,
         lastName: envVars.GUEST_USER_LAST_NAME,
+        userName: envVars.GUEST_USERNAME,
     },
 }

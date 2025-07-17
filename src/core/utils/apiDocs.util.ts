@@ -1,5 +1,6 @@
 import configs from "../../configs";
-import { INestApplication } from "@nestjs/common";
+import { Response } from "express"
+import { INestApplication, Res } from "@nestjs/common";
 import { apiReference } from "@scalar/nestjs-api-reference";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
@@ -38,6 +39,10 @@ export function addScalarApiDocs(app: INestApplication) {
     .setVersion('1.0')
     .addBearerAuth()
     .build();
+
+  app.use('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
+    res.status(204).send();
+  });
 
   app.use(
     '/docs-scalar',
