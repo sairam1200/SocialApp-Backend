@@ -6,10 +6,10 @@ import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/comm
 import { ManualProfileModel } from "../../../../domain/contracts/manualProfile.model";
 
 @ApiBearerAuth()
-@ApiTags('Profiles')
+@ApiTags('User Profiles')
 @UseGuards()
 @Controller({
-  path: `/user`,
+  path: `/user/profile`,
   version: '1',
 })
 export class GetUserManualProfilesController {

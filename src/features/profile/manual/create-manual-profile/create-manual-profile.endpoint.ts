@@ -6,10 +6,10 @@ import { CreateManualProfileCommand } from "./create-manual-profile.handler";
 import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 import { CreateManualProfileModel, ManualProfileModel } from "../../../../domain/contracts/manualProfile.model";
 
-@ApiTags('Profiles')
+@ApiTags('User Profiles')
 @UseGuards(UserAccoutGuard)
 @Controller({
-  path: `/user`,
+  path: `/user/profile`,
   version: '1',
 })
 export class CreateManualProfileController {

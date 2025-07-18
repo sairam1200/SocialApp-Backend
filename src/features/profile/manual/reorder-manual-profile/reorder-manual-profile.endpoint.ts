@@ -5,10 +5,10 @@ import { UserAccoutGuard } from "../../../../core/passport";
 import { Body, Controller, HttpStatus, Patch, Res, UseGuards } from "@nestjs/common";
 import { ReorderManualProfileCommand, ReorderManualProfileRequestModel } from "./reorder-manual-profile.handler";
 
-@ApiTags('Profiles')
+@ApiTags('User Profiles')
 @UseGuards(UserAccoutGuard)
 @Controller({
-  path: `/user`,
+  path: `/user/profile`,
   version: '1',
 })
 export class ReorderManualProfileController {

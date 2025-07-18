@@ -1,4 +1,5 @@
-import { Repository } from "typeorm";
+import _const from "../../core/utils/const";
+import { Brackets, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ManualProfile } from "../../domain/entities";
 import { Injectable, NotFoundException } from "@nestjs/common";
@@ -102,4 +103,51 @@ export class ManualProfileRepository implements IManualProfileRepository {
     profileToMove.displayOrder = newDisplayOrder;
     await this.manualProfileContext.save(profileToMove);
   }
+
+  public async searchAsync(
+    page: number,
+    pageSize: number,
+    searchTerm?: string
+  ): Promise<[ManualProfile[], number]> {
+    if (!searchTerm || !searchTerm.trim()) {
+      return [[], 0];
+    }
+
+    const skip = (page - 1) * pageSize;
+    const take = pageSize;
+
+    const queryBuilder = this.manualProfileContext
+      .createQueryBuilder("manualProfile")
+      .leftJoin("manualProfile.user", "user")
+      .addSelect([
+        "user.id",
+        "user.userName",
+        "user.firstName",
+        "user.lastName",
+        "user.profileImage"
+      ])
+      .where("manualProfile.url IS NOT NULL")
+      .andWhere("manualProfile.url NOT ILIKE ANY(:platforms)", {
+        platforms: _const.KNOWN_PLATFORMS_URIS.map(p => `%${p}%`),
+      })
+      .andWhere(
+        new Brackets(qb => {
+          qb.where(
+            `REGEXP_REPLACE(manualProfile.url, '^.*(?:/user/|/@|/u/|/c/|/)?([^/?#]+).*$','\\1') ILIKE :searchTerm`,
+            { searchTerm }
+          )
+            .orWhere(
+              `REGEXP_REPLACE(manualProfile.url, '^https?://([^/]+).*$','\\1') ILIKE :searchTerm`,
+              { searchTerm }
+            );
+        })
+      )
+      .skip(skip)
+      .take(take);
+
+    // Execute the query and get the results
+    const [results, count] = await queryBuilder.getManyAndCount();
+    return [results, count];
+  }
+
 }

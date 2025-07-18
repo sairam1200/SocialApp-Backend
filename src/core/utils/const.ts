@@ -29,6 +29,8 @@ export default {
     REDDIT_IMPORT: "reddit-import",
   },
 
+
+
   EMAILTEMPLATES: {
     ACCOUNT: {
       EMAIL_CONFIRMATION: 'account/email-confirmation',
@@ -48,6 +50,33 @@ export default {
     SPOTIFY: "spotify",
     REDDIT: "reddit",
   },
+
+  KNOWN_PLATFORMS_URIS: [
+    'facebook.com',
+    'twitter.com',
+    'instagram.com',
+    'tiktok.com',
+    'linkedin.com',
+    'snapchat.com',
+    'youtube.com',
+    'pinterest.com',
+    'reddit.com',
+    'tumblr.com',
+    'threads.net',
+    'discord.com',
+    'twitch.tv',
+    'medium.com',
+    'vimeo.com',
+    'telegram.me',
+    'clubhouse.com',
+    'mastodon.social',
+    'weibo.com',
+    'line.me',
+    'flickr.com',
+    'bilibili.com',
+    'ok.ru',
+    'vk.com'
+  ],
 
   TOKEN: {
     PURPOSE: {

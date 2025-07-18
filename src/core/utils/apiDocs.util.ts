@@ -1,6 +1,5 @@
 import configs from "../../configs";
-import { Response } from "express"
-import { INestApplication, Res } from "@nestjs/common";
+import { INestApplication } from "@nestjs/common";
 import { apiReference } from "@scalar/nestjs-api-reference";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 

@@ -8,6 +8,8 @@ import { GetUserManualProfilesController } from "./manual/get-manual-profiles/ge
 import { GetUserManualProfilesQueryHandler } from "./manual/get-manual-profiles/get-manual-profiles.handler";
 import { ReorderManualProfileController } from "./manual/reorder-manual-profile/reorder-manual-profile.endpoint";
 import { ReorderManualProfileCommandHandler } from "./manual/reorder-manual-profile/reorder-manual-profile.handler";
+import { SearchManualProfileController } from "./manual/search-manual-profile/search-manual-profile.endpoint";
+import { SearchManualProfileQueryHandler } from "./manual/search-manual-profile/search-manual-profile.handler";
 import { UpdateManualProfileController } from "./manual/update-manual-profile/update-manual-profile.endpoint";
 import { UpdateManualProfileCommandHandler } from "./manual/update-manual-profile/update-manual-profile.handler";
 
@@ -21,6 +23,8 @@ export { DeleteManualProfileController } from "./manual/delete-manual-profile/de
 export { DeleteManualProfileCommandHandler } from "./manual/delete-manual-profile/delete-manual-profile.handler";
 export { GetUserManualProfilesController } from "./manual/get-manual-profiles/get-manual-profiles.endpoint";
 export { GetUserManualProfilesQueryHandler } from "./manual/get-manual-profiles/get-manual-profiles.handler";
+export { SearchManualProfileController } from "./manual/search-manual-profile/search-manual-profile.endpoint";
+export { SearchManualProfileQuery, SearchManualProfileQueryHandler } from "./manual/search-manual-profile/search-manual-profile.handler";
 
 const controllers = [
   GetUserLinkedAccountsController,
@@ -29,6 +33,7 @@ const controllers = [
   UpdateManualProfileController,
   CreateManualProfileController,
   ReorderManualProfileController,
+  SearchManualProfileController,
 ];
 
 const handlers = [
@@ -38,6 +43,7 @@ const handlers = [
   UpdateManualProfileCommandHandler,
   CreateManualProfileCommandHandler,
   ReorderManualProfileCommandHandler,
+  SearchManualProfileQueryHandler,
 ];
 
 const profile = {

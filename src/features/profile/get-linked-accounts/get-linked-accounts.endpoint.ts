@@ -1,14 +1,15 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { LinkedAccountModel } from "../../../domain/contracts/user.model";
 import { GetUserLinkedAccountsQuery } from "./get-linked-accounts.handler";
 import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 
 @ApiBearerAuth()
-@ApiTags('Profiles')
+@ApiTags('User Profiles')
 @UseGuards()
 @Controller({
-    path: `/user`,
+    path: `/user/profile`,
     version: '1',
 })
 export class GetUserLinkedAccountsController {
@@ -17,7 +18,7 @@ export class GetUserLinkedAccountsController {
     ) { }
 
     @Get("linked-accounts")
-    @ApiResponse({ status: 200, description: 'OK' })
+    @ApiResponse({ status: 200, description: 'OK', type: [LinkedAccountModel] })
     @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
     @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
     @ApiResponse({ status: 403, description: 'FORBIDDEN' })

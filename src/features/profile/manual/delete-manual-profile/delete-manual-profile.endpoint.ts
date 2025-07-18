@@ -5,10 +5,10 @@ import { UserAccoutGuard } from "../../../../core/passport";
 import { DeleteManualProfileCommand } from "./delete-manual-profile.handler";
 import { Controller, Delete, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 
-@ApiTags('Profiles')
+@ApiTags('User Profiles')
 @UseGuards(UserAccoutGuard)
 @Controller({
-  path: `/user`,
+  path: `/user/profile`,
   version: '1',
 })
 export class DeleteManualProfileController {
