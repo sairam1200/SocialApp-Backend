@@ -3,6 +3,7 @@ import { Inject } from "@nestjs/common";
 import _const from "../../../core/utils/const";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { UserModel } from "../../../domain/contracts/user.model";
+import { mapToUserModel } from "../../../domain/mappers/user.mapper";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 import { UserNotFoundException } from "../../../core/exceptions/user.exception";
 
@@ -38,16 +39,6 @@ export class GetUserQueryHandler implements ICommandHandler<GetUserQuery> {
       throw new UserNotFoundException();
     }
 
-    const result = new UserModel({
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      gender: user.gender,
-      phoneNumber: user.phoneNumber,
-      isEmailVerified: user.emailConfirmed,
-    });
-
-    return result;
+    return mapToUserModel(user)
   }
 }  
