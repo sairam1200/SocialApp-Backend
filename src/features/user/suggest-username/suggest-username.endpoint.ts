@@ -1,9 +1,9 @@
+import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
-import { Controller, Post, Query } from "@nestjs/common";
-import { ApiBearerAuth, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { Controller, HttpStatus, Post, Query, Res } from "@nestjs/common";
 import { SuggestUserNameCommand, SuggestUserNameResponseModel } from "./suggest-username.handler";
 
-@ApiBearerAuth()
 @ApiTags('Account')
 @Controller({
   path: `/account`,
@@ -15,17 +15,19 @@ export class SuggestUserNameController {
   }
 
   @Post('suggest-username')
-  @ApiResponse({ status: 200, description: 'OK' })
+  @ApiResponse({ status: 200, description: 'OK', type: SuggestUserNameResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   @ApiQuery({ name: 'hint', required: false, type: '' })
   @ApiQuery({ name: 'userName', required: false, type: '' })
   public async Suggest(
+    @Res() res: Response,
     @Query('hint') hint?: string,
     @Query('userName') userName?: string
-  ): Promise<SuggestUserNameResponseModel> {
+  ): Promise<Response> {
     const result = await this.queryBus.execute(new SuggestUserNameCommand({ hint, userName }));
-    return result;
+    res.status(HttpStatus.OK).send(result)
+    return res;
   }
 }
