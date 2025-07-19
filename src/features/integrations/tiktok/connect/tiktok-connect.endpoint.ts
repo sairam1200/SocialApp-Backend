@@ -6,40 +6,15 @@ import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { ApiProperty, ApiTags, ApiResponse, ApiOperation, ApiQuery } from "@nestjs/swagger";
 import { Controller, Get, HttpStatus, Query, Req, Res, UseGuards } from "@nestjs/common";
 import { TikTokConnectCallbackQuery, TikTokConnectQuery } from "./tiktok-connect.handler";
+import { TikTokProfileModel } from "../../../../domain/contracts/tiktok.model";
 import * as crypto from 'crypto';
 
-class ConnectResponseModel {
+class TikTokConnectResponseModel {
   @ApiProperty({
     description: 'TikTok OAuth authorization URL with PKCE support',
     example: 'https://www.tiktok.com/v2/auth/authorize/?response_type=code&client_key=...&redirect_uri=...&scope=user.info.basic,user.info.profile,user.info.stats,video.list&state=...&code_challenge_method=S256&code_challenge=...'
   })
   authorizeURL: string;
-}
-
-class TikTokUserProfile {
-  @ApiProperty({ description: 'User ID on TikTok platform', example: 'user123' })
-  userId: string;
-  
-  @ApiProperty({ description: 'Platform identifier', example: 'tiktok' })
-  platform: string;
-  
-  @ApiProperty({ description: 'Username on TikTok', example: 'john_doe' })
-  userName: string;
-  
-  @ApiProperty({ description: 'External user ID from TikTok', example: 'tiktok_12345' })
-  externalId: string;
-  
-  @ApiProperty({ description: 'Whether import is allowed', example: true })
-  allowImport: boolean;
-  
-  @ApiProperty({ 
-    description: 'User metadata from TikTok',
-    example: { likesCount: 100, videoCount: 50 }
-  })
-  metaData: {
-    likesCount: number;
-    videoCount: number;
-  };
 }
 
 class TikTokConnectCallbackResponseModel {
@@ -57,9 +32,9 @@ class TikTokConnectCallbackResponseModel {
   
   @ApiProperty({ 
     description: 'User profile data from TikTok',
-    type: TikTokUserProfile
+    type: TikTokProfileModel
   })
-  profile: TikTokUserProfile;
+  profile: TikTokProfileModel;
 }
 
 @ApiTags('Integrations')
@@ -80,7 +55,7 @@ export class TikTokConnectController {
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
-  @ApiResponse({ status: 302, description: 'FOUND', type: ConnectResponseModel })
+  @ApiResponse({ status: 302, description: 'FOUND', type: TikTokConnectResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })

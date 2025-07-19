@@ -41,9 +41,9 @@ export class TikTokImportCommandHandler implements ICommandHandler<TikTokImportC
       throw new ApplicationException('TikTok account not linked');
     }
 
-    if (!linkedAccount.allowImport) {
-      throw new ApplicationException('Import not allowed for this TikTok account');
-    }
+    // Determine import strategy based on allowImport state
+    const importType = linkedAccount.allowImport ? 'full' : 'incremental';
+    const lastImportDate = linkedAccount.allowImport ? null : linkedAccount.lastRefreshed;
     
     const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.TIKTOK);
 
@@ -65,16 +65,18 @@ export class TikTokImportCommandHandler implements ICommandHandler<TikTokImportC
       await this.userLoginRepository.updateAsync(userLogin);
     }
 
-    // Add job to import queue
+    // Add job to import queue with import strategy info
     await this.tiktokImportQueue.add('import-tiktok-content', {
       userId,
       linkedAccountId: linkedAccount.id,
-      platform: _const.PLATFORMS.TIKTOK
+      platform: _const.PLATFORMS.TIKTOK,
+      importType,
+      lastImportDate
     });
 
     return {
       success: true,
-      message: 'TikTok content import started successfully'
+      message: `TikTok ${importType} import started successfully`
     };
   }
 

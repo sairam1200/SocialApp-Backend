@@ -15,7 +15,8 @@ import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey
 import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
-import { TikTokErrorHandler } from '../../../../core/utils/tiktokError.util';
+import { mapToTikTokProfileModel } from '../../../../domain/mappers/tiktok.mapper';
+import { TikTokProfileModel } from '../../../../domain/contracts/tiktok.model';
 
 const TIKTOK_BASE = 'https://open.tiktokapis.com/v2';
 
@@ -84,7 +85,7 @@ export class TikTokConnectCallbackQueryHandler implements ICommandHandler<TikTok
   ) { }
 
   public async execute(query: TikTokConnectCallbackQuery):
-    Promise<{ accessToken: string; expiresIn: number; profile: any }> {
+    Promise<{ accessToken: string; expiresIn: number; profile: TikTokProfileModel }> {
 
     const { model } = query;
     await tiktokConnectCallbackValidations.validateAsync(model);
@@ -115,12 +116,12 @@ export class TikTokConnectCallbackQueryHandler implements ICommandHandler<TikTok
     return {
       accessToken: tokenData.access_token,
       expiresIn: tokenData.expires_in,
-      profile: linkedAccount, // Map to desired profile model as needed
+      profile: mapToTikTokProfileModel(linkedAccount, linkedAccount.allowImport),
     };
   }
 
   private async exchangeCodeForToken(code: string, codeVerifier?: string): Promise<any> {
-    return TikTokErrorHandler.withRetry(async () => {
+    try {
       const tokenRequest: any = {
         client_key: configs.tiktok.clientId,
         client_secret: configs.tiktok.clientSecret,
@@ -141,7 +142,10 @@ export class TikTokConnectCallbackQueryHandler implements ICommandHandler<TikTok
         },
       });
       return response.data;
-    }, 3, 1000, 'TikTok token exchange');
+    } catch (error) {
+      logger.error('Error exchanging code for TikTok token', error);
+      throw new ApplicationException('Unexpected error during authentication with TikTok');
+    }
   }
 
   private async validateState(state: string): Promise<DataProtectionKey> {
@@ -200,7 +204,7 @@ export class TikTokConnectCallbackQueryHandler implements ICommandHandler<TikTok
   }
 
   private async refreshTokenAsync(refreshToken: string): Promise<{ access_token: string, expires_in: number, refresh_token?: string }> {
-    return TikTokErrorHandler.withRetry(async () => {
+    try {
       const response = await axios.post(`${TIKTOK_BASE}/oauth/token/`, {
         client_key: configs.tiktok.clientId,
         client_secret: configs.tiktok.clientSecret,
@@ -214,7 +218,10 @@ export class TikTokConnectCallbackQueryHandler implements ICommandHandler<TikTok
       });
       
       return response.data;
-    }, 3, 1000, 'TikTok token refresh');
+    } catch (error) {
+      logger.error('Error refreshing TikTok token', error);
+      throw new ApplicationException('Failed to refresh TikTok authentication token. Please re-authenticate your account.');
+    }
   }
 
   private async verifyAccessTokenAsync(accessToken: string): Promise<boolean> {

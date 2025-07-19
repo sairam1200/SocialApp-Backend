@@ -29,6 +29,6 @@ export class TikTokProfileQueryHandler implements ICommandHandler<TikTokProfileQ
       throw new Error('TikTok account not linked');
     }
 
-    return mapToTikTokProfileModel(linkedAccount, true);
+    return mapToTikTokProfileModel(linkedAccount, linkedAccount.allowImport);
   }
 }
