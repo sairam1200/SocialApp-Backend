@@ -40,6 +40,12 @@ import { YoutubeProfileController } from "./youtube/get-profile/get-profile.endp
 import { YoutubeProfileQueryHandler } from "./youtube/get-profile/get-profile.handler";
 import { YoutubeImportController } from "./youtube/import/youtube-import.endpoint";
 import { YoutubeImportCommandHandler } from "./youtube/import/youtube-import.handler";
+import { TikTokConnectController } from "./tiktok/connect/tiktok-connect.endpoint";
+import { TikTokConnectCallbackQueryHandler, TikTokConnectQueryHandler } from "./tiktok/connect/tiktok-connect.handler";
+import { TikTokProfileController } from "./tiktok/get-profile/get-profile.endpoint";
+import { TikTokProfileQueryHandler } from "./tiktok/get-profile/get-profile.handler";
+import { TikTokImportController } from "./tiktok/import/tiktok-import.endpoint";
+import { TikTokImportCommandHandler } from "./tiktok/import/tiktok-import.handler";
 
 export { FacebookConnectController } from "./facebook/connect/facebook-connect.endpoint"
 export { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./facebook/connect/facebook-connect.handler";
@@ -104,8 +110,14 @@ export { YoutubeProfileQueryHandler } from "./youtube/get-profile/get-profile.ha
 export { YoutubeImportController } from "./youtube/import/youtube-import.endpoint";
 export { YoutubeImportCommandHandler } from "./youtube/import/youtube-import.handler";
 
-export { } from "./";
-export { } from "./";
+export { TikTokConnectController } from "./tiktok/connect/tiktok-connect.endpoint";
+export { TikTokConnectCallbackQueryHandler, TikTokConnectQueryHandler } from "./tiktok/connect/tiktok-connect.handler";
+
+export { TikTokProfileController } from "./tiktok/get-profile/get-profile.endpoint";
+export { TikTokProfileQueryHandler } from "./tiktok/get-profile/get-profile.handler";
+
+export { TikTokImportController } from "./tiktok/import/tiktok-import.endpoint";
+export { TikTokImportCommandHandler } from "./tiktok/import/tiktok-import.handler";
 
 const controllers = [
   FacebookConnectController,
@@ -129,6 +141,9 @@ const controllers = [
   YoutubeConnectController,
   YoutubeProfileController,
   YoutubeImportController,
+  TikTokConnectController,
+  TikTokProfileController,
+  TikTokImportController,
 ];
 
 const handlers = [
@@ -153,6 +168,10 @@ const handlers = [
   YoutubeConnectCallbackQueryHandler, YoutubeConnectQueryHandler,
   YoutubeProfileQueryHandler,
   YoutubeImportCommandHandler,
+  TikTokConnectCallbackQueryHandler,
+  TikTokConnectQueryHandler,
+  TikTokProfileQueryHandler,
+  TikTokImportCommandHandler,
 ];
 
 const integrations = {

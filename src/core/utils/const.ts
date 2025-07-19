@@ -27,6 +27,7 @@ export default {
     PINTEREST_IMPORT: "pinterest-import",
     TWITTER_IMPORT: "twitter-import",
     REDDIT_IMPORT: "reddit-import",
+    TIKTOK_IMPORT: "tiktok-import",
   },
 
 
@@ -49,6 +50,7 @@ export default {
     YOUTUBE: "youtube",
     SPOTIFY: "spotify",
     REDDIT: "reddit",
+    TIKTOK: "tiktok",
   },
 
   KNOWN_PLATFORMS_URIS: [

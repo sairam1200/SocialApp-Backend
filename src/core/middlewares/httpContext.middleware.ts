@@ -6,6 +6,7 @@ import { JwtPayload } from '../passport/jwtPayload';
 import { NextFunction, Request, Response } from 'express';
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { extractTokenFromHeader, getUserFromAccessTokenAsync } from '../utils/jwt.util';
+import logger from '../utils/winston.util';
 
 interface HttpContextStore {
   request: Request;
@@ -54,11 +55,21 @@ export class HttpContextMiddleware implements NestMiddleware {
   ) { }
 
   async use(req: Request, res: Response, next: NextFunction) {
+    // Debug logging
+    logger.info(`[HttpContext] Request URL: ${req.url}`);
+    logger.info(`[HttpContext] Authorization header: ${req.headers.authorization ? 'Present' : 'Missing'}`);
+    
     const access_token = extractTokenFromHeader(req);
     if (!access_token) {
+      logger.info('[HttpContext] No access token found in request');
       HttpContext.run(req, res, null, next);
     } else {
+      logger.info('[HttpContext] Access token found, attempting to get user');
       const user = await getUserFromAccessTokenAsync(access_token, res, this.jwtService, true);
+      logger.info(`[HttpContext] User resolved: ${user ? 'Yes' : 'No'}`);
+      if (user) {
+        logger.info(`[HttpContext] User type: ${user[Globals.ClaimTypes.UserType]}`);
+      }
       HttpContext.run(req, res, (user ?? null), next);
     }
   }
