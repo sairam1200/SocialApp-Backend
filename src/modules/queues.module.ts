@@ -22,7 +22,7 @@ import { FacebookImportProcessor, InjectFacebookImportQueue } from "../infrastru
 import { InjectPinterestImportQueue, PinterestImportProcessor } from "../infrastructure/background/processors/pinterest-import.processor";
 import { InjectInstagramImportQueue, InstagramImportProcessor } from "../infrastructure/background/processors/instagram-import.processor";
 import { RedditImportProcessor, InjectRedditImportQueue } from "../infrastructure/background/processors/reddit-import.processor";
-import { TikTokImportProcessor, InjectTikTokImportQueue } from "../infrastructure/background/processors/tiktok-import.processor";
+// import { TikTokImportProcessor, InjectTikTokImportQueue } from "../infrastructure/background/processors/tiktok-import.processor";
 
 @Module({})
 export class QueuesModule implements NestModule {
@@ -84,7 +84,7 @@ export class QueuesModule implements NestModule {
         FacebookImportProcessor,
         YoutubeImportProcessor,
         RedditImportProcessor,
-        TikTokImportProcessor,
+        // TikTokImportProcessor,
         EmailProcessor,
         ImportGateway,
 
@@ -97,7 +97,7 @@ export class QueuesModule implements NestModule {
         FacebookImportProcessor,
         YoutubeImportProcessor,
         RedditImportProcessor,
-        TikTokImportProcessor,
+        // TikTokImportProcessor,
         ...queues.exports,
         EmailProcessor,
       ],
@@ -111,7 +111,7 @@ export class QueuesModule implements NestModule {
     @InjectYoutubeImportQueue() private readonly youtubeImportQueue: Queue,
     @InjectSpotifyImportQueue() private readonly spotifyImportQueue: Queue,
     @InjectRedditImportQueue() private readonly redditImportQueue: Queue,
-    @InjectTikTokImportQueue() private readonly tiktokImportQueue: Queue,
+    // @InjectTikTokImportQueue() private readonly tiktokImportQueue: Queue,
     @InjectEmailQueue() private readonly emailQueue: Queue,
   ) { }
 
@@ -125,7 +125,7 @@ export class QueuesModule implements NestModule {
         new BullMQAdapter(this.youtubeImportQueue),
         new BullMQAdapter(this.instagramImportQueue),
         new BullMQAdapter(this.redditImportQueue),
-        new BullMQAdapter(this.tiktokImportQueue),
+        // new BullMQAdapter(this.tiktokImportQueue),
         new BullMQAdapter(this.emailQueue),
       ],
       serverAdapter,
