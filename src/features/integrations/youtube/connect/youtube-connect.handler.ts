@@ -110,7 +110,6 @@ export class YoutubeConnectCallbackQueryHandler
     if (!user || user.id !== dataProtectionKey.userId) {
       throw new UserNotFoundException(userData.profile.email, 'email');
     }
-    
     let linkedAccount =
       await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
         _const.PLATFORMS.YOUTUBE,
@@ -132,11 +131,10 @@ export class YoutubeConnectCallbackQueryHandler
         channel: {
           id: userData.channel.items[0].id,
           title: userData.channel.items[0].snippet.title,
-          desciption: userData.channel.items[0].snippet.description,
+          description: userData.channel.items[0].snippet.description,
           viewCount: userData.channel.items[0].statistics.viewCount,
           videoCount: userData.channel.items[0].statistics.videoCount,
-          thumbthumbnail:
-            userData.channel.items[0].snippet.thumbnails.default.url,
+          thumbthumbnail: userData.channel.items[0].snippet.thumbnails.default.url,
         },
       };
       await this.linkedAccountRepository.updateAsync(linkedAccount);
@@ -161,11 +159,10 @@ export class YoutubeConnectCallbackQueryHandler
             channel: {
               id: userData.channel.items[0].id,
               title: userData.channel.items[0].snippet.title,
-              desciption: userData.channel.items[0].snippet.description,
+              description: userData.channel.items[0].snippet.description,
               viewCount: userData.channel.items[0].statistics.viewCount,
               videoCount: userData.channel.items[0].statistics.videoCount,
-              thumbnail:
-                userData.channel.items[0].snippet.thumbnails.default.url,
+              thumbnail: userData.channel.items[0].snippet.thumbnails.default.url,
             },
           },
         }),

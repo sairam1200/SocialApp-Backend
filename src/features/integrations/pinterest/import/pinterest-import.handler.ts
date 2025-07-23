@@ -83,12 +83,16 @@ export class PinterestImportCommandHandler implements ICommandHandler<PinterestI
     if (!account) {
       throw new NotFoundException("No matching Pinterest profile was found!");
     }
-
-    this.importQueue.add({ account, accessToken }, {
-      attempts: 3,
-      backoff: 5000
-    });
-
+    try{
+      await this.importQueue.add("PINTEREST_IMPORT",{ account, accessToken }, {
+        attempts: 3,
+        backoff: 5000
+      });
+    } catch (error) {
+      logger.error(`An error occurred while adding the Pinterest import job to the queue: 
+        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
+      throw new ApplicationException('Failed to initiate Pinterest import. Please try again later.');
+    }
     return {
       accessToken,
       expiresIn
@@ -98,20 +102,21 @@ export class PinterestImportCommandHandler implements ICommandHandler<PinterestI
   private async refreshTokenAsync(refreshToken: string)
     : Promise<{ access_token: string, expires_in: number, refresh_token: string, refresh_token_expires_in: number }> {
 
-    try {
+    const basicAuth = Buffer.from(`${configs.pinterest.clientId}:${configs.pinterest.clientSecret}`).toString('base64'); 
 
-      const response = await axios.post('https://api.pinterest.com/v5/oauth/token',
-        qs.stringify({
-          grant_type: 'refresh_token',
-          refresh_token: refreshToken,
-          client_id: configs.pinterest.clientId,
-          client_secret: configs.pinterest.clientSecret,
-        }),
+    try {
+      const response = await axios.post(
+        'https://api.pinterest.com/v5/oauth/token',
+        `grant_type=refresh_token` +
+        `&refresh_token=${encodeURIComponent(refreshToken)}` 
+      ,
         {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          headers: { 
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${basicAuth}` 
+          },
         },
       );
-
       const { access_token, expires_in, refresh_token, refresh_token_expires_in } = response.data;
 
       return {
@@ -122,6 +127,7 @@ export class PinterestImportCommandHandler implements ICommandHandler<PinterestI
       };
 
     } catch (error) {
+      console.log(error)
       logger.error(`An error occurred while processing the Pinterest import command: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
 

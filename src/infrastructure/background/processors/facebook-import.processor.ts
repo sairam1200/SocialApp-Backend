@@ -22,7 +22,6 @@ interface CursorMap {
 
 export const InjectFacebookImportQueue = (): ParameterDecorator =>
   InjectQueue(_const.BULL_QUEUES.FACEBOOK_IMPORT);
-
 @Processor(_const.BULL_QUEUES.FACEBOOK_IMPORT)
 export class FacebookImportProcessor extends WorkerHost {
 

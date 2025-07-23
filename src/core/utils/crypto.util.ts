@@ -42,6 +42,24 @@ function verifyWithHMAC(encryptedText: string, hmac: string): boolean {
 function encodeSHA256ToBase64(text: string): string {
   return crypto.createHash('sha256').update(text).digest('base64');
 }
+//// SHA-256 -> base64url
+function encodeSHA256ToBase64Url(text: string): string {
+  return crypto.createHash('sha256')
+          .update(text)
+          .digest('base64')
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+  
+}
+// Convert Buffer to base64url format
+function generateEncryptionKeyBase64url(size: number=32): string {
+  return crypto.randomBytes(size)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
 
 // SHA-256 -> hex
 function encodeSHA256ToHex(text: string): string {
@@ -52,6 +70,8 @@ function encodeSHA256ToHex(text: string): string {
 function generateEncryptionKey(size: number = 32): string {
   return crypto.randomBytes(size).toString('hex');
 }
+
+
 
 // Export utility object
 export const cryptoUtils = {
@@ -65,4 +85,6 @@ export const cryptoUtils = {
   encodeSHA256ToBase64,
   encodeSHA256ToHex,
   generateEncryptionKey,
+  generateEncryptionKeyBase64url,
+  encodeSHA256ToBase64Url
 };

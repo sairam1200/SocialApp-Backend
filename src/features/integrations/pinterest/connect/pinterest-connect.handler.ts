@@ -16,6 +16,7 @@ import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinke
 import { PinterestProfileModel, PinterestUserDataModel } from "../../../../domain/contracts/pinterest.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 import { DataProtectionKey } from "../../../../domain/entities";
+import { UserNotFoundException } from "core/exceptions";
 
 const BASE_URL = 'https://api.pinterest.com/v5';
 
@@ -94,13 +95,17 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
     const { access_token, refresh_token, expires_in, refresh_token_expires_in } = await this.fetchToken(model.code);
 
     const userData = await this.fetchUserData(access_token);
+    
     const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
-
-    if (!user) {
-      throw new ApplicationException('Prevented: Alduterated Request Received!');
+    if (!user || user.id !== dataProtectionKey.userId) {
+      throw new UserNotFoundException(userData.id);
     }
+   
 
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(_const.PLATFORMS.PINTEREST, user.email);
+    console.log("user user: ", user);
+    console.log("user userdata: ", userData);
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.PINTEREST, user.id);
+    console.log("linkedAccount: ", linkedAccount);
     if (linkedAccount) {
       linkedAccount.userName = userData.username;
       linkedAccount.profileImage = userData.profile_image;
@@ -116,6 +121,7 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
       };
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
+      console.log("Creating new linked account for Pinterest");
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
         platform: _const.PLATFORMS.PINTEREST,
         userId: user.id,
@@ -169,15 +175,13 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
         `${BASE_URL}/oauth/token`, 
         `grant_type=authorization_code` +
         `&code=${encodeURIComponent(code)}` +
-        `&redirect_uri=${encodeURIComponent(configs.pinterest.redirectUri)}` +
-        `&continuous_refresh=${encodeURIComponent(String(true))}`, 
+        `&redirect_uri=${encodeURIComponent(configs.pinterest.redirectUri)}` ,
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             'Authorization': `Basic ${basicAuth}`
           }
         })
-
       console.log('Access token response:', response.data);
       return response.data;
     } catch (error) {
