@@ -1,14 +1,14 @@
 import * as bcrypt from 'bcrypt';
+import configs from '../../configs';
 import _const from '../../core/utils/const';
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, SelectQueryBuilder } from "typeorm";
+import { Like, Repository, SelectQueryBuilder } from "typeorm";
 import { cryptoUtils } from '../../core/utils/crypto.util';
-import { BadRequestException, forwardRef, Inject, Injectable } from "@nestjs/common";
 import { User, UserClaim, UserRole } from '../../domain/entities';
 import { generateTimestampUUID } from '../../core/utils/time.util';
+import { BadRequestException, forwardRef, Inject, Injectable } from "@nestjs/common";
 import { IRoleRepository, IUserRepository, IUserRoleRepository } from '../../domain/repositories';
 import { RoleNotFoundException, ClaimAlreadyExistsException, ApplicationException, UserAlreadyExistsException, UserAlreadyInRoleException, UserNotFoundException, ClaimNotFoundException } from "../../core/exceptions";
-import configs from 'configs';
 
 @Injectable()
 export class UserRepository implements IUserRepository {
@@ -19,6 +19,14 @@ export class UserRepository implements IUserRepository {
     @Inject(forwardRef(() => _const.IROLE_REPOSITORY)) private readonly roleRepository: IRoleRepository,
     @Inject(forwardRef(() => _const.IUSERROLE_REPOSITORY)) private readonly userRoleRepository: IUserRoleRepository
   ) { }
+
+  public async getSimilarUserNamesAsync(userName: string): Promise<string[]> {
+    const users = await this.userContext.find({
+      where: { userName: Like(`%${userName}%`) },
+      select: ['userName'],
+    });
+    return users.map(user => user.userName);
+  }
 
   public async getAsync(): Promise<User[]> {
     return await this.userContext.find();

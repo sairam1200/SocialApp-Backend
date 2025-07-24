@@ -39,8 +39,8 @@ export class PinterestImportProcessor extends WorkerHost {
     const { account, accessToken } = job.data;
     const lastCursors: CursorMap = {};
     const fields: Record<string, { endpoint: string; type: string }> = {
-      boards: { endpoint: '/me/boards', type: 'Boards' },
-      pins: { endpoint: '/me/pins', type: 'Pins' },
+      boards: { endpoint: '/boards', type: 'Boards' },
+      pins: { endpoint: '/pins', type: 'Pins' },
     };
 
     const progressReports: {
@@ -54,22 +54,49 @@ export class PinterestImportProcessor extends WorkerHost {
 
     let notification: NotificationModel;
     let encounteredError = false;
+    const initialReports = Object.entries(progressReports).map(([type, report]) => ({
+      type,
+      ...report,
+    }));
+    
+    try {
+      const notificationResult = await this.notificationService.notifyAsync(
+        account.userId,
+        NotificationType.Import,
+        "Importing your Reddit data...",
+        "",
+        true,
+        {
+          type: NotificationType.Import,
+          status: NotificationStatus.InProgress,
+          reports: initialReports,
+        }
+      );
+      notification = mapToNotificationModel(notificationResult);
+      logger.debug(`[RedditImport] Created initial notification before import loop`);
+    } catch (err) {
+      logger.error(`[RedditImport] Failed to create notification: ${err.message}`);
+    }
 
     for (const [key, { endpoint, type }] of Object.entries(fields)) {
       let cursor: string | null = lastCursors[key] || null;
-
+      logger.info(`[PinterestImport] Starting import of ${type} for user ${account.userId}`);
       try {
         while (true) {
+          logger.debug(`hello`);
           const response = await axios.get(`https://api.pinterest.com/v5${endpoint}`, {
+            headers: {
+             Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
             params: {
-              access_token: accessToken,
               bookmark: cursor || undefined,
             },
           });
-
+      
           const data = response.data;
           const items = data.items;
-
+          logger.debug(`[PinterestImport] Retrieved ${items.length} ${type} items`);
           progressReports[type] = {
             totalItem: 0,
             itemProcessed: 0,
@@ -78,7 +105,7 @@ export class PinterestImportProcessor extends WorkerHost {
           };
 
 
-          console.log(`Fetched ${items.length} items from ${type}`);
+          logger.debug(`Fetched ${items.length} items from ${type}`);
 
           for (const item of items) {
             let content = new UserContent({
@@ -125,7 +152,10 @@ export class PinterestImportProcessor extends WorkerHost {
             }
 
             content = await this.userContentRepository.createAsync(content);
+            logger.debug(`[PinterestImport] Saved ${type} content with ID: ${content.externalId}`);
+
             this.gateway.emitNewImportContent(account.userId, 'pinterest', content);
+            logger.debug(`[PinterestImport] Emitted new ${type} content for user ${account.userId}`);
             progressReports[type].itemProcessed++;
             progressReports[type].progressPercent = Math.round(
               (progressReports[type].itemProcessed / progressReports[type].totalItem) * 100,
@@ -137,6 +167,8 @@ export class PinterestImportProcessor extends WorkerHost {
             }));
 
             if (!notification) {
+              logger.debug(`[PinterestImport] Creating initial notification`);
+              logger.debug(`NotificationType.Import: ${NotificationType.Import}`);
               const notificationResult = await this.notificationService.notifyAsync(
                 account.userId,
                 NotificationType.Import,
@@ -151,18 +183,22 @@ export class PinterestImportProcessor extends WorkerHost {
 
               notification = mapToNotificationModel(notificationResult);
             } else {
+              logger.debug(`[PinterestImport] Updating notification with progress for type: ${type}`);
               await this.notificationService.updateAsync(notification.id, true, {
                 metaData: {
                   status: NotificationStatus.InProgress,
                   reports: reportArray,
                 },
               });
+              
             }
           }
 
           if (data.bookmark) {
             cursor = data.bookmark;
+            logger.debug(`[PinterestImport] Bookmark for next page: ${data.bookmark}`);
           } else {
+            logger.info(`[PinterestImport] Completed import of ${type} for user ${account.userId}`);
             progressReports[type].status = NotificationStatus.Completed;
             break; // no more pages
           }
@@ -186,6 +222,7 @@ export class PinterestImportProcessor extends WorkerHost {
     if (notification) {
 
       if (encounteredError) {
+        logger.warn(`[PinterestImport] Completed with issues for user ${account.userId}`);
         await this.notificationService.updateAsync(notification.id,
           false,
           {
@@ -195,6 +232,7 @@ export class PinterestImportProcessor extends WorkerHost {
           "⚠️ Pinterest import completed with issues",
         );
       } else {
+        logger.info(`[PinterestImport] Successfully completed import for user ${account.userId}`);
         await this.notificationService.updateAsync(notification.id,
           false,
           {
@@ -209,6 +247,7 @@ export class PinterestImportProcessor extends WorkerHost {
       await this.linkedAccountRepository.updateAsync(account);
 
     } else {
+      logger.error(`[PinterestImport] Notification not created. Import likely failed to start.`);
       // # TODO #: Handle failed
       await this.notificationService.updateAsync(notification.id,
         false,

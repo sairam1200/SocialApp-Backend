@@ -24,7 +24,10 @@ export class GetPlaylistController {
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-  public async GetById(@Query('playlistReferenceId') playlistReferenceId: string): Promise<PlaylistModel> {
+  public async GetById(
+    @Query('playlistReferenceId') playlistReferenceId: string,
+    @Res() res: Response
+  ): Promise<Response> {
 
     const result = await this.queryBus.execute(new GetPlaylistByIdQuery({
       model: {
@@ -32,7 +35,8 @@ export class GetPlaylistController {
       }
     }));
 
-    return result;
+    res.status(HttpStatus.OK).send(result);
+    return res;
   }
 
   @Get(':userNameOrId/get-by-name')
@@ -53,7 +57,7 @@ export class GetPlaylistController {
       }
     }));
 
-    res.status(HttpStatus.NO_CONTENT).send(result);
+    res.status(HttpStatus.OK).send(result);
     return res;
   }
 }

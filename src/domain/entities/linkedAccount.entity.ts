@@ -40,27 +40,8 @@ export class LinkedAccount extends BaseEntity {
   @Column({ type: 'json', nullable: true })
   metaData?: Record<string, any>;
 
-  
-
   constructor(request: Partial<LinkedAccount> = {}) {
     super();
     Object.assign(this, request);
   }
 }
-
-/*
-{
-    [
-            {
-                "platform": "Instagram", 
-                "username": "john_doe",
-                "verified": true
-            }, 
-            {
-                "platform": "Twitter", 
-                "username": "john_doe", 
-                "verified": false
-            }
-    ]
-}
-*/

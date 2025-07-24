@@ -27,3 +27,18 @@ export { Verify2FACommandHandler as Verfiy2FACommandHandler } from "./2fa/verify
 
 export { Enable2FAController } from "./2fa/enable/2fa-enable.endpoint"
 export { Enable2FACommandHandler } from "./2fa/enable/2fa-enable.handler"
+
+const controllers = [
+
+];
+
+const handlers = [
+  
+];
+
+const authentication = {
+  addControllers: () => controllers,
+  addHandlers: () => handlers,
+};
+
+export default authentication;

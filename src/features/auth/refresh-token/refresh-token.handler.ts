@@ -7,6 +7,7 @@ import ipUtil from "../../../core/utils/ip.util";
 import { TokenResponseModel } from "../tokenResponse.model";
 import { Inject, UnauthorizedException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { cryptoUtils } from "../../../core/utils/crypto.util";
 import { addDurationToNow } from "../../../core/utils/time.util";
 import { ITokenService } from "../../../domain/services/itoken.service";
 import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
@@ -97,7 +98,7 @@ export class RefreshTokenCommandHandler implements ICommandHandler<RefreshTokenC
       accessToken = await this.tokenService.generateJwtAsync(user);
     }
 
-    userLogin.tokenValue = this.userLoginRepository.GenerateToken();
+    userLogin.tokenValue = cryptoUtils.generateEncryptionKey(32);
     userLogin.expiryDateUtc = addDurationToNow(configs.jwt.refreshTokenExpiration);
 
     const hasChanged = ipUtil.hasIpChanged(model.ipAddress, userLogin.ipAddress);

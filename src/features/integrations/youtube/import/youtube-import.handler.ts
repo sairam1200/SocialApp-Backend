@@ -47,13 +47,12 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     const { youtubeAccessToken } = command.model;
     let accessToken: string | undefined;
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-
+   
     if (youtubeAccessToken) {
       const isTokenValid = await this.verifyAccessTokenAsync(youtubeAccessToken);
       if (!isTokenValid) {
         const userLogin = await this.getUserLoginAsync(userId);
         const { access_token, expires_in } = await this.refreshTokenAsync(userLogin.tokenValue);
-
         accessToken = access_token;
         expiresIn = expires_in;
       } else {
@@ -68,14 +67,37 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     }
 
     const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.YOUTUBE, userId);
+    console.log(account);
     if (!account) {
       throw new NotFoundException("No matching Youtube profile was found!");
     }
-
-    this.importQueue.add({ account, accessToken }, {
-      attempts: 3,
-      backoff: 5000
-    });
+    /*
+    const sanitizedAccount = (obj:{})=>{
+      Object.entries(obj).forEach(([key, value]) => {
+        if (value === null || value === undefined) {
+          obj[key] = '';
+        } else if(typeof obj[key] === "object" && !Array.isArray(obj[key]) ){
+          sanitizedAccount(obj[key]);
+        }
+        })
+      return obj;
+    }
+     const newAccount = await JSON.parse(JSON.stringify(sanitizedAccount(account)));
+    console.log(newAccount);
+    */
+   
+    try{
+      await this.importQueue.add("YOUTUBE_IMPORT",{account, accessToken }, {
+        attempts: 3,
+        backoff:5000
+      });
+    }catch (error) {
+      console.log(error)
+      logger.error(`An error occurred while adding the Youtube import job to the queue: 
+        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
+      throw new ApplicationException('Failed to initiate Youtube import. Please try again later.');
+    }
+   
 
     return {
       accessToken,
@@ -156,7 +178,6 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
         'Your Youtube session has expired or the access token is invalid. Please log in to Youtube again to continue.'
       );
     }
-
     return userLogin;
   }
 

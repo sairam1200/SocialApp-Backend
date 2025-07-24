@@ -6,6 +6,7 @@ import { RoleModule } from './role.module';
 import { AuthModule } from './auth.module';
 import { QueuesModule } from './queues.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ProfileModule } from './profile.module';
 import { PassportModule } from '@nestjs/passport';
 import { PlaylistModule } from './playlist.module';
 import { IntegrationsModule } from './integrations.module';
@@ -25,6 +26,7 @@ import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '
     UserModule,
     RoleModule,
     AuthModule,
+    ProfileModule,
     PlaylistModule,
     QueuesModule.register(),
     NotificationModule,

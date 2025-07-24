@@ -16,7 +16,8 @@ export enum NotificationType {
 export enum NotificationStatus {
     InProgress = 'In-Progress',
     Completed = 'Completed',
-    Cancelled = 'Cancelled'
+    Cancelled = 'Cancelled',
+    Failed = 'Failed'
 }
 
 export enum PlaylistMemberRole {

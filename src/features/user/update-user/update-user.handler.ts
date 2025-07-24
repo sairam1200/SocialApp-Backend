@@ -61,7 +61,7 @@ export class UpdateUserCommandHandler implements ICommandHandler<UpdateUserComma
         await createUserValidations.validateAsync(command.model);
 
         let user = await this.userRepository.getUserByIdAsync(command.model.id)
-            ?? (() => { throw new UserNotFoundException('', command.model.id) })();
+            ?? (() => { throw new UserNotFoundException() })();
 
 
         user.firstName = command.model.firstName;

@@ -129,6 +129,12 @@ const envVarsSchema = Joi.object()
             .description('Reddit client secret'),
         REDDIT_CALLBACK_URL: Joi.string()
             .description('Reddit callback URL'),
+        TIKTOK_CLIENT_ID: Joi.string()
+            .description('TikTok OAuth client ID'),
+        TIKTOK_CLIENT_SECRET: Joi.string()
+            .description('TikTok OAuth client secret'),
+        TIKTOK_CALLBACK_URL: Joi.string()
+            .description('TikTok OAuth callback URL'),
         TOKEN_EXPIRATION_TIME: Joi.number()
             .default(900000)
             .description('Token expiration time in milliseconds'),
@@ -160,6 +166,8 @@ const envVarsSchema = Joi.object()
         GUEST_USER_FIRST_NAME: Joi.string()
             .default('John'),
         GUEST_USER_LAST_NAME: Joi.string()
+            .default('Doe'),
+        GUEST_USERNAME: Joi.string()
             .default('Doe'),
 
         CLOUDINARY_CLOUD_NAME: Joi.string()
@@ -258,6 +266,12 @@ export default {
         redirectUri: envVars.REDDIT_CALLBACK_URL,
     },
 
+    tiktok: {
+        clientId: envVars.TIKTOK_CLIENT_ID,
+        clientSecret: envVars.TIKTOK_CLIENT_SECRET,
+        redirectUri: envVars.TIKTOK_CALLBACK_URL,
+    },
+
     Token: {
         expirationTime: envVars.TOKEN_EXPIRATION_TIME
     },
@@ -283,5 +297,6 @@ export default {
         password: envVars.GUEST_USER_PASSWORD,
         firstName: envVars.GUEST_USER_FIRST_NAME,
         lastName: envVars.GUEST_USER_LAST_NAME,
+        userName: envVars.GUEST_USERNAME,
     },
 }

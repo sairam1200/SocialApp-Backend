@@ -9,6 +9,7 @@ export default {
   IUSERLOGIN_REPOSITORY: "IUserLoginRepository",
   IUSERCONTENT_REPOSITORY: "IUserContentRepository",
   INOTIFICATION_REPOSITORY: "INotificationRepository",
+  IMANUALPROFILE_REPOSITORY: "IManualProfileRepository",
   ILINKEDACCOUNT_REPOSITORY: "ILinkedAccountRepository",
   IDATAPROTECTIONKEY_REPOSITORY: "IDataProtectionKeyRepository",
 
@@ -26,7 +27,10 @@ export default {
     PINTEREST_IMPORT: "pinterest-import",
     TWITTER_IMPORT: "twitter-import",
     REDDIT_IMPORT: "reddit-import",
+    TIKTOK_IMPORT: "tiktok-import",
   },
+
+
 
   EMAILTEMPLATES: {
     ACCOUNT: {
@@ -46,7 +50,35 @@ export default {
     YOUTUBE: "youtube",
     SPOTIFY: "spotify",
     REDDIT: "reddit",
+    TIKTOK: "tiktok",
   },
+
+  KNOWN_PLATFORMS_URIS: [
+    'facebook.com',
+    'twitter.com',
+    'instagram.com',
+    'tiktok.com',
+    'linkedin.com',
+    'snapchat.com',
+    'youtube.com',
+    'pinterest.com',
+    'reddit.com',
+    'tumblr.com',
+    'threads.net',
+    'discord.com',
+    'twitch.tv',
+    'medium.com',
+    'vimeo.com',
+    'telegram.me',
+    'clubhouse.com',
+    'mastodon.social',
+    'weibo.com',
+    'line.me',
+    'flickr.com',
+    'bilibili.com',
+    'ok.ru',
+    'vk.com'
+  ],
 
   TOKEN: {
     PURPOSE: {

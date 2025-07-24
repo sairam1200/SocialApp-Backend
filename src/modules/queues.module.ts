@@ -22,7 +22,7 @@ import { FacebookImportProcessor, InjectFacebookImportQueue } from "../infrastru
 import { InjectPinterestImportQueue, PinterestImportProcessor } from "../infrastructure/background/processors/pinterest-import.processor";
 import { InjectInstagramImportQueue, InstagramImportProcessor } from "../infrastructure/background/processors/instagram-import.processor";
 import { RedditImportProcessor, InjectRedditImportQueue } from "../infrastructure/background/processors/reddit-import.processor";
-
+import { InjectTwitterImportQueue,TwitterImportProcessor } from "../infrastructure/background/processors/twitter-import.processor";
 @Module({})
 export class QueuesModule implements NestModule {
   static register(): DynamicModule {
@@ -50,6 +50,9 @@ export class QueuesModule implements NestModule {
       },
       {
         name: _const.BULL_QUEUES.REDDIT_IMPORT,
+      },
+      {
+        name: _const.BULL_QUEUES.TIKTOK_IMPORT,
       }
     );
 
@@ -79,6 +82,8 @@ export class QueuesModule implements NestModule {
         InstagramImportProcessor,
         FacebookImportProcessor,
         YoutubeImportProcessor,
+        TwitterImportProcessor,
+        SpotifyImportProcessor,
         RedditImportProcessor,
         EmailProcessor,
         ImportGateway,
@@ -105,6 +110,7 @@ export class QueuesModule implements NestModule {
     @InjectYoutubeImportQueue() private readonly youtubeImportQueue: Queue,
     @InjectSpotifyImportQueue() private readonly spotifyImportQueue: Queue,
     @InjectRedditImportQueue() private readonly redditImportQueue: Queue,
+    @InjectTwitterImportQueue() private readonly twitterImportQueue: Queue,
     @InjectEmailQueue() private readonly emailQueue: Queue,
   ) { }
 

@@ -1,7 +1,7 @@
 import { UserType } from "../enums";
 import { BaseEntity } from "../baseEntity";
-import { Entity, Column, OneToMany } from "typeorm";
 import { Playlist } from "./playlist.entity";
+import { Entity, Column, OneToMany } from "typeorm";
 import { PlaylistMember } from "./playlistMember.entity";
 
 @Entity({ name: 'users', schema: 'identity' })
@@ -87,6 +87,7 @@ export class User extends BaseEntity {
         super();
         Object.assign(this, request);
         this.normalizedEmail = request.email?.toUpperCase();
+        this.normalizedUserName = request.userName?.toUpperCase();
         this.registeredOn = new Date();
     }
 }

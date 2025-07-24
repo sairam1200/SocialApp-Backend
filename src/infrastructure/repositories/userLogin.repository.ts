@@ -1,9 +1,8 @@
-import * as crypto from 'crypto';
 import configs from '../../configs';
 import { Repository } from "typeorm";
 import { Injectable } from '@nestjs/common';
-import { Globals } from '../../core/globals';
 import { InjectRepository } from "@nestjs/typeorm";
+import { cryptoUtils } from '../../core/utils/crypto.util';
 import { addDurationToNow } from '../../core/utils/time.util';
 import { UserLogin } from "../../domain/entities/userLogin.entity";
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
@@ -23,11 +22,11 @@ export class UserLoginRepository implements IUserLoginRepository {
         deviceId: string,
         userAgent: string,
         ipAddress: string,
-        tokenValue: string = this.GenerateToken(),
+        tokenValue: string = cryptoUtils.generateEncryptionKey(32),
         expiryDateUtc: Date = addDurationToNow(configs.jwt.refreshTokenExpiration)
     ): Promise<UserLogin> {
 
-        const refreshToken = new UserLogin({
+        const userLogin = new UserLogin({
             provider,
             userId,
             deviceId,
@@ -38,10 +37,9 @@ export class UserLoginRepository implements IUserLoginRepository {
         });
 
         if (HttpContext.user) {
-            const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-            refreshToken.setCurrentUser(userId);
+            userLogin.setCurrentUser(HttpContext.getCurrentUserId);
         }
-        return await this.userLoginContext.save(refreshToken);
+        return await this.userLoginContext.save(userLogin);
     }
 
     public async getByUserIdAndProviderAsync(userId: string, provider: string): Promise<UserLogin> {
@@ -60,21 +58,16 @@ export class UserLoginRepository implements IUserLoginRepository {
         return await this.userLoginContext.findOne({ where: { tokenValue, deviceId } });
     }
 
-    public async updateAsync(refreshToken: UserLogin): Promise<void> {
+    public async updateAsync(userLogin: UserLogin): Promise<void> {
+        
         if (HttpContext.user) {
-            const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-            refreshToken.setCurrentUser(userId);
+            //userLogin.setCurrentUser(HttpContext.getCurrentUserId);
+            console.log("this is from rep:",HttpContext.getCurrentUserId);
         }
-        await this.userLoginContext.update(refreshToken.id, refreshToken);
+        await this.userLoginContext.update(userLogin.id, userLogin);
     }
 
     public async deleteAsync(refreshToken: UserLogin): Promise<UserLogin> {
         return await this.userLoginContext.remove(refreshToken);
     }
-
-    public GenerateToken(): string {
-        const randomBytes = crypto.randomBytes(32);
-        return randomBytes.toString('base64');
-    }
-
 }

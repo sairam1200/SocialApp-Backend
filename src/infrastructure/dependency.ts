@@ -1,5 +1,6 @@
 import _const from "../core/utils/const";
 import { DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, UserContentRepository, UserLoginRepository, UserRepository, UserRoleRepository } from "./repositories";
+import { ManualProfileRepository } from "./repositories/manualProfile.repository";
 import { EmailService, NotificationService, TokenService } from "./services";
 
 /* This is the dependency object that holds all the repositories & services
@@ -51,6 +52,10 @@ export const dependency = {
   PlaylistRepository: {
     provide: _const.IPLAYLIST_REPOSITORY,
     useClass: PlaylistRepository
+  },
+  ManualProfileRepository: {
+    provide: _const.IMANUALPROFILE_REPOSITORY,
+    useClass: ManualProfileRepository
   },
   TokenService: {
     provide: _const.ITOKEN_SERVICE,

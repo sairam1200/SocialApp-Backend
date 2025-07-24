@@ -39,6 +39,10 @@ export function addScalarApiDocs(app: INestApplication) {
     .addBearerAuth()
     .build();
 
+  app.use('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
+    res.status(204).send();
+  });
+
   app.use(
     '/docs-scalar',
     apiReference({

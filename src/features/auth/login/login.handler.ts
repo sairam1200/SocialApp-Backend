@@ -89,7 +89,7 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
       return new TokenResponseModel({
         access_token,
         isTwoFARequired: true,
-        succeeded: true,
+        succeeded: false,
       });
 
     } else {

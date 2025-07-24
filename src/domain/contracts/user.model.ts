@@ -39,7 +39,7 @@ export class LinkedAccountModel {
     @ApiProperty()
     username:string;
 
-    @ApiProperty()
+    @ApiProperty({ default: false })
     isImported:boolean;
 
     @ApiProperty()
@@ -48,13 +48,13 @@ export class LinkedAccountModel {
     @ApiProperty()
     externalUrl:string;
 
-    @ApiProperty()
+    @ApiProperty({ default: 0 })
     followersCount:number;
 
-    @ApiProperty()
+    @ApiProperty({ default: 0 })
     followingCount:number;
 
-    @ApiProperty()
+    @ApiProperty({ default: false })
     isVerified:boolean;
 
     constructor(partial?: Partial<LinkedAccountModel>) {

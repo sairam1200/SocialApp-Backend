@@ -5,11 +5,11 @@ import _const from "../../../core/utils/const";
 import { UserType } from "../../../domain/enums";
 import { User } from "../../../domain/entities/user.entity";
 import { stringUtil } from "../../../core/utils/string.util";
-import { password } from "../../../core/utils/validation.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { UserModel } from "../../../domain/contracts/user.model";
 import { mapToUserModel } from "../../../domain/mappers/user.mapper";
 import { generateInitialImage } from "../../../core/utils/canvas.util";
+import { password, userName } from "../../../core/utils/validation.util";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 import { uploadBase64ToCloudinaryAsync } from "../../../core/utils/cloudinary.util";
 import { UserAlreadyExistsException } from "../../../core/exceptions/user.exception";
@@ -29,6 +29,9 @@ export class RegisterModel {
 
   @ApiProperty()
   gender: string;
+  
+  @ApiProperty()
+  userName: string;
 
   @ApiProperty()
   phoneNumber: string;
@@ -52,6 +55,7 @@ const createUserValidations = Joi.object({
   firstName: Joi.string().required(),
   lastName: Joi.string().required(),
   phoneNumber: Joi.string().required(),
+  userName: Joi.string().optional().custom(userName),
   gender: Joi.string().required()
 });
 
@@ -83,7 +87,10 @@ export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> 
         firstName: model.firstName,
         lastName: model.lastName,
         email: model.email,
+        gender: model.gender,
+        phoneNumber: model.phoneNumber,
         type: UserType.User,
+        userName: model.userName,
         profileImage: avatar.secure_url,
       }), model.password);
 

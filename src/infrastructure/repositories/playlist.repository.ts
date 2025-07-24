@@ -215,7 +215,7 @@ export class PlaylistRepository implements IPlaylistRepository {
     });
 
     if (!userToAdd) {
-      throw new UserNotFoundException(userId);
+      throw new UserNotFoundException();
     }
 
     const existing = await this.playlistMemberContext.findOne({

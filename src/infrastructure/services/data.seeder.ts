@@ -76,7 +76,7 @@ export class DataSeeder {
       emailConfirmed: true,
       type: UserType.User,
       createdBy: configs.systemAdmin.email,
-      userName: ""
+      userName: configs.guestUser.userName
     });
 
     if (!(await this.userRepository.getUserByEmailAsync(JOHN_DOE.email))) {

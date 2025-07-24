@@ -11,3 +11,15 @@ export const password: Joi.CustomValidator<string> = (value) => {
     }
     return value;
 };
+
+export const userName: Joi.CustomValidator<string> = (value) => {
+    const userNameRegex = /^[a-zA-Z][a-zA-Z0-9._]{2,29}$/;
+
+    if (!userNameRegex.test(value)) {
+        throw new BadRequestException(
+            'Username must start with a letter and be 3-30 characters long, containing only letters, numbers, underscores, or dots.'
+        );
+    }
+
+    return value;
+};
