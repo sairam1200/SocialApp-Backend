@@ -85,7 +85,6 @@ export class QueuesModule implements NestModule {
         TwitterImportProcessor,
         SpotifyImportProcessor,
         RedditImportProcessor,
-        // TikTokImportProcessor,
         EmailProcessor,
         ImportGateway,
 
@@ -98,7 +97,6 @@ export class QueuesModule implements NestModule {
         FacebookImportProcessor,
         YoutubeImportProcessor,
         RedditImportProcessor,
-        // TikTokImportProcessor,
         ...queues.exports,
         EmailProcessor,
       ],
@@ -126,7 +124,6 @@ export class QueuesModule implements NestModule {
         new BullMQAdapter(this.youtubeImportQueue),
         new BullMQAdapter(this.instagramImportQueue),
         new BullMQAdapter(this.redditImportQueue),
-        // new BullMQAdapter(this.tiktokImportQueue),
         new BullMQAdapter(this.emailQueue),
       ],
       serverAdapter,
