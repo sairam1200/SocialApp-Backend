@@ -100,10 +100,11 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
       throw new UserNotFoundException(userData.data.email, 'email');
     }
 
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
       _const.PLATFORMS.SPOTIFY,
-      user.email
+      user.id
     );
+    console.log("this is the account : ",linkedAccount);
 
     if (linkedAccount) {
       linkedAccount.userName = userData.data.display_name;

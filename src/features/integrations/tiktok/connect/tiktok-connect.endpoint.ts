@@ -60,7 +60,7 @@ export class TiktokConnectController {
     const state = cryptoUtils.generateEncryptionKey(16);
     const codeVerifier = cryptoUtils.generateEncryptionKey();
     const challenge = cryptoUtils.encodeSHA256ToBase64(codeVerifier);
-
+    console.log(configs.tiktok.clientId,configs.tiktok.redirectUri)
     const params = new URLSearchParams({
       response_type: 'code',
       client_key: configs.tiktok.clientId,
@@ -77,7 +77,7 @@ export class TiktokConnectController {
     return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
   }
 
-  @Get('connect-callback')
+  @Get('connect/callback')
   @ApiResponse({ status: 200, description: 'OK', type: TikTokConnectCallbackResponseModel })
   public async Callback(
     @Query('code') code: string,

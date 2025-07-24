@@ -16,8 +16,10 @@ import { IUserLoginRepository } from "../../../../domain/repositories/irefreshto
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { TwitterProfileModel, TwitterUserDataModel } from "../../../../domain/contracts/twitter.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
+import { UserNotFoundException } from "core/exceptions";
+import { serialize } from "v8";
+import { serializeObject } from "core/utils/serialization.util";
 
-const PLATFORM = 'twitter';
 const BASE_URL = 'https://api.twitter.com/2';
 
 export class TwitterConnectQuery {
@@ -91,78 +93,85 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
 
     const { model } = query;
     await twitterConnectValidations.validateAsync(model);
-    const dataProtectionKey = await this.validateState(model.state);
-
+    const dataProtectionKey = await this.validateStateAsync(model.state);
+   console.log('Data Protection Key:', dataProtectionKey);
     const { access_token, refresh_token, expires_in } = await this.fetchToken(model.code, dataProtectionKey.value);
 
     const userData = await this.fetchUserData(access_token);
-    const user = await this.userRepository.getUserByIdAsync(HttpContext.user[Globals.ClaimTypes.UserId]);
-
+    const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId) 
     if (!user) {
-      throw new ApplicationException('Prevented: Alduterated Request Received!');
+      throw new UserNotFoundException(userData.data.id);
     }
 
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(PLATFORM, user.id);
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.TWITTER, user.id);
+    console.log("Linked Account:", linkedAccount);
     if (linkedAccount) {
       linkedAccount.userName = userData.data.username;
       linkedAccount.profileImage = userData.data.profile_image_url;
       linkedAccount.followersCount = userData.data.public_metrics.followers_count;
       linkedAccount.followingCount = userData.data.public_metrics.following_count;
+      linkedAccount.verified= userData.data.verified,
+      linkedAccount.externalUrl=`https://x.com/${userData.data.username}`,
       linkedAccount.metaData = {
         name: userData.data.name,
         description: userData.data.description,
-        countryCodes: userData.data.withheld.country_codes,
-        url: userData.data.url,
-        location: userData.data.location,
-        pinnedTweetId: userData.data.pinned_tweet_id,
+        countryCodes: userData.data.withheld?.country_codes || [],
+        url: userData.data.url || null,
+        location: userData.data.location || null,
+        pinnedTweetId: userData.data.pinned_tweet_id || null,
         tweetCount: userData.data.public_metrics.tweet_count,
         listedCount: userData.data.public_metrics.listed_count,
         createdAt: userData.data.created_at,
-        verified: userData.data.verified,
         protected: userData.data.protected,
-        entities: userData.data.entities,
+        entities: userData.data.entities || null,
       };
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
-        platform: PLATFORM,
+        platform: _const.PLATFORMS.TWITTER,
         userId: user.id,
         externalId: userData.data.id,
         userName: userData.data.username,
         profileImage: userData.data.profile_image_url,
         followersCount: userData.data.public_metrics.followers_count,
         followingCount: userData.data.public_metrics.following_count,
+        verified: userData.data.verified,
+        externalUrl: `https://x.com/${userData.data.username}`,
         metaData: {
           name: userData.data.name,
           description: userData.data.description,
-          countryCodes: userData.data.withheld.country_codes,
-          url: userData.data.url,
-          location: userData.data.location,
-          pinnedTweetId: userData.data.pinned_tweet_id,
+          countryCodes: userData.data.withheld?.country_codes || [],
+          url: userData.data.url || null,
+          location: userData.data.location  || null,
+          pinnedTweetId: userData.data.pinned_tweet_id || null,
           tweetCount: userData.data.public_metrics.tweet_count,
           listedCount: userData.data.public_metrics.listed_count,
           createdAt: userData.data.created_at,
-          verified: userData.data.verified,
           protected: userData.data.protected,
-          entities: userData.data.entities,
+          entities: userData.data.entities || null,
         }
       }));
     }
 
-    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, PLATFORM);
+    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.TWITTER);
+    const tokenValue = serializeObject({access_token , refresh_token})
+    console.log("this is the token value: ", tokenValue);
     if (existingAccountLogin) {
-      existingAccountLogin.tokenValue = refresh_token;
+
+      existingAccountLogin.tokenValue = tokenValue;
       existingAccountLogin.addedDateUtc = new Date();
       existingAccountLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000);
+      console.log("before update: ", existingAccountLogin);
       await this.userLoginRepository.updateAsync(existingAccountLogin);
+      console.log("after update: ", existingAccountLogin);
     } else {
       existingAccountLogin = await this.userLoginRepository.createAysnc(
-        PLATFORM,
+        _const.PLATFORMS.TWITTER,
         user.id,
         "",
         "",
         "",
-        refresh_token,
+        tokenValue,
         new Date(Date.now() + 100 * 24 * 60 * 60 * 1000)
       );
     }
@@ -176,20 +185,26 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
 
   private async fetchToken(code: string, codeVerifier: string)
     : Promise<{ access_token: string; expires_in: number; refresh_token: string; }> {
+      const basicAuth = Buffer.from(`${configs.twitter.clientId}:${configs.twitter.clientSecret}`).toString('base64');
     try {
-      const response = await axios.get(`${BASE_URL}/oauth2/token`, {
-        params: {
-          redirect_uri: configs.twitter.redirectUri,
-          client_id: configs.twitter.clientId,
-          grant_type: 'authorization_code',
-          code_verifier: codeVerifier,
-          code: code,
-        },
-      });
-
+      console.log("codeVerifier:", codeVerifier);
+      const response = await axios.post(
+        `${BASE_URL}/oauth2/token`,
+        `grant_type=authorization_code`+
+        `&redirect_uri=${encodeURIComponent(configs.twitter.redirectUri)}` +
+        `&code_verifier=${codeVerifier}` +
+        `&code=${encodeURIComponent(code)}`,
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${basicAuth}`,
+          }
+        }
+      );
+      console.log('Twitter token response:', response.data);
       return response.data;
     } catch (error) {
-      logger.error('Error fetching token from Twitter', error);
+      console.log('Error fetching token from Twitter', error);
       throw new Error('Unexpected error during authentication with Twitter');
     }
   }
@@ -212,19 +227,21 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
             'location',
             'url',
             'entities',
-            'pinned_tweet_id'
+            'pinned_tweet_id',
+            'withheld'
           ].join(',')
         }
       });
-
+      console.log('Twitter user data response:', response.data);
       return response.data
     } catch (error) {
+      console.log(error)
       logger.error('Error fetching user data from Twitter', error);
       throw new Error('Unexpected error during authentication with Twiiter');
     }
   }
 
-  private async validateState(state: string): Promise<DataProtectionKey> {
+  private async validateStateAsync(state: string): Promise<DataProtectionKey> {
     const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
