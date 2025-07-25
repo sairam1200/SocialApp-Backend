@@ -3,7 +3,6 @@ import { ChangePasswordCommandHandler } from "./change-password/change-password.
 import { CreateUserController } from "./create-user/create-user.endpoint";
 import { CreateUserCommandHandler } from "./create-user/create-user.handler";
 import { GetUserLinkedAccountsController } from "../profile/get-linked-accounts/get-linked-accounts.endpoint";
-import { GetUserLinkedAccountsQueryHandler } from "../profile/get-linked-accounts/get-linked-accounts.handler";
 import { GetUserController } from "./get-user/get-user.endpoint";
 import { GetUserQueryHandler } from "./get-user/get-user.handler";
 import { GetUsersController } from "./get-users/get-users.endpoint";
@@ -52,7 +51,6 @@ const handlers = [
   UpdateUserCommandHandler,
   ChangePasswordCommandHandler,
   SuggestUserNameCommandHandler,
-  GetUserLinkedAccountsQueryHandler,
 ];
 
 const users = {
