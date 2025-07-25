@@ -51,19 +51,19 @@ export interface TwitterProfileModel {
 }
 export interface UserTweetModel {
   id: string,
-  tweet:string,
+  name: string,
   type: string,
-  name:string,
-  tweet_id: string,
-  edit_history_tweet_ids: string[],
+  tweet: string,
+  tweetId: string,
+  editHistoryTweetIds: string[],
  
 }
 export interface UserLikedTweetModel {
   id: string,
-  liked_tweet:string,
-  type: string,
   name:string,
-  tweet_id: string,
-  edit_history_tweet_ids: string[],
+  type: string,
+  tweetId: string,
+  likedTweet: string,
+  editHistoryTweetIds: string[],
  
 }
