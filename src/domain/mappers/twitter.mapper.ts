@@ -1,5 +1,6 @@
 import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { TwitterProfileModel } from "../contracts/twitter.model";
+import { TwitterProfileModel, UserLikedTweetModel, UserTweetModel } from "../contracts/twitter.model";
+import { UserContent } from "domain/entities";
 
 export function mapToTwitterProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): TwitterProfileModel {
   return {
@@ -25,4 +26,25 @@ export function mapToTwitterProfileModel(data: LinkedAccount, includeSensitiveFi
     url: data.metaData.url,
     verified: data.metaData.verified,
   } as TwitterProfileModel;
+}
+
+export function mapToUserTweetModel(data: UserContent): UserTweetModel{
+  return {
+    id: data.id,
+    tweet: data.metaData.text,
+    type: 'tweet',
+    name:data.title,
+    tweet_id: data.externalId,
+    edit_history_tweet_ids: data.metaData.edit_history_tweet_ids,
+  } as UserTweetModel;
+}
+export function mapToLikedTweetModel(data: UserContent): UserLikedTweetModel {
+  return {
+    id: data.id,
+    liked_tweet: data.metaData.text,
+    type: 'tweet',
+    name:data.title,
+    tweet_id: data.externalId,
+    edit_history_tweet_ids: data.metaData.edit_history_tweet_ids,
+  } as UserLikedTweetModel;
 }

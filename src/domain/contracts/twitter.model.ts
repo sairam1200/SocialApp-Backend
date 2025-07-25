@@ -49,3 +49,21 @@ export interface TwitterProfileModel {
   entities: any;
   url: string;
 }
+export interface UserTweetModel {
+  id: string,
+  tweet:string,
+  type: string,
+  name:string,
+  tweet_id: string,
+  edit_history_tweet_ids: string[],
+ 
+}
+export interface UserLikedTweetModel {
+  id: string,
+  liked_tweet:string,
+  type: string,
+  name:string,
+  tweet_id: string,
+  edit_history_tweet_ids: string[],
+ 
+}
