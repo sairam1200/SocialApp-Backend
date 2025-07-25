@@ -74,8 +74,7 @@ const envVarsSchema = Joi.object()
     POSTGRES_SSL_REJECTUNAUTHORIZED: Joi.boolean()
       .default(false)
       .description('Path to PostgreSQL ssl rejectUnauthorized'),
-    POSTGRES_SSL_CERTIFICATION: Joi.boolean()
-      .default(false)
+    POSTGRES_SSL_CERTIFICATION: Joi.string()
       .description('Path to PostgreSQL ssl certificate'),
     POSTGRES_LOGGING: Joi.boolean()
       .default(false)
