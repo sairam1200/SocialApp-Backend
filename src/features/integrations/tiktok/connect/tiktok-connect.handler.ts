@@ -268,41 +268,4 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
       new Date(Date.now() + tokenData.refresh_expires_in * 1000)
     );
   }
-
-  private async refreshTokenAsync(refreshToken: string): Promise<{ access_token: string, expires_in: number, refresh_token?: string }> {
-    try {
-      const response = await axios.post(`${TIKTOK_BASE}/oauth/token/`, {
-        client_key: configs.tiktok.clientId,
-        client_secret: configs.tiktok.clientSecret,
-        grant_type: 'refresh_token',
-        refresh_token: refreshToken,
-      }, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Cache-Control': 'no-cache',
-        },
-      });
-
-      return response.data;
-    } catch (error) {
-      logger.error('Error refreshing TikTok token', error);
-      throw new ApplicationException('Failed to refresh TikTok authentication token. Please re-authenticate your account.');
-    }
-  }
-
-  private async verifyAccessTokenAsync(accessToken: string): Promise<boolean> {
-    try {
-      const response = await axios.get(`${TIKTOK_BASE}/user/info/`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      return response.status === 200 && !!response.data?.data?.user?.open_id;
-    } catch (error) {
-      logger.error('TikTok token verification failed', error);
-      return false;
-    }
-  }
 }
-
