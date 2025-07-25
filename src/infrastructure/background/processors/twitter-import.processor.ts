@@ -15,6 +15,7 @@ import { IUserContentRepository } from "../../../domain/repositories/iuserConten
 import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
 
 import { mapToLikedTweetModel,mapToUserTweetModel } from "domain/mappers/twitter.mapper";
+import { stringUtil } from "core/utils/string.util";
 
 interface CursorMap {
     [key: string]: string | null;
@@ -97,8 +98,7 @@ export class TwitterImportProcessor extends WorkerHost {
                         externalId: item.id
                        });
                        content.type = key;
-                       content.title = item.text.substring(0, 20) + " ...";
-                       content.metaData = {
+                        content.title = stringUtil.trimWithEllipsis(item.title || item.body || item.link_title || "Twitter Content");                       content.metaData = {
                         text: item.text,
                         edit_history_tweet_ids: item.edit_history_tweet_ids,
                        }
