@@ -49,6 +49,43 @@ export class FacebookConnectCallbackQuery {
   }
 }
 
+// Facebook-specific token response model
+export class FacebookCallbackTokenResponseModel {
+  @ApiProperty()
+  accessToken: string;
+
+  @ApiProperty()
+  refreshToken: string;
+
+  @ApiProperty()
+  message: string;
+
+  @ApiProperty()
+  userImage: string;
+
+  @ApiProperty({ default: false })
+  succeeded: boolean;
+
+  @ApiProperty({ default: false })
+  isLockedOut: boolean;
+
+  @ApiProperty({ default: false })
+  isTwoFARequired: boolean;
+
+  @ApiProperty()
+  refreshTokenExpiryTime: string;
+
+  @ApiProperty({ required: false })
+  facebookAccessToken?: string;
+
+  @ApiProperty({ required: false })
+  facebookAccessTokenExpiresIn?: number;
+
+  constructor(request: Partial<FacebookCallbackTokenResponseModel> = {}) {
+    Object.assign(this, request);
+  }
+}
+
 // Using existing TokenResponseModel with Facebook-specific extensions
 interface FacebookTokenResponse extends TokenResponseModel {
   facebookAccessToken?: string;
@@ -100,7 +137,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     private readonly userRepository: IUserRepository,
   ) { }
 
-  public async execute(query: FacebookConnectCallbackQuery): Promise<FacebookTokenResponse> {
+  public async execute(query: FacebookConnectCallbackQuery): Promise<FacebookCallbackTokenResponseModel> {
     const { model } = query;
     await facebookConnectCallbackValidations.validateAsync(model);
     const dataProtectionKey = await this.validateState(model.state);
