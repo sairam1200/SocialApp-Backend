@@ -6,24 +6,25 @@ import _const from "../../../../core/utils/const";
 import { Globals } from '../../../../core/globals';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { UserLogin } from "../../../../domain/entities/userLogin.entity";
-import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { serializeObject } from '../../../../core/utils/serialization.util';
+import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { mapToTiktokProfileModel } from '../../../../domain/mappers/tiktok.mapper';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
 import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
+import { TiktokProfileModel, TiktokUserDataModel } from '../../../../domain/contracts/tiktok.model';
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
-import { mapToTikTokProfileModel } from '../../../../domain/mappers/tiktok.mapper';
-import { TikTokProfileModel } from '../../../../domain/contracts/tiktok.model';
 
 const TIKTOK_BASE = 'https://open.tiktokapis.com/v2';
 
 export class TikTokConnectQuery {
   model: {
     state: string;
-    codeVerifier?: string;
+    codeVerifier: string;
   }
 
   constructor(request: Partial<TikTokConnectQuery> = {}) {
@@ -31,13 +32,13 @@ export class TikTokConnectQuery {
   }
 }
 
-export class TikTokConnectCallbackQuery {
+export class TiktokConnectCallbackQuery {
   model: {
     code: string;
     state: string;
   }
 
-  constructor(request: Partial<TikTokConnectCallbackQuery> = {}) {
+  constructor(request: Partial<TiktokConnectCallbackQuery> = {}) {
     Object.assign(this, request);
   }
 }
@@ -48,12 +49,12 @@ const tiktokConnectCallbackValidations = Joi.object({
 });
 
 @CommandHandler(TikTokConnectQuery)
-export class TikTokConnectQueryHandler implements ICommandHandler<TikTokConnectQuery> {
+export class TiktokConnectQueryHandler implements ICommandHandler<TikTokConnectQuery> {
 
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-  ) { }
+  ) { console.log('TiktokConnectQueryHandler initialized'); }
 
   public async execute(query: TikTokConnectQuery): Promise<void> {
 
@@ -64,14 +65,14 @@ export class TikTokConnectQueryHandler implements ICommandHandler<TikTokConnectQ
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       model.codeVerifier || "",
-      HttpContext.user[Globals.ClaimTypes.UserId],
+      HttpContext.getCurrentUserId,
       expiresIn
     );
   }
 }
 
-@CommandHandler(TikTokConnectCallbackQuery)
-export class TikTokConnectCallbackQueryHandler implements ICommandHandler<TikTokConnectCallbackQuery> {
+@CommandHandler(TiktokConnectCallbackQuery)
+export class TiktokConnectCallbackQueryHandler implements ICommandHandler<TiktokConnectCallbackQuery> {
 
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
@@ -84,57 +85,61 @@ export class TikTokConnectCallbackQueryHandler implements ICommandHandler<TikTok
     private readonly userRepository: IUserRepository,
   ) { }
 
-  public async execute(query: TikTokConnectCallbackQuery):
-    Promise<{ accessToken: string; expiresIn: number; profile: TikTokProfileModel }> {
+  public async execute(query: TiktokConnectCallbackQuery):
+    Promise<{ accessToken: string; expiresIn: number; profile: TiktokProfileModel }> {
 
     const { model } = query;
     await tiktokConnectCallbackValidations.validateAsync(model);
-    const dataProtectionKey = await this.validateState(model.state);
+    const dataProtectionKey = await this.validateStateAsync(model.state);
 
-    const tokenData = await this.exchangeCodeForToken(model.code, dataProtectionKey.value);
-
+    const {
+      access_token,
+      expires_in,
+      open_id,
+      refresh_expires_in,
+      refresh_token
+    } = await this.fetchTokenAsync(model.code, dataProtectionKey.value);
+    console.log('TikTok access token:', access_token);
+    const userData = await this.fetchUserData(access_token, open_id);
     const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
 
     if (!user) {
-      throw new ApplicationException('TikTok callback received incorrect user');
+      throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(_const.PLATFORMS.TIKTOK, user.email);
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.TIKTOK, user.id);
     if (linkedAccount) {
-      linkedAccount = await this.updateLinkedAccount(linkedAccount, tokenData);
+      linkedAccount = await this.updateLinkedAccount(linkedAccount, userData);
     } else {
-      linkedAccount = await this.createLinkedAccount(user, tokenData);
+      linkedAccount = await this.createLinkedAccount(user.id, userData);
     }
 
     const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.TIKTOK);
     if (userLogin) {
-      await this.updateUserLogin(userLogin, tokenData);
+      await this.updateUserLogin(userLogin, { access_token, expires_in, refresh_token, refresh_expires_in });
     } else {
-      await this.createUserLogin(user.id, tokenData);
+      await this.createUserLogin(user.id, { access_token, expires_in, refresh_token, refresh_expires_in });
     }
 
     return {
-      accessToken: tokenData.access_token,
-      expiresIn: tokenData.expires_in,
-      profile: mapToTikTokProfileModel(linkedAccount, linkedAccount.allowImport),
+      accessToken: access_token,
+      expiresIn: expires_in,
+      profile: mapToTiktokProfileModel(linkedAccount, true),
     };
   }
 
-  private async exchangeCodeForToken(code: string, codeVerifier?: string): Promise<any> {
+  private async fetchTokenAsync(code: string, codeVerifier?: string)
+    : Promise<{ access_token: string; expires_in: number; refresh_token: string; refresh_expires_in: number; open_id: number; }> {
     try {
       const tokenRequest: any = {
         client_key: configs.tiktok.clientId,
         client_secret: configs.tiktok.clientSecret,
         code,
         grant_type: 'authorization_code',
+        code_verifier: codeVerifier,
         redirect_uri: configs.tiktok.redirectUri,
       };
-      
-      // Include code_verifier if PKCE is used
-      if (codeVerifier) {
-        tokenRequest.code_verifier = codeVerifier;
-      }
-      
+      console.log(configs.tiktok.clientId,configs.tiktok.clientSecret );
       const response = await axios.post(`${TIKTOK_BASE}/oauth/token/`, tokenRequest, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -143,12 +148,43 @@ export class TikTokConnectCallbackQueryHandler implements ICommandHandler<TikTok
       });
       return response.data;
     } catch (error) {
-      logger.error('Error exchanging code for TikTok token', error);
+      logger.error('Error fetching token from TikTok', error);
       throw new ApplicationException('Unexpected error during authentication with TikTok');
     }
   }
 
-  private async validateState(state: string): Promise<DataProtectionKey> {
+  private async fetchUserData(accessToken: string, openId: number): Promise<TiktokUserDataModel> {
+    try {
+      const response = await axios.get('https://open.tiktokapis.com/v2/user/info/', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        params: {
+          open_id: openId,
+          fields: [
+            'open_id',
+            'union_id',
+            'display_name',
+            'avatar_url',
+            'bio',
+            'profile_deep_link',
+            'is_verified',
+            'follower_count',
+            'following_count',
+            'likes_count',
+            'video_count'
+          ].join(','),
+        },
+      });
+
+      return response.data.data.user 
+    } catch (error) {
+      logger.error('Error fetching user data from Tiktok', error);
+      throw new Error('Unexpected error during authentication with Tiktok');
+    }
+  }
+
+  private async validateStateAsync(state: string): Promise<DataProtectionKey> {
     const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
@@ -160,83 +196,76 @@ export class TikTokConnectCallbackQueryHandler implements ICommandHandler<TikTok
     return dataProtectionKey;
   }
 
-  private async updateLinkedAccount(linkedAccount: LinkedAccount, tokenData: any): Promise<LinkedAccount> {
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: TiktokUserDataModel): Promise<LinkedAccount> {
+    const userName = userData.profile_deep_link?.split('@')[1] ?? '';
+
+    linkedAccount.verified = userData.is_verified;
+    linkedAccount.followersCount = userData.follower_count;
+    linkedAccount.followingCount = userData.following_count;
+    linkedAccount.externalUrl = userData.profile_deep_link;
+    linkedAccount.profileImage = userData.avatar_url;
+    linkedAccount.userName = userName;
     linkedAccount.metaData = {
-      ...linkedAccount.metaData,
-      likesCount: tokenData.scoped_info?.likes_count || 0,
-      videoCount: tokenData.scoped_info?.video_count || 0,
+      bio: userData?.bio,
+      unionId: userData.union_id,
+      displayName: userData.display_name,
+      likesCount: userData?.likes_count || 0,
+      videoCount: userData?.video_count || 0,
     };
     await this.linkedAccountRepository.updateAsync(linkedAccount);
     return linkedAccount;
   }
 
-  private async createLinkedAccount(user: any, tokenData: any): Promise<LinkedAccount> {
-    const newAccount = new LinkedAccount({
-      userId: user.id,
+  private async createLinkedAccount(userId: string, userData: TiktokUserDataModel): Promise<LinkedAccount> {
+   console.log("this is the user data", userData);
+    const userName = userData.profile_deep_link?.split('@')[1] ?? '';
+    const newEntry = new LinkedAccount({
+      userId,
+      userName,
+      externalId: userData.open_id,
+      verified: userData?.is_verified,
+      profileImage: userData.avatar_url,
       platform: _const.PLATFORMS.TIKTOK,
-      userName: user.email, // Simplified for example
-      externalId: tokenData.open_id,
-      allowImport: true,
+      externalUrl: userData.profile_deep_link,
+      followersCount: userData.follower_count,
+      followingCount: userData.following_count,
       metaData: {
-        likesCount: tokenData.scoped_info?.likes_count || 0,
-        videoCount: tokenData.scoped_info?.video_count || 0,
+        bio: userData?.bio,
+        unionId: userData.union_id,
+        displayName: userData.display_name,
+        likesCount: userData?.likes_count || 0,
+        videoCount: userData?.video_count || 0,
       },
     });
-    return this.linkedAccountRepository.createAsync(newAccount);
+    return this.linkedAccountRepository.createAsync(newEntry);
   }
 
-  private async updateUserLogin(userLogin: any, tokenData: any): Promise<void> {
-    userLogin.tokenValue = tokenData.access_token;
-    userLogin.expiryDateUtc = new Date(Date.now() + tokenData.expires_in * 1000);
+  private async updateUserLogin(userLogin: UserLogin, tokenData: { access_token: string; expires_in: number; refresh_token: string; refresh_expires_in: number; }): Promise<void> {
+    const tokenValue = serializeObject({
+      access_token: tokenData.access_token,
+      expires_in: tokenData.expires_in,
+      refresh_token: tokenData.refresh_token
+    })
+    userLogin.tokenValue = tokenValue;
+    userLogin.expiryDateUtc = new Date(Date.now() + tokenData.refresh_expires_in * 1000);
     await this.userLoginRepository.updateAsync(userLogin);
   }
 
-  private async createUserLogin(userId: string, tokenData: any): Promise<void> {
+  private async createUserLogin(userId: string, tokenData: { access_token: string; expires_in: number; refresh_token: string; refresh_expires_in: number; }): Promise<void> {
+    const tokenValue = serializeObject({
+      access_token: tokenData.access_token,
+      expires_in: tokenData.expires_in,
+      refresh_token: tokenData.refresh_token
+    })
+
     await this.userLoginRepository.createAysnc(
       _const.PLATFORMS.TIKTOK,
       userId,
       '', // deviceId
       '', // userAgent
       '', // ipAddress
-      tokenData.refresh_token || tokenData.access_token,
-      new Date(Date.now() + (tokenData.refresh_token_expires_in || tokenData.expires_in) * 1000)
+      tokenValue,
+      new Date(Date.now() + tokenData.refresh_expires_in * 1000)
     );
   }
-
-  private async refreshTokenAsync(refreshToken: string): Promise<{ access_token: string, expires_in: number, refresh_token?: string }> {
-    try {
-      const response = await axios.post(`${TIKTOK_BASE}/oauth/token/`, {
-        client_key: configs.tiktok.clientId,
-        client_secret: configs.tiktok.clientSecret,
-        grant_type: 'refresh_token',
-        refresh_token: refreshToken,
-      }, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Cache-Control': 'no-cache',
-        },
-      });
-      
-      return response.data;
-    } catch (error) {
-      logger.error('Error refreshing TikTok token', error);
-      throw new ApplicationException('Failed to refresh TikTok authentication token. Please re-authenticate your account.');
-    }
-  }
-
-  private async verifyAccessTokenAsync(accessToken: string): Promise<boolean> {
-    try {
-      const response = await axios.get(`${TIKTOK_BASE}/user/info/`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      
-      return response.status === 200 && !!response.data?.data?.user?.open_id;
-    } catch (error) {
-      logger.error('TikTok token verification failed', error);
-      return false;
-    }
-  }
 }
-

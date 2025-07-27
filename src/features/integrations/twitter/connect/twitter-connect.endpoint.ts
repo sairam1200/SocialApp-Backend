@@ -28,11 +28,14 @@ export class TwitterConnectController {
       'tweet.read',
       'users.read',
       'offline.access',
+      'like.read',
+     
+      
     ].join(' ');
 
     const state = cryptoUtils.generateEncryptionKey(16);
-    const codeVerifier = cryptoUtils.generateEncryptionKey();
-    const challenge = cryptoUtils.encodeSHA256ToBase64(codeVerifier);
+    const codeVerifier = cryptoUtils.generateEncryptionKeyBase64url();
+    const challenge = cryptoUtils.encodeSHA256ToBase64Url(codeVerifier);
 
     const params = new URLSearchParams({
       response_type: 'code',
@@ -49,7 +52,7 @@ export class TwitterConnectController {
     return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
   }
 
-  @Get('connect-callback')
+  @Get('connect/callback')
   @ApiResponse({ status: 200, description: 'OK' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })

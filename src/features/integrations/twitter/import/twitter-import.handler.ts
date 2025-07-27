@@ -13,6 +13,7 @@ import { HttpContext } from "../../../../core/middlewares/httpContext.middleware
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { deserializeObject, serializeObject } from "core/utils/serialization.util";
 
 export class TwitterImportRequestModel {
   @ApiProperty()
@@ -45,47 +46,91 @@ export class TwitterImportCommandHandler implements ICommandHandler<TwitterImpor
 
     let expiresIn: number;
     const { twitterAccessToken: twtterAccessToken } = command.model;
-    let accessToken: string | undefined;
-    const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-
+    let accessToken : string | undefined;
+    const userId = HttpContext.getCurrentUserId;
+    console.log("this is a user id: ",userId);
     if (twtterAccessToken) {
+      console.log("fisrt")
       const isTokenValid = await this.verifyAccessTokenAsync(twtterAccessToken);
+      const userLogin = await this.getUserLoginAsync(userId);
       if (!isTokenValid) {
-        const userLogin = await this.getUserLoginAsync(userId);
+        console.log("second")
+        
+        console.log("this is the user login: ", userLogin);
+        const tokenValue  = deserializeObject <{access_token:string,refresh_token:string}>(userLogin.tokenValue);
         const {
           access_token,
           expires_in,
           refresh_token
-        } = await this.refreshTokenAsync(userLogin.tokenValue);
-
+        } = await this.refreshTokenAsync(tokenValue.refresh_token);
+        console.log("this is the referesh token: " ,refresh_token);
         if (refresh_token) {
-          userLogin.tokenValue = refresh_token;
+          console.log("third")
+        
+          userLogin.tokenValue = serializeObject({access_token , refresh_token});
           userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
-          this.userLoginRepository.updateAsync(userLogin);
+          await this.userLoginRepository.updateAsync(userLogin);
         }
 
         accessToken = access_token;
         expiresIn = expires_in;
       } else {
+        console.log("fourth")
         accessToken = twtterAccessToken;
+        expiresIn= userLogin.expiryDateUtc.getTime(); // Calculate remaining time in milliseconds
+        
       }
     } else {
+      console.log("fifth")
       const userLogin = await this.getUserLoginAsync(userId);
-      const { access_token, expires_in } = await this.refreshTokenAsync(userLogin.tokenValue);
+      const tokenValue  = deserializeObject <{access_token:string,refresh_token:string}>(userLogin.tokenValue);
+      const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
 
-      accessToken = access_token;
-      expiresIn = expires_in;
+      if (!isTokenValid) {
+        console.log("second")
+        console.log("this is the user login: ", userLogin);
+        const {
+          access_token,
+          expires_in,
+          refresh_token
+        } = await this.refreshTokenAsync(tokenValue.refresh_token);
+        console.log("this is the referesh token: " ,refresh_token);
+        
+        console.log("third")
+      
+        userLogin.tokenValue = serializeObject({access_token , refresh_token});
+        userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
+        await this.userLoginRepository.updateAsync(userLogin);
+      
+
+        accessToken = access_token;
+        expiresIn = expires_in;
+      } else {
+        console.log("fourth")
+        accessToken = tokenValue.access_token;
+        expiresIn = userLogin.expiryDateUtc.getTime()// Calculate remaining time in milliseconds
+      }
     }
 
     const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.TWITTER, userId);
+    console.log("this is the linkedaccount: ", account);
     if (!account) {
       throw new NotFoundException("No matching Twitter profile was found!");
     }
 
-    this.importQueue.add({ account, accessToken }, {
-      attempts: 3,
-      backoff: 5000
-    });
+    try{
+     
+      await this.importQueue.add(_const.BULL_QUEUES.TWITTER_IMPORT,{ account, accessToken }, {
+        attempts: 3,
+        backoff: 5000
+      });
+      console.log("added the import job to the queue");
+    }catch(error) {
+      //logger.error(`An error occurred while adding the Twitter import job to the queue: 
+      // ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
+      throw new ApplicationException('Failed to add Twitter import job to the queue. Please try again later.');
+    }
+    
 
     return {
       accessToken,
@@ -95,22 +140,27 @@ export class TwitterImportCommandHandler implements ICommandHandler<TwitterImpor
 
   private async refreshTokenAsync(refreshToken: string)
     : Promise<{ access_token: string, expires_in: number, refresh_token: string }> {
+      console.log(`Refreshing Twitter token with refresh token: ${refreshToken}`);
+      const basicAuth = Buffer.from(`${configs.twitter.clientId}:${configs.twitter.clientSecret}`).toString('base64');
+      console.log("Basic Auth:",configs.twitter.clientId,configs.twitter.clientSecret, basicAuth);
 
     try {
 
       const response = await axios.post('https://api.twitter.com/2/oauth2/token', new URLSearchParams({
-        client_id: configs.youtube.clientId,
-        client_secret: configs.youtube.clientSecret,
         refresh_token: refreshToken,
         grant_type: 'refresh_token',
       }).toString(), {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${basicAuth}`,
         },
       });
+      console.log("THIS IS THE RESPONSE DATA: ",response.data);
 
       const { access_token, expires_in, refresh_token } = response.data;
-
+      if (!access_token) {
+        throw new ApplicationException('Your twitter session has expired or the access token is invalid. Please log in to Twitter again to continue.');
+      }
       return {
         access_token,
         expires_in,
@@ -118,6 +168,7 @@ export class TwitterImportCommandHandler implements ICommandHandler<TwitterImpor
       };
 
     } catch (error) {
+      //console.log('Error refreshing Twitter token', error);
       logger.error(`An error occurred while processing the Twitter import command: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
 

@@ -22,8 +22,7 @@ import { FacebookImportProcessor, InjectFacebookImportQueue } from "../infrastru
 import { InjectPinterestImportQueue, PinterestImportProcessor } from "../infrastructure/background/processors/pinterest-import.processor";
 import { InjectInstagramImportQueue, InstagramImportProcessor } from "../infrastructure/background/processors/instagram-import.processor";
 import { RedditImportProcessor, InjectRedditImportQueue } from "../infrastructure/background/processors/reddit-import.processor";
-import { TikTokImportProcessor, InjectTikTokImportQueue } from "../infrastructure/background/processors/tiktok-import.processor";
-
+import { InjectTwitterImportQueue,TwitterImportProcessor } from "../infrastructure/background/processors/twitter-import.processor";
 @Module({})
 export class QueuesModule implements NestModule {
   static register(): DynamicModule {
@@ -83,8 +82,9 @@ export class QueuesModule implements NestModule {
         InstagramImportProcessor,
         FacebookImportProcessor,
         YoutubeImportProcessor,
+        TwitterImportProcessor,
+        SpotifyImportProcessor,
         RedditImportProcessor,
-        TikTokImportProcessor,
         EmailProcessor,
         ImportGateway,
 
@@ -97,7 +97,6 @@ export class QueuesModule implements NestModule {
         FacebookImportProcessor,
         YoutubeImportProcessor,
         RedditImportProcessor,
-        TikTokImportProcessor,
         ...queues.exports,
         EmailProcessor,
       ],
@@ -111,7 +110,7 @@ export class QueuesModule implements NestModule {
     @InjectYoutubeImportQueue() private readonly youtubeImportQueue: Queue,
     @InjectSpotifyImportQueue() private readonly spotifyImportQueue: Queue,
     @InjectRedditImportQueue() private readonly redditImportQueue: Queue,
-    @InjectTikTokImportQueue() private readonly tiktokImportQueue: Queue,
+    @InjectTwitterImportQueue() private readonly twitterImportQueue: Queue,
     @InjectEmailQueue() private readonly emailQueue: Queue,
   ) { }
 
@@ -125,7 +124,6 @@ export class QueuesModule implements NestModule {
         new BullMQAdapter(this.youtubeImportQueue),
         new BullMQAdapter(this.instagramImportQueue),
         new BullMQAdapter(this.redditImportQueue),
-        new BullMQAdapter(this.tiktokImportQueue),
         new BullMQAdapter(this.emailQueue),
       ],
       serverAdapter,

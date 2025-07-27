@@ -2,6 +2,7 @@ import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
+import { ImportResponseModel } from "../../../../domain/contracts/response.model";
 import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 import { SpotifyImportCommand, SpotifyImportRequestModel } from "./spotify-import.handler";
 
@@ -18,7 +19,7 @@ export class SpotifyImportController {
   ) { }
 
   @Post('import')
-  @ApiResponse({ status: 200, description: 'OK' })
+  @ApiResponse({ status: 200, description: 'OK', type: ImportResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })

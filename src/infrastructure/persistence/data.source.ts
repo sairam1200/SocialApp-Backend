@@ -3,17 +3,21 @@ import configs from '../../configs';
 import { DataSource, DataSourceOptions } from 'typeorm';
 
 export const postgresOptions: DataSourceOptions = {
-    type: 'postgres',
-    host: configs.postgres.host,
-    port: configs.postgres.port,
-    username: configs.postgres.username,
-    password: configs.postgres.password,
-    database: configs.postgres.database,
-    synchronize: configs.postgres.synchronize,
-    entities: [path.resolve(__dirname + configs.postgres.entities)],
-    migrations: [path.resolve(__dirname + configs.postgres.migrations)],
-    logging: configs.postgres.logging,
-    migrationsRun: configs.postgres.migrationsRun,
+  type: 'postgres',
+  host: configs.postgres.host,
+  port: configs.postgres.port,
+  username: configs.postgres.username,
+  password: configs.postgres.password,
+  database: configs.postgres.database,
+  synchronize: configs.postgres.synchronize,
+  entities: [path.resolve(__dirname + configs.postgres.entities)],
+  migrations: [path.resolve(__dirname + configs.postgres.migrations)],
+  logging: configs.postgres.logging,
+  migrationsRun: configs.postgres.migrationsRun,
+  ssl: {
+    ca: configs.postgres.ssl.certificate,
+    rejectUnauthorized: configs.postgres.ssl.rejectUnauthorized,
+  },
 };
 
 const dataSource = new DataSource(postgresOptions);

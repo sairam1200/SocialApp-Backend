@@ -32,9 +32,11 @@ export abstract class BaseEntity extends TypeORMBaseEntity {
 
     constructor() {
         super();
+        //this._currentUser = "";
         this.lastRefreshed = new Date();
     }
 
+    
     setCurrentUser(user: string) {
         this._currentUser = user;
     }
@@ -42,7 +44,7 @@ export abstract class BaseEntity extends TypeORMBaseEntity {
     @BeforeInsert()
     private beforeInsert() {
         this.createdBy = this._currentUser;
-        this.lastModifiedBy = this._currentUser;
+        this.createdOn = new Date();
     }
 
     @BeforeUpdate()

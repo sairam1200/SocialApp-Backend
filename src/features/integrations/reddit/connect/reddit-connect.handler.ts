@@ -14,6 +14,7 @@ import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
+import { UserNotFoundException } from "core/exceptions";
 
 export class RedditConnectQuery {
   model: { state: string };
@@ -85,14 +86,14 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
 
     // Get local user by ID
     const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
-    if (!user) {
-      throw new ApplicationException('Prevented: User not found!');
+    if (!user || user.id !== dataProtectionKey.userId) {
+      throw new UserNotFoundException(userData.id);
     }
 
     // Find existing linked account or create a new one
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
       _const.PLATFORMS.REDDIT,
-      user.email
+      user.id
     );
 
     if (linkedAccount) {

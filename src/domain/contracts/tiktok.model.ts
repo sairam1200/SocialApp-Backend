@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class TikTokProfileModel {
+export class TiktokProfileModel {
   @ApiProperty()
   id: string;
 
@@ -27,26 +27,22 @@ export class TikTokProfileModel {
 
   @ApiProperty()
   verified: boolean;
-
-  @ApiProperty()
-  platform: string;
-
-  @ApiProperty({ type: 'object', additionalProperties: true })
-  metaData?: Record<string, any>;
 }
 
-export class TikTokUserDataModel {
-  id: string;
-  username: string;
-  display_name: string;
-  avatar_url: string;
-  follower_count: number;
-  following_count: number;
-  likes_count: number;
-  video_count: number;
+export type TiktokUserDataModel = {
+  open_id: string;
   union_id?: string;
-  open_id?: string;
+  display_name?: string;
+  avatar_url?: string;
+  bio?: string;
+  profile_deep_link?: string;
+  is_verified?: boolean;
+  follower_count?: number;
+  following_count?: number;
+  likes_count?: number;
+  video_count?: number;
 }
+
 
 export class TikTokVideoModel {
   id: string;
@@ -108,3 +104,4 @@ export class TikTokContentModel {
     width: number;
   };
 }
+
