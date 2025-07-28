@@ -4,6 +4,7 @@ import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserModel } from "../../../domain/contracts/user.model";
 import { RegisterCommand, RegisterModel } from "./register.handler";
 import { Body, Controller, HttpStatus, Post, Res } from "@nestjs/common";
+import { RequireTurnstile } from "../../../core/passport";
 
 @ApiTags('Account')
 @Controller({
@@ -14,6 +15,7 @@ export class RegisterController {
 
   constructor(private readonly commandBus: CommandBus) { }
 
+  @RequireTurnstile()
   @Post('register')
   @ApiResponse({ status: 200, description: 'OK', type: UserModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
