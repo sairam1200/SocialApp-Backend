@@ -5,7 +5,7 @@ import _const from "../../../core/utils/const";
 import { InjectQueue, Processor } from "@nestjs/bullmq";
 import logger from "../../../core/utils/winston.util";
 import { OnWorkerEvent, WorkerHost } from "@nestjs/bullmq";
-import { NotificationStatus,NotificationType } from "../../../domain/enums";
+import { NotificationStatus, NotificationType } from "../../../domain/enums";
 import { stringUtil } from "../../../core/utils/string.util";
 import { UserContent } from "../../../domain/entities/userContent.entity";
 import { LinkedAccount } from "../../../domain/entities/linkedAccount.entity";
@@ -15,6 +15,7 @@ import { mapToNotificationModel } from "../../../domain/mappers/notification.map
 import { INotificationService } from "../../../domain/services/inotification.service";
 import { ImportGateway } from "../../../infrastructure/websocket/gateways/import.gateway";
 import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
+import { Notification } from "domain/entities";
 
 interface CursorMap {
   [key: string]: string | null;
@@ -45,22 +46,8 @@ export class RedditImportProcessor extends WorkerHost {
     logger.info(`[RedditImport] Starting import for user ${account.userId}`);
     logger.debug(`[RedditImport] Using access token: ${accessToken}`);
 
-    // Step 1: Fetch the Reddit username using the token
-    let username: string;
-    try {
-      const meResponse = await axios.get("https://oauth.reddit.com/api/v1/me", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        },
-      });
-      username = meResponse.data.name;
-      logger.info(`[RedditImport] Fetched Reddit username: ${username}`);
-    } catch (error: any) {
-      logger.error(`[RedditImport] Failed to fetch Reddit username: ${error.message}`);
-      return;
-    }
+    const username = account.userName;
 
-    // Step 2: Correct endpoints
     const endpoints = {
       posts: { url: `https://oauth.reddit.com/user/${username}/submitted`, type: "Posts" },
       comments: { url: `https://oauth.reddit.com/user/${username}/comments`, type: "Comments" },
@@ -68,16 +55,16 @@ export class RedditImportProcessor extends WorkerHost {
     };
 
     const progressReports: Record<string, any> = {};
-    let notification: NotificationModel;
+    let notification: Notification;
     let encounteredError = false;
-    
+
     const initialReports = Object.entries(progressReports).map(([type, report]) => ({
       type,
       ...report,
     }));
-    
+
     try {
-      const notificationResult = await this.notificationService.notifyAsync(
+      notification = await this.notificationService.notifyAsync(
         account.userId,
         NotificationType.Import,
         "Importing your Reddit data...",
@@ -89,12 +76,11 @@ export class RedditImportProcessor extends WorkerHost {
           reports: initialReports,
         }
       );
-      notification = mapToNotificationModel(notificationResult);
       logger.debug(`[RedditImport] Created initial notification before import loop`);
     } catch (err) {
       logger.error(`[RedditImport] Failed to create notification: ${err.message}`);
     }
-    
+
     for (const [key, { url, type }] of Object.entries(endpoints)) {
       let after: string | null = null;
 
@@ -110,7 +96,7 @@ export class RedditImportProcessor extends WorkerHost {
       try {
         while (true) {
           logger.debug(`[RedditImport] Fetching ${type} with cursor: ${after || "none"}`);
-          
+
           const response = await axios.get(url, {
             headers: {
               Authorization: `Bearer ${accessToken}`
@@ -126,8 +112,7 @@ export class RedditImportProcessor extends WorkerHost {
           if (progressReports[type].totalItem === 0) {
             progressReports[type].totalItem = response.data.data.dist || items.length;
           }
-          
-          
+
           for (const item of items) {
             const data = item.data;
 
@@ -138,7 +123,7 @@ export class RedditImportProcessor extends WorkerHost {
             });
 
             content.type = key;
-            content.title = stringUtil.trimWithEllipsis(data.title || data.body || data.link_title || "Reddit Content");
+            content.title = stringUtil.trimWithEllipsis(data.title ?? data.body ?? data.link_title);
             content.metaData = {
               subreddit: data.subreddit,
               score: data.score,
@@ -171,7 +156,7 @@ export class RedditImportProcessor extends WorkerHost {
             if (!notification) {
               logger.debug(`[RedditImport] Creating initial notification`);
               logger.debug(`NotificationType.Import: ${NotificationType.Import}`);
-              const notificationResult = await this.notificationService.notifyAsync(
+              notification = await this.notificationService.notifyAsync(
                 account.userId,
                 NotificationType.Import,
                 "Importing your Reddit data...",
@@ -183,12 +168,12 @@ export class RedditImportProcessor extends WorkerHost {
                   reports: reportArray,
                 }
               );
-              notification = mapToNotificationModel(notificationResult);
+
             } else {
               logger.debug(`[RedditImport] Updating notification with progress`);
               await this.notificationService.updateAsync(notification.id, true, {
-                  status: NotificationStatus.InProgress,
-                  reports: reportArray,
+                status: NotificationStatus.InProgress,
+                reports: reportArray,
               });
             }
           }
@@ -220,8 +205,8 @@ export class RedditImportProcessor extends WorkerHost {
         await this.notificationService.updateAsync(
           notification.id,
           false,
-          { status: NotificationStatus.Completed, reports: finalReportArray },
-          "Reddit import completed with issues"
+          { status: NotificationStatus.Failed, reports: finalReportArray },
+          "Reddit import failed with issues"
         );
       } else {
         logger.info(`[RedditImport] Successfully completed import for user ${account.userId}`);
@@ -237,15 +222,15 @@ export class RedditImportProcessor extends WorkerHost {
       await this.linkedAccountRepository.updateAsync(account);
       logger.debug(`[RedditImport] Updated account to allow import: ${account.id}`);
     } else {
-    
+
       logger.error(`[RedditImport] Notification not created. Import likely failed to start.`);
       await this.notificationService.updateAsync(
-        notification?.id ?? "",
+        notification.id,
         false,
         { status: NotificationStatus.Cancelled, reports: finalReportArray },
         "Reddit import could not start"
       );
-      
+
     }
   }
 

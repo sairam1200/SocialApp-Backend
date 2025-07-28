@@ -3,7 +3,6 @@ import * as Joi from 'joi';
 import { Inject } from '@nestjs/common';
 import configs from '../../../../configs';
 import _const from '../../../../core/utils/const';
-import { Globals } from '../../../../core/globals';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { User } from '../../../../domain/entities/user.entity';
@@ -21,7 +20,6 @@ import { generateInitialImage } from '../../../../core/utils/canvas.util';
 import { uploadBase64ToCloudinaryAsync } from '../../../../core/utils/cloudinary.util';
 import { stringUtil } from '../../../../core/utils/string.util';
 import { UserType } from '../../../../domain/enums';
-import { TokenResponseModel } from '../../tokenResponse.model';
 
 const GRAPH_BASE = 'https://graph.facebook.com/v22.0';
 
@@ -84,12 +82,6 @@ export class FacebookCallbackTokenResponseModel {
   constructor(request: Partial<FacebookCallbackTokenResponseModel> = {}) {
     Object.assign(this, request);
   }
-}
-
-// Using existing TokenResponseModel with Facebook-specific extensions
-interface FacebookTokenResponse extends TokenResponseModel {
-  facebookAccessToken?: string;
-  facebookAccessTokenExpiresIn?: number;
 }
 
 const facebookConnectCallbackValidations = Joi.object({

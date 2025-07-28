@@ -2,9 +2,9 @@ import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { Globals } from '../../core/globals';
 import { UserType } from "../../domain/enums";
+import logger from "../../core/utils/winston.util";
 import { extractTokenFromHeader, getUserFromAccessTokenAsync } from "../../core/utils/jwt.util";
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
-import logger from "../../core/utils/winston.util";
 
 function createAccountGuard(type?: UserType, allowTwoFARequired: boolean = false, ignoreExpiration: boolean = false) {
   @Injectable()

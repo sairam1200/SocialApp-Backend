@@ -1,7 +1,7 @@
 import _const from "../core/utils/const";
-import { DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, UserContentRepository, UserLoginRepository, UserRepository, UserRoleRepository } from "./repositories";
+import { ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, UserContentRepository, UserLoginRepository, UserRepository, UserRoleRepository } from "./repositories";
 import { ManualProfileRepository } from "./repositories/manualProfile.repository";
-import { EmailService, NotificationService, TokenService } from "./services";
+import { EmailService, NotificationService, SearchService, TokenService } from "./services";
 
 /* This is the dependency object that holds all the repositories & services
 * used in the application. It is used to provide the dependencies to the
@@ -57,6 +57,12 @@ export const dependency = {
     provide: _const.IMANUALPROFILE_REPOSITORY,
     useClass: ManualProfileRepository
   },
+
+  ContentStreamRepository: {
+    provide: _const.ICONTENTSTREAM_REPOSITORY,
+    useClass: ContentStreamRepository
+  },
+
   TokenService: {
     provide: _const.ITOKEN_SERVICE,
     useClass: TokenService,
@@ -68,5 +74,9 @@ export const dependency = {
   NotificationService: {
     provide: _const.INOTIFICATION_SERVICE,
     useClass: NotificationService,
+  },
+  SearchService: {
+    provide: _const.ISEARCH_SERVICE,
+    useClass: SearchService,
   }
 };
