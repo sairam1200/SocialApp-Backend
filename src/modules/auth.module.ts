@@ -32,7 +32,6 @@ import { TurnstileGuard } from '../core/passport';
     JwtService,
 
     ...authentication.addHandlers(),
-    TurnstileGuard,
 
     dependency.TokenService,
     dependency.UserRepository,
