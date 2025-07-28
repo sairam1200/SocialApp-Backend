@@ -4,6 +4,9 @@ export { LoginCommandHandler } from "./login/login.handler";
 export { GoogleAuthenticationController } from "./external/google-auth/google-auth.endpoint";
 export { GoogleConnectCallbackQueryHandler, GoogleConnectQueryHandler } from "./external/google-auth/google-auth.handler";
 
+export { FacebookAuthenticationController } from "./external/facebook-auth/facebook-auth.endpoint";
+export { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./external/facebook-auth/facebook-auth.handler";
+
 export { ForgotPasswordController } from "./forgot-password/forgot-password.endpoint";
 export { ForgotPasswordCommandHandler } from "./forgot-password/forgot-password.handler";
 

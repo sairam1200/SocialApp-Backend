@@ -8,7 +8,7 @@ import { AuthGuardsModule } from './authGuard.module';
 import { dependency } from '../infrastructure/dependency';
 import { NotificationModule } from './notification.module';
 import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, DataProtectionKey } from '../domain/entities';
-import { GoogleAuthenticationController, GoogleConnectQueryHandler, GoogleConnectCallbackQueryHandler, ResetPasswordController, ResetPasswordCommandHandler, RegisterController, RegisterCommandHandler, LoginController, LoginCommandHandler, RefreshTokenController, RefreshTokenCommandHandler, Verfiy2FACommandHandler, Enable2FACommandHandler, Setup2FACommandHandler, Disbale2FACommandHandler, Setup2FAController, Enable2FAController, Verify2FAController, Disable2FAController } from '../features/auth';
+import { GoogleAuthenticationController, GoogleConnectQueryHandler, GoogleConnectCallbackQueryHandler, FacebookAuthenticationController, FacebookConnectQueryHandler, FacebookConnectCallbackQueryHandler, ResetPasswordController, ResetPasswordCommandHandler, RegisterController, RegisterCommandHandler, LoginController, LoginCommandHandler, RefreshTokenController, RefreshTokenCommandHandler, Verfiy2FACommandHandler, Enable2FACommandHandler, Setup2FACommandHandler, Disbale2FACommandHandler, Setup2FAController, Enable2FAController, Verify2FAController, Disable2FAController } from '../features/auth';
 
 @Module({
   imports: [
@@ -38,12 +38,14 @@ import { GoogleAuthenticationController, GoogleConnectQueryHandler, GoogleConnec
     RefreshTokenCommandHandler,
     ResetPasswordCommandHandler,
     GoogleConnectQueryHandler,
+    GoogleConnectCallbackQueryHandler,
+    FacebookConnectQueryHandler,
+    FacebookConnectCallbackQueryHandler,
     dependency.TokenService,
     dependency.UserRepository,
     dependency.RoleRepository,
     dependency.UserRoleRepository,
     dependency.UserLoginRepository,
-    GoogleConnectCallbackQueryHandler,
     dependency.DataProtectionKeyRepository,
     dependency.LinkedAccountRepository,
   ],
@@ -51,6 +53,7 @@ import { GoogleAuthenticationController, GoogleConnectQueryHandler, GoogleConnec
     LoginController,
     RegisterController,
     GoogleAuthenticationController,
+    FacebookAuthenticationController,
     RefreshTokenController,
     ResetPasswordController,
     Setup2FAController,

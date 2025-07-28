@@ -88,6 +88,8 @@ const envVarsSchema = Joi.object()
       .description('Facebook OAuth client secret'),
     FACEBOOK_CALLBACK_URL: Joi.string()
       .description('Facebook OAuth callback URL'),
+    FACEBOOK_AUTH_CALLBACK_URL: Joi.string()
+      .description('Facebook OAuth auth callback URL for login'),
     INSTAGRAM_CLIENT_ID: Joi.string()
       .description('Instagram OAuth client ID'),
     INSTAGRAM_CLIENT_SECRET: Joi.string()
@@ -194,6 +196,79 @@ if (error) {
 }
 
 export default {
+<<<<<<< HEAD
+    env: envVars.NODE_ENV,
+    projectName: envVars.PROJECT_NAME,
+    port: envVars.PORT,
+    log: {
+        level: envVars.NODE_ENV === 'development' ? 'debug' : 'info',
+        path: envVars.LOG_PATH,
+    },
+    postgres: {
+        host: envVars.POSTGRES_HOST,
+        port: envVars.POSTGRES_PORT,
+        username: envVars.POSTGRES_USERNAME,
+        password: envVars.POSTGRES_PASSWORD,
+        database: envVars.POSTGRES_DATABASE,
+        synchronize: envVars.POSTGRES_SYNCHRONIZE,
+        autoLoadEntities: envVars.POSTGRES_AUTO_LOAD_ENTITIES,
+        entities: envVars.POSTGRES_ENTITIES,
+        migrations: envVars.POSTGRES_MIGRATIONS,
+        logging: envVars.POSTGRES_LOGGING,
+        migrationsRun: envVars.POSTGRES_MIGRATIONS_RUN
+    },
+    jwt: {
+        secret: envVars.JWT_SECRET,
+        audience: envVars.JWT_AUDIENCE,
+        issuer: envVars.JWT_ISSUER,
+        accessTokenExpiration: envVars.JWT_ACCESS_EXPIRATION_MINUTES,
+        refreshTokenExpiration: envVars.JWT_REFRESH_EXPIRATION_HOURS,
+    },
+    encryption: {
+        key: envVars.ENCRYPTION_KEY,
+        algorithm: envVars.ENCRYPTION_ALGORITHM,
+        iv: envVars.ENCRYPTION_IV,
+    },
+    youtube: {
+        clientId: envVars.YOUTUBE_CLIENT_ID,
+        clientSecret: envVars.YOUTUBE_CLIENT_SECRET,
+        callbackUrl: envVars.YOUTUBE_CALLBACK_URL,
+    },
+    google: {
+        callbackUrl: envVars.GOOGLE_CALLBACK_URL,
+    },
+    facebook: {
+        clientId: envVars.FACEBOOK_CLIENT_ID,
+        clientSecret: envVars.FACEBOOK_CLIENT_SECRET,
+        redirectUri: envVars.FACEBOOK_CALLBACK_URL,
+        authCallbackUrl: envVars.FACEBOOK_AUTH_CALLBACK_URL,
+    },
+    Instagram: {
+        clientId: envVars.INSTAGRAM_CLIENT_ID,
+        clientSecret: envVars.INSTAGRAM_CLIENT_SECRET,
+        redirectUri: envVars.INSTAGRAM_CALLBACK_URL,
+    },
+    pinterest: {
+        clientId: envVars.PINTEREST_CLIENT_ID,
+        clientSecret: envVars.PINTEREST_CLIENT_SECRET,
+        redirectUri: envVars.PINTEREST_CALLBACK_URL,
+    },
+    twitter: {
+        clientId: envVars.TWITTER_CLIENT_ID,
+        clientSecret: envVars.TWITTER_CLIENT_SECRET,
+        redirectUri: envVars.TWITTER_CALLBACK_URL,
+    },
+    spotify: {
+        clientId: envVars.SPOTIFY_CLIENT_ID,
+        clientSecret: envVars.SPOTIFY_CLIENT_SECRET,
+        redirectUri: envVars.SPOTIFY_CALLBACK_URL,
+    },
+    redis: {
+        host: envVars.REDIS_HOST,
+        port: envVars.REDIS_PORT,
+        username: envVars.REDIS_USERNAME,
+        password: envVars.REDIS_PASSWORD
+=======
   env: envVars.NODE_ENV,
   projectName: envVars.PROJECT_NAME,
   port: envVars.PORT,
@@ -207,6 +282,7 @@ export default {
     ssl: {
       certificate: envVars.POSTGRES_SSL_CERTIFICATION,
       rejectUnauthorized: envVars.POSTGRES_SSL_REJECTUNAUTHORIZED,
+>>>>>>> develop
     },
     username: envVars.POSTGRES_USERNAME,
     password: envVars.POSTGRES_PASSWORD,
