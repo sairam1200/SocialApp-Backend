@@ -1,6 +1,20 @@
-import { Injectable, CanActivate, ExecutionContext, BadRequestException } from '@nestjs/common';
-import { Request } from 'express';
+import { Injectable, CanActivate, ExecutionContext, BadRequestException, UseGuards } from '@nestjs/common';
+import logger from '../utils/winston.util';
 import configs from '../../configs';
+import { Request } from 'express';
+
+/**
+ * Decorator to require Turnstile captcha verification for an endpoint.
+ * The Turnstile token must be provided in the 'X-Turnstile-Token' header.
+ * 
+ * Usage:
+ * @RequireTurnstile()
+ * @Post('/register')
+ * async register(@Body() data: RegisterModel) {
+ *   // endpoint logic
+ * }
+ */
+export const RequireTurnstile = () => UseGuards(TurnstileGuard);
 
 @Injectable()
 export class TurnstileGuard implements CanActivate {
@@ -10,14 +24,14 @@ export class TurnstileGuard implements CanActivate {
     const turnstileToken = request.headers['x-turnstile-token'] as string;
     
     if (!turnstileToken) {
-      throw new BadRequestException('Turnstile token is required in X-Turnstile-Token header');
+      throw new BadRequestException('[Turnstile]: token is required!');
     }
 
     const clientIp = this.getClientIp(request);
     const isValid = await this.verifyToken(turnstileToken, clientIp);
     
     if (!isValid) {
-      throw new BadRequestException('Invalid captcha verification');
+      throw new BadRequestException('[Turnstile]: Invalid captcha verification');
     }
 
     return true;
@@ -26,7 +40,7 @@ export class TurnstileGuard implements CanActivate {
   private async verifyToken(token: string, ip?: string): Promise<boolean> {
     // Test bypass tokens for development/testing only
     if (configs.env === 'development' && (token === 'test-token')) {
-      console.log('Turnstile: Using test bypass token in development mode');
+      logger.verbose('[Turnstile]: Using test bypass token in development mode');
       return true;
     }
     
@@ -46,17 +60,17 @@ export class TurnstileGuard implements CanActivate {
       const result = await response.json();
       
       if (result.success) {
-        console.log('Turnstile: Token verification successful');
+        logger.verbose('[Turnstile]: Token verification successful');
         return true;
       } else {
-        console.warn('Turnstile: Token verification failed', {
+        logger.warn('[Turnstile]: Token verification failed', {
           'error-codes': result['error-codes'],
           success: result.success
         });
         return false;
       }
     } catch (error) {
-      console.error('Turnstile: API request failed:', error);
+      logger.error('[Turnstile]: API request failed:', error);
       return false;
     }
   }
