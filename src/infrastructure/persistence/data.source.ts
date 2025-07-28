@@ -14,10 +14,12 @@ export const postgresOptions: DataSourceOptions = {
   migrations: [path.resolve(__dirname + configs.postgres.migrations)],
   logging: configs.postgres.logging,
   migrationsRun: configs.postgres.migrationsRun,
-  ssl: {
-    ca: configs.postgres.ssl.certificate,
-    rejectUnauthorized: configs.postgres.ssl.rejectUnauthorized,
-  },
+  ...(configs.postgres.ssl?.certificate && {
+    ssl: {
+      ca: configs.postgres.ssl.certificate,
+      rejectUnauthorized: configs.postgres.ssl.rejectUnauthorized,
+    },
+  }),
 };
 
 const dataSource = new DataSource(postgresOptions);

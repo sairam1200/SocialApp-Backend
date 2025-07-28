@@ -1,4 +1,3 @@
-import { FacebookConnectQueryHandler, FacebookConnectCallbackQueryHandler } from "features/integrations";
 import { Disbale2FACommandHandler } from "./2fa/disable/2fa-disable.handler";
 import { Enable2FACommandHandler } from "./2fa/enable/2fa-enable.handler";
 import { Setup2FACommandHandler } from "./2fa/setup/2fa-setup.handler";
@@ -18,6 +17,7 @@ import { LoginController } from "./login/login.endpoint";
 import { RefreshTokenController } from "./refresh-token/refresh-token.endpoint";
 import { RegisterController } from "./register/register.endpoint";
 import { ResetPasswordController } from "./reset-password/reset-password.endpoint";
+import { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./external/facebook-auth/facebook-auth.handler";
 
 export { LoginController } from "./login/login.endpoint";
 export { LoginCommandHandler } from "./login/login.handler";
