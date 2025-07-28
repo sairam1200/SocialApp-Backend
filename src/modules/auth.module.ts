@@ -9,6 +9,7 @@ import { AuthGuardsModule } from './authGuard.module';
 import { dependency } from '../infrastructure/dependency';
 import { NotificationModule } from './notification.module';
 import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, DataProtectionKey } from '../domain/entities';
+import { TurnstileGuard } from '../core/passport';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, D
     JwtService,
 
     ...authentication.addHandlers(),
+    TurnstileGuard,
 
     dependency.TokenService,
     dependency.UserRepository,
