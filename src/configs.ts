@@ -2,7 +2,6 @@ import * as Joi from "joi";
 import * as path from "path";
 import * as dotenv from 'dotenv'
 import { ApplicationException } from "./core/exceptions/application.exception";
-import { Certificate } from "crypto";
 
 const nodeEnv = process.env.NODE_ENV || 'development';
 
@@ -88,6 +87,8 @@ const envVarsSchema = Joi.object()
       .description('Facebook OAuth client secret'),
     FACEBOOK_CALLBACK_URL: Joi.string()
       .description('Facebook OAuth callback URL'),
+    FACEBOOK_AUTH_CALLBACK_URL: Joi.string()
+      .description('Facebook OAuth auth callback URL for login'),
     INSTAGRAM_CLIENT_ID: Joi.string()
       .description('Instagram OAuth client ID'),
     INSTAGRAM_CLIENT_SECRET: Joi.string()
@@ -204,10 +205,6 @@ export default {
   postgres: {
     host: envVars.POSTGRES_HOST,
     port: envVars.POSTGRES_PORT,
-    ssl: {
-      certificate: envVars.POSTGRES_SSL_CERTIFICATION,
-      rejectUnauthorized: envVars.POSTGRES_SSL_REJECTUNAUTHORIZED,
-    },
     username: envVars.POSTGRES_USERNAME,
     password: envVars.POSTGRES_PASSWORD,
     database: envVars.POSTGRES_DATABASE,
@@ -216,7 +213,11 @@ export default {
     entities: envVars.POSTGRES_ENTITIES,
     migrations: envVars.POSTGRES_MIGRATIONS,
     logging: envVars.POSTGRES_LOGGING,
-    migrationsRun: envVars.POSTGRES_MIGRATIONS_RUN
+    migrationsRun: envVars.POSTGRES_MIGRATIONS_RUN,
+    ssl: {
+      certificate: envVars.POSTGRES_SSL_CERTIFICATION,
+      rejectUnauthorized: envVars.POSTGRES_SSL_REJECTUNAUTHORIZED,
+    }
   },
   jwt: {
     secret: envVars.JWT_SECRET,
@@ -242,6 +243,7 @@ export default {
     clientId: envVars.FACEBOOK_CLIENT_ID,
     clientSecret: envVars.FACEBOOK_CLIENT_SECRET,
     redirectUri: envVars.FACEBOOK_CALLBACK_URL,
+    authCallbackUrl: envVars.FACEBOOK_AUTH_CALLBACK_URL,
   },
   Instagram: {
     clientId: envVars.INSTAGRAM_CLIENT_ID,
@@ -263,25 +265,22 @@ export default {
     clientSecret: envVars.SPOTIFY_CLIENT_SECRET,
     redirectUri: envVars.SPOTIFY_CALLBACK_URL,
   },
+  reddit: {
+    clientId: envVars.REDDIT_CLIENT_ID,
+    clientSecret: envVars.REDDIT_CLIENT_SECRET,
+    redirectUri: envVars.REDDIT_CALLBACK_URL,
+  },
   redis: {
     host: envVars.REDIS_HOST,
     port: envVars.REDIS_PORT,
     username: envVars.REDIS_USERNAME,
     password: envVars.REDIS_PASSWORD
   },
-
-  reddit: {
-    clientId: envVars.REDDIT_CLIENT_ID,
-    clientSecret: envVars.REDDIT_CLIENT_SECRET,
-    redirectUri: envVars.REDDIT_CALLBACK_URL,
-  },
-
   tiktok: {
     clientId: envVars.TIKTOK_CLIENT_ID,
     clientSecret: envVars.TIKTOK_CLIENT_SECRET,
     redirectUri: envVars.TIKTOK_CALLBACK_URL,
   },
-
   Token: {
     expirationTime: envVars.TOKEN_EXPIRATION_TIME
   },

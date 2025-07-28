@@ -5,17 +5,26 @@ export interface FacebookUserDataModel {
   name: string;
   email: string;
   username?: string;
-  picture: {
+  picture?: {
     data: {
       url: string;
     };
   };
-  followers_count: number;
-  friends: {
+  followers_count?: number;
+  friends?: {
     summary: {
       total_count: number;
     };
   };
+  birthday?: string;
+  gender?: string;
+  hometown?: {
+    name: string;
+  };
+  location?: {
+    name: string;
+  };
+  link?: string;
 }
 
 export class FacebookProfileModel {

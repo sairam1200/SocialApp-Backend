@@ -8,4 +8,5 @@ export { RoleClaimRepository } from './roleClaim.repository';
 export { UserContentRepository } from './userContent.repository';
 export { NotificationRepository } from './notification.repository';
 export { LinkedAccountRepository } from './linkedAccount.repository';
+export { ContentStreamRepository } from './contentStream.repository';
 export { DataProtectionKeyRepository } from './dataProtectionKey.repository';

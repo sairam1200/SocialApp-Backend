@@ -1,12 +1,12 @@
 import { Globals } from '../globals';
 import { JwtService } from '@nestjs/jwt';
 import { IncomingHttpHeaders } from 'http';
+import logger from '../utils/winston.util';
 import { AsyncLocalStorage } from 'async_hooks';
 import { JwtPayload } from '../passport/jwtPayload';
 import { NextFunction, Request, Response } from 'express';
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { extractTokenFromHeader, getUserFromAccessTokenAsync } from '../utils/jwt.util';
-import logger from '../utils/winston.util';
 
 interface HttpContextStore {
   request: Request;

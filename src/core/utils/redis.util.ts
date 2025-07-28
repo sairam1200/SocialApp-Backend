@@ -1,6 +1,7 @@
 import { Redis } from 'ioredis';
 import configs from "../../configs";
 import logger from "./winston.util";
+import { deserializeObject, serializeObject } from './serialization.util';
 
 type Prefix = 'gaddr'
 const prefix = 'gaddr'
@@ -35,25 +36,31 @@ async function connectToRedis() {
   }
 }
 
-async function storeInRedis(key: string, data: any, duration: number) {
-  await instance.set(key, data, 'EX', duration);
+async function storeInRedisAsync(key: string, data: object, duration: number) {
+  const value = serializeObject(data)
+  await instance.set(key, value, 'EX', duration);
   return true;
 }
 
-async function getFromRedis(key: string) {
+async function getFromRedisAsync<T = any>(key: string): Promise<T | null> {
   const data = await instance.get(key);
   if (data) {
-    return data;
+    return deserializeObject<T>(data);
   }
   return null;
+}
+
+async function removeFromRedisAsync(key: string) {
+  await instance.del(key);
 }
 
 const redis = {
   instance,
   getRedisKey,
   connectToRedis,
-  storeInRedis,
-  getFromRedis
+  storeInRedisAsync,
+  getFromRedisAsync,
+  removeFromRedisAsync
 };
 
 export default redis;

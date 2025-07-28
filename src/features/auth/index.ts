@@ -1,8 +1,32 @@
+import { Disbale2FACommandHandler } from "./2fa/disable/2fa-disable.handler";
+import { Enable2FACommandHandler } from "./2fa/enable/2fa-enable.handler";
+import { Setup2FACommandHandler } from "./2fa/setup/2fa-setup.handler";
+import { GoogleConnectQueryHandler, GoogleConnectCallbackQueryHandler } from "./external/google-auth/google-auth.handler";
+import { LoginCommandHandler } from "./login/login.handler";
+import { RefreshTokenCommandHandler } from "./refresh-token/refresh-token.handler";
+import { RegisterCommandHandler } from "./register/register.handler";
+import { ResetPasswordCommandHandler } from "./reset-password/reset-password.handler";
+import { Verify2FACommandHandler } from "./2fa/verify/2fa-verify.handler";
+import { Disable2FAController } from "./2fa/disable/2fa-disable.endpoint";
+import { Enable2FAController } from "./2fa/enable/2fa-enable.endpoint";
+import { Setup2FAController } from "./2fa/setup/2fa-setup.endpoint";
+import { Verify2FAController } from "./2fa/verify/2fa-verify.endpoint";
+import { FacebookAuthenticationController } from "./external/facebook-auth/facebook-auth.endpoint";
+import { GoogleAuthenticationController } from "./external/google-auth/google-auth.endpoint";
+import { LoginController } from "./login/login.endpoint";
+import { RefreshTokenController } from "./refresh-token/refresh-token.endpoint";
+import { RegisterController } from "./register/register.endpoint";
+import { ResetPasswordController } from "./reset-password/reset-password.endpoint";
+import { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./external/facebook-auth/facebook-auth.handler";
+
 export { LoginController } from "./login/login.endpoint";
 export { LoginCommandHandler } from "./login/login.handler";
 
 export { GoogleAuthenticationController } from "./external/google-auth/google-auth.endpoint";
 export { GoogleConnectCallbackQueryHandler, GoogleConnectQueryHandler } from "./external/google-auth/google-auth.handler";
+
+export { FacebookAuthenticationController } from "./external/facebook-auth/facebook-auth.endpoint";
+export { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./external/facebook-auth/facebook-auth.handler";
 
 export { ForgotPasswordController } from "./forgot-password/forgot-password.endpoint";
 export { ForgotPasswordCommandHandler } from "./forgot-password/forgot-password.handler";
@@ -23,17 +47,37 @@ export { Disbale2FACommandHandler } from "./2fa/disable/2fa-disable.handler";
 export { Disable2FAController } from "./2fa/disable/2fa-disable.endpoint";
 
 export { Verify2FAController } from "./2fa/verify/2fa-verify.endpoint"
-export { Verify2FACommandHandler as Verfiy2FACommandHandler } from "./2fa/verify/2fa-verify.handler"
+export { Verify2FACommandHandler } from "./2fa/verify/2fa-verify.handler"
 
 export { Enable2FAController } from "./2fa/enable/2fa-enable.endpoint"
 export { Enable2FACommandHandler } from "./2fa/enable/2fa-enable.handler"
 
 const controllers = [
-
+  LoginController,
+  RegisterController,
+  GoogleAuthenticationController,
+  FacebookAuthenticationController,
+  RefreshTokenController,
+  ResetPasswordController,
+  Setup2FAController,
+  Enable2FAController,
+  Verify2FAController,
+  Disable2FAController
 ];
 
 const handlers = [
-  
+  LoginCommandHandler,
+  Verify2FACommandHandler,
+  Enable2FACommandHandler,
+  Setup2FACommandHandler,
+  Disbale2FACommandHandler,
+  RegisterCommandHandler,
+  RefreshTokenCommandHandler,
+  ResetPasswordCommandHandler,
+  GoogleConnectQueryHandler,
+  GoogleConnectCallbackQueryHandler,
+  FacebookConnectQueryHandler,
+  FacebookConnectCallbackQueryHandler,
 ];
 
 const authentication = {

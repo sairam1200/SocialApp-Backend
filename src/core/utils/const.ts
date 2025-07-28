@@ -11,10 +11,12 @@ export default {
   INOTIFICATION_REPOSITORY: "INotificationRepository",
   IMANUALPROFILE_REPOSITORY: "IManualProfileRepository",
   ILINKEDACCOUNT_REPOSITORY: "ILinkedAccountRepository",
+  ICONTENTSTREAM_REPOSITORY: "IContentStreamRepository",
   IDATAPROTECTIONKEY_REPOSITORY: "IDataProtectionKeyRepository",
 
   // Service Interfaces
   IEMAIL_SERVICE: "IEmailService",
+  ISEARCH_SERVICE: "ISearchService",
   ITOKEN_SERVICE: "ITokenService",
   INOTIFICATION_SERVICE: "INotificationService",
 
@@ -29,8 +31,6 @@ export default {
     REDDIT_IMPORT: "reddit-import",
     TIKTOK_IMPORT: "tiktok-import",
   },
-
-
 
   EMAILTEMPLATES: {
     ACCOUNT: {

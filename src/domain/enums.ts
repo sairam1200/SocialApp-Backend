@@ -25,3 +25,11 @@ export enum PlaylistMemberRole {
     Editor = 'Editor',
     Viewer = 'Viewer'
 }
+
+export enum StreamEntityType {
+    Profile = "Profile",
+    Post = "Post",
+    Comment = "Comment",
+    Group = "Group",
+    Channel = "Channel"
+}

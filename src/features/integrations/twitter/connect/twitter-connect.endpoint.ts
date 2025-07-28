@@ -29,7 +29,7 @@ export class TwitterConnectController {
       'users.read',
       'offline.access',
       'like.read',
-      
+     
       
     ].join(' ');
 
