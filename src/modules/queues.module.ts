@@ -53,6 +53,9 @@ export class QueuesModule implements NestModule {
       },
       {
         name: _const.BULL_QUEUES.TIKTOK_IMPORT,
+      },
+      {
+        name: _const.BULL_QUEUES.LINKEDIN_IMPORT,
       }
     );
 
