@@ -89,7 +89,7 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
 
     const dataProtectionKey = await this.validateStateAsync(model.state);
 
-    const accessToken = await this.fetchAccessTokenAsync(model.code);
+    const { accessToken, refreshToken, expiresIn } = await this.fetchAccessTokenAsync(model.code);
     const userData = await this.fetchUserDataAsync(accessToken);
     const userEmail = await this.fetchUserEmailAsync(accessToken);
 
@@ -129,12 +129,11 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     }
 
-    // # TODO #
     const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.LINKEDIN);
     if (existingAccountLogin) {
-      existingAccountLogin.tokenValue = accessToken; // change to refresh token or better still keep both using searizeObject({ access_token: accessToken, refresh_token: refreshToken, accessTokenExpiresIn  })
+      existingAccountLogin.tokenValue = JSON.stringify({ accessToken, refreshToken, expiresIn });
       existingAccountLogin.addedDateUtc = new Date();
-      // existingAccountLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);  // replace with refreshToken expiresIn 
+      existingAccountLogin.expiryDateUtc = new Date(Date.now() + expiresIn * 1000);
       await this.userLoginRepository.updateAsync(existingAccountLogin);
     } else {
       await this.userLoginRepository.createAysnc(
@@ -143,19 +142,19 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
         "",
         "",
         "",
-        accessToken,
-        // new Date(Date.now() + expires_in * 1000) // replace with refreshToken expiresIn 
+        JSON.stringify({ accessToken, refreshToken, expiresIn }),
+        new Date(Date.now() + expiresIn * 1000)
       );
     }
 
     return {
       accessToken,
-      expiresIn: 5184000,
+      expiresIn,
       profile: mapToLinkedInProfileModel(linkedAccount, true),
     };
   }
 
-  private async fetchAccessTokenAsync(code: string): Promise<string> {
+  private async fetchAccessTokenAsync(code: string): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
     try {
       const params = new URLSearchParams({
         grant_type: 'authorization_code',
@@ -171,7 +170,11 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
         },
       });
 
-      return response.data.access_token;
+      return {
+        accessToken: response.data.access_token,
+        refreshToken: response.data.refresh_token,
+        expiresIn: response.data.expires_in
+      };
     } catch (error) {
       logger.error('LinkedIn access token fetch failed', error);
       throw new ApplicationException('Failed to authenticate with LinkedIn');
