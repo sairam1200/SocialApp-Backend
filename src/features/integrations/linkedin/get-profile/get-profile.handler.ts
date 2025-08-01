@@ -1,7 +1,7 @@
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
-import { Inject, NotFoundException } from "@nestjs/common";  
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { Inject, NotFoundException } from "@nestjs/common";
+import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { LinkedInProfileModel } from "../../../../domain/contracts/linkedin.model";
 import { mapToLinkedInProfileModel } from "../../../../domain/mappers/linkedin.mapper";
@@ -20,8 +20,8 @@ export class LinkedInProfileQuery {
   }
 }
 
-@CommandHandler(LinkedInProfileQuery)
-export class LinkedInProfileQueryHandler implements ICommandHandler<LinkedInProfileQuery> {
+@QueryHandler(LinkedInProfileQuery)
+export class LinkedInProfileQueryHandler implements IQueryHandler<LinkedInProfileQuery> {
 
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)

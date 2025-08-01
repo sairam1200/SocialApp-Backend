@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
+import { QueryBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { stringUtil } from "../../../../core/utils/string.util";
@@ -29,7 +29,7 @@ class LinkedInConnectCallbackResponseModel {
 })
 export class LinkedInConnectController {
 
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly queryBus: QueryBus) { }
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
@@ -55,7 +55,7 @@ export class LinkedInConnectController {
 
     const authorizeURL = `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;
 
-    await this.commandBus.execute(new LinkedInConnectQuery({ model: { state } }));
+    await this.queryBus.execute(new LinkedInConnectQuery({ model: { state } }));
 
     return res.redirect(HttpStatus.FOUND, authorizeURL);
   }
@@ -66,7 +66,7 @@ export class LinkedInConnectController {
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Callback(@Query() query: any): Promise<LinkedInConnectCallbackResponseModel> {
 
-    const result = await this.commandBus.execute(new LinkedInConnectCallbackQuery({ 
+    const result = await this.queryBus.execute(new LinkedInConnectCallbackQuery({ 
       model: {
         code: query.code, 
         state: query.state 

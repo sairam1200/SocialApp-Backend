@@ -5,7 +5,8 @@ import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
+import { DataProtectionKey } from "../../../../domain/entities";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
@@ -45,8 +46,8 @@ const linkedInConnectCallbackValidations = Joi.object({
   state: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
 });
 
-@CommandHandler(LinkedInConnectQuery)
-export class LinkedInConnectQueryHandler implements ICommandHandler<LinkedInConnectQuery> {
+@QueryHandler(LinkedInConnectQuery)
+export class LinkedInConnectQueryHandler implements IQueryHandler<LinkedInConnectQuery> {
 
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
@@ -67,8 +68,8 @@ export class LinkedInConnectQueryHandler implements ICommandHandler<LinkedInConn
   }
 }
 
-@CommandHandler(LinkedInConnectCallbackQuery)
-export class LinkedInConnectCallbackQueryHandler implements ICommandHandler<LinkedInConnectCallbackQuery> {
+@QueryHandler(LinkedInConnectCallbackQuery)
+export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<LinkedInConnectCallbackQuery> {
 
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
@@ -84,29 +85,28 @@ export class LinkedInConnectCallbackQueryHandler implements ICommandHandler<Link
   public async execute(query: LinkedInConnectCallbackQuery): Promise<{ accessToken: string; expiresIn: number; profile: LinkedInProfileModel; }> {
 
     const { model } = query;
-    const { error } = linkedInConnectCallbackValidations.validate(model);
+    await linkedInConnectCallbackValidations.validateAsync(model);
 
-    if (error) {
-      throw new ApplicationException(error.details[0].message);
+    const dataProtectionKey = await this.validateStateAsync(model.state);
+
+    const accessToken = await this.fetchAccessTokenAsync(model.code);
+    const userData = await this.fetchUserDataAsync(accessToken);
+    const userEmail = await this.fetchUserEmailAsync(accessToken);
+
+    const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
+    if (!user) {
+      throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
-    await this.validateState(model.state);
-
-    const accessToken = await this.fetchAccessToken(model.code);
-    const userData = await this.fetchUserData(accessToken);
-    const userEmail = await this.fetchUserEmail(accessToken);
-
-    const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-
     const existingAccount = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(PLATFORM, userData.id);
-    if (existingAccount && existingAccount.userId !== userId) {
+    if (existingAccount && existingAccount.userId !== user.id) {
       throw new ApplicationException('This LinkedIn account is already connected to another user.');
     }
 
     let linkedAccount = existingAccount;
     if (!linkedAccount) {
       linkedAccount = new LinkedAccount();
-      linkedAccount.userId = userId;
+      linkedAccount.userId = user.id;
       linkedAccount.platform = PLATFORM;
       linkedAccount.externalId = userData.id;
     }
@@ -129,16 +129,33 @@ export class LinkedInConnectCallbackQueryHandler implements ICommandHandler<Link
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     }
 
-    const profile = mapToLinkedInProfileModel(linkedAccount, true);
+    // # TODO #
+    const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.LINKEDIN);
+    if (existingAccountLogin) {
+      existingAccountLogin.tokenValue = accessToken; // change to refresh token or better still keep both using searizeObject({ access_token: accessToken, refresh_token: refreshToken, accessTokenExpiresIn  })
+      existingAccountLogin.addedDateUtc = new Date();
+      // existingAccountLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);  // replace with refreshToken expiresIn 
+      await this.userLoginRepository.updateAsync(existingAccountLogin);
+    } else {
+      await this.userLoginRepository.createAysnc(
+        _const.PLATFORMS.LINKEDIN,
+        user.id,
+        "",
+        "",
+        "",
+        accessToken,
+        // new Date(Date.now() + expires_in * 1000) // replace with refreshToken expiresIn 
+      );
+    }
 
     return {
       accessToken,
       expiresIn: 5184000,
-      profile,
+      profile: mapToLinkedInProfileModel(linkedAccount, true),
     };
   }
 
-  private async fetchAccessToken(code: string): Promise<string> {
+  private async fetchAccessTokenAsync(code: string): Promise<string> {
     try {
       const params = new URLSearchParams({
         grant_type: 'authorization_code',
@@ -161,7 +178,7 @@ export class LinkedInConnectCallbackQueryHandler implements ICommandHandler<Link
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<LinkedInUserDataModel> {
+  private async fetchUserDataAsync(accessToken: string): Promise<LinkedInUserDataModel> {
     try {
       const response = await axios.get(`${API_BASE}/me?projection=(id,localizedFirstName,localizedLastName,profilePicture(displayImage~:playableStreams))`, {
         headers: {
@@ -170,7 +187,7 @@ export class LinkedInConnectCallbackQueryHandler implements ICommandHandler<Link
       });
 
       const userData = response.data;
-      
+
       // Extract the profile picture URL from LinkedIn v2 API response
       let profilePictureUrl = '';
       if (userData.profilePicture && userData.profilePicture['displayImage~']) {
@@ -196,7 +213,7 @@ export class LinkedInConnectCallbackQueryHandler implements ICommandHandler<Link
     }
   }
 
-  private async fetchUserEmail(accessToken: string): Promise<string> {
+  private async fetchUserEmailAsync(accessToken: string): Promise<string> {
     try {
       const response = await axios.get(`${API_BASE}/emailAddress?q=members&projection=(elements*(handle~))`, {
         headers: {
@@ -212,9 +229,18 @@ export class LinkedInConnectCallbackQueryHandler implements ICommandHandler<Link
     }
   }
 
-  private async validateState(state: string): Promise<void> {
-    if (!state || state.length < 16) {
+
+  private async validateStateAsync(state: string): Promise<DataProtectionKey> {
+    const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
+    if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
     }
+
+    if (dataProtectionKey.expiresIn < Math.floor(Date.now() / 1000)) {
+      throw new ApplicationException('State parameter has expired');
+    }
+
+    await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
+    return dataProtectionKey;
   }
 }

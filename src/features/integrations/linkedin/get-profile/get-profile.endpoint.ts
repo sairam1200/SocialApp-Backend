@@ -1,4 +1,4 @@
-import { CommandBus } from "@nestjs/cqrs";
+import { QueryBus } from "@nestjs/cqrs";
 import { ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Controller, Get, Query, UseGuards } from "@nestjs/common";
@@ -28,7 +28,7 @@ class LinkedInProfileResponseModel {
 })
 export class LinkedInProfileController {
 
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly queryBus: QueryBus) { }
 
   @Get('profile')
   @UseGuards(UserAccoutGuard)
@@ -39,7 +39,7 @@ export class LinkedInProfileController {
   @ApiResponse({ status: 404, description: 'NOT_FOUND' })
   public async GetProfile(@Query() query: LinkedInProfileQueryModel): Promise<LinkedInProfileResponseModel> {
 
-    const profile = await this.commandBus.execute(new LinkedInProfileQuery({ model: query }));
+    const profile = await this.queryBus.execute(new LinkedInProfileQuery({ model: query }));
 
     return {
       profile,
