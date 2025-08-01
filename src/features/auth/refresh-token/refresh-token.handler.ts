@@ -4,7 +4,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
 import { Globals } from "../../../core/globals";
 import ipUtil from "../../../core/utils/ip.util";
-import { TokenResponseModel } from "../tokenResponse.model";
+import { TokenResponseModel } from "../../../domain/contracts/tokenResponse.model";
 import { Inject, UnauthorizedException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { cryptoUtils } from "../../../core/utils/crypto.util";
