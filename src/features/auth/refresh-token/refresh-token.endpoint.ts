@@ -1,6 +1,6 @@
 import { Response } from "express"
 import { CommandBus } from "@nestjs/cqrs";
-import { TokenResponseModel } from "../tokenResponse.model";
+import { TokenResponseModel } from "../../../domain/contracts/tokenResponse.model";
 import { RefreshTokenGuard } from "../../../core/passport";
 import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";

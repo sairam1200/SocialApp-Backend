@@ -5,7 +5,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import ipUtil from '../../../../core/utils/ip.util';
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { TokenResponseModel } from '../../tokenResponse.model';
+import { TokenResponseModel } from '../../../../domain/contracts/tokenResponse.model';
 import { ITokenService } from '../../../../domain/services/itoken.service';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { IUserLoginRepository, IUserRepository } from '../../../../domain/repositories';
