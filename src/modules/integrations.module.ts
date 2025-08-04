@@ -8,7 +8,7 @@ import integrations from "../features/integrations";
 import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
-import { DataProtectionKey, LinkedAccount, Role, User, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
+import { ContentStream, DataProtectionKey, LinkedAccount, Role, User, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
 
 @Module({
   imports: [
@@ -23,7 +23,8 @@ import { DataProtectionKey, LinkedAccount, Role, User, UserClaim, UserContent, U
       UserClaim,
       UserContent,
       LinkedAccount,
-      DataProtectionKey
+      DataProtectionKey,
+      ContentStream,
     ])
   ],
   controllers: [
@@ -42,6 +43,8 @@ import { DataProtectionKey, LinkedAccount, Role, User, UserClaim, UserContent, U
     dependency.UserContentRepository,
     dependency.LinkedAccountRepository,
     dependency.DataProtectionKeyRepository,
+    dependency.ContentStreamRepository,
+    dependency.SearchService
   ],
   exports: [],
 })

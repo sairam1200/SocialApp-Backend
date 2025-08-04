@@ -16,7 +16,42 @@ export interface YoutubeChannelDataModel {
   etag: string;
   items: YoutubeChannelModel[];
 }
-
+export interface YouTubeSearchResponseModel{
+  kind: string;
+  etag: string;
+  nextPageToken?: string;
+  regionCode: string;
+  pageInfo: {
+    totalResults: number;
+    resultsPerPage: number;
+  };
+  items: YoutubeSearchItemModel[];
+}
+export interface YoutubeSearchItemModel {
+  kind: string;
+  etag: string;
+  id: {
+    kind: string; 
+    videoId?: string; 
+    channelId?: string; 
+    playlistId?: string
+  };
+  snippet: {
+    publishedAt: Date; 
+    channelId: string; 
+    title: string; 
+    description: string; 
+    thumbnails: {
+      default: { url: string };
+      medium: { url: string };
+      high: { url: string };
+      standard: { url: string };
+      maxres: { url: string };
+    };
+    channelTitle: string; 
+    liveBroadcastContent?: string; 
+  };
+}
 interface YoutubeChannelModel {
   kind: string;
   id: string; // Channel ID
