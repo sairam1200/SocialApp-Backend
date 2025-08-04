@@ -23,6 +23,7 @@ import { InjectPinterestImportQueue, PinterestImportProcessor } from "../infrast
 import { InjectInstagramImportQueue, InstagramImportProcessor } from "../infrastructure/background/processors/instagram-import.processor";
 import { RedditImportProcessor, InjectRedditImportQueue } from "../infrastructure/background/processors/reddit-import.processor";
 import { InjectTwitterImportQueue,TwitterImportProcessor } from "../infrastructure/background/processors/twitter-import.processor";
+import { InjectLinkedInImportQueue, LinkedInImportProcessor } from "../infrastructure/background/processors/linkedin-import.processor";
 @Module({})
 export class QueuesModule implements NestModule {
   static register(): DynamicModule {
@@ -53,6 +54,9 @@ export class QueuesModule implements NestModule {
       },
       {
         name: _const.BULL_QUEUES.TIKTOK_IMPORT,
+      },
+      {
+        name: _const.BULL_QUEUES.LINKEDIN_IMPORT,
       }
     );
 

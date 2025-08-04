@@ -30,6 +30,7 @@ export default {
     TWITTER_IMPORT: "twitter-import",
     REDDIT_IMPORT: "reddit-import",
     TIKTOK_IMPORT: "tiktok-import",
+    LINKEDIN_IMPORT: "linkedin-import",
   },
 
   EMAILTEMPLATES: {
@@ -51,6 +52,7 @@ export default {
     SPOTIFY: "spotify",
     REDDIT: "reddit",
     TIKTOK: "tiktok",
+    LINKEDIN: "linkedin",
   },
 
   KNOWN_PLATFORMS_URIS: [

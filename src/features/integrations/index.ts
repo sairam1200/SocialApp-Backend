@@ -46,6 +46,12 @@ import { TikTokProfileController } from "./tiktok/get-profile/get-profile.endpoi
 import { TiktokProfileQueryHandler } from "./tiktok/get-profile/get-profile.handler";
 import { TikTokImportController } from "./tiktok/import/tiktok-import.endpoint";
 import { TiktokImportCommandHandler } from "./tiktok/import/tiktok-import.handler";
+import { LinkedInConnectController } from "./linkedin/connect/linkedin-connect.endpoint";
+import { LinkedInConnectCallbackQueryHandler } from "./linkedin/connect/linkedin-connect.handler";
+import { LinkedInProfileController } from "./linkedin/get-profile/get-profile.endpoint";
+import { LinkedInProfileQueryHandler } from "./linkedin/get-profile/get-profile.handler";
+import { LinkedInImportController } from "./linkedin/import/linkedin-import.endpoint";
+import { LinkedInImportCommandHandler } from "./linkedin/import/linkedin-import.handler";
 
 export { FacebookConnectController } from "./facebook/connect/facebook-connect.endpoint"
 export { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./facebook/connect/facebook-connect.handler";
@@ -119,6 +125,15 @@ export { TiktokProfileQueryHandler } from "./tiktok/get-profile/get-profile.hand
 export { TikTokImportController } from "./tiktok/import/tiktok-import.endpoint";
 export { TiktokImportCommandHandler } from "./tiktok/import/tiktok-import.handler";
 
+export { LinkedInConnectController } from "./linkedin/connect/linkedin-connect.endpoint";
+export { LinkedInConnectCallbackQueryHandler } from "./linkedin/connect/linkedin-connect.handler";
+
+export { LinkedInProfileController } from "./linkedin/get-profile/get-profile.endpoint";
+export { LinkedInProfileQueryHandler } from "./linkedin/get-profile/get-profile.handler";
+
+export { LinkedInImportController } from "./linkedin/import/linkedin-import.endpoint";
+export { LinkedInImportCommandHandler } from "./linkedin/import/linkedin-import.handler";
+
 const controllers = [
   FacebookConnectController,
   FacebookImportController,
@@ -144,6 +159,9 @@ const controllers = [
   TiktokConnectController,
   TikTokProfileController,
   TikTokImportController,
+  LinkedInConnectController,
+  LinkedInProfileController,
+  LinkedInImportController,
 ];
 
 const handlers = [
@@ -172,6 +190,9 @@ const handlers = [
   TiktokConnectQueryHandler,
   TiktokProfileQueryHandler,
   TiktokImportCommandHandler,
+  LinkedInConnectCallbackQueryHandler,
+  LinkedInProfileQueryHandler,
+  LinkedInImportCommandHandler,
 ];
 
 const integrations = {
