@@ -49,7 +49,7 @@ export class SearchService implements ISearchService {
     limit: number,
     filters: Record<string, string | number>,
     accessToken?: string
-  ): Promise<void> {
+  ): Promise<any> {
 
 
     let normalizedQuery = await this.normalizeQuery(searchTerm);

@@ -34,7 +34,7 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
 
 
 
-    const data = await this.searchService.searchYoutubeAsync(searchTerm, filter, youtubeAccessToken);
+    const data = await this.searchService.searchYoutubeAsync(searchTerm, 25, filter, youtubeAccessToken);
     return data
   }
 }

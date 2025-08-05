@@ -7,5 +7,8 @@ export interface ISearchService {
 
   searchTwitterAsync(access_token: string): Promise<any>;
   searchSpotifyAsync(access_token: string): Promise<any>;
-  searchYoutubeAsync(searchTerm: string, filter?: Record<string,any>, accessToken?: string): Promise<YouTubeSearchResponseModel>;
+  searchYoutubeAsync(searchTerm: string,
+    limit: number,
+    filters: Record<string, string | number>,
+    accessToken?: string): Promise<any>;
 }

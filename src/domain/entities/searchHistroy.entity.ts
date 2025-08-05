@@ -5,9 +5,6 @@ import { BaseEntity } from "../baseEntity";
 export class SearchHistory extends BaseEntity {
 
   @Column()
-  searchTerm: Record<string, string>;
-
-  @Column()
   originalQuery: string;
 
   @Column()
