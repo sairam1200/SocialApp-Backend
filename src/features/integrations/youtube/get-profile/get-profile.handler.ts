@@ -1,7 +1,7 @@
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
 import { Inject, NotFoundException } from "@nestjs/common";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
 import { YoutubeProfileModel } from "../../../../domain/contracts/youtube.model";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { mapToYoutubeProfileModel } from "../../../../domain/mappers/youtube.mapper";
@@ -19,8 +19,8 @@ export class YoutubeProfileQuery {
   }
 }
 
-@CommandHandler(YoutubeProfileQuery)
-export class YoutubeProfileQueryHandler implements ICommandHandler<YoutubeProfileQuery> {
+@QueryHandler(YoutubeProfileQuery)
+export class YoutubeProfileQueryHandler implements IQueryHandler<YoutubeProfileQuery> {
 
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)

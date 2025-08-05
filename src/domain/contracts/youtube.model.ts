@@ -16,7 +16,7 @@ export interface YoutubeChannelDataModel {
   etag: string;
   items: YoutubeChannelModel[];
 }
-export interface YouTubeSearchResponseModel{
+export interface YouTubeSearchResponseModel {
   kind: string;
   etag: string;
   nextPageToken?: string;
@@ -31,16 +31,16 @@ export interface YoutubeSearchItemModel {
   kind: string;
   etag: string;
   id: {
-    kind: string; 
-    videoId?: string; 
-    channelId?: string; 
+    kind: string;
+    videoId?: string;
+    channelId?: string;
     playlistId?: string
   };
   snippet: {
-    publishedAt: Date; 
-    channelId: string; 
-    title: string; 
-    description: string; 
+    publishedAt: Date;
+    channelId: string;
+    title: string;
+    description: string;
     thumbnails: {
       default: { url: string };
       medium: { url: string };
@@ -48,8 +48,8 @@ export interface YoutubeSearchItemModel {
       standard: { url: string };
       maxres: { url: string };
     };
-    channelTitle: string; 
-    liveBroadcastContent?: string; 
+    channelTitle: string;
+    liveBroadcastContent?: string;
   };
 }
 interface YoutubeChannelModel {
