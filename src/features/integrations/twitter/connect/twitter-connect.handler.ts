@@ -6,6 +6,8 @@ import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { UserNotFoundException } from "../../../../core/exceptions";
+import { serializeObject } from "../../../../core/utils/serialization.util";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
@@ -16,9 +18,6 @@ import { IUserLoginRepository } from "../../../../domain/repositories/irefreshto
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { TwitterProfileModel, TwitterUserDataModel } from "../../../../domain/contracts/twitter.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
-import { UserNotFoundException } from "core/exceptions";
-import { serialize } from "v8";
-import { serializeObject } from "core/utils/serialization.util";
 
 const BASE_URL = 'https://api.twitter.com/2';
 
@@ -65,7 +64,7 @@ export class TwiiterConnectQueryHandler implements ICommandHandler<TwitterConnec
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       model.codeVerifier,
-      HttpContext.user[Globals.ClaimTypes.UserId],
+      HttpContext.getCurrentUserId,
       expiresIn
     );
   }
@@ -154,7 +153,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     }
 
     let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.TWITTER);
-    const tokenValue = serializeObject({access_token , refresh_token})
+    const tokenValue = serializeObject({access_token , refresh_token, expires_in})
     console.log("this is the token value: ", tokenValue);
     if (existingAccountLogin) {
 

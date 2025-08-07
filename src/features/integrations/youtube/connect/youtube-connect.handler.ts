@@ -21,6 +21,7 @@ import {
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
 import { UserNotFoundException } from 'core/exceptions';
+import { serializeObject } from 'core/utils/serialization.util';
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
 
@@ -119,7 +120,7 @@ export class YoutubeConnectCallbackQueryHandler
       console.log(linkedAccount);
       linkedAccount.userName = '';
       linkedAccount.profileImage = userData.profile.picture;
-      linkedAccount.externalUrl= `https://www.youtube.com/channel/${userData.channel.items[0].id}`;
+      linkedAccount.externalUrl = `https://www.youtube.com/channel/${userData.channel.items[0].id}`;
       (linkedAccount.followersCount = Number.parseInt(
         userData.channel.items[0].statistics.subscriberCount,
       )),
@@ -147,7 +148,7 @@ export class YoutubeConnectCallbackQueryHandler
           externalId: userData.profile.id,
           userName: '',
           profileImage: userData.profile.picture,
-          externalUrl:  `https://www.youtube.com/channel/${userData.channel.items[0].id}`,
+          externalUrl: `https://www.youtube.com/channel/${userData.channel.items[0].id}`,
           followersCount: Number.parseInt(
             userData.channel.items[0].statistics.subscriberCount,
           ),
@@ -176,7 +177,7 @@ export class YoutubeConnectCallbackQueryHandler
       );
 
     if (existingAccountLogin) {
-      existingAccountLogin.tokenValue = refresh_token;
+      existingAccountLogin.tokenValue = serializeObject({ access_token, refresh_token, expires_in });
       existingAccountLogin.addedDateUtc = new Date();
       existingAccountLogin.expiryDateUtc = new Date(
         Date.now() + 100 * 24 * 60 * 60 * 1000,
@@ -189,7 +190,7 @@ export class YoutubeConnectCallbackQueryHandler
         '',
         '',
         '',
-        refresh_token,
+        serializeObject({ access_token, refresh_token, expires_in }),
         new Date(Date.now() + 100 * 24 * 60 * 60 * 1000),
       );
     }

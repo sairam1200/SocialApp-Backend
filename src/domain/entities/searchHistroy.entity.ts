@@ -12,4 +12,9 @@ export class SearchHistory extends BaseEntity {
 
   @Column()
   userId?: string;
+
+  constructor(request: Partial<SearchHistory> = {}) {
+    super();
+    Object.assign(this, request);
+  }
 }

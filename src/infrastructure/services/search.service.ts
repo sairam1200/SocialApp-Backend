@@ -1,6 +1,5 @@
 import axios from "axios";
 import _const from "../../core/utils/const";
-import fuseUtil from "../../core/utils/fuse.util";
 import logger from "../../core/utils/winston.util";
 import { Inject, Injectable } from "@nestjs/common";
 import { ISearchService } from "../../domain/services/isearch.service";
@@ -13,8 +12,6 @@ export class SearchService implements ISearchService {
   constructor(
     @Inject(_const.ICONTENTSTREAM_REPOSITORY)
     private readonly contenStreamRepository: IContentStreamRepository,
-    @Inject(_const.ISEARCHHISTORY_REPOSITORY)
-    private readonly searchHistoryRepository: ISearchHistoryRepository,
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
   ) { }
@@ -45,17 +42,15 @@ export class SearchService implements ISearchService {
   }
 
   public async searchYoutubeAsync(
-    searchTerm: string,
+    originalQuery: string,
     limit: number,
     filters: Record<string, string | number>,
     accessToken?: string
   ): Promise<any> {
 
 
-    let normalizedQuery = await this.normalizeQuery(searchTerm);
     // TODO: figure out when to save the query
-
-    const ytResponse = await this.fetchYouTubeVideos(normalizedQuery, limit, filters, accessToken);
+    const ytResponse = await this.fetchYouTubeVideos(originalQuery, limit, filters, accessToken);
   }
 
   private async fetchYouTubeVideos(
@@ -96,17 +91,6 @@ export class SearchService implements ISearchService {
         items: [],
       };
     }
-  }
-
-  private async normalizeQuery(query: string): Promise<string> {
-
-    const searchHistory = await this.searchHistoryRepository.findSimilarQueriesAsync(query);
-    if (searchHistory.length > 0) {
-      const queries = searchHistory.map(item => item.normalizedQuery);
-      return fuseUtil.normalizeSearchTerm(query, queries);
-    }
-
-    return fuseUtil.normalizeSearchTerm(query, []);
   }
 
 }
