@@ -142,6 +142,12 @@ const envVarsSchema = Joi.object()
       .description('TikTok OAuth client secret'),
     TIKTOK_CALLBACK_URL: Joi.string()
       .description('TikTok OAuth callback URL'),
+    LINKEDIN_CLIENT_ID: Joi.string()
+      .description('LinkedIn OAuth client ID'),
+    LINKEDIN_CLIENT_SECRET: Joi.string()
+      .description('LinkedIn OAuth client secret'),
+    LINKEDIN_CALLBACK_URL: Joi.string()
+      .description('LinkedIn OAuth callback URL'),
     TOKEN_EXPIRATION_TIME: Joi.number()
       .default(900000)
       .description('Token expiration time in milliseconds'),
@@ -311,5 +317,10 @@ export default {
   },
   turnstile: {
     secretKey: envVars.TURNSTILE_SECRET_KEY,
+  },
+  linkedin: {
+    clientId: envVars.LINKEDIN_CLIENT_ID,
+    clientSecret: envVars.LINKEDIN_CLIENT_SECRET,
+    redirectUri: envVars.LINKEDIN_CALLBACK_URL,
   },
 }
