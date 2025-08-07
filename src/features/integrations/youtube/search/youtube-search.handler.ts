@@ -6,8 +6,8 @@ import _const from "../../../../core/utils/const";
 import fuseUtil from "../../../../core/utils/fuse.util";
 import logger from "../../../../core/utils/winston.util";
 import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
+import { SearchHistory } from "../../../../domain/entities";
 import { ApplicationException } from "../../../../core/exceptions";
-import { SearchHistory, UserLogin } from "../../../../domain/entities";
 import { ISearchService } from "../../../../domain/services/isearch.service";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
@@ -52,7 +52,6 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
     if (youtubeAccessToken) {
       const isTokenValid = await this.verifyAccessTokenAsync(youtubeAccessToken);
       if (!isTokenValid) {
-
         const now = new Date();
         const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.YOUTUBE);
 

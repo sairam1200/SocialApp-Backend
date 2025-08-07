@@ -15,6 +15,8 @@ export class YoutubeSearchController {
     private readonly queryBus: QueryBus
   ) { }
 
+ 
+
   @Post('search')
   @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 200, description: 'OK' })
@@ -23,11 +25,13 @@ export class YoutubeSearchController {
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   @ApiBody({ type: YoutubeSearchRequestModel })
   public async Search(
-    @Body() model: YoutubeSearchRequestModel,
-    @Res() res: Response
+      @Body() model: YoutubeSearchRequestModel,
+      @Res() res: Response
   ): Promise<Response | void> {
 
-    const result = await this.queryBus.execute(new YoutubeSearchQuery({ model }));
-    return res.status(HttpStatus.OK).json(result);
+      const result = await this.queryBus.execute(new YoutubeSearchQuery({ model }));
+      return res.status(HttpStatus.OK).json(result);
+
   }
+   
 }
