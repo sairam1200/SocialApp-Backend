@@ -107,15 +107,16 @@ export class YoutubeConnectCallbackQueryHandler
     console.log(userData);
 
     const user = configs.env !== "production" ? await this.userRepository.getUserByIdAsync(dataProtectionKey.userId) : await this.userRepository.getUserByEmailAsync(userData.profile.email);
-
     if (!user || user.id !== dataProtectionKey.userId) {
       throw new UserNotFoundException(userData.profile.email, 'email');
     }
-    let linkedAccount =
-      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-        _const.PLATFORMS.YOUTUBE,
-        user.id,
-      );
+
+    const existingAccount = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(_const.PLATFORMS.YOUTUBE, userData.channel.items[0].id);
+    if (existingAccount && existingAccount.userId !== user.id) {
+      throw new ApplicationException('This Youtube account is already connected to another user.');
+    }
+
+    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.YOUTUBE, user.id);
     if (linkedAccount) {
       console.log(linkedAccount);
       linkedAccount.userName = '';
