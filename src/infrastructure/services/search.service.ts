@@ -2,9 +2,12 @@ import axios from "axios";
 import _const from "../../core/utils/const";
 import logger from "../../core/utils/winston.util";
 import { Inject, Injectable } from "@nestjs/common";
+import { LinkedAccount, UserContent } from "../../domain/entities";
+import { QueryOptions } from "../../domain/types/queryOptions.type";
 import { ISearchService } from "../../domain/services/isearch.service";
-import { YouTubeSearchResponseModel } from "../../domain/contracts/youtube.model";
-import { IContentStreamRepository, ISearchHistoryRepository, IUserContentRepository } from "../../domain/repositories";
+import limitAllocatorUtil, { SectionSkipMap } from "../../core/utils/limitAllocator.util";
+import { YouTubeSearchParamsModel, YouTubeSearchResponseModel } from "../../domain/contracts/youtube.model";
+import { IContentStreamRepository, ILinkedAccountRepository, IUserContentRepository } from "../../domain/repositories";
 
 @Injectable()
 export class SearchService implements ISearchService {
@@ -14,6 +17,8 @@ export class SearchService implements ISearchService {
     private readonly contenStreamRepository: IContentStreamRepository,
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
+    @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
+    private readonly linkedAccountRepository: ILinkedAccountRepository,
   ) { }
 
   public async searchFacebookAsync(access_token: string): Promise<any> {
@@ -41,16 +46,56 @@ export class SearchService implements ISearchService {
     return;
   }
 
-  public async searchYoutubeAsync(
-    originalQuery: string,
-    limit: number,
-    filters: Record<string, string | number>,
-    accessToken?: string
-  ): Promise<any> {
+  public async searchYoutubeAsync(params: YouTubeSearchParamsModel): Promise<any> {
 
+    const { filters, limit, normalizedQuery, originalQuery, accessToken, pageToken, page } = params;
+    const skipUserContentSearch = filters.type && !['video', 'playlist'].includes(filters.type);
+    const skipLinkedAccountSearch = filters.type && !['channel'].includes(filters.type);
+
+    const skips: SectionSkipMap = {
+      contentStream: false,
+      userContent: skipUserContentSearch,
+      linkedAccount: skipLinkedAccountSearch,
+      online: false
+    };
+
+    const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
+
+    const [contentStreamResults, userContentResults, linkedAccountResults, ytOnlineResults] = await Promise.all([
+      this.searchContentStreamAsync(false, {page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.contentStream } as QueryOptions),
+      this.searchUserContentAsync(skipUserContentSearch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.userContent } as QueryOptions),
+      this.searchLinkedAccountAsync(skipLinkedAccountSearch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.linkedAccount } as QueryOptions),
+      this.fetchYouTubeVideos(originalQuery, sectionLimits.online, filters, accessToken)
+    ]);
 
     // TODO: figure out when to save the query
-    const ytResponse = await this.fetchYouTubeVideos(originalQuery, limit, filters, accessToken);
+  }
+
+  private async searchLinkedAccountAsync(skipSearch: boolean, params: QueryOptions): Promise<[LinkedAccount[], number]> {
+
+    if (skipSearch) {
+      return [[], 0]
+    }
+
+    return await this.linkedAccountRepository.getEntriesAsync(params);
+  }
+
+  private async searchUserContentAsync(skipSearch: boolean, params: QueryOptions): Promise<[UserContent[], number]> {
+
+    if (skipSearch) {
+      return [[], 0]
+    }
+
+    return await this.userContentRepository.getEntriesAsync(params);
+  }
+
+  private async searchContentStreamAsync(skipSearch: boolean, params: QueryOptions): Promise<[UserContent[], number]> {
+
+    if (skipSearch) {
+      return [[], 0]
+    }
+
+    return await this.userContentRepository.getEntriesAsync(params);
   }
 
   private async fetchYouTubeVideos(
@@ -66,7 +111,6 @@ export class SearchService implements ISearchService {
         params: {
           part: 'snippet',
           q: query,
-          type: 'video',
           maxResults: limit,
           ...filters,
         },
@@ -92,5 +136,4 @@ export class SearchService implements ISearchService {
       };
     }
   }
-
 }

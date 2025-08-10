@@ -128,3 +128,27 @@ export class YoutubeProfileModel {
     thumbthumbnail: string;
   };
 }
+
+export class YouTubeSearchParamsModel {
+
+  @ApiProperty()
+  page: number;
+
+  @ApiProperty()
+  originalQuery: string;
+
+  @ApiProperty()
+  normalizedQuery: string;
+
+  @ApiProperty()
+  limit: number;
+
+  @ApiProperty()
+  accessToken?: string;
+
+  @ApiProperty()
+  filters?: Record<string, any>;
+
+  @ApiProperty()
+  pageToken?: string;
+}

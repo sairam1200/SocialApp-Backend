@@ -6,6 +6,7 @@ import { LinkedAccount } from "../../domain/entities/linkedAccount.entity";
 import { HttpContext } from "../../core/middlewares/httpContext.middleware";
 import { ILinkedAccountRepository } from "../../domain/repositories/ilinkedAccount.repository";
 import { LinkedAccountAlreadyExistsException } from "../../core/exceptions/linkedAccount.exception";
+import { QueryOptions } from "domain/types/queryOptions.type";
 
 @Injectable()
 export class LinkedAccountRepository implements ILinkedAccountRepository {
@@ -72,4 +73,53 @@ export class LinkedAccountRepository implements ILinkedAccountRepository {
     return await this.linkedAccountContext.remove(linkedAccount);
   }
 
+  public async getEntriesAsync(params: QueryOptions): Promise<[LinkedAccount[], number]> {
+
+    let { page, pageSize, orderBy, order, searchQuery, filter } = params;
+    const queryBuilder = this.linkedAccountContext.createQueryBuilder("account");
+
+    if (!orderBy) {
+      orderBy = "userName";
+    }
+
+    const whereConditions: string[] = [];
+    const parameters: any = {};
+
+    if (searchQuery) {
+      whereConditions.push("(account.userName ILIKE :searchQuery");
+      parameters.searchQuery = `%${searchQuery}%`;
+    }
+
+    if (filter?.platform) {
+      whereConditions.push("account.platform = :platform");
+      parameters.platform = filter.platform;
+    }
+
+    if (filter?.userId) {
+      whereConditions.push("account.userId = :userId");
+      parameters.userId = filter.userId;
+    }
+
+    if (whereConditions.length > 0) {
+      queryBuilder.where(whereConditions.join(" AND "), parameters);
+    }
+
+    if (searchQuery) {
+      queryBuilder.orderBy(
+        `CASE WHEN account.userName ILIKE :exactSearch THEN 0 
+               WHEN account.userName ILIKE :searchQuery THEN 1 
+               ELSE 2 END`,
+        "ASC"
+      )
+        .addOrderBy(`account.${orderBy}`, order)
+        .setParameter("exactSearch", searchQuery.toLowerCase());
+    } else {
+      queryBuilder.orderBy(`account.${orderBy}`, order);
+    }
+
+    queryBuilder.skip((page - 1) * pageSize)
+      .take(pageSize);
+
+    return await queryBuilder.getManyAndCount();
+  }
 }
