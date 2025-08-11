@@ -2,7 +2,7 @@ import axios from "axios";
 import _const from "../../core/utils/const";
 import logger from "../../core/utils/winston.util";
 import { Inject, Injectable } from "@nestjs/common";
-import { LinkedAccount, UserContent } from "../../domain/entities";
+import { ContentStream, LinkedAccount, UserContent } from "../../domain/entities";
 import { QueryOptions } from "../../domain/types/queryOptions.type";
 import { ISearchService } from "../../domain/services/isearch.service";
 import limitAllocatorUtil, { SectionSkipMap } from "../../core/utils/limitAllocator.util";
@@ -49,8 +49,14 @@ export class SearchService implements ISearchService {
   public async searchYoutubeAsync(params: YouTubeSearchParamsModel): Promise<any> {
 
     const { filters, limit, normalizedQuery, originalQuery, accessToken, pageToken, page } = params;
+
+    if (!filters?.platform || filters.platform !== _const.PLATFORMS.YOUTUBE) {
+      filters.platform = _const.PLATFORMS.YOUTUBE;
+    }
+
     const skipUserContentSearch = filters.type && !['video', 'playlist'].includes(filters.type);
     const skipLinkedAccountSearch = filters.type && !['channel'].includes(filters.type);
+    const skipOnlineSearch = page > 1 && !pageToken;
 
     const skips: SectionSkipMap = {
       contentStream: false,
@@ -62,13 +68,27 @@ export class SearchService implements ISearchService {
     const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
 
     const [contentStreamResults, userContentResults, linkedAccountResults, ytOnlineResults] = await Promise.all([
-      this.searchContentStreamAsync(false, {page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.contentStream } as QueryOptions),
+      this.searchContentStreamAsync(false, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.contentStream } as QueryOptions),
       this.searchUserContentAsync(skipUserContentSearch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.userContent } as QueryOptions),
       this.searchLinkedAccountAsync(skipLinkedAccountSearch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.linkedAccount } as QueryOptions),
-      this.fetchYouTubeVideos(originalQuery, sectionLimits.online, filters, accessToken)
+      this.fetchYouTubeVideos(skipOnlineSearch, originalQuery, sectionLimits.online, filters, accessToken)
     ]);
 
-    // TODO: figure out when to save the query
+    if (contentStreamResults[0].length !== 0) {
+
+    }
+
+    if (userContentResults[0].length !== 0) {
+
+    }
+
+    if (linkedAccountResults[0].length !== 0) {
+
+    }
+
+    if (ytOnlineResults.items.length !== 0) {
+
+    }
   }
 
   private async searchLinkedAccountAsync(skipSearch: boolean, params: QueryOptions): Promise<[LinkedAccount[], number]> {
@@ -89,31 +109,45 @@ export class SearchService implements ISearchService {
     return await this.userContentRepository.getEntriesAsync(params);
   }
 
-  private async searchContentStreamAsync(skipSearch: boolean, params: QueryOptions): Promise<[UserContent[], number]> {
+  private async searchContentStreamAsync(skipSearch: boolean, params: QueryOptions): Promise<[ContentStream[], number]> {
 
     if (skipSearch) {
       return [[], 0]
     }
 
-    return await this.userContentRepository.getEntriesAsync(params);
+    return await this.contenStreamRepository.getEntriesAsync(params);
   }
 
   private async fetchYouTubeVideos(
+    skipSearch: boolean,
     query: string,
     limit: number,
-    filters: Record<string, string | number>,
-    accessToken: string
+    filters: Record<string, string | number> = {},
+    accessToken: string,
+    pageToken?: string,
   ): Promise<YouTubeSearchResponseModel> {
+
+    const emptyResult = { kind: '', etag: '', regionCode: '', pageInfo: { totalResults: 0, resultsPerPage: 0, }, items: [] };
+    if (skipSearch) {
+      return emptyResult;
+    }
+
     try {
       const baseUrl = 'https://www.googleapis.com/youtube/v3/search';
 
+      const params: Record<string, string | number> = {
+        part: 'snippet',
+        q: query,
+        maxResults: limit,
+        ...filters,
+      };
+
+      if (pageToken) {
+        params.pageToken = pageToken;
+      }
+
       const response = await axios.get<YouTubeSearchResponseModel>(baseUrl, {
-        params: {
-          part: 'snippet',
-          q: query,
-          maxResults: limit,
-          ...filters,
-        },
+        params,
         headers: {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
@@ -121,19 +155,11 @@ export class SearchService implements ISearchService {
       });
 
       return response.data;
-    } catch (error) {
-      logger.error('Error fetching YouTube videos:', error);
+    } catch (error: any) {
+      logger.error('Error fetching YouTube videos:', error?.response?.data || error.message || error);
 
-      return {
-        kind: '',
-        etag: '',
-        regionCode: '',
-        pageInfo: {
-          totalResults: 0,
-          resultsPerPage: 0,
-        },
-        items: [],
-      };
+      return emptyResult;
     }
   }
+
 }
