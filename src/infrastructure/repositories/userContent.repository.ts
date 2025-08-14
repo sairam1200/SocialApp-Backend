@@ -76,7 +76,7 @@ export class UserContentRepository implements IUserContentRepository {
             content.title ILIKE :searchQuery
             OR EXISTS (
               SELECT 1
-              FROM jsonb_each_text(content.metaData) AS kv(key, value)
+              FROM json_each_text(content.metaData) AS kv(key, value)
               WHERE value ILIKE :searchQuery
             )
           )
@@ -124,7 +124,7 @@ export class UserContentRepository implements IUserContentRepository {
 
     queryBuilder.skip((page - 1) * pageSize)
       .take(pageSize);
-
-    return await queryBuilder.getManyAndCount();
+ 
+      return await queryBuilder.getManyAndCount();
   }
 }

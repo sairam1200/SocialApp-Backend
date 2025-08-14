@@ -33,7 +33,7 @@ export class ContentStreamRepository implements IContentStreamRepository {
           content.title ILIKE :searchQuery
           OR EXISTS (
             SELECT 1
-            FROM jsonb_each_text(content.metaData) AS kv(key, value)
+            FROM json_each_text(content.metaData) AS kv(key, value)
             WHERE value ILIKE :searchQuery
           )
         )
@@ -65,7 +65,7 @@ export class ContentStreamRepository implements IContentStreamRepository {
     if (whereConditions.length > 0) {
       queryBuilder.where(whereConditions.join(" AND "), parameters);
     }
-
+  
     if (searchQuery) {
       queryBuilder.orderBy(
         `CASE WHEN content.title ILIKE :exactSearch THEN 0 
@@ -81,7 +81,7 @@ export class ContentStreamRepository implements IContentStreamRepository {
 
     queryBuilder.skip((page - 1) * pageSize)
       .take(pageSize);
-
-    return await queryBuilder.getManyAndCount();
+    
+      return await queryBuilder.getManyAndCount();
   }
 }

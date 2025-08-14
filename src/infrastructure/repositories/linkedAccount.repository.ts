@@ -86,7 +86,7 @@ export class LinkedAccountRepository implements ILinkedAccountRepository {
     const parameters: any = {};
 
     if (searchQuery) {
-      whereConditions.push("(account.userName ILIKE :searchQuery");
+      whereConditions.push("(account.userName ILIKE :searchQuery)");
       parameters.searchQuery = `%${searchQuery}%`;
     }
 
@@ -119,7 +119,7 @@ export class LinkedAccountRepository implements ILinkedAccountRepository {
 
     queryBuilder.skip((page - 1) * pageSize)
       .take(pageSize);
-
-    return await queryBuilder.getManyAndCount();
+     
+      return await queryBuilder.getManyAndCount();
   }
 }

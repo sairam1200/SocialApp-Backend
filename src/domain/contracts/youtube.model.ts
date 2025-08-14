@@ -1,4 +1,6 @@
+
 import { ApiProperty } from "@nestjs/swagger";
+import { LinkedAccount } from "domain/entities";
 
 export class GoogleUserDataModel {
   id: string;
@@ -82,6 +84,37 @@ interface YoutubeChannelModel {
     };
   };
 }
+export interface SearchResponseModel{
+  query: string;
+  sections:{
+    channals: SearchSectionResponseModel[];
+    videos: SearchSectionResponseModel[];
+    shorts: SearchSectionResponseModel[];
+    playList: SearchSectionResponseModel[];
+    accounts: LinkedAccount[];
+    subscriptions: SearchSectionResponseModel[],
+    playlist: SearchSectionResponseModel[],
+    playlist_video: SearchSectionResponseModel[]
+    activities: SearchSectionResponseModel[]
+    pageInfo?: {
+      page: number;
+      pageSize: number;
+    }
+
+  }
+}
+
+export interface SearchSectionResponseModel{
+  id: string
+  userId?: string;
+  type: string;
+  title?: string;
+  platform: string;
+  externalId?: string;
+  metaData?: Record<string, any>;
+
+}
+
 
 export class YoutubeProfileModel {
   @ApiProperty()

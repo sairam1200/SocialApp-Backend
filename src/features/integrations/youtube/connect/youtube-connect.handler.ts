@@ -119,7 +119,7 @@ export class YoutubeConnectCallbackQueryHandler
     let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.YOUTUBE, user.id);
     if (linkedAccount) {
       console.log(linkedAccount);
-      linkedAccount.userName = '';
+      linkedAccount.userName = userData.profile.name;
       linkedAccount.profileImage = userData.profile.picture;
       linkedAccount.externalUrl = `https://www.youtube.com/channel/${userData.channel.items[0].id}`;
       (linkedAccount.followersCount = Number.parseInt(
@@ -147,7 +147,7 @@ export class YoutubeConnectCallbackQueryHandler
           userId: user.id,
           email: userData.profile.email,
           externalId: userData.profile.id,
-          userName: '',
+          userName: userData.profile.name,
           profileImage: userData.profile.picture,
           externalUrl: `https://www.youtube.com/channel/${userData.channel.items[0].id}`,
           followersCount: Number.parseInt(

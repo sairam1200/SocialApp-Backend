@@ -96,7 +96,7 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
     }
 
     const normalizedQuery = await this.normalizeQueryAsync(searchTerm);
-    const data = await this.searchService.searchYoutubeAsync(normalizedQuery, 25, filter, accessToken);
+    const data = await this.searchService.searchYoutubeAsync({ page : 1, normalizedQuery, originalQuery : searchTerm, limit : 25, filters : filter, accessToken});
     return data
   }
 

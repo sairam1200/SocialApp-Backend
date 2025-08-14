@@ -6,7 +6,7 @@ import { ContentStream, LinkedAccount, UserContent } from "../../domain/entities
 import { QueryOptions } from "../../domain/types/queryOptions.type";
 import { ISearchService } from "../../domain/services/isearch.service";
 import limitAllocatorUtil, { SectionSkipMap } from "../../core/utils/limitAllocator.util";
-import { YouTubeSearchParamsModel, YouTubeSearchResponseModel } from "../../domain/contracts/youtube.model";
+import {  SearchResponseModel, SearchSectionResponseModel, YouTubeSearchParamsModel, YouTubeSearchResponseModel } from "../../domain/contracts/youtube.model";
 import { IContentStreamRepository, ILinkedAccountRepository, IUserContentRepository } from "../../domain/repositories";
 
 @Injectable()
@@ -46,9 +46,31 @@ export class SearchService implements ISearchService {
     return;
   }
 
-  public async searchYoutubeAsync(params: YouTubeSearchParamsModel): Promise<any> {
+  public async searchYoutubeAsync(params: YouTubeSearchParamsModel): Promise<SearchResponseModel> {
+    const response: SearchResponseModel = {
+      query: "",
+      sections: {
+        channals: [],
+        videos: [],
+        shorts: [],
+        playList: [],
+        accounts: [],
+        subscriptions: [],
+        playlist: [],
+        playlist_video: [],
+        activities:[],
+        pageInfo: {
+          page: 0,
+          pageSize: 0
+        }
 
+      }
+
+    }
+    console.debug('Search Params:', params);
     const { filters, limit, normalizedQuery, originalQuery, accessToken, pageToken, page } = params;
+
+    response.query=originalQuery
 
     if (!filters?.platform || filters.platform !== _const.PLATFORMS.YOUTUBE) {
       filters.platform = _const.PLATFORMS.YOUTUBE;
@@ -75,20 +97,185 @@ export class SearchService implements ISearchService {
     ]);
 
     if (contentStreamResults[0].length !== 0) {
+      console.log('Content Stream Results:', contentStreamResults[0]);
 
     }
 
     if (userContentResults[0].length !== 0) {
+      userContentResults[0].forEach((content : UserContent)=>{
+        if(content.type==="channel"){
+          const channal : SearchSectionResponseModel= {
+            id: content.id,
+            userId: content.userId,
+            type: content.type,
+            title: content.title,
+            platform: content.platform,
+            externalId:  content.externalId,
+            metaData:{
+              description: content.metaData.desciption,
+              thumbnails: content.metaData.thumbnails ,
+              statistics: content.metaData.statistics,
+            }
+           
+          }
+          response.sections.channals.push(channal)
+        }else if(content.type === "uploaded_video"){
+          const uploaded_video : SearchSectionResponseModel =  {
+            id: content.id,
+            userId: content.userId,
+            title: content.title,
+            type: content.type,
+            platform: content.platform,
+            externalId: content.externalId,
+            metaData: {
+              externalId: content.externalId,
+              description: content.metaData.desciption,
+              videoId: content.metaData.videoId,
+              thumbnails: content.metaData.thumbnails
+            }
+
+          }
+          response.sections.videos.push(uploaded_video)
+        }else if(content.type === "activity"){
+          const activity : SearchSectionResponseModel =  {
+            id: content.id,
+            userId: content.userId,
+            title: content.title,
+            type: content.type,
+            externalId: content.externalId,
+            platform: content.platform,
+            metaData:{
+              publishedAt: content.metaData.publishedAt,
+              channelId: content.metaData.channelId,
+              description: content.metaData.desciption,
+              thumbnails: content.metaData.thumbnails
+            }
+          } 
+          response.sections.activities.push(activity)
+        }else if(content.type === "playlist_video"){
+          const playlistVideo : SearchSectionResponseModel = {
+            id: content.id,
+            userId: content.userId,
+            title: content.title,
+            type: content.type,
+            externalId: content.externalId,
+            platform: content.platform,
+            metaData: {
+              videoId: content.metaData.videoId,
+              publishedAt: content.metaData.publishedAt,
+              description: content.metaData.description,
+              thumbnails: content.metaData.thumbnails,
+              playlistId: content.metaData.playlistId
+            }
+
+          }
+          response.sections.playlist_video.push(playlistVideo)
+        }else if(content.type === "playlist"){
+          const playList: SearchSectionResponseModel ={
+            id: content.id,
+            userId: content.userId,
+            title: content.title,
+            type: content.type,
+            externalId: content.externalId,
+            platform: content.platform,
+            metaData:{
+              playlistId: content.metaData.playlistId,
+              description: content.metaData.description,
+              itemCount: content.metaData.itemCount,
+              publishedAt: content.metaData.publishedAt,
+              thumbnails: content.metaData.thumbnails
+            }
+          }
+          response.sections.playList.push(playList)
+        }else if(content.type === "subscription"){
+          const subscription : SearchSectionResponseModel = {
+            id: content.id,
+            userId: content.userId,
+            title: content.title,
+            type: content.type,
+            externalId: content.externalId,
+            platform: content.platform,
+            metaData: {
+              description: content.metaData.description,
+              publishedAt: content.metaData.publishedAt,
+              thumbnails: content.metaData.thumbnails
+            }
+          }
+          response.sections.subscriptions.push(subscription)
+        }
+      })
+      console.log('User Content Results:', userContentResults[0]);
 
     }
 
     if (linkedAccountResults[0].length !== 0) {
+      linkedAccountResults[0].forEach((account:LinkedAccount)=>{
+        response.sections.accounts.push(account)
+      })
+      console.log('Linked Account Results:', linkedAccountResults[0]);
 
     }
 
     if (ytOnlineResults.items.length !== 0) {
+      ytOnlineResults.items.forEach((content)=>{
+        if(content.id.kind==="youtube#channel"){
+          const channal : SearchSectionResponseModel= {
+            id: content.id.channelId,
+            type: content.id.kind,
+            title: content.snippet.title,
+            platform: _const.PLATFORMS.YOUTUBE,
+            metaData:{
+              description: content.snippet.description,
+              thumbnails: content.snippet.thumbnails ,
+              channelTitle: content.snippet.channelTitle,
+              etag: content.etag,
+              liveBroadcastContent: content.snippet.liveBroadcastContent,
+              publishedAt: content.snippet.publishedAt,
+            }
+           
+          }
+          response.sections.channals.push(channal)
+        }else if(content.id.kind === "youtube#video"){
+          const video : SearchSectionResponseModel =  {
+            id: content.id.channelId,
+            type: content.id.kind,
+            title: content.snippet.title,
+            platform: _const.PLATFORMS.YOUTUBE,
+            metaData:{
+              description: content.snippet.description,
+              thumbnails: content.snippet.thumbnails ,
+              channelTitle: content.snippet.channelTitle,
+              etag: content.etag,
+              liveBroadcastContent: content.snippet.liveBroadcastContent,
+              publishedAt: content.snippet.publishedAt,
+            
+            }
+
+          }
+          response.sections.videos.push(video)
+        }else  if(content.id.kind === "youtube#playlist"){
+          const playlist : SearchSectionResponseModel =  {
+            id: content.id.playlistId,
+            type: content.id.kind,
+            platform: _const.PLATFORMS.YOUTUBE,
+            metaData:{
+              description: content.snippet.description,
+              thumbnails: content.snippet.thumbnails ,
+              channelTitle: content.snippet.channelTitle,
+              etag: content.etag,
+              liveBroadcastContent: content.snippet.liveBroadcastContent,
+              publishedAt: content.snippet.publishedAt,
+              playlistId: content.id.playlistId
+            }
+
+          }
+          response.sections.playlist.push(playlist)
+        }
+      })
+      console.log('YouTube Online Results:', ytOnlineResults.items);
 
     }
+    return response
   }
 
   private async searchLinkedAccountAsync(skipSearch: boolean, params: QueryOptions): Promise<[LinkedAccount[], number]> {
