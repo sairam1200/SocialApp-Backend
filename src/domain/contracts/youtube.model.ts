@@ -1,6 +1,7 @@
 
 import { ApiProperty } from "@nestjs/swagger";
 import { LinkedAccount } from "domain/entities";
+import { LinkedInProfileModel } from "./linkedin.model";
 
 export class GoogleUserDataModel {
   id: string;
@@ -43,35 +44,33 @@ export interface YoutubeSearchItemModel {
     channelId: string;
     title: string;
     description: string;
-    thumbnails: {
-      default: { url: string };
-      medium: { url: string };
-      high: { url: string };
-      standard: { url: string };
-      maxres: { url: string };
-    };
+    thumbnails: YoutubeThumbnails;
     channelTitle: string;
     liveBroadcastContent?: string;
   };
 }
+interface YoutubeThumbnails {
+  default: { url: string };
+  medium: { url: string };
+  high: { url: string };
+  standard: { url: string };
+  maxres: { url: string };
+};
+interface YoutubeStatistics {
+  viewCount: string; // Total views
+  subscriberCount: string; // Total subscribers
+  hiddenSubscriberCount: boolean; // Whether subscribers are hidden
+  videoCount: string; // Number of videos uploaded
+};
 interface YoutubeChannelModel {
   kind: string;
   id: string; // Channel ID
   snippet: {
     title: string; // Channel title
     description: string; // Channel description
-    thumbnails: {
-      default: { url: string };
-      medium: { url: string };
-      high: { url: string };
-    };
+    thumbnails: YoutubeThumbnails;
   };
-  statistics: {
-    viewCount: string; // Total views
-    subscriberCount: string; // Total subscribers
-    hiddenSubscriberCount: boolean; // Whether subscribers are hidden
-    videoCount: string; // Number of videos uploaded
-  };
+  statistics: YoutubeStatistics;
   contentDetails: {
     relatedPlaylists: {
       uploads: string; // Playlist ID for the user's uploaded videos
@@ -87,15 +86,14 @@ interface YoutubeChannelModel {
 export interface SearchResponseModel{
   query: string;
   sections:{
-    channals: SearchSectionResponseModel[];
-    videos: SearchSectionResponseModel[];
-    shorts: SearchSectionResponseModel[];
-    playList: SearchSectionResponseModel[];
-    accounts: LinkedAccount[];
-    subscriptions: SearchSectionResponseModel[],
-    playlist: SearchSectionResponseModel[],
-    playlist_video: SearchSectionResponseModel[]
-    activities: SearchSectionResponseModel[]
+    UserContentChannals: YoutubeChannelInfoModel[];
+    UserContentvideos: YoutubeUploadedVideosModel[];
+    UserContentshorts: YoutubeUploadedVideosModel[];
+    UserContentplayList: YoutubePlaylistModel[];
+    accounts: LinkedInProfileModel[];
+    UserContentsubscriptions: YoutubeSubscriptionsModel[],
+    UserContentplaylist_video: YoutubePlaylistVideoModel[]
+    UserContentactivities: YoutubeActivitiesModel[]
     pageInfo?: {
       page: number;
       pageSize: number;
@@ -115,6 +113,73 @@ export interface SearchSectionResponseModel{
 
 }
 
+export interface YoutubeSubscriptionsModel{
+  id: string;
+  type: string;
+  title: string;
+  externalId: string;
+  description: string;
+  publishedAt: Date;
+  thumbnails: YoutubeThumbnails;
+}
+export interface YoutubePlaylistModel {
+  id: string;
+  title: string;
+  type: string;
+  externalId: string;
+  platfrom: string;
+  playlistId: string;
+  description: string;
+  itemCount: number;
+  publishedAt: Date;
+  thumbnails: YoutubeThumbnails;
+}
+
+export interface YoutubePlaylistVideoModel {
+  id: string;
+  platform: string;
+  type: string;
+  title: string;
+  externalId: string;
+  videoId: string;
+  publishedAt: Date;
+  description: string;
+  thumbnails: YoutubeThumbnails;
+  playlistId: string;
+}
+
+export interface YoutubeActivitiesModel {
+  id: string;
+  type: string;
+  title: string;
+  externalId: string;
+  publishedAt: Date;
+  channelId: string;
+  description: string;
+  thumbnails: YoutubeThumbnails;
+}
+export interface YoutubeChannelInfoModel {
+  id: string;
+  type: string;
+  title: string;
+  externalId: string;
+  description: string;
+  publishedAt: string;
+  thumbnails: YoutubeThumbnails;
+  statistics: YoutubeStatistics;
+}
+export interface YoutubeUploadedVideosModel {
+  id: string;
+  platform: string;
+  type: string;
+  title: string;
+  externalId: string;
+  videoId: string;
+  publishedAt: Date;
+  description: string;
+  thumbnails: YoutubeThumbnails;
+  
+}
 
 export class YoutubeProfileModel {
   @ApiProperty()
