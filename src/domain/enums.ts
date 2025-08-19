@@ -31,3 +31,19 @@ export enum StreamEntityType {
     Content = "Content",
     Community = "Community",
 }
+
+export enum YouTubeUserContentFilters { 
+    Channals = "channel",
+    Videos = "uploaded_video",
+    Shorts = "short",
+    Playlists = "playlist",
+    Subscriptions = "subscription",
+    Activities = "activity",
+    PlaylistVideos = "playlist_video"
+}
+
+export enum YouTubeOnlineFilters {
+    Channals = "youtube#channel",
+    Videos = "youtube#video",
+    Playlists = "youtube#playlist"
+}

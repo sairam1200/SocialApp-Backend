@@ -1,6 +1,8 @@
 import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { SearchSectionResponseModel, YoutubeActivitiesModel, YoutubeChannelInfoModel, YoutubePlaylistModel, YoutubePlaylistVideoModel, YoutubeProfileModel, YoutubeSubscriptionsModel, YoutubeUploadedVideosModel } from "../contracts/youtube.model";
-import { User, UserContent } from "domain/entities";
+import { YoutubeActivitiesModel, YoutubeChannelInfoModel, YoutubePlaylistModel, YoutubePlaylistVideoModel, YoutubeProfileModel, YoutubeSubscriptionsModel, YoutubeVideosModel, YouTubeSearchResponseModel, YoutubeOnlineModel } from "../contracts/youtube.model";
+import { UserContent } from "domain/entities";
+import _const from "core/utils/const";
+import { YouTubeOnlineFilters } from "domain/enums";
 
 export function mapToYoutubeProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): YoutubeProfileModel {
   return {
@@ -41,8 +43,9 @@ export function mapToYoutubePlaylistModel(data: UserContent) : YoutubePlaylistMo
     playlistId: data.metaData.playlistId,
     description: data.metaData.description,
     itemCount: data.metaData.itemCount,
-    publishedAt: data.metaData,
+    publishedAt: data.metaData.publishedAt,
     thumbnails: data.metaData.thumbnails,
+    platfrom: _const.PLATFORMS.YOUTUBE,
  } as YoutubePlaylistModel
 } 
 
@@ -85,7 +88,7 @@ export function mapToYoutubeChannelInfoModel (data: UserContent): YoutubeChannel
     statistics: data.metaData.statistics,
   } as YoutubeChannelInfoModel
 }
-export function mapToYoutubeUploadedVideosModel(data: UserContent): YoutubeUploadedVideosModel{
+export function mapToYoutubeUploadedVideosModel(data: UserContent): YoutubeVideosModel{
   return  {
     id: data.id,
     platform: data.platform,
@@ -96,6 +99,31 @@ export function mapToYoutubeUploadedVideosModel(data: UserContent): YoutubeUploa
     publishedAt: data.metaData.publishedAt,
     description: data.metaData.description,
     thumbnails: data.metaData.thumbnails,
-  } as YoutubeUploadedVideosModel
+  } as YoutubeVideosModel
     
+}
+export function mapToYoutubeOnlineModel(data) : YoutubeOnlineModel {
+  let id = ""
+  if(data.id.kind == YouTubeOnlineFilters.Videos){
+    id = data.id.videoId
+  }else if(data.id.kind == YouTubeOnlineFilters.Channals){
+    id = data.id.channelId
+  }else if(data.id.kind == YouTubeOnlineFilters.Playlists){
+    id = data.id.playlistId
+  }
+  return {
+    id: id,
+    etag: data.etag,
+    title: data.snippet.title,
+    type: data.id.kind,
+    platform: _const.PLATFORMS.YOUTUBE,
+    channelId: data.snippet.channelId,
+    description: data.snippet.description,
+    thumbnails: data.snippet.thumbnails,
+    channelTitle: data.snippet.channelTitle,
+    liveBroadcastContent: data.snippet.liveBroadcastContent,
+    publishedAt: data.snippet.publishedAt,
+    publishTime: data.snippet.publishTime,
+  
+  } as YoutubeOnlineModel
 }

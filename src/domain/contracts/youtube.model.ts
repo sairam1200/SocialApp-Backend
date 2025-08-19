@@ -50,12 +50,12 @@ export interface YoutubeSearchItemModel {
   };
 }
 interface YoutubeThumbnails {
-  default: { url: string };
-  medium: { url: string };
-  high: { url: string };
-  standard: { url: string };
-  maxres: { url: string };
-};
+  default?: { url: string };
+  medium?: { url: string };
+  high?: { url: string };
+  standard?: { url: string };
+  maxres?: { url: string };
+}
 interface YoutubeStatistics {
   viewCount: string; // Total views
   subscriberCount: string; // Total subscribers
@@ -83,35 +83,9 @@ interface YoutubeChannelModel {
     };
   };
 }
-export interface SearchResponseModel{
-  query: string;
-  sections:{
-    UserContentChannals: YoutubeChannelInfoModel[];
-    UserContentvideos: YoutubeUploadedVideosModel[];
-    UserContentshorts: YoutubeUploadedVideosModel[];
-    UserContentplayList: YoutubePlaylistModel[];
-    accounts: LinkedInProfileModel[];
-    UserContentsubscriptions: YoutubeSubscriptionsModel[],
-    UserContentplaylist_video: YoutubePlaylistVideoModel[]
-    UserContentactivities: YoutubeActivitiesModel[]
-    pageInfo?: {
-      page: number;
-      pageSize: number;
-    }
 
-  }
-}
 
-export interface SearchSectionResponseModel{
-  id: string
-  userId?: string;
-  type: string;
-  title?: string;
-  platform: string;
-  externalId?: string;
-  metaData?: Record<string, any>;
 
-}
 
 export interface YoutubeSubscriptionsModel{
   id: string;
@@ -119,20 +93,26 @@ export interface YoutubeSubscriptionsModel{
   title: string;
   externalId: string;
   description: string;
-  publishedAt: Date;
+  publishedAt: String;
   thumbnails: YoutubeThumbnails;
 }
 export interface YoutubePlaylistModel {
   id: string;
   title: string;
   type: string;
-  externalId: string;
-  platfrom: string;
-  playlistId: string;
+  externalId?: string;
+  platfrom?: string;
+  playlistId?: string;
   description: string;
-  itemCount: number;
-  publishedAt: Date;
+  itemCount?: number;
+  publishedAt: string;
   thumbnails: YoutubeThumbnails;
+  etag?: string;
+  channelId?: string;
+  liveBroadcastContent?: string;
+  publishTime?: string;
+  channelTitle?: string;
+  
 }
 
 export interface YoutubePlaylistVideoModel {
@@ -140,12 +120,17 @@ export interface YoutubePlaylistVideoModel {
   platform: string;
   type: string;
   title: string;
-  externalId: string;
+  externalId?: string;
   videoId: string;
-  publishedAt: Date;
+  publishedAt: string;
   description: string;
   thumbnails: YoutubeThumbnails;
-  playlistId: string;
+  playlistId?: string;
+  etag?: string;
+  channelId?: string;
+  liveBroadcastContent?: string;
+  publishTime?: string;
+  channelTitle?: string;
 }
 
 export interface YoutubeActivitiesModel {
@@ -153,7 +138,7 @@ export interface YoutubeActivitiesModel {
   type: string;
   title: string;
   externalId: string;
-  publishedAt: Date;
+  publishedAt: string;
   channelId: string;
   description: string;
   thumbnails: YoutubeThumbnails;
@@ -162,24 +147,48 @@ export interface YoutubeChannelInfoModel {
   id: string;
   type: string;
   title: string;
-  externalId: string;
+  externalId?: string;
   description: string;
   publishedAt: string;
-  thumbnails: YoutubeThumbnails;
-  statistics: YoutubeStatistics;
+  thumbnails?: YoutubeThumbnails;
+  statistics?: YoutubeStatistics;
+  etag?: string;
+  channelId?: string;
+  liveBroadcastContent?: string;
+  publishTime?: string;
+  channelTitle?: string;
 }
-export interface YoutubeUploadedVideosModel {
+export interface YoutubeVideosModel {
   id: string;
   platform: string;
   type: string;
   title: string;
-  externalId: string;
-  videoId: string;
-  publishedAt: Date;
+  externalId?: string;
+  videoId?: string;
+  publishedAt: string;
   description: string;
   thumbnails: YoutubeThumbnails;
-  
+  etag?: string;
+  channelId?: string;
+  liveBroadcastContent?: string;
+  publishTime?: string;
+  channelTitle?: string;
 }
+export interface YoutubeOnlineModel{
+  id: string;
+  type: string;
+  platform: string;
+  description: string;
+  thumbnails: YoutubeThumbnails;
+  channelTitle: string;
+  etag: string;
+  liveBroadcastContent: string;
+  publishedAt: string;
+  channelId: string;
+  title: string;
+  publishTime: string;
+}
+
 
 export class YoutubeProfileModel {
   @ApiProperty()
@@ -249,4 +258,47 @@ export class YouTubeSearchParamsModel {
 
   @ApiProperty()
   pageToken?: string;
+}
+
+export class SearchResponseModel {
+
+  @ApiProperty()
+  query: string;
+  
+  @ApiProperty()
+  results: {
+    subscriptions: YoutubeSubscriptionsModel[],
+    playlistVideo: YoutubePlaylistVideoModel[],
+    activities: YoutubeActivitiesModel[],
+    channels: YoutubeChannelInfoModel[],  
+    videos: YoutubeVideosModel[],
+    shorts: YoutubeVideosModel[],
+    playlist: YoutubePlaylistModel[],
+    accounts: LinkedInProfileModel[];
+    pageInfo?: {
+      page: number;
+      pageToken: string;
+      pageSize: number;
+    }
+  };
+
+  constructor() {
+    this.query = "";
+    this.results = {
+      subscriptions: [],
+      playlistVideo: [],
+      activities: [],
+      channels: [],  
+      videos: [],
+      shorts: [],
+      playlist: [],
+      accounts: [],
+      pageInfo:  {
+        page: 0,
+        pageToken: "",
+        pageSize: 0,
+      }
+    };
+   
+  }
 }

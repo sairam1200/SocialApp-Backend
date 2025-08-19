@@ -6,8 +6,11 @@ import { ContentStream, LinkedAccount, UserContent } from "../../domain/entities
 import { QueryOptions } from "../../domain/types/queryOptions.type";
 import { ISearchService } from "../../domain/services/isearch.service";
 import limitAllocatorUtil, { SectionSkipMap } from "../../core/utils/limitAllocator.util";
-import {  SearchResponseModel, SearchSectionResponseModel, YouTubeSearchParamsModel, YouTubeSearchResponseModel } from "../../domain/contracts/youtube.model";
+import {  SearchResponseModel, YouTubeSearchParamsModel, YouTubeSearchResponseModel } from "../../domain/contracts/youtube.model";
 import { IContentStreamRepository, ILinkedAccountRepository, IUserContentRepository } from "../../domain/repositories";
+import { mapToLinkedInProfileModel } from "domain/mappers/linkedin.mapper";
+import { mapToYoutubeActivityModel, mapToYoutubeChannelInfoModel, mapToYoutubeOnlineModel, mapToYoutubePlaylisVideoModel, mapToYoutubePlaylistModel, mapToYoutubeSubscriptionsModel, mapToYoutubeUploadedVideosModel } from "domain/mappers/youtube.mapper";
+import { YouTubeUserContentFilters,YouTubeOnlineFilters } from "domain/enums";
 
 @Injectable()
 export class SearchService implements ISearchService {
@@ -47,26 +50,7 @@ export class SearchService implements ISearchService {
   }
 
   public async searchYoutubeAsync(params: YouTubeSearchParamsModel): Promise<SearchResponseModel> {
-    const response: SearchResponseModel = {
-      query: "",
-      sections: {
-        channals: [],
-        videos: [],
-        shorts: [],
-        playList: [],
-        accounts: [],
-        subscriptions: [],
-        playlist: [],
-        playlist_video: [],
-        activities:[],
-        pageInfo: {
-          page: 0,
-          pageSize: 0
-        }
-
-      }
-
-    }
+    const response = new SearchResponseModel();
     console.debug('Search Params:', params);
     const { filters, limit, normalizedQuery, originalQuery, accessToken, pageToken, page } = params;
 
@@ -75,13 +59,13 @@ export class SearchService implements ISearchService {
     if (!filters?.platform || filters.platform !== _const.PLATFORMS.YOUTUBE) {
       filters.platform = _const.PLATFORMS.YOUTUBE;
     }
-
+    const skipContentStreamSerch = filters.type && !["Profile","Content","Community"].includes(filters.type)
     const skipUserContentSearch = filters.type && !['video', 'playlist'].includes(filters.type);
     const skipLinkedAccountSearch = filters.type && !['channel'].includes(filters.type);
     const skipOnlineSearch = page > 1 && !pageToken;
 
     const skips: SectionSkipMap = {
-      contentStream: false,
+      contentStream: skipContentStreamSerch,
       userContent: skipUserContentSearch,
       linkedAccount: skipLinkedAccountSearch,
       online: false
@@ -90,7 +74,7 @@ export class SearchService implements ISearchService {
     const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
 
     const [contentStreamResults, userContentResults, linkedAccountResults, ytOnlineResults] = await Promise.all([
-      this.searchContentStreamAsync(false, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.contentStream } as QueryOptions),
+      this.searchContentStreamAsync(skipContentStreamSerch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.contentStream } as QueryOptions),
       this.searchUserContentAsync(skipUserContentSearch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.userContent } as QueryOptions),
       this.searchLinkedAccountAsync(skipLinkedAccountSearch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.linkedAccount } as QueryOptions),
       this.fetchYouTubeVideos(skipOnlineSearch, originalQuery, sectionLimits.online, filters, accessToken)
@@ -102,178 +86,63 @@ export class SearchService implements ISearchService {
     }
 
     if (userContentResults[0].length !== 0) {
+      console.log('User Content Results:', userContentResults[0]);
       userContentResults[0].forEach((content : UserContent)=>{
-        if(content.type==="channel"){
-          const channal : SearchSectionResponseModel= {
-            id: content.id,
-            userId: content.userId,
-            type: content.type,
-            title: content.title,
-            platform: content.platform,
-            externalId:  content.externalId,
-            metaData:{
-              description: content.metaData.desciption,
-              thumbnails: content.metaData.thumbnails ,
-              statistics: content.metaData.statistics,
-            }
-           
-          }
-          response.sections.channals.push(channal)
-        }else if(content.type === "uploaded_video"){
-          const uploaded_video : SearchSectionResponseModel =  {
-            id: content.id,
-            userId: content.userId,
-            title: content.title,
-            type: content.type,
-            platform: content.platform,
-            externalId: content.externalId,
-            metaData: {
-              externalId: content.externalId,
-              description: content.metaData.desciption,
-              videoId: content.metaData.videoId,
-              thumbnails: content.metaData.thumbnails
-            }
-
-          }
-          response.sections.videos.push(uploaded_video)
-        }else if(content.type === "activity"){
-          const activity : SearchSectionResponseModel =  {
-            id: content.id,
-            userId: content.userId,
-            title: content.title,
-            type: content.type,
-            externalId: content.externalId,
-            platform: content.platform,
-            metaData:{
-              publishedAt: content.metaData.publishedAt,
-              channelId: content.metaData.channelId,
-              description: content.metaData.desciption,
-              thumbnails: content.metaData.thumbnails
-            }
-          } 
-          response.sections.activities.push(activity)
-        }else if(content.type === "playlist_video"){
-          const playlistVideo : SearchSectionResponseModel = {
-            id: content.id,
-            userId: content.userId,
-            title: content.title,
-            type: content.type,
-            externalId: content.externalId,
-            platform: content.platform,
-            metaData: {
-              videoId: content.metaData.videoId,
-              publishedAt: content.metaData.publishedAt,
-              description: content.metaData.description,
-              thumbnails: content.metaData.thumbnails,
-              playlistId: content.metaData.playlistId
-            }
-
-          }
-          response.sections.playlist_video.push(playlistVideo)
-        }else if(content.type === "playlist"){
-          const playList: SearchSectionResponseModel ={
-            id: content.id,
-            userId: content.userId,
-            title: content.title,
-            type: content.type,
-            externalId: content.externalId,
-            platform: content.platform,
-            metaData:{
-              playlistId: content.metaData.playlistId,
-              description: content.metaData.description,
-              itemCount: content.metaData.itemCount,
-              publishedAt: content.metaData.publishedAt,
-              thumbnails: content.metaData.thumbnails
-            }
-          }
-          response.sections.playList.push(playList)
-        }else if(content.type === "subscription"){
-          const subscription : SearchSectionResponseModel = {
-            id: content.id,
-            userId: content.userId,
-            title: content.title,
-            type: content.type,
-            externalId: content.externalId,
-            platform: content.platform,
-            metaData: {
-              description: content.metaData.description,
-              publishedAt: content.metaData.publishedAt,
-              thumbnails: content.metaData.thumbnails
-            }
-          }
-          response.sections.subscriptions.push(subscription)
+        switch (content.type) {
+          case YouTubeUserContentFilters.Channals:
+            response.results.channels.push(mapToYoutubeChannelInfoModel(content));
+            break;
+          case YouTubeUserContentFilters.Videos:
+            response.results.videos.push(mapToYoutubeUploadedVideosModel(content));
+            break;
+          case YouTubeUserContentFilters.Playlists:
+            response.results.playlist.push(mapToYoutubePlaylistModel(content));
+            break;
+          case YouTubeUserContentFilters.Activities:
+            response.results.activities.push(mapToYoutubeActivityModel(content));
+            break;
+          case YouTubeUserContentFilters.PlaylistVideos:
+            response.results.playlistVideo.push(mapToYoutubePlaylisVideoModel(content));
+            break;
+          case YouTubeUserContentFilters.Subscriptions:
+            const results  = mapToYoutubeSubscriptionsModel(content)
+            console.log("Mapped Subscription: ", results)
+            response.results.subscriptions.push(results);
+            break;
+          default:
+            console.warn(`Unknown content type: ${content.type}`);
+            break;
         }
       })
       console.log('User Content Results:', userContentResults[0]);
 
     }
-
     if (linkedAccountResults[0].length !== 0) {
       linkedAccountResults[0].forEach((account:LinkedAccount)=>{
-        response.sections.accounts.push(account)
+        const mappedLinkedAccount = mapToLinkedInProfileModel(account)
+        response.results.accounts.push(mappedLinkedAccount)
       })
       console.log('Linked Account Results:', linkedAccountResults[0]);
-
     }
 
     if (ytOnlineResults.items.length !== 0) {
       ytOnlineResults.items.forEach((content)=>{
-        if(content.id.kind==="youtube#channel"){
-          const channal : SearchSectionResponseModel= {
-            id: content.id.channelId,
-            type: content.id.kind,
-            title: content.snippet.title,
-            platform: _const.PLATFORMS.YOUTUBE,
-            metaData:{
-              description: content.snippet.description,
-              thumbnails: content.snippet.thumbnails ,
-              channelTitle: content.snippet.channelTitle,
-              etag: content.etag,
-              liveBroadcastContent: content.snippet.liveBroadcastContent,
-              publishedAt: content.snippet.publishedAt,
-            }
-           
-          }
-          response.sections.channals.push(channal)
-        }else if(content.id.kind === "youtube#video"){
-          const video : SearchSectionResponseModel =  {
-            id: content.id.channelId,
-            type: content.id.kind,
-            title: content.snippet.title,
-            platform: _const.PLATFORMS.YOUTUBE,
-            metaData:{
-              description: content.snippet.description,
-              thumbnails: content.snippet.thumbnails ,
-              channelTitle: content.snippet.channelTitle,
-              etag: content.etag,
-              liveBroadcastContent: content.snippet.liveBroadcastContent,
-              publishedAt: content.snippet.publishedAt,
-            
-            }
-
-          }
-          response.sections.videos.push(video)
-        }else  if(content.id.kind === "youtube#playlist"){
-          const playlist : SearchSectionResponseModel =  {
-            id: content.id.playlistId,
-            type: content.id.kind,
-            platform: _const.PLATFORMS.YOUTUBE,
-            metaData:{
-              description: content.snippet.description,
-              thumbnails: content.snippet.thumbnails ,
-              channelTitle: content.snippet.channelTitle,
-              etag: content.etag,
-              liveBroadcastContent: content.snippet.liveBroadcastContent,
-              publishedAt: content.snippet.publishedAt,
-              playlistId: content.id.playlistId
-            }
-
-          }
-          response.sections.playlist.push(playlist)
+        switch (content.id.kind) {
+          case YouTubeOnlineFilters.Channals:
+            response.results.channels.push(mapToYoutubeOnlineModel(content));
+            break;
+          case YouTubeOnlineFilters.Videos:
+            response.results.videos.push(mapToYoutubeOnlineModel(content));
+            break;
+          case YouTubeOnlineFilters.Playlists:
+            response.results.playlist.push(mapToYoutubeOnlineModel(content));
+            break;
+          default:
+            console.warn(`Unknown YouTube online content type: ${content.id.kind}`);
+            break;
         }
       })
       console.log('YouTube Online Results:', ytOnlineResults.items);
-
     }
     return response
   }
@@ -282,7 +151,7 @@ export class SearchService implements ISearchService {
 
     if (skipSearch) {
       return [[], 0]
-    }
+    } 
 
     return await this.linkedAccountRepository.getEntriesAsync(params);
   }
