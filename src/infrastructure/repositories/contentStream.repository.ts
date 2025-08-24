@@ -4,6 +4,8 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { ContentStream } from "../../domain/entities";
 import { QueryOptions } from "../../domain/types/queryOptions.type";
 import { IContentStreamRepository } from "../../domain/repositories/icontentStream.repository";
+import { StreamEntityType } from "domain/enums";
+
 
 @Injectable()
 export class ContentStreamRepository implements IContentStreamRepository {
@@ -13,8 +15,27 @@ export class ContentStreamRepository implements IContentStreamRepository {
     @InjectRepository(ContentStream)
     private readonly contentStreamContext: Repository<ContentStream>
   ) { }
+  public async createAsync(content: ContentStream){
 
-
+    const existingContent = await this.getContentByIdAndTypeAsync(content.externalId, content.type, content.subType, content.title, content.platform);
+    if(existingContent.length < 1 ){
+      console.info(`Content with externalId ${content.externalId} and type ${content.type} does not exist. saving the content`);
+      await this.contentStreamContext.save(content);
+    }else{
+      console.info(`Content with externalId ${content.externalId} and type ${content.type} already exists. you dont have to amke api call`);
+    }
+  }
+  public async getContentByIdAndTypeAsync(externalId: string, type: StreamEntityType , subType: string , title: string, platform: string): Promise<ContentStream[] | null> {
+    return await this.contentStreamContext.find({
+      where: {
+        externalId: externalId,
+        type: type,
+        subType: subType,
+        title: title,
+        platform: platform,
+      }
+    })
+  }
   public async getEntriesAsync(params: QueryOptions): Promise<[ContentStream[], number]> {
 
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;

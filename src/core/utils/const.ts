@@ -32,6 +32,7 @@ export default {
     REDDIT_IMPORT: "reddit-import",
     TIKTOK_IMPORT: "tiktok-import",
     LINKEDIN_IMPORT: "linkedin-import",
+    CONTENT_STREAM_IMPORT: "content-stream-import",
   },
 
   EMAILTEMPLATES: {

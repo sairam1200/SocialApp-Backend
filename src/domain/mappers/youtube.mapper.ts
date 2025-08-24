@@ -117,6 +117,7 @@ export function mapToYoutubeOnlineModel(data) : YoutubeOnlineModel {
     title: data.snippet.title,
     type: data.id.kind,
     platform: _const.PLATFORMS.YOUTUBE,
+    externalId: id,
     channelId: data.snippet.channelId,
     description: data.snippet.description,
     thumbnails: data.snippet.thumbnails,

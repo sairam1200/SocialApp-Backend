@@ -2,6 +2,8 @@ import axios from "axios";
 import _const from "../../core/utils/const";
 import logger from "../../core/utils/winston.util";
 import { Inject, Injectable } from "@nestjs/common";
+import { Queue } from "bullmq";
+import { InjectQueue } from "@nestjs/bullmq";
 import { ContentStream, LinkedAccount, UserContent } from "../../domain/entities";
 import { QueryOptions } from "../../domain/types/queryOptions.type";
 import { ISearchService } from "../../domain/services/isearch.service";
@@ -11,6 +13,7 @@ import { IContentStreamRepository, ILinkedAccountRepository, IUserContentReposit
 import { mapToLinkedInProfileModel } from "domain/mappers/linkedin.mapper";
 import { mapToYoutubeActivityModel, mapToYoutubeChannelInfoModel, mapToYoutubeOnlineModel, mapToYoutubePlaylisVideoModel, mapToYoutubePlaylistModel, mapToYoutubeSubscriptionsModel, mapToYoutubeUploadedVideosModel } from "domain/mappers/youtube.mapper";
 import { YouTubeUserContentFilters,YouTubeOnlineFilters } from "domain/enums";
+import { LinkedInProfileModel } from "domain/contracts/linkedin.model";
 
 @Injectable()
 export class SearchService implements ISearchService {
@@ -22,6 +25,8 @@ export class SearchService implements ISearchService {
     private readonly userContentRepository: IUserContentRepository,
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
+    @InjectQueue(_const.BULL_QUEUES.CONTENT_STREAM_IMPORT)
+    private readonly contentStreamImportQueue: Queue,
   ) { }
 
   public async searchFacebookAsync(access_token: string): Promise<any> {
@@ -51,7 +56,6 @@ export class SearchService implements ISearchService {
 
   public async searchYoutubeAsync(params: YouTubeSearchParamsModel): Promise<SearchResponseModel> {
     const response = new SearchResponseModel();
-    console.debug('Search Params:', params);
     const { filters, limit, normalizedQuery, originalQuery, accessToken, pageToken, page } = params;
 
     response.query=originalQuery
@@ -81,12 +85,12 @@ export class SearchService implements ISearchService {
     ]);
 
     if (contentStreamResults[0].length !== 0) {
-      console.log('Content Stream Results:', contentStreamResults[0]);
+      //console.log('Content Stream Results:', contentStreamResults[0]);
 
     }
 
-    if (userContentResults[0].length !== 0) {
-      console.log('User Content Results:', userContentResults[0]);
+    if (userContentResults[0].length > 0) {
+      //console.log('User Content Results:', userContentResults[0]);
       userContentResults[0].forEach((content : UserContent)=>{
         switch (content.type) {
           case YouTubeUserContentFilters.Channals:
@@ -106,15 +110,15 @@ export class SearchService implements ISearchService {
             break;
           case YouTubeUserContentFilters.Subscriptions:
             const results  = mapToYoutubeSubscriptionsModel(content)
-            console.log("Mapped Subscription: ", results)
+            //console.log("Mapped Subscription: ", results)
             response.results.subscriptions.push(results);
             break;
           default:
-            console.warn(`Unknown content type: ${content.type}`);
+            //console.warn(`Unknown content type: ${content.type}`);
             break;
         }
       })
-      console.log('User Content Results:', userContentResults[0]);
+      //console.log('User Content Results:', userContentResults[0]);
 
     }
     if (linkedAccountResults[0].length !== 0) {
@@ -122,7 +126,7 @@ export class SearchService implements ISearchService {
         const mappedLinkedAccount = mapToLinkedInProfileModel(account)
         response.results.accounts.push(mappedLinkedAccount)
       })
-      console.log('Linked Account Results:', linkedAccountResults[0]);
+      //console.log('Linked Account Results:', linkedAccountResults[0]);
     }
 
     if (ytOnlineResults.items.length !== 0) {
@@ -142,8 +146,27 @@ export class SearchService implements ISearchService {
             break;
         }
       })
-      console.log('YouTube Online Results:', ytOnlineResults.items);
+
+      //console.log('YouTube Online Results:', ytOnlineResults.items);
     }
+   response.results.accounts.map((account: LinkedInProfileModel) => console.log("account",account))
+    response.results.playlistVideo.map((video) => console.log("playListvideo",video))
+    response.results.videos.map((video) => console.log("videos",video))
+    response.results.channels.map((channel) => console.log("channal",channel))
+    response.results.activities.map((activity) => console.log("activity",activity))
+    response.results.subscriptions.map((subscription) => console.log("subscription",subscription))
+    response.results.playlist.map((playlist) => console.log("playlist",playlist))
+   
+
+    await this.contentStreamImportQueue.add(_const.BULL_QUEUES.CONTENT_STREAM_IMPORT, {
+      searchResponse: response,
+
+    },
+    {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 1000 }
+  })
+
     return response
   }
 
