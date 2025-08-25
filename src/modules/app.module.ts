@@ -30,7 +30,7 @@ import { NodeIdempotencyModule, StorageAdapterEnum } from '@node-idempotency/nes
         storage: {
           adapter: StorageAdapterEnum.memory,
         },
-        ttlInMs: 60 * 60 * 1000, // 1 hour TTL
+        ttlInMs: 2500, // 2.5 seconds TTL
         enforceIdempotency: false, // Optional - allows requests without idempotency key
       }),
     }),
