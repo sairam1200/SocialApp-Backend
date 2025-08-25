@@ -303,4 +303,6 @@ export class PlaylistRepository implements IPlaylistRepository {
 
     return member;
   }
+
+  /// Search
 }
