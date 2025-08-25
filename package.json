@@ -42,6 +42,7 @@
     "@node-idempotency/nestjs": "^1.0.7",
     "@node-idempotency/storage-adapter-memory": "^1.0.4",
     "@scalar/nestjs-api-reference": "^0.4.15",
+    "@types/uuid": "^10.0.0",
     "axios": "^1.9.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^4.16.5",
@@ -67,6 +68,7 @@
     "speakeasy": "^2.0.0",
     "typeorm": "^0.3.23",
     "useragent": "^2.3.0",
+    "uuid": "^11.1.0",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"
   },
