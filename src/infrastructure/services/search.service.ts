@@ -8,7 +8,7 @@ import { ContentStream, LinkedAccount, UserContent } from "../../domain/entities
 import { QueryOptions } from "../../domain/types/queryOptions.type";
 import { ISearchService } from "../../domain/services/isearch.service";
 import limitAllocatorUtil, { SectionSkipMap } from "../../core/utils/limitAllocator.util";
-import {  SearchResponseModel, YouTubeSearchParamsModel, YouTubeSearchResponseModel } from "../../domain/contracts/youtube.model";
+import { SearchResponseModel, YouTubeSearchParamsModel, YouTubeSearchResponseModel } from "../../domain/contracts/youtube.model";
 import { IContentStreamRepository, ILinkedAccountRepository, IUserContentRepository } from "../../domain/repositories";
 import { mapToLinkedInProfileModel } from "domain/mappers/linkedin.mapper";
 import { mapContentStreamToYouTubeOnlineModel, mapToYoutubeActivityModel, mapToYoutubeChannelInfoModel, mapToYoutubeOnlineModel, mapToYoutubePlaylisVideoModel, mapToYoutubePlaylistModel, mapToYoutubeSubscriptionsModel, mapToYoutubeUploadedVideosModel } from "domain/mappers/youtube.mapper";
@@ -58,12 +58,12 @@ export class SearchService implements ISearchService {
     const response = new SearchResponseModel();
     const { filters, limit, normalizedQuery, originalQuery, accessToken, pageToken, page } = params;
 
-    response.query=originalQuery
+    response.query = originalQuery
 
     if (!filters?.platform || filters.platform !== _const.PLATFORMS.YOUTUBE) {
       filters.platform = _const.PLATFORMS.YOUTUBE;
     }
-    const skipContentStreamSerch = filters.type && !["Profile","Content","Community"].includes(filters.type)
+    const skipContentStreamSerch = filters.type && !["Profile", "Content", "Community"].includes(filters.type)
     const skipUserContentSearch = filters.type && !['video', 'playlist'].includes(filters.type);
     const skipLinkedAccountSearch = filters.type && !['channel'].includes(filters.type);
     const skipOnlineSearch = page > 1 && !pageToken;
@@ -72,6 +72,7 @@ export class SearchService implements ISearchService {
       contentStream: skipContentStreamSerch,
       userContent: skipUserContentSearch,
       linkedAccount: skipLinkedAccountSearch,
+      manualProfile: false,
       online: false
     };
 
@@ -81,8 +82,9 @@ export class SearchService implements ISearchService {
       this.searchContentStreamAsync(skipContentStreamSerch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.contentStream } as QueryOptions),
       this.searchUserContentAsync(skipUserContentSearch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.userContent } as QueryOptions),
       this.searchLinkedAccountAsync(skipLinkedAccountSearch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.linkedAccount } as QueryOptions),
-      this.fetchYouTubeVideos(skipOnlineSearch, originalQuery, limit, filters, accessToken)
+      this.fetchYouTubeOnlineAsync(skipOnlineSearch, originalQuery, limit, filters, accessToken)
     ]);
+
 
     if (contentStreamResults[0].length !== 0) {
       contentStreamResults[0].forEach((content: ContentStream) => {
@@ -128,7 +130,7 @@ export class SearchService implements ISearchService {
             response.results.playlistVideo.push(mapToYoutubePlaylisVideoModel(content));
             break;
           case YouTubeUserContentFilters.Subscriptions:
-            const results  = mapToYoutubeSubscriptionsModel(content)
+            const results = mapToYoutubeSubscriptionsModel(content)
             //console.log("Mapped Subscription: ", results)
             response.results.subscriptions.push(results);
             break;
@@ -137,11 +139,11 @@ export class SearchService implements ISearchService {
             break;
         }
       })
-      //console.log('User Content Results:', userContentResults[0]);
 
     }
+
     if (linkedAccountResults[0].length !== 0) {
-      linkedAccountResults[0].forEach((account:LinkedAccount)=>{
+      linkedAccountResults[0].forEach((account: LinkedAccount) => {
         const mappedLinkedAccount = mapToLinkedInProfileModel(account)
         response.results.accounts.push(mappedLinkedAccount)
       })
@@ -197,7 +199,7 @@ export class SearchService implements ISearchService {
         console.log("length ", ytOnlineResults.items.length)
         console.log("length with out youtube ", contentStreamResults[0].length + userContentResults[0].length + linkedAccountResults[0].length)
         console.log("limit ", limit)
-
+        console.log("content stream limit",sectionLimits.contentStream)
         
         const youTubeSectionLimit = limit - (contentStreamResults[0].length + userContentResults[0].length + linkedAccountResults[0].length)
         console.log("youTubeSectionLimit ", youTubeSectionLimit)
@@ -256,7 +258,7 @@ export class SearchService implements ISearchService {
 
     if (skipSearch) {
       return [[], 0]
-    } 
+    }
 
     return await this.linkedAccountRepository.getEntriesAsync(params);
   }
@@ -279,7 +281,7 @@ export class SearchService implements ISearchService {
     return await this.contenStreamRepository.getEntriesAsync(params);
   }
 
-  private async fetchYouTubeVideos(
+  private async fetchYouTubeOnlineAsync(
     skipSearch: boolean,
     query: string,
     limit: number,

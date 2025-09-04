@@ -1,15 +1,14 @@
-import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
-import { Inject } from '@nestjs/common';
 import { Job } from 'bullmq';
-import _const from 'core/utils/const';
-import { SearchResponseModel, YouTubeSearchResponseModel, YoutubeSearchItemModel } from 'domain/contracts/youtube.model';
-import { ContentStream } from 'domain/entities';
-import { StreamEntityType, YouTubeOnlineFilters, YouTubeUserContentFilters } from 'domain/enums';
-import { mapToYoutubeOnlineModel, mapYouTubeOnlineResponseToContentStream } from 'domain/mappers/youtube.mapper';
-import { IContentStreamRepository } from 'domain/repositories';
+import {  YoutubeSearchItemModel } from '../../../domain/contracts/youtube.model';
+import { mapYouTubeOnlineResponseToContentStream } from 'domain/mappers/youtube.mapper';
+import { Inject } from '@nestjs/common';
+import _const from '../../../core/utils/const';
+import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
+import { IContentStreamRepository } from '../../../domain/repositories';
+
 
 export const InjectContentStreamImportQueue = (): ParameterDecorator =>
-    InjectQueue(_const.BULL_QUEUES.CONTENT_STREAM_IMPORT);
+  InjectQueue(_const.BULL_QUEUES.CONTENT_STREAM_IMPORT);
 @Processor(_const.BULL_QUEUES.CONTENT_STREAM_IMPORT)
 export class ContentStreamImportProcessor extends WorkerHost  {
     constructor(
@@ -29,7 +28,7 @@ export class ContentStreamImportProcessor extends WorkerHost  {
                 console.info(`Content with externalId ${YouTubeOnlineResponseMapped.externalId} and type ${YouTubeOnlineResponseMapped.type} does not exist. saving the content`);
                 await this.contentStreamRepository.createAsync(YouTubeOnlineResponseMapped)
               }else{
-                console.info(`Content with externalId ${YouTubeOnlineResponseMapped.externalId} and type ${YouTubeOnlineResponseMapped.type} already exists. you dont have to amke api call`);
+                console.info(`Content with externalId ${YouTubeOnlineResponseMapped.externalId} and type ${YouTubeOnlineResponseMapped.type} already exists. not saving it`);
               }
            
               

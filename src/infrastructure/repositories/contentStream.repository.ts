@@ -10,7 +10,6 @@ import { StreamEntityType } from "domain/enums";
 @Injectable()
 export class ContentStreamRepository implements IContentStreamRepository {
 
-
   constructor(
     @InjectRepository(ContentStream)
     private readonly contentStreamContext: Repository<ContentStream>
@@ -19,6 +18,7 @@ export class ContentStreamRepository implements IContentStreamRepository {
     console.info(`Saving content with externalId ${content.externalId} and type ${content.type}`);
     await this.contentStreamContext.save(content);
   }
+
   public async getContentByIdAndTypeAsync(externalId: string, type: StreamEntityType , subType: string , title: string, platform: string): Promise<ContentStream[] | null> {
     return await this.contentStreamContext.find({
       where: {
@@ -30,6 +30,7 @@ export class ContentStreamRepository implements IContentStreamRepository {
       }
     })
   }
+  
   public async getEntriesAsync(params: QueryOptions): Promise<[ContentStream[], number]> {
 
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;

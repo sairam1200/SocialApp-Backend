@@ -1,9 +1,10 @@
-type SearchSectionKey = 'contentStream' | 'userContent' | 'linkedAccount' | 'online';
+type SearchSectionKey = 'contentStream' | 'userContent' | 'linkedAccount' | 'online' | 'manualProfile';
 
 export interface SectionSkipMap {
   contentStream: boolean;
   userContent: boolean;
   linkedAccount: boolean;
+  manualProfile: boolean;
   online: boolean;
 }
 
@@ -15,6 +16,7 @@ function getSectionLimits(limit: number, skips: SectionSkipMap): Record<SearchSe
     { key: 'contentStream', skip: skips.contentStream },
     { key: 'userContent', skip: skips.userContent },
     { key: 'linkedAccount', skip: skips.linkedAccount },
+    { key: 'manualProfile', skip: skips.manualProfile },
     { key: 'online', skip: skips.online },
   ];
 
@@ -28,6 +30,7 @@ function getSectionLimits(limit: number, skips: SectionSkipMap): Record<SearchSe
     contentStream: 0,
     userContent: 0,
     linkedAccount: 0,
+    manualProfile: 0,
     online: 0
   };
 
