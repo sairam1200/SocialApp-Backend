@@ -1,8 +1,8 @@
 import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { YoutubeActivitiesModel, YoutubeChannelInfoModel, YoutubePlaylistModel, YoutubePlaylistVideoModel, YoutubeProfileModel, YoutubeSubscriptionsModel, YoutubeVideosModel, YouTubeSearchResponseModel, YoutubeOnlineModel } from "../contracts/youtube.model";
-import { UserContent } from "domain/entities";
+import { YoutubeActivitiesModel, YoutubeChannelInfoModel, YoutubePlaylistModel, YoutubePlaylistVideoModel, YoutubeProfileModel, YoutubeSubscriptionsModel, YoutubeVideosModel, YouTubeSearchResponseModel, YoutubeOnlineModel, YoutubeSearchItemModel } from "../contracts/youtube.model";
+import { ContentStream, UserContent } from "domain/entities";
 import _const from "core/utils/const";
-import { YouTubeOnlineFilters } from "domain/enums";
+import { StreamEntityType, YouTubeOnlineFilters, YouTubeUserContentFilters } from "domain/enums";
 
 export function mapToYoutubeProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): YoutubeProfileModel {
   return {
@@ -126,5 +126,32 @@ export function mapToYoutubeOnlineModel(data) : YoutubeOnlineModel {
     publishedAt: data.snippet.publishedAt,
     publishTime: data.snippet.publishTime,
   
+  } as YoutubeOnlineModel
+}
+
+export function mapYouTubeOnlineResponseToContentStream(content:YoutubeSearchItemModel) : ContentStream {
+    const youTubeOnlineContent = new ContentStream();
+    const {type, externalId, title, ...rest} = mapToYoutubeOnlineModel(content)
+    youTubeOnlineContent.type = StreamEntityType.Profile;
+    youTubeOnlineContent.subType = type;
+    youTubeOnlineContent.platform = _const.PLATFORMS.YOUTUBE
+    youTubeOnlineContent.externalId = externalId;
+    youTubeOnlineContent.title = title;
+    youTubeOnlineContent.metaData = rest;
+    return youTubeOnlineContent
+
+
+    
+}
+
+export function mapContentStreamToYouTubeOnlineModel(content: ContentStream) : YoutubeOnlineModel {
+  const {type, externalId, title, ...rest} = content
+  return {
+    id: content.id,
+    type: content.subType,
+    platform: content.platform,
+    title: content.title,
+    externalId: content.externalId,
+    ...rest.metaData
   } as YoutubeOnlineModel
 }

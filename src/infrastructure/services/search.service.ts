@@ -11,7 +11,7 @@ import limitAllocatorUtil, { SectionSkipMap } from "../../core/utils/limitAlloca
 import {  SearchResponseModel, YouTubeSearchParamsModel, YouTubeSearchResponseModel } from "../../domain/contracts/youtube.model";
 import { IContentStreamRepository, ILinkedAccountRepository, IUserContentRepository } from "../../domain/repositories";
 import { mapToLinkedInProfileModel } from "domain/mappers/linkedin.mapper";
-import { mapToYoutubeActivityModel, mapToYoutubeChannelInfoModel, mapToYoutubeOnlineModel, mapToYoutubePlaylisVideoModel, mapToYoutubePlaylistModel, mapToYoutubeSubscriptionsModel, mapToYoutubeUploadedVideosModel } from "domain/mappers/youtube.mapper";
+import { mapContentStreamToYouTubeOnlineModel, mapToYoutubeActivityModel, mapToYoutubeChannelInfoModel, mapToYoutubeOnlineModel, mapToYoutubePlaylisVideoModel, mapToYoutubePlaylistModel, mapToYoutubeSubscriptionsModel, mapToYoutubeUploadedVideosModel } from "domain/mappers/youtube.mapper";
 import { YouTubeUserContentFilters,YouTubeOnlineFilters } from "domain/enums";
 import { LinkedInProfileModel } from "domain/contracts/linkedin.model";
 
@@ -81,10 +81,29 @@ export class SearchService implements ISearchService {
       this.searchContentStreamAsync(skipContentStreamSerch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.contentStream } as QueryOptions),
       this.searchUserContentAsync(skipUserContentSearch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.userContent } as QueryOptions),
       this.searchLinkedAccountAsync(skipLinkedAccountSearch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.linkedAccount } as QueryOptions),
-      this.fetchYouTubeVideos(skipOnlineSearch, originalQuery, sectionLimits.online, filters, accessToken)
+      this.fetchYouTubeVideos(skipOnlineSearch, originalQuery, limit, filters, accessToken)
     ]);
 
     if (contentStreamResults[0].length !== 0) {
+      contentStreamResults[0].forEach((content: ContentStream) => {
+        const mappedContent = mapContentStreamToYouTubeOnlineModel(content)
+        switch (mappedContent.type) {
+          case YouTubeOnlineFilters.Channals:
+            response.results.channels.push(mappedContent);
+           // console.log("channel added from online",content)
+            break;
+          case YouTubeOnlineFilters.Videos:
+            response.results.videos.push(mappedContent);
+            // console.log("video added from online",content)
+            break;
+          case YouTubeOnlineFilters.Playlists:
+            response.results.playlist.push(mappedContent);
+            // console.log("playlist added from online",content)
+            break;
+          default:
+            break;
+        }
+      })
       //console.log('Content Stream Results:', contentStreamResults[0]);
 
     }
@@ -128,27 +147,100 @@ export class SearchService implements ISearchService {
       })
       //console.log('Linked Account Results:', linkedAccountResults[0]);
     }
-
+    //console.log("YouTube Online Results Fetched items count",ytOnlineResults.items.length)
     if (ytOnlineResults.items.length !== 0) {
-      ytOnlineResults.items.forEach((content)=>{
-        switch (content.id.kind) {
-          case YouTubeOnlineFilters.Channals:
-            response.results.channels.push(mapToYoutubeOnlineModel(content));
-            break;
-          case YouTubeOnlineFilters.Videos:
-            response.results.videos.push(mapToYoutubeOnlineModel(content));
-            break;
-          case YouTubeOnlineFilters.Playlists:
-            response.results.playlist.push(mapToYoutubeOnlineModel(content));
-            break;
-          default:
-            console.warn(`Unknown YouTube online content type: ${content.id.kind}`);
-            break;
-        }
-      })
+      for (let i = ytOnlineResults.items.length-1; i >= 0; i--){ 
+          const content = ytOnlineResults.items[i];
+          switch (content.id.kind) {
+            case YouTubeOnlineFilters.Channals:
+              const channalExists = response.results.channels.find(channel=>{
+               
+                return channel.externalId == content.id.channelId
+              })
+             
+              if(channalExists){
+                //console.log("channalExists",channalExists)
+                ytOnlineResults.items.splice(i,1)
+              }else{
+                response.results.channels.push(mapToYoutubeOnlineModel(content));
+                //console.log("channel added from online",content)
+              }
+              break;
+            case YouTubeOnlineFilters.Videos:
+              const videoExists = response.results.videos.find(video=>video.externalId == content.id.videoId)
+              //console.log("videoExists",videoExists)
+              if(videoExists){
+                ytOnlineResults.items.splice(i,1)
+                continue;
+              } else {
+                response.results.videos.push(mapToYoutubeOnlineModel(content));
+                //console.log("video added from online",content)
+              }
+              break;
+            case YouTubeOnlineFilters.Playlists:
+              const playlistExists = response.results.playlist.find(playlist=>playlist.externalId == content.id.playlistId)
+              //console.log("playlistExists",playlistExists)
+              if(playlistExists){
+                ytOnlineResults.items.splice(i,1)
+                continue;
+              }else{
+                response.results.playlist.push(mapToYoutubeOnlineModel(content));
+                //console.log("playlist added from online",content)
+              }
+              break;
 
+            default:
+              break;
+          }
+      }
+      if (ytOnlineResults.items.length !== 0) {
+        console.log("length ", ytOnlineResults.items.length)
+        console.log("length with out youtube ", contentStreamResults[0].length + userContentResults[0].length + linkedAccountResults[0].length)
+        console.log("limit ", limit)
+
+        
+        const youTubeSectionLimit = limit - (contentStreamResults[0].length + userContentResults[0].length + linkedAccountResults[0].length)
+        console.log("youTubeSectionLimit ", youTubeSectionLimit)
+        for(let i = 0; i < youTubeSectionLimit; i++){
+          //console.log("YouTube Online Results items left to process",ytOnlineResults.items.length)
+          //console.log("YouTube Online Results items left to process index",i)
+          const content = ytOnlineResults.items[i];
+          switch (content.id.kind) {
+            case YouTubeOnlineFilters.Channals:
+              response.results.channels.push(mapToYoutubeOnlineModel(content));
+             // console.log("channel added from online",content)
+              break;
+            case YouTubeOnlineFilters.Videos:
+              response.results.videos.push(mapToYoutubeOnlineModel(content));
+              // console.log("video added from online",content)
+              break;
+            case YouTubeOnlineFilters.Playlists:
+              response.results.playlist.push(mapToYoutubeOnlineModel(content));
+              // console.log("playlist added from online",content)
+              break;
+            default:
+              break;
+          }
+
+        }
+        try{ 
+          await this.contentStreamImportQueue.add(_const.BULL_QUEUES.CONTENT_STREAM_IMPORT, {
+            youTubeSearchOnlineResponse: ytOnlineResults.items,
+          },
+          {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 1000 }
+        })
+      }catch(error){
+        logger.error('Error adding job to ContentStreamImportQueue:', error);
+      }
+        //console.log(`YouTube Online Results: Fetched ${ytOnlineResults.items.length} items.`);
+        
+      }
+    
       //console.log('YouTube Online Results:', ytOnlineResults.items);
     }
+    /*
    response.results.accounts.map((account: LinkedInProfileModel) => console.log("account",account))
     response.results.playlistVideo.map((video) => console.log("playListvideo",video))
     response.results.videos.map((video) => console.log("videos",video))
@@ -156,17 +248,7 @@ export class SearchService implements ISearchService {
     response.results.activities.map((activity) => console.log("activity",activity))
     response.results.subscriptions.map((subscription) => console.log("subscription",subscription))
     response.results.playlist.map((playlist) => console.log("playlist",playlist))
-   
-
-    await this.contentStreamImportQueue.add(_const.BULL_QUEUES.CONTENT_STREAM_IMPORT, {
-      searchResponse: response,
-
-    },
-    {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 1000 }
-  })
-
+   */
     return response
   }
 

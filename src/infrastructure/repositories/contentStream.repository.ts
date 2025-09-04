@@ -16,14 +16,8 @@ export class ContentStreamRepository implements IContentStreamRepository {
     private readonly contentStreamContext: Repository<ContentStream>
   ) { }
   public async createAsync(content: ContentStream){
-
-    const existingContent = await this.getContentByIdAndTypeAsync(content.externalId, content.type, content.subType, content.title, content.platform);
-    if(existingContent.length < 1 ){
-      console.info(`Content with externalId ${content.externalId} and type ${content.type} does not exist. saving the content`);
-      await this.contentStreamContext.save(content);
-    }else{
-      console.info(`Content with externalId ${content.externalId} and type ${content.type} already exists. you dont have to amke api call`);
-    }
+    console.info(`Saving content with externalId ${content.externalId} and type ${content.type}`);
+    await this.contentStreamContext.save(content);
   }
   public async getContentByIdAndTypeAsync(externalId: string, type: StreamEntityType , subType: string , title: string, platform: string): Promise<ContentStream[] | null> {
     return await this.contentStreamContext.find({

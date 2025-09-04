@@ -179,8 +179,10 @@ export interface YoutubeOnlineModel{
   type: string;
   platform: string;
   description: string;
+  externalId: string;
   thumbnails: YoutubeThumbnails;
-  channelTitle: string;
+  channelTitle: string
+  subType?: string;
   etag: string;
   liveBroadcastContent: string;
   publishedAt: string;
