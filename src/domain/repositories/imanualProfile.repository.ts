@@ -1,3 +1,4 @@
+import { QueryOptions } from "../types/queryOptions.type";
 import { ManualProfile } from "../entities/manualProfile.entity";
 
 export interface IManualProfileRepository {
@@ -10,9 +11,5 @@ export interface IManualProfileRepository {
   reorderAsync(id: string, displayOrder: number): Promise<void>;
   createAsync(manualProfile: Partial<ManualProfile>): Promise<ManualProfile>;
 
-  searchAsync(
-    page: number,
-    pageSize: number,
-    searchTerm?: string
-  ): Promise<[ManualProfile[], number]>;
+  getEntriesAsync(params: QueryOptions): Promise<[ManualProfile[], number]>;
 }

@@ -3,6 +3,7 @@ import { Brackets, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ManualProfile } from "../../domain/entities";
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { QueryOptions } from "../../domain/types/queryOptions.type";
 import { IManualProfileRepository } from "../../domain/repositories";
 import { HttpContext } from "../../core/middlewares/httpContext.middleware";
 
@@ -104,50 +105,84 @@ export class ManualProfileRepository implements IManualProfileRepository {
     await this.manualProfileContext.save(profileToMove);
   }
 
-  public async searchAsync(
-    page: number,
-    pageSize: number,
-    searchTerm?: string
-  ): Promise<[ManualProfile[], number]> {
-    if (!searchTerm || !searchTerm.trim()) {
-      return [[], 0];
-    }
+  public async getEntriesAsync(params: QueryOptions): Promise<[ManualProfile[], number]> {
+    let { page, pageSize, orderBy, order, searchQuery, filter } = params;
+    const queryBuilder = this.manualProfileContext.createQueryBuilder("profile");
 
-    const skip = (page - 1) * pageSize;
-    const take = pageSize;
-
-    const queryBuilder = this.manualProfileContext
-      .createQueryBuilder("manualProfile")
-      .leftJoin("manualProfile.user", "user")
+    queryBuilder
+      .leftJoin("profile.user", "user")
       .addSelect([
         "user.id",
         "user.userName",
         "user.firstName",
         "user.lastName",
         "user.profileImage"
-      ])
-      .where("manualProfile.url IS NOT NULL")
-      .andWhere("manualProfile.url NOT ILIKE ANY(:platforms)", {
-        platforms: _const.KNOWN_PLATFORMS_URIS.map(p => `%${p}%`),
-      })
-      .andWhere(
+      ]);
+
+    if (!orderBy) {
+      orderBy = "url";
+    }
+
+    const whereConditions: string[] = [];
+    const parameters: any = {};
+
+    // WHERE conditions
+    // queryBuilder
+    //   .where("manualProfile.url IS NOT NULL")
+    //   .andWhere("manualProfile.url NOT ILIKE ANY(:platforms)", {
+    //     platforms: _const.KNOWN_PLATFORMS_URIS.map(p => `%${p}%`),
+    //   });
+
+    if (searchQuery) {
+      const searchTerm = `%${searchQuery}%`;
+      queryBuilder.andWhere(
         new Brackets(qb => {
           qb.where(
             `REGEXP_REPLACE(manualProfile.url, '^.*(?:/user/|/@|/u/|/c/|/)?([^/?#]+).*$','\\1') ILIKE :searchTerm`,
             { searchTerm }
-          )
-            .orWhere(
-              `REGEXP_REPLACE(manualProfile.url, '^https?://([^/]+).*$','\\1') ILIKE :searchTerm`,
-              { searchTerm }
-            );
+          ).orWhere(
+            `REGEXP_REPLACE(manualProfile.url, '^https?://([^/]+).*$','\\1') ILIKE :searchTerm`,
+            { searchTerm }
+          );
         })
-      )
-      .skip(skip)
-      .take(take);
+      );
+    }
 
-    // Execute the query and get the results
-    const [results, count] = await queryBuilder.getManyAndCount();
-    return [results, count];
+    if (filter?.platform) {
+      whereConditions.push("profile.platform = :platform");
+      parameters.platform = filter.platform;
+    }
+
+    if (filter?.userId) {
+      whereConditions.push("profile.userId = :userId");
+      parameters.userId = filter.userId;
+    }
+
+    if (whereConditions.length > 0) {
+      queryBuilder.where(whereConditions.join(" AND "), parameters);
+    }
+
+    if (searchQuery) {
+      const exactSearch = searchQuery.toLowerCase();
+      queryBuilder.orderBy(
+        `CASE 
+        WHEN manualProfile.url ILIKE :exactSearch THEN 0 
+        WHEN manualProfile.url ILIKE :searchTerm THEN 1 
+        ELSE 2 
+      END`,
+        "ASC"
+      )
+        .addOrderBy(`manualProfile.${orderBy}`, order)
+        .setParameter("exactSearch", exactSearch)
+        .setParameter("searchTerm", `%${searchQuery}%`);
+    } else {
+      queryBuilder.orderBy(`manualProfile.${orderBy}`, order);
+    }
+
+    queryBuilder.skip((page - 1) * pageSize)
+      .take(pageSize);
+
+    return await queryBuilder.getManyAndCount();
   }
 
 }
