@@ -14,23 +14,20 @@ export class ContentStreamRepository implements IContentStreamRepository {
     @InjectRepository(ContentStream)
     private readonly contentStreamContext: Repository<ContentStream>
   ) { }
-  public async createAsync(content: ContentStream){
+  public async createAsync(content: ContentStream) {
     console.info(`Saving content with externalId ${content.externalId} and type ${content.type}`);
     await this.contentStreamContext.save(content);
   }
 
-  public async getContentByIdAndTypeAsync(externalId: string, type: StreamEntityType , subType: string , title: string, platform: string): Promise<ContentStream[] | null> {
-    return await this.contentStreamContext.find({
+  public async getContentByIdAndTypeAsync(externalId: string, platform: string): Promise<ContentStream> {
+    return await this.contentStreamContext.findOne({
       where: {
         externalId: externalId,
-        type: type,
-        subType: subType,
-        title: title,
         platform: platform,
       }
     })
   }
-  
+
   public async getEntriesAsync(params: QueryOptions): Promise<[ContentStream[], number]> {
 
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;
@@ -81,7 +78,7 @@ export class ContentStreamRepository implements IContentStreamRepository {
     if (whereConditions.length > 0) {
       queryBuilder.where(whereConditions.join(" AND "), parameters);
     }
-  
+
     if (searchQuery) {
       queryBuilder.orderBy(
         `CASE WHEN content.title ILIKE :exactSearch THEN 0 
@@ -97,7 +94,7 @@ export class ContentStreamRepository implements IContentStreamRepository {
 
     queryBuilder.skip((page - 1) * pageSize)
       .take(pageSize);
-    
-      return await queryBuilder.getManyAndCount();
+
+    return await queryBuilder.getManyAndCount();
   }
 }
