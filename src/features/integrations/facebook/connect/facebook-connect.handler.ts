@@ -17,7 +17,7 @@ import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinke
 import { FacebookProfileModel, FacebookUserDataModel } from '../../../../domain/contracts/facebook.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
 
-const GRAPH_BASE = 'https://graph.facebook.com/v22.0';
+const GRAPH_BASE = 'https://graph.facebook.com/v23.0';
 
 export class FacebookConnectQuery {
   model: {
@@ -194,7 +194,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       const response = await axios.get<FacebookUserDataModel>(`${GRAPH_BASE}/me`, {
         params: {
           access_token: accessToken,
-          fields: 'id,name,username,email,picture,followers_count,friends',
+          fields: 'id,name,username,email,picture,followers_count,user_friends',
         },
       });
 

@@ -98,7 +98,7 @@ export class FacebookImportCommandHandler implements ICommandHandler<FacebookImp
     try {
       const appAccessToken = `${configs.facebook.clientId}|${configs.facebook.clientSecret}`;
 
-      const response = await axios.get(`https://graph.facebook.com/v22.0/debug_token`, {
+      const response = await axios.get(`https://graph.facebook.com/v23.0/debug_token`, {
         params: {
           input_token: accessToken,
           access_token: appAccessToken

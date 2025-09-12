@@ -63,7 +63,7 @@ export class FacebookConnectController {
       show_dialog: 'true', // Always show the login page
     });
 
-    const authorizeURL = `https://www.facebook.com/v22.0/dialog/oauth?${params.toString()}`;
+    const authorizeURL = `https://www.facebook.com/v23.0/dialog/oauth?${params.toString()}`;
 
     await this.commandBus.execute(new FacebookConnectQuery({ model: { state } }));
     return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
