@@ -199,6 +199,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         location: userData.location?.name,
         link: userData.link,
       };
+      console.log(linkedAccount, "linkedAccount")
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
       linkedAccount = await this.linkedAccountRepository.createAsync(
