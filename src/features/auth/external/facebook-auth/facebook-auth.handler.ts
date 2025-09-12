@@ -163,7 +163,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         profileImage: profileImage,
         emailConfirmed: true,
         type: UserType.User,
-        userName: userData.username || `${firstName.toLowerCase()}${lastName.toLowerCase()}`.replace(/\s/g, ''),
+        userName: `${firstName.toLowerCase()}${lastName.toLowerCase()}`.replace(/\s/g, ''),
       });
 
       user = await this.userRepository.createAsync(entry, ''); // Empty password for OAuth users
@@ -188,7 +188,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     );
 
     if (linkedAccount) {
-      linkedAccount.userName = userData.username || userData.name;
+      linkedAccount.userName = userData.name;
       linkedAccount.profileImage = userData.picture?.data?.url;
       linkedAccount.followingCount = userData.friends?.summary?.total_count || 0;
       linkedAccount.metaData = {
@@ -207,7 +207,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
           userId: user.id,
           email: userData.email,
           externalId: userData.id,
-          userName: userData.username || userData.name,
+          userName: userData.name,
           profileImage: userData.picture?.data?.url,
           followingCount: userData.friends?.summary?.total_count || 0,
           metaData: {
