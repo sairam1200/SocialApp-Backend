@@ -39,6 +39,8 @@
     "@nestjs/swagger": "^11.2.0",
     "@nestjs/typeorm": "^11.0.0",
     "@nestjs/websockets": "^11.1.1",
+    "@node-idempotency/nestjs": "^1.0.7",
+    "@node-idempotency/storage-adapter-memory": "^1.0.4",
     "@scalar/nestjs-api-reference": "^0.4.15",
     "@types/uuid": "^10.0.0",
     "axios": "^1.9.0",

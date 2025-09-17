@@ -15,6 +15,7 @@ import { DataSeeder } from '../infrastructure/services/data.seeder';
 import { postgresOptions } from '../infrastructure/persistence/data.source';
 import { HttpContextMiddleware } from '../core/middlewares/httpContext.middleware';
 import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '@nestjs/common';
+import { NodeIdempotencyModule, StorageAdapterEnum } from '@node-idempotency/nestjs';
 
 @Module({
   imports: [
@@ -24,6 +25,15 @@ import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '
       signOptions: { expiresIn: configs.jwt.accessTokenExpiration },
     }),
     TypeOrmModule.forRoot(postgresOptions),
+    NodeIdempotencyModule.forRootAsync({
+      useFactory: () => ({
+        storage: {
+          adapter: StorageAdapterEnum.memory,
+        },
+        ttlInMs: 2500, // 2.5 seconds TTL
+        enforceIdempotency: false, // Optional - allows requests without idempotency key
+      }),
+    }),
     UserModule,
     RoleModule,
     AuthModule,
