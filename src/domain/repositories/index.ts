@@ -9,6 +9,4 @@ export { IUserContentRepository } from './iuserContent.repository';
 export { INotificationRepository } from './inotification.repository';
 export { ILinkedAccountRepository } from './ilinkedAccount.repository';
 export { IManualProfileRepository } from './imanualProfile.repository';
-export { IContentStreamRepository } from './icontentStream.repository';
-export { ISearchHistoryRepository } from './isearchHistory.repository';
 export { IDataProtectionKeyRepository } from './idataProtectionKey.repository';

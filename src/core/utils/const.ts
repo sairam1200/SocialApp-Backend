@@ -12,7 +12,6 @@ export default {
   IMANUALPROFILE_REPOSITORY: "IManualProfileRepository",
   ILINKEDACCOUNT_REPOSITORY: "ILinkedAccountRepository",
   ICONTENTSTREAM_REPOSITORY: "IContentStreamRepository",
-  ISEARCHHISTORY_REPOSITORY: "ISearchHistoryRepository",
   IDATAPROTECTIONKEY_REPOSITORY: "IDataProtectionKeyRepository",
 
   // Service Interfaces
@@ -32,7 +31,6 @@ export default {
     REDDIT_IMPORT: "reddit-import",
     TIKTOK_IMPORT: "tiktok-import",
     LINKEDIN_IMPORT: "linkedin-import",
-    CONTENT_STREAM_IMPORT: "content-stream-import",
   },
 
   EMAILTEMPLATES: {

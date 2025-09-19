@@ -7,7 +7,6 @@ export { UserLoginRepository } from './userLogin.repository';
 export { RoleClaimRepository } from './roleClaim.repository';
 export { UserContentRepository } from './userContent.repository';
 export { NotificationRepository } from './notification.repository';
-export { SearchHistoryRepository } from './searchHistory.repository';
 export { LinkedAccountRepository } from './linkedAccount.repository';
 export { ContentStreamRepository } from './contentStream.repository';
 export { DataProtectionKeyRepository } from './dataProtectionKey.repository';

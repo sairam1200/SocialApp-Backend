@@ -14,7 +14,6 @@ import { ImportGateway } from "../../../infrastructure/websocket/gateways/import
 import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
 import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
 import { console } from "inspector";
-import { mapToYoutubeActivityModel, mapToYoutubeChannelInfoModel, mapToYoutubePlaylisVideoModel, mapToYoutubePlaylistModel, mapToYoutubeSubscriptionsModel, mapToYoutubeUploadedVideosModel } from "domain/mappers/youtube.mapper";
 
 interface CursorMap {
   [key: string]: string | null;
@@ -145,13 +144,6 @@ export class YoutubeImportProcessor extends WorkerHost {
                 publishedAt: item.snippet.publishedAt,
                 thumbnails: item.snippet.thumbnails,
               };
-              content = await this.userContentRepository.createAsync(content);
-              const subscription = mapToYoutubeSubscriptionsModel(content)
-              this.gateway.emitNewImportContent(
-                account.userId,
-                _const.PLATFORMS.YOUTUBE,
-                subscription,
-              );
             } else if (type === 'Playlists') {
              //logger.debug(JSON.stringify(item, null, 2));
               content.type = 'playlist';
@@ -164,16 +156,8 @@ export class YoutubeImportProcessor extends WorkerHost {
                 publishedAt: item.snippet.publishedAt,
                 thumbnails: item.snippet.thumbnails,
               };
-              
               logger.debug(`▶️ Fetching videos from playlist ${item.id}`);
               // Fetch videos for this playlist
-              content = await this.userContentRepository.createAsync(content);
-              const playlist = mapToYoutubePlaylistModel(content)
-              this.gateway.emitNewImportContent(
-                account.userId,
-                _const.PLATFORMS.YOUTUBE,
-                playlist,
-              );
               const videos = await this.fetchPlaylistVideos(accessToken, item.id);
               logger.debug(`📹 Found ${videos.length} videos in playlist`);
               for (const video of videos) {
@@ -193,14 +177,15 @@ export class YoutubeImportProcessor extends WorkerHost {
                   },
                 });
                 try{
-                 
+                  //logger.debug(JSON.stringify(videoContent, null, 2));
+                  // Save videoContent
                   videoContent = await this.userContentRepository.createAsync(videoContent);
                   logger.debug("this is the video content: ");
-                  const playlist_video = mapToYoutubePlaylisVideoModel(content)
+                  //logger.debug(JSON.stringify(videoContent, null, 2));
                   this.gateway.emitNewImportContent(
                     account.userId,
                     _const.PLATFORMS.YOUTUBE,
-                    playlist_video,
+                    videoContent,
                   );
                   }catch (err) {
                   logger.error(`Error saving video content for playlist ${item.id}:`, err.message);
@@ -218,13 +203,6 @@ export class YoutubeImportProcessor extends WorkerHost {
                 thumbnails: item.snippet.thumbnails,
                 type: item.snippet.type,
               };
-              content = await this.userContentRepository.createAsync(content);
-              const activity = mapToYoutubeActivityModel(content)
-              this.gateway.emitNewImportContent(
-                account.userId,
-                _const.PLATFORMS.YOUTUBE,
-                activity,
-              );
             } else if (type === 'ChannelInfo') {
               //logger.debug("channel item: ",JSON.stringify(item, null, 2));
               content.type = 'channel';
@@ -238,16 +216,14 @@ export class YoutubeImportProcessor extends WorkerHost {
               };
               uploadsPlaylistId=item.contentDetails?.relatedPlaylists?.uploads || null;
               logger.debug(`📥 the new Uploads playlist ID: ${uploadsPlaylistId}`);
+            }
+            try{
               content = await this.userContentRepository.createAsync(content);
-              const channelInfo = mapToYoutubeChannelInfoModel(content)
               this.gateway.emitNewImportContent(
                 account.userId,
                 _const.PLATFORMS.YOUTUBE,
-                channelInfo,
+                content,
               );
-            }
-            try{
-            
             }catch (err) {
               logger.error(`Error saving content for ${type}:`, err.message);
             }
@@ -338,12 +314,11 @@ export class YoutubeImportProcessor extends WorkerHost {
           try{
           //logger.debug(JSON.stringify(content, null, 2));
           content = await this.userContentRepository.createAsync(content);
-          const uploadedVedio = mapToYoutubeUploadedVideosModel(content)
           //logger.debug(JSON.stringify(content, null, 2));
           this.gateway.emitNewImportContent(
             account.userId,
             _const.PLATFORMS.YOUTUBE,
-            uploadedVedio,
+            content,
           );
           }catch (err) {
             logger.error(`Error saving uploaded video content:`, err.message);

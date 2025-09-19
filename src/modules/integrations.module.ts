@@ -8,7 +8,7 @@ import integrations from "../features/integrations";
 import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
-import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
+import { DataProtectionKey, LinkedAccount, Role, User, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
 
 @Module({
   imports: [
@@ -23,9 +23,7 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
       UserClaim,
       UserContent,
       LinkedAccount,
-      DataProtectionKey,
-      SearchHistory,
-      ContentStream,
+      DataProtectionKey
     ])
   ],
   controllers: [
@@ -37,17 +35,12 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
 
     ...integrations.addHandlers(),
 
-    dependency.SearchService,
     dependency.RoleRepository,
     dependency.UserRepository,
     dependency.UserRoleRepository,
     dependency.UserLoginRepository,
     dependency.UserContentRepository,
-    dependency.UserContentRepository,
     dependency.LinkedAccountRepository,
-    dependency.ContentStreamRepository,
-    dependency.ContentStreamRepository,
-    dependency.SearchHistoryRepository,
     dependency.DataProtectionKeyRepository,
   ],
   exports: [],

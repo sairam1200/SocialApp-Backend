@@ -52,12 +52,12 @@ export class TwitterImportCommandHandler implements ICommandHandler<TwitterImpor
     if (twtterAccessToken) {
       console.log("fisrt")
       const isTokenValid = await this.verifyAccessTokenAsync(twtterAccessToken);
+      const userLogin = await this.getUserLoginAsync(userId);
       if (!isTokenValid) {
-        const userLogin = await this.getUserLoginAsync(userId);
         console.log("second")
         
         console.log("this is the user login: ", userLogin);
-        const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number; }>(userLogin.tokenValue);
+        const tokenValue  = deserializeObject <{access_token:string,refresh_token:string}>(userLogin.tokenValue);
         const {
           access_token,
           expires_in,
@@ -77,7 +77,8 @@ export class TwitterImportCommandHandler implements ICommandHandler<TwitterImpor
       } else {
         console.log("fourth")
         accessToken = twtterAccessToken;
-        expiresIn= 0;
+        expiresIn= userLogin.expiryDateUtc.getTime(); // Calculate remaining time in milliseconds
+        
       }
     } else {
       console.log("fifth")

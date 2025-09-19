@@ -19,7 +19,6 @@ import {
   YoutubeChannelDataModel,
 } from '../../../../domain/contracts/youtube.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
-import { serializeObject } from 'core/utils/serialization.util';
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
 
@@ -114,7 +113,7 @@ export class GoogleConnectQueryHandler
     const { model } = command;
     await googleConnectValidations.validateAsync(model);
 
-    const value = serializeObject({
+    const value = JSON.stringify({
       deviceId: model.deviceId,
       userAgent: model.userAgent,
       ipAddress: model.ipAddress,

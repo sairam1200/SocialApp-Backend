@@ -1,7 +1,6 @@
 import { Repository } from "typeorm";
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { QueryOptions } from "../../domain/types/queryOptions.type";
 import { UserContent } from "../../domain/entities/userContent.entity";
 import { IUserContentRepository } from "../../domain/repositories/iuserContent.repository";
 
@@ -58,73 +57,25 @@ export class UserContentRepository implements IUserContentRepository {
     return [result, nextCursor];
   }
 
-  public async getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]> {
-
-    let { page, pageSize, orderBy, order, searchQuery, filter } = params;
-    const queryBuilder = this.userContentContext.createQueryBuilder("content");
-
-    if (!orderBy) {
-      orderBy = "title";
+  async getEntriesAsync(
+    page: number,
+    pageSize: number,
+    orderBy: string,
+    order: "ASC" | "DESC",
+    searchTerm?: string
+  ): Promise<[UserContent[], number]> {
+    const qb = this.userContentContext.createQueryBuilder("content");
+    if (searchTerm) {
+      qb.where("content.title LIKE :searchTerm OR content.body LIKE :searchTerm", {
+        searchTerm: `%${searchTerm}%`,
+      });
     }
-
-    const whereConditions: string[] = [];
-    const parameters: any = {};
-
-    if (searchQuery) {
-      whereConditions.push(`
-          (
-            content.title ILIKE :searchQuery
-            OR EXISTS (
-              SELECT 1
-              FROM json_each_text(content.metaData) AS kv(key, value)
-              WHERE value ILIKE :searchQuery
-            )
-          )
-        `);
-
-      parameters.searchQuery = `%${searchQuery}%`;
-    }
-
-    if (filter?.platform) {
-      whereConditions.push("content.platform = :platform");
-      parameters.platform = filter.platform;
-    }
-
-    if (filter?.userId) {
-      whereConditions.push("content.userId = :userId");
-      parameters.userId = filter.userId;
-    }
-
-    if (filter?.externalId) {
-      whereConditions.push("content.externalId = :externalId");
-      parameters.externalId = filter.externalId;
-    }
-
-    if (filter?.type) {
-      whereConditions.push("content.type = :type");
-      parameters.type = filter.type;
-    }
-
-    if (whereConditions.length > 0) {
-      queryBuilder.where(whereConditions.join(" AND "), parameters);
-    }
-
-    if (searchQuery) {
-      queryBuilder.orderBy(
-        `CASE WHEN content.title ILIKE :exactSearch THEN 0 
-                   WHEN content.title ILIKE :searchQuery THEN 1 
-                   ELSE 2 END`,
-        "ASC"
-      )
-        .addOrderBy(`content.${orderBy}`, order)
-        .setParameter("exactSearch", searchQuery.toLowerCase());
-    } else {
-      queryBuilder.orderBy(`content.${orderBy}`, order);
-    }
-
-    queryBuilder.skip((page - 1) * pageSize)
+    qb.orderBy(`content.${orderBy}`, order)
+      .skip((page - 1) * pageSize)
       .take(pageSize);
- 
-      return await queryBuilder.getManyAndCount();
+
+    const [result, total] = await qb.getManyAndCount();
+    return [result, total];
   }
+
 }

@@ -1,5 +1,4 @@
 import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { QueryOptions } from "../types/queryOptions.type";
 
 export interface ILinkedAccountRepository {
   createAsync(linkedAccount: LinkedAccount): Promise<LinkedAccount>;
@@ -13,6 +12,4 @@ export interface ILinkedAccountRepository {
   getByPlatformAndUserNameAsync(platform: string, username: string): Promise<LinkedAccount | null>;
   getByPlatformAndExternalIdAsync(platform: string, externalId: string): Promise<LinkedAccount | null>;
   getByPlatformAndEmailAsync(platform: string, email: string): Promise<LinkedAccount | null>;
-
-  getEntriesAsync(params: QueryOptions): Promise<[LinkedAccount[], number]>;
 }

@@ -28,22 +28,8 @@ export enum PlaylistMemberRole {
 
 export enum StreamEntityType {
     Profile = "Profile",
-    Content = "Content",
-    Community = "Community",
-}
-
-export enum YouTubeUserContentFilters { 
-    Channals = "channel",
-    Videos = "uploaded_video",
-    Shorts = "short",
-    Playlists = "playlist",
-    Subscriptions = "subscription",
-    Activities = "activity",
-    PlaylistVideos = "playlist_video"
-}
-
-export enum YouTubeOnlineFilters {
-    Channals = "youtube#channel",
-    Videos = "youtube#video",
-    Playlists = "youtube#playlist"
+    Post = "Post",
+    Comment = "Comment",
+    Group = "Group",
+    Channel = "Channel"
 }
