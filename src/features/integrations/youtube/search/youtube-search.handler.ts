@@ -57,13 +57,12 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
 
         if (userLogin && now < userLogin.expiryDateUtc) {
           const tokenValue = deserializeObject<{ access_token: string, refresh_token: string }>(userLogin.tokenValue);
-          const { access_token, refresh_token, expires_in } = await this.refreshTokenAsync(tokenValue.access_token);
-          if (refresh_token !== '') {
-            userLogin.tokenValue = serializeObject({ access_token, refresh_token });
+          const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
+          if (accessToken !== '') {
+            userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
             userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
             await this.userLoginRepository.updateAsync(userLogin);
           }
-
           accessToken = access_token;
           expiresIn = expires_in;
         }
@@ -75,18 +74,15 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
       const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.YOUTUBE);
       const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
       const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
-
       if (!isTokenValid) {
         const {
           access_token,
-          expires_in,
-          refresh_token
+          expires_in
+          
         } = await this.refreshTokenAsync(tokenValue.refresh_token);
-
-        userLogin.tokenValue = serializeObject({ access_token, refresh_token });
+        userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token});
         userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
         await this.userLoginRepository.updateAsync(userLogin);
-
         accessToken = access_token;
         expiresIn = expires_in;
       } else {
@@ -101,8 +97,7 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
   }
 
   private async refreshTokenAsync(refreshToken: string)
-    : Promise<{ access_token: string, refresh_token: string, expires_in: number }> {
-
+    : Promise<{ access_token: string, expires_in: number }> {
     try {
 
       const response = await axios.post('https://oauth2.googleapis.com/token', new URLSearchParams({
@@ -115,8 +110,7 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
           'Content-Type': 'application/x-www-form-urlencoded',
         },
       });
-
-      const { access_token, expires_in, refresh_token } = response.data;
+      const { access_token, expires_in} = response.data;
       if (!access_token) {
         throw new ApplicationException('Your Youtube session has expired or the access token is invalid. Please log in to Youtube again to continue.');
       }
@@ -124,14 +118,10 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
       return {
         access_token,
         expires_in,
-        refresh_token
       };
 
     } catch (error) {
-      logger.error(`An error occurred while processing the Youtube import command: 
-        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
-
-      return { access_token: '', expires_in: 0, refresh_token: '' }
+      logger.error("Error refreshing YouTube token", { error });
     }
   }
 
@@ -155,6 +145,7 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
   private async normalizeQueryAsync(query: string): Promise<string> {
 
     const searchHistory = await this.searchHistoryRepository.findSimilarQueriesAsync(query);
+    console.log("Search history:", searchHistory);
     let normalizedQuery;
     if (searchHistory.length > 0) {
       const queries = searchHistory.map(item => item.normalizedQuery);

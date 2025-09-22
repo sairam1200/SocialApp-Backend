@@ -1,3 +1,4 @@
+
 import { Response } from 'express';
 import { CommandBus } from '@nestjs/cqrs';
 import configs from '../../../../configs';
@@ -60,7 +61,7 @@ export class FacebookAuthenticationController {
       state: state,
       show_dialog: 'true', // Always show the login page
     });
-    const authorizeURL = `https://www.facebook.com/v22.0/dialog/oauth?${params.toString()}`;
+    const authorizeURL = `https://www.facebook.com/v23.0/dialog/oauth?${params.toString()}`;
 
     await this.commandBus.execute(
       new FacebookConnectQuery({

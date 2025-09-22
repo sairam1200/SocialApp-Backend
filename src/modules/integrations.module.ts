@@ -49,6 +49,7 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     dependency.ContentStreamRepository,
     dependency.SearchHistoryRepository,
     dependency.DataProtectionKeyRepository,
+    dependency.GeneralRepository,
   ],
   exports: [],
 })

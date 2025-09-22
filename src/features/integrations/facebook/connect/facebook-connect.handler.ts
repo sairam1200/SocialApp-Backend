@@ -17,7 +17,7 @@ import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinke
 import { FacebookProfileModel, FacebookUserDataModel } from '../../../../domain/contracts/facebook.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
 
-const GRAPH_BASE = 'https://graph.facebook.com/v22.0';
+const GRAPH_BASE = 'https://graph.facebook.com/v23.0';
 
 export class FacebookConnectQuery {
   model: {
@@ -101,9 +101,8 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
 
     let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(_const.PLATFORMS.FACEBOOK, user.email);
     if (linkedAccount) {
-      linkedAccount.userName = userData.username;
+      linkedAccount.userName = userData.name;
       linkedAccount.profileImage = userData.picture?.data?.url;
-      linkedAccount.followersCount = userData.followers_count;
       linkedAccount.followingCount = userData.friends?.summary?.total_count;
       linkedAccount.metaData = {
         name: userData.name,
@@ -115,9 +114,8 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         email: userData.email,
         userId: user.id,
         externalId: userData.id,
-        userName: userData.username,
+        userName: userData.name,
         profileImage: userData.picture?.data?.url,
-        followersCount: userData.followers_count,
         followingCount: userData.friends?.summary?.total_count,
         metaData: {
           name: userData.name,
@@ -194,14 +192,16 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       const response = await axios.get<FacebookUserDataModel>(`${GRAPH_BASE}/me`, {
         params: {
           access_token: accessToken,
-          fields: 'id,name,username,email,picture,followers_count,friends',
+          fields: 'id,name,email,picture,friends',
         },
       });
 
       return response.data;
-    } catch (error) {
+    } catch (error:any) {
       logger.error('Error fetching user data from Facebook', error);
-      throw new Error('Unexpected error during authentication with Facebook');
+      const facebookError = error.response?.data || error.message;
+      logger.error('Facebook API Error Details:', facebookError);
+      throw new ApplicationException(`Facebook API Error: ${JSON.stringify(facebookError)}`);
     }
   }
 

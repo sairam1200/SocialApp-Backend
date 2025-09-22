@@ -29,7 +29,7 @@ export class ContentStreamImportProcessor extends WorkerHost  {
                 await this.contentStreamRepository.createAsync(YouTubeOnlineResponseMapped)
               }else{
                 console.info(`Content with externalId ${YouTubeOnlineResponseMapped.externalId} and type ${YouTubeOnlineResponseMapped.type} already exists. not saving it`);
-              }
+            }
            
               
         })

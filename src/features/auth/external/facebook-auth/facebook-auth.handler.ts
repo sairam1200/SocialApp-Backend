@@ -21,7 +21,7 @@ import { uploadBase64ToCloudinaryAsync } from '../../../../core/utils/cloudinary
 import { stringUtil } from '../../../../core/utils/string.util';
 import { UserType } from '../../../../domain/enums';
 
-const GRAPH_BASE = 'https://graph.facebook.com/v22.0';
+const GRAPH_BASE = 'https://graph.facebook.com/v23.0';
 
 export class FacebookConnectQuery {
   model: {
@@ -163,7 +163,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         profileImage: profileImage,
         emailConfirmed: true,
         type: UserType.User,
-        userName: userData.username || `${firstName.toLowerCase()}${lastName.toLowerCase()}`.replace(/\s/g, ''),
+        userName: `${firstName.toLowerCase()}${lastName.toLowerCase()}`.replace(/\s/g, ''),
       });
 
       user = await this.userRepository.createAsync(entry, ''); // Empty password for OAuth users
@@ -188,9 +188,8 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     );
 
     if (linkedAccount) {
-      linkedAccount.userName = userData.username || userData.name;
+      linkedAccount.userName = userData.name;
       linkedAccount.profileImage = userData.picture?.data?.url;
-      linkedAccount.followersCount = userData.followers_count || 0;
       linkedAccount.followingCount = userData.friends?.summary?.total_count || 0;
       linkedAccount.metaData = {
         name: userData.name,
@@ -200,6 +199,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         location: userData.location?.name,
         link: userData.link,
       };
+      console.log(linkedAccount, "linkedAccount")
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
       linkedAccount = await this.linkedAccountRepository.createAsync(
@@ -208,9 +208,8 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
           userId: user.id,
           email: userData.email,
           externalId: userData.id,
-          userName: userData.username || userData.name,
+          userName: userData.name,
           profileImage: userData.picture?.data?.url,
-          followersCount: userData.followers_count || 0,
           followingCount: userData.friends?.summary?.total_count || 0,
           metaData: {
             name: userData.name,
@@ -246,7 +245,15 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       );
     }
 
-    return result;
+    // Generate JWT token for the user
+    const access_token_jwt = await this.tokenService.generateJwtAsync(user);
+    
+    return new FacebookCallbackTokenResponseModel({
+      accessToken: access_token_jwt,
+      refreshToken: '', // No refresh token for external auth
+      message: 'Facebook authentication successful',
+      succeeded: true,
+    });
   }
 
   private async fetchShortLivedToken(code: string): Promise<string> {
@@ -295,14 +302,16 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       const response = await axios.get<FacebookUserDataModel>(`${GRAPH_BASE}/me`, {
         params: {
           access_token: accessToken,
-          fields: 'id,name,username,email,picture,followers_count,friends,birthday,gender,hometown,location,link',
+          fields: 'id,name,email,picture,link,birthday,gender,hometown,location,friends'
         },
       });
 
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Error fetching user data from Facebook', error);
-      throw new Error('Unexpected error during authentication with Facebook');
+      const facebookError = error.response?.data || error.message;
+      logger.error('Facebook API Error Details:', facebookError);
+      throw new ApplicationException(`Facebook API Error: ${JSON.stringify(facebookError)}`);
     }
   }
 

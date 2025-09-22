@@ -55,11 +55,11 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
         const tokenValue = deserializeObject<{ access_token: string, refresh_token: string }>(userLogin.tokenValue);
         const {
           access_token,
-          expires_in,
-          refresh_token
+          expires_in
+     
         } = await this.refreshTokenAsync(tokenValue.refresh_token);
-        if (refresh_token) {
-          userLogin.tokenValue = serializeObject({ access_token, refresh_token, expires_in });
+        if (accessToken) {
+          userLogin.tokenValue = serializeObject({ access_token,refresh_token: tokenValue.refresh_token, expires_in });
           userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
           await this.userLoginRepository.updateAsync(userLogin);
         }
@@ -75,8 +75,8 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
       const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
 
       if (!isTokenValid) {
-        const { access_token, expires_in, refresh_token } = await this.refreshTokenAsync(tokenValue.refresh_token);
-        userLogin.tokenValue = serializeObject({ access_token, refresh_token });
+        const { access_token, expires_in} = await this.refreshTokenAsync(tokenValue.refresh_token);
+        userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
         userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
         await this.userLoginRepository.updateAsync(userLogin);
 
@@ -105,7 +105,7 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
   }
 
   private async refreshTokenAsync(refreshToken: string)
-    : Promise<{ access_token: string, expires_in: number, refresh_token: string; }> {
+    : Promise<{ access_token: string, expires_in: number }> {
 
     try {
 
@@ -120,7 +120,7 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
         },
       });
 
-      const { access_token, expires_in, refresh_token } = response.data;
+      const { access_token, expires_in} = response.data;
       if (!access_token) {
         throw new ApplicationException('Your Youtube session has expired or the access token is invalid. Please log in to Youtube again to continue.');
       }
@@ -128,7 +128,6 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
       return {
         access_token,
         expires_in,
-        refresh_token
       };
 
     } catch (error) {

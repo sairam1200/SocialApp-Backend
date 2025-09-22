@@ -34,6 +34,7 @@ export class ContentStreamRepository implements IContentStreamRepository {
   public async getEntriesAsync(params: QueryOptions): Promise<[ContentStream[], number]> {
 
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;
+    console.log('Query Options:', searchQuery);
     const queryBuilder = this.contentStreamContext.createQueryBuilder("content");
 
     if (!orderBy) {
@@ -97,7 +98,8 @@ export class ContentStreamRepository implements IContentStreamRepository {
 
     queryBuilder.skip((page - 1) * pageSize)
       .take(pageSize);
-    
-      return await queryBuilder.getManyAndCount();
+      const result = await queryBuilder.getManyAndCount();
+      console.log('Query Result:', result);
+      return result
   }
 }
