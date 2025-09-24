@@ -103,7 +103,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     if (linkedAccount) {
       linkedAccount.userName = userData.name;
       linkedAccount.profileImage = userData.picture?.data?.url;
-      linkedAccount.followingCount = userData.friends?.summary?.total_count;
+      linkedAccount.followingCount = userData.friends?.summary?.total_count,
       linkedAccount.metaData = {
         name: userData.name,
       };
@@ -197,7 +197,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       });
 
       return response.data;
-    } catch (error:any) {
+    } catch (error: any) {
       logger.error('Error fetching user data from Facebook', error);
       const facebookError = error.response?.data || error.message;
       logger.error('Facebook API Error Details:', facebookError);
