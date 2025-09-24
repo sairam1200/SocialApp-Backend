@@ -1,6 +1,5 @@
 import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { Globals } from "../../../../core/globals";
+import { QueryBus } from "@nestjs/cqrs";
 import { PinterestProfileQuery } from "./get-profile.handler";
 import { ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
@@ -15,7 +14,7 @@ import { BadRequestException, Controller, Get, HttpStatus, Query, Res, UseGuards
 export class PinterestProfileController {
 
   constructor(
-    private readonly commandBus: CommandBus
+    private readonly queryBus: QueryBus
   ) { }
 
   @Get('me')
@@ -28,8 +27,8 @@ export class PinterestProfileController {
     @Res() res: Response
   ): Promise<Response | void> {
 
-    const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-    const result = await this.commandBus.execute(new PinterestProfileQuery({ model: { userId } }));
+    const userId = HttpContext.getCurrentUserId;
+    const result = await this.queryBus.execute(new PinterestProfileQuery({ model: { userId } }));
 
     return res.status(HttpStatus.OK).json(result);
   }
@@ -54,7 +53,7 @@ export class PinterestProfileController {
       throw new BadRequestException('Only one of the following query parameters should be provided: userId, userName, or pinterestId.',);
     }
 
-    const result = await this.commandBus.execute(new PinterestProfileQuery({ model: { userId, userName, pinterestId } }));
+    const result = await this.queryBus.execute(new PinterestProfileQuery({ model: { userId, userName, pinterestId } }));
 
     return res.status(HttpStatus.OK).json(result);
   }

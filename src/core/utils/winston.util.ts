@@ -329,4 +329,5 @@ class Logger {
   }
 }
 
-export default new Logger();
+const logger = new Logger();
+export default logger;

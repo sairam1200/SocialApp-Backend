@@ -1,3 +1,4 @@
+import { QueryOptions } from "../types/queryOptions.type";
 import { UserContent } from "../entities/userContent.entity";
 
 export interface IUserContentRepository {
@@ -7,22 +8,8 @@ export interface IUserContentRepository {
 
   deleteAsync(content: UserContent): Promise<void>;
   getByIdAsync(id: string): Promise<UserContent>;
-  getByPlatformAndContentIdAsync(
-    platform: string,
-    contentId: string
-  ): Promise<UserContent>;
+  getByPlatformAndContentIdAsync(platform: string, contentId: string): Promise<UserContent>;
+  getByUserIdAsync(userId: string, platform: string, cursor: string): Promise<[UserContent[], string]>;
 
-  getByUserIdAsync(
-    userId: string,
-    platform: string,
-    cursor: string
-  ): Promise<[UserContent[], string]>;
-
-  getEntriesAsync(
-    page: number,
-    pageSize: number,
-    orderBy: string,
-    order: "ASC" | "DESC",
-    searchTerm?: string
-  ): Promise<[UserContent[], number]>;
+  getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]>
 }

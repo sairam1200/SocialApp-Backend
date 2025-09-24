@@ -16,14 +16,17 @@ import { ImportGateway } from "../infrastructure/websocket/gateways/import.gatew
 import { BullBoardAuthMiddleware } from "../core/middlewares/bullBoardAuth.middleware";
 import { DynamicModule, MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { EmailProcessor, InjectEmailQueue } from "../infrastructure/background/processors/email.processor";
+import { RedditImportProcessor, InjectRedditImportQueue } from "../infrastructure/background/processors/reddit-import.processor";
 import { InjectSpotifyImportQueue, SpotifyImportProcessor } from "../infrastructure/background/processors/spotify-import.processor";
+import { InjectTwitterImportQueue, TwitterImportProcessor } from "../infrastructure/background/processors/twitter-import.processor";
 import { InjectYoutubeImportQueue, YoutubeImportProcessor } from "../infrastructure/background/processors/youtube-import.processor";
 import { FacebookImportProcessor, InjectFacebookImportQueue } from "../infrastructure/background/processors/facebook-import.processor";
 import { InjectPinterestImportQueue, PinterestImportProcessor } from "../infrastructure/background/processors/pinterest-import.processor";
 import { InjectInstagramImportQueue, InstagramImportProcessor } from "../infrastructure/background/processors/instagram-import.processor";
-import { RedditImportProcessor, InjectRedditImportQueue } from "../infrastructure/background/processors/reddit-import.processor";
-import { InjectTwitterImportQueue,TwitterImportProcessor } from "../infrastructure/background/processors/twitter-import.processor";
-import { InjectLinkedInImportQueue, LinkedInImportProcessor } from "../infrastructure/background/processors/linkedin-import.processor";
+import { ContentStreamImportProcessor, InjectContentStreamImportQueue } from "infrastructure/background/processors/contentStream-import.processor";
+import { IntegrationsModule } from "./integrations.module";
+import { ContentStream } from "domain/entities";
+
 @Module({})
 export class QueuesModule implements NestModule {
   static register(): DynamicModule {
@@ -57,14 +60,17 @@ export class QueuesModule implements NestModule {
       },
       {
         name: _const.BULL_QUEUES.LINKEDIN_IMPORT,
-      }
+      },
+      {
+        name: _const.BULL_QUEUES.CONTENT_STREAM_IMPORT,
+      },
     );
 
     return {
       module: QueuesModule,
       imports: [
         NotificationModule,
-        TypeOrmModule.forFeature([Notification, UserContent, LinkedAccount]),
+        TypeOrmModule.forFeature([Notification, UserContent, LinkedAccount,ContentStream]),
         BullModule.forRoot({
           connection: redis.instance,
           prefix: 'gaddr-backend',
@@ -81,7 +87,7 @@ export class QueuesModule implements NestModule {
       providers: [
         JwtService,
         ...queues.providers,
-
+        
         PinterestImportProcessor,
         InstagramImportProcessor,
         FacebookImportProcessor,
@@ -89,18 +95,21 @@ export class QueuesModule implements NestModule {
         TwitterImportProcessor,
         SpotifyImportProcessor,
         RedditImportProcessor,
+        ContentStreamImportProcessor, 
         EmailProcessor,
         ImportGateway,
 
         dependency.UserContentRepository,
         dependency.LinkedAccountRepository,
+        dependency.ContentStreamRepository
       ],
       exports: [
         InstagramImportProcessor,
-        PinterestImportProcessor,
+        PinterestImportProcessor, 
         FacebookImportProcessor,
         YoutubeImportProcessor,
         RedditImportProcessor,
+        ContentStreamImportProcessor,
         ...queues.exports,
         EmailProcessor,
       ],
@@ -115,6 +124,7 @@ export class QueuesModule implements NestModule {
     @InjectSpotifyImportQueue() private readonly spotifyImportQueue: Queue,
     @InjectRedditImportQueue() private readonly redditImportQueue: Queue,
     @InjectTwitterImportQueue() private readonly twitterImportQueue: Queue,
+    @InjectContentStreamImportQueue() private readonly contentStreamImportQueue: Queue,
     @InjectEmailQueue() private readonly emailQueue: Queue,
   ) { }
 
@@ -128,6 +138,7 @@ export class QueuesModule implements NestModule {
         new BullMQAdapter(this.youtubeImportQueue),
         new BullMQAdapter(this.instagramImportQueue),
         new BullMQAdapter(this.redditImportQueue),
+        new BullMQAdapter(this.contentStreamImportQueue),
         new BullMQAdapter(this.emailQueue),
       ],
       serverAdapter,

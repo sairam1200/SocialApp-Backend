@@ -40,6 +40,8 @@ import { YoutubeProfileController } from "./youtube/get-profile/get-profile.endp
 import { YoutubeProfileQueryHandler } from "./youtube/get-profile/get-profile.handler";
 import { YoutubeImportController } from "./youtube/import/youtube-import.endpoint";
 import { YoutubeImportCommandHandler } from "./youtube/import/youtube-import.handler";
+import { YoutubeSearchController } from "./youtube/search/youtube-search.endpoint";
+import { YoutubeSearchQueryHandler } from "./youtube/search/youtube-search.handler";
 import { TiktokConnectController } from "./tiktok/connect/tiktok-connect.endpoint";
 import { TiktokConnectCallbackQueryHandler, TiktokConnectQueryHandler } from "./tiktok/connect/tiktok-connect.handler";
 import { TikTokProfileController } from "./tiktok/get-profile/get-profile.endpoint";
@@ -115,6 +117,8 @@ export { YoutubeProfileQueryHandler } from "./youtube/get-profile/get-profile.ha
 
 export { YoutubeImportController } from "./youtube/import/youtube-import.endpoint";
 export { YoutubeImportCommandHandler } from "./youtube/import/youtube-import.handler";
+export { YoutubeSearchController } from "./youtube/search/youtube-search.endpoint";
+export { YoutubeSearchQueryHandler } from "./youtube/search/youtube-search.handler";
 
 export { TiktokConnectController as TikTokConnectController } from "./tiktok/connect/tiktok-connect.endpoint";
 export { TiktokConnectCallbackQueryHandler, TiktokConnectQueryHandler } from "./tiktok/connect/tiktok-connect.handler";
@@ -156,6 +160,7 @@ const controllers = [
   YoutubeConnectController,
   YoutubeProfileController,
   YoutubeImportController,
+  YoutubeSearchController,
   TiktokConnectController,
   TikTokProfileController,
   TikTokImportController,
@@ -186,6 +191,7 @@ const handlers = [
   YoutubeConnectCallbackQueryHandler, YoutubeConnectQueryHandler,
   YoutubeProfileQueryHandler,
   YoutubeImportCommandHandler,
+  YoutubeSearchQueryHandler,
   TiktokConnectCallbackQueryHandler,
   TiktokConnectQueryHandler,
   TiktokProfileQueryHandler,

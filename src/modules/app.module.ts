@@ -17,7 +17,8 @@ import { HttpContextMiddleware } from '../core/middlewares/httpContext.middlewar
 import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '@nestjs/common';
 
 @Module({
-  imports: [PassportModule,
+  imports: [
+    PassportModule,
     JwtModule.register({
       secret: configs.jwt.secret,
       signOptions: { expiresIn: configs.jwt.accessTokenExpiration },
