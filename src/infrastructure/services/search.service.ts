@@ -76,7 +76,7 @@ export class SearchService implements ISearchService {
       userContent: skipUserContentSearch,
       linkedAccount: skipLinkedAccountSearch,
       manualProfile: false,
-      online: false
+     
     };
     // loop and check in every table if the content exist if not add to the response
     const ytOnlineResults =  await  this.fetchYouTubeOnlineAsync(skipOnlineSearch, originalQuery, limit, filters, accessToken)

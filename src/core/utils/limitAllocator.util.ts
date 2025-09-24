@@ -1,11 +1,10 @@
-type SearchSectionKey = 'contentStream' | 'userContent' | 'linkedAccount' | 'online' | 'manualProfile';
+type SearchSectionKey = 'contentStream' | 'userContent' | 'linkedAccount' | 'manualProfile';
 
 export interface SectionSkipMap {
   contentStream: boolean;
   userContent: boolean;
   linkedAccount: boolean;
   manualProfile: boolean;
-  online: boolean;
 }
 
 /**
@@ -17,7 +16,7 @@ function getSectionLimits(limit: number, skips: SectionSkipMap): Record<SearchSe
     { key: 'userContent', skip: skips.userContent },
     { key: 'linkedAccount', skip: skips.linkedAccount },
     { key: 'manualProfile', skip: skips.manualProfile },
-    { key: 'online', skip: skips.online },
+    
   ];
 
   const activeSections = sections.filter(s => !s.skip);
@@ -31,7 +30,6 @@ function getSectionLimits(limit: number, skips: SectionSkipMap): Record<SearchSe
     userContent: 0,
     linkedAccount: 0,
     manualProfile: 0,
-    online: 0
   };
 
   activeSections.forEach((section, index) => {
