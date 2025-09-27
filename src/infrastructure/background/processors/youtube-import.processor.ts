@@ -117,7 +117,6 @@ export class YoutubeImportProcessor extends WorkerHost {
           
           logger.debug(`✅ Retrieved ${items.length} items of ${type}`);
 
-
           if (!nextPageToken) {
             progressReports[type].status = NotificationStatus.Completed;
           }
@@ -193,7 +192,6 @@ export class YoutubeImportProcessor extends WorkerHost {
                   },
                 });
                 try{
-                 
                   videoContent = await this.userContentRepository.createAsync(videoContent);
                   logger.debug("this is the video content: ");
                   const playlist_video = mapToYoutubePlaylisVideoModel(content)

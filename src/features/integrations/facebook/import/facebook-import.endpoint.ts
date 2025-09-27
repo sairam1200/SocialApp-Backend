@@ -4,6 +4,7 @@ import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 import { FacebookImportCommand, FacebookImportRequestModel } from "./facebook-import.handler";
+import logger from "core/utils/winston.util";
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
@@ -29,8 +30,11 @@ export class FacebookImportController {
   ): Promise<Response | void> {
 
     const result = await this.commandBus.execute(new FacebookImportCommand({ model }));
+    console.log("facebook import result:", result)
     if (model.facebookAccessToken) {
-      return res.status(HttpStatus.OK).json({ message: "Facebook import has begun." });
+      return res
+        .status(HttpStatus.OK)
+        .json({ message: 'Facebook import has begun.' });
     }
 
     return res.status(HttpStatus.OK).json({ message: "Facebook import has begun.", ...result });

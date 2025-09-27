@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { Queue } from 'bull';
+import { Queue } from 'bullmq';
 import configs from '../../../../configs';
-import { InjectQueue } from '@nestjs/bull';
+import { InjectQueue } from '@nestjs/bullmq';
 import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import { Globals } from '../../../../core/globals';
@@ -89,7 +89,7 @@ export class FacebookImportCommandHandler
 
     try {
       await this.importQueue.add(
-        'FACEBOOK_IMPORT',
+        _const.BULL_QUEUES.FACEBOOK_IMPORT,
         { account, accessToken },
         {
           attempts: 3,
