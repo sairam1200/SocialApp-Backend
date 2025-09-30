@@ -98,6 +98,7 @@ export class FacebookImportProcessor extends WorkerHost {
         continue;
       }
 
+      const requestUrl = `https://graph.facebook.com/v23.0${endpoint}`;
       let nextPageParams: Record<string, string> | null = null;
 
       progressReports[type] = {
@@ -109,10 +110,10 @@ export class FacebookImportProcessor extends WorkerHost {
 
       try {
         while (true) {
-          const requestUrl = `https://graph.facebook.com/v23.0${endpoint}`;
+          
           const params: any = {
             access_token: accessToken,
-            limit: 100,
+            limit: 50,
             ...(nextPageParams || {}),
           };
 
@@ -255,7 +256,7 @@ export class FacebookImportProcessor extends WorkerHost {
         const errorDetails = {
           message: err.message,
           stack: err.stack,
-          url: `https://graph.facebook.com/v23.0${endpoint}`,
+          url: requestUrl,
           params: nextPageParams,
           responseData: err.response?.data,
           status: err.response?.status,
