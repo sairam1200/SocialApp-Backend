@@ -47,3 +47,18 @@ export enum YouTubeOnlineFilters {
     Videos = "youtube#video",
     Playlists = "youtube#playlist"
 }
+
+export enum FacebookUserContentFilters { 
+    Feed = "feed",
+    Post = "post",
+    Likes = "likes",
+    Group = "group",
+}
+
+export enum FacebookOnlineFilters { 
+    Post = "post",
+    Page = "page",
+    Group = "group",
+    Event = "event",
+    Place = "place",
+}

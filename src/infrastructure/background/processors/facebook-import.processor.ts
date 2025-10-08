@@ -159,11 +159,8 @@ export class FacebookImportProcessor extends WorkerHost {
               content.type = 'feed';
               content.title =
                 facebookContent.name ??
-                stringUtil.trimWithEllipsis(
-                  facebookContent.message ??
-                    facebookContent.story ??
-                    'Facebook Post',
-                );
+                facebookContent.message ??
+                'Facebook Post';
               content.metaData = {
                 from: facebookContent.from,
                 link: facebookContent.link,

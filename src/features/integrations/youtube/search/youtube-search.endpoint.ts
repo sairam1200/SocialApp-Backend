@@ -15,7 +15,6 @@ export class YoutubeSearchController {
     private readonly queryBus: QueryBus
   ) { }
 
- 
 
   @Post('search')
   @UseGuards(UserAccoutGuard)
@@ -33,5 +32,4 @@ export class YoutubeSearchController {
       return res.status(HttpStatus.OK).json(result);
 
   }
-   
 }
