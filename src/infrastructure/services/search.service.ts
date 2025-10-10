@@ -42,9 +42,9 @@ import {
   FacebookOnlineFilters,
   FacebookUserContentFilters,
 } from 'domain/enums';
-import { LinkedInProfileModel } from 'domain/contracts/linkedin.model';
 import { IGeneralRepository } from 'domain/repositories/igeneral.repository';
 import {
+  FacebookAPIResponseModel,
   FacebookSearchParamsModel,
   FacebookSearchResponseModel,
 } from 'domain/contracts/facebook.model';
@@ -76,6 +76,8 @@ export class SearchService implements ISearchService {
     const response = new FacebookSearchResponseModel();
     response.query = params.originalQuery;
 
+    console.log("Facebook params:",params);
+
     const {
       filters,
       limit,
@@ -106,7 +108,7 @@ export class SearchService implements ISearchService {
       manualProfile: false,
     };
 
-    // Step 1: Fetch data from Facebook Graph API
+    // Fetch data from Facebook Graph API
     const fbOnlineResults = await this.fetchFacebookOnlineAsync(
       skipOnlineSearch,
       normalizedQuery,
@@ -115,42 +117,36 @@ export class SearchService implements ISearchService {
       accessToken,
     );
 
-    // Step 2: Map Facebook results into ContentStream entities
+    // Map Facebook results into ContentStream entities
     const mappedFbOnlineResults = await Promise.all(
-      fbOnlineResults.items.map((item) =>
+      fbOnlineResults.data.map((item) =>
         mapFacebookOnlineResponseToContentStream(item),
       ),
     );
 
-    // Step 3: Check which ones are new
+    // Check which ones are new
     const fbOnlineExternalIds = mappedFbOnlineResults.map(
       (content) => content.externalId,
     );
-    console.log('this is the list of ids to check', fbOnlineExternalIds);
 
     const listIds = await this.generalRepository.checkExistingItemsAsync(
       fbOnlineExternalIds,
       _const.PLATFORMS.FACEBOOK,
     );
-    console.log("this is the list of ids that doesn't exist", listIds);
 
     const newContents = mappedFbOnlineResults.filter((content) =>
       listIds.includes(content.externalId),
     );
 
-    console.log('this is the list of contents to add', newContents);
-
-    // Step 4: Insert new contents if any
+    // Insert new contents if any
     if (newContents.length > 0) {
       const result = await this.generalRepository.createAsync(newContents);
-      console.log('this are the external id  of the bulk insert', result);
     }
 
-    // 5️ Allocate section limits
+    // Allocate section limits
     const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
-    console.log('this is the section limits', sectionLimits);
 
-    // 6️ Fetch local results from DB (contentStreams, userContents, linkedAccounts)
+    // Fetch local results from DB (contentStreams, userContents, linkedAccounts)
     const [contentStreamResults, userContentResults, linkedAccountResults] =
       await Promise.all([
         this.searchContentStreamAsync(skipContentStreamSearch, {
@@ -173,13 +169,8 @@ export class SearchService implements ISearchService {
         } as QueryOptions),
       ]);
 
-    // 7️ Process content stream results
+    // Process content stream results
     if (contentStreamResults[0].length !== 0) {
-      console.log(
-        'this is the content stream results and limit',
-        contentStreamResults[0],
-        sectionLimits.contentStream,
-      );
 
       contentStreamResults[0].forEach((content: ContentStream) => {
         const mappedContent = mapContentStreamToFacebookOnlineModel(content);
@@ -203,14 +194,8 @@ export class SearchService implements ISearchService {
       });
     }
 
-    // 8️ Process user content results
+    // Process user content results
     if (userContentResults[0].length > 0) {
-      console.log(
-        'this is the user content results and limit',
-        userContentResults[0],
-        sectionLimits.userContent,
-      );
-
       userContentResults[0].forEach((content: UserContent) => {
         switch (content.type) {
           case FacebookUserContentFilters.Feed:
@@ -237,32 +222,26 @@ export class SearchService implements ISearchService {
       });
     }
 
-    // 9️ Process linked account results
+    // Process linked account results
     if (linkedAccountResults[0].length !== 0) {
-      console.log(
-        'this is the linked account results and limit',
-        linkedAccountResults[0],
-        sectionLimits.linkedAccount,
-      );
 
       linkedAccountResults[0].forEach((account: LinkedAccount) => {
         const mappedLinkedAccount = mapToFacebookProfileModel(account);
-        console.log("mapped linked account", mappedLinkedAccount);
         response.results.accounts.push(mappedLinkedAccount);
       });
     }
 
     //  Merge new online data into response
-    if (fbOnlineResults?.data?.length > 0) {
-      fbOnlineResults.data.forEach((item) => {
-        const exists = response.results.posts.data.find(
-          (p) => p.id === item.id,
-        );
-        if (!exists) {
-          response.results.posts.data.push(item);
-        }
-      });
-    }
+    // if (fbOnlineResults?.data?.length > 0) {
+    //   fbOnlineResults.data.forEach((item) => {
+    //     const exists = response.results.posts.data.find(
+    //       (p) => p.id === item.id,
+    //     );
+    //     if (!exists) {
+    //       response.results.posts.data.push(item);
+    //     }
+    //   });
+    // }
 
     // Assign paging info from Facebook API
     // response.results.posts.paging = fbOnlineResults.paging;
@@ -277,22 +256,25 @@ export class SearchService implements ISearchService {
     filters: Record<string, string | number> = {},
     accessToken: string,
     pageToken?: string,
-  ): Promise<any> {
+  ): Promise<FacebookAPIResponseModel> {
     const emptyResult = { data: [] };
+
+    if (skipSearch) {
+      return emptyResult;
+    }
 
     try {
       const baseUrl = `https://graph.facebook.com/v23.0/search`;
 
       const params: Record<string, string | number> = {
         q: query,
-        type: filters.type || 'post', // can be page, post, group, event, place
+        type: filters.type || 'posts', // can be page, post, grousp, events
         limit: limit,
-        fields: 'id,name,about,picture{url},category,message', //TODO: Confirm that these fields are correct
+        // fields: 'id,name,about,picture{url},category,message',
         access_token: accessToken,
       };
 
       const response = await axios.get(baseUrl, { params });
-      console.log('Search response', response);
       return response.data;
     } catch (error: any) {
       logger.error(

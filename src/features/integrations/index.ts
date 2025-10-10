@@ -54,6 +54,8 @@ import { LinkedInProfileController } from "./linkedin/get-profile/get-profile.en
 import { LinkedInProfileQueryHandler } from "./linkedin/get-profile/get-profile.handler";
 import { LinkedInImportController } from "./linkedin/import/linkedin-import.endpoint";
 import { LinkedInImportCommandHandler } from "./linkedin/import/linkedin-import.handler";
+import { FacebookSearchController } from "./facebook/search/facebook-search.endpoint";
+import { FacebookSearchQueryHandler } from "./facebook/search/facebook-search.handler";
 
 export { FacebookConnectController } from "./facebook/connect/facebook-connect.endpoint"
 export { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./facebook/connect/facebook-connect.handler";
@@ -63,6 +65,9 @@ export { FacebookImportCommandHandler } from "./facebook/import/facebook-import.
 
 export { FacebookProfileController } from "./facebook/get-profile/get-profile.endpoint";
 export { FacebookProfileQueryHandler } from "./facebook/get-profile/get-profile.handler";
+
+export { FacebookSearchController } from "./facebook/search/facebook-search.endpoint";
+export { FacebookSearchQueryHandler } from "./facebook/search/facebook-search.handler"
 
 export { InstagramConnectController } from "./instagram/connect/instagram-connect.endpoint"
 export { InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler } from "./instagram/connect/instagram-connect.handler";
@@ -142,6 +147,7 @@ const controllers = [
   FacebookConnectController,
   FacebookImportController,
   FacebookProfileController,
+  FacebookSearchController,
   InstagramConnectController,
   InstagramProfileController,
   InstagramImportController,
@@ -173,6 +179,7 @@ const handlers = [
   FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler,
   FacebookImportCommandHandler,
   FacebookProfileQueryHandler,
+  FacebookSearchQueryHandler,
   InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler,
   InstagramProfileQueryHandler,
   InstagramImportCommandHandler,

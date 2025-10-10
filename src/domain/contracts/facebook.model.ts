@@ -134,7 +134,7 @@ export interface FacebookPaging {
   next?: string;
 }
 
-export interface FacebookResponseModel {
+export interface FacebookAPIResponseModel {
   data: FacebookSearchItemModel[];
   paging?: FacebookPaging;
 }
@@ -142,14 +142,14 @@ export interface FacebookResponseModel {
 export class FacebookSearchResponseModel {
   query: string;
   results: {
-    feeds?: FacebookResponseModel;
-    posts?: FacebookResponseModel;
-    likes?: FacebookResponseModel;
-    pages?: FacebookResponseModel;
-    groups?: FacebookResponseModel;
-    events?: FacebookResponseModel;
-    people?: FacebookResponseModel;
-    videos?: FacebookResponseModel;
+    feeds?: FacebookAPIResponseModel;
+    posts?: FacebookAPIResponseModel;
+    likes?: FacebookAPIResponseModel;
+    pages?: FacebookAPIResponseModel;
+    groups?: FacebookAPIResponseModel;
+    events?: FacebookAPIResponseModel;
+    people?: FacebookAPIResponseModel;
+    videos?: FacebookAPIResponseModel;
     accounts?: any; // TODO: confirm proper type
   };
 

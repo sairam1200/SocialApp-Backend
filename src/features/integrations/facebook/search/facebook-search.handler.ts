@@ -11,10 +11,6 @@ import { ApplicationException } from '../../../../core/exceptions';
 import { ISearchService } from '../../../../domain/services/isearch.service';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import {
-  deserializeObject,
-  serializeObject,
-} from '../../../../core/utils/serialization.util';
-import {
   ISearchHistoryRepository,
   IUserLoginRepository,
 } from '../../../../domain/repositories';
@@ -59,69 +55,56 @@ export class FacebookSearchQueryHandler
     if (facebookAccessToken) {
       const isTokenValid =
         await this.verifyAccessTokenAsync(facebookAccessToken);
-      if (!isTokenValid) {
+      if (isTokenValid) {
+        accessToken = facebookAccessToken;
+      } else {
         const now = new Date();
         const userLogin =
           await this.userLoginRepository.getByUserIdAndProviderAsync(
             userId,
-            _const.PLATFORMS.YOUTUBE,
+            _const.PLATFORMS.FACEBOOK,
+          );
+        console.log('User Login', userLogin);
+        if (userLogin && now < userLogin.expiryDateUtc) {
+          const { access_token, expires_in } = await this.refreshTokenAsync(
+            userLogin.tokenValue,
           );
 
-        if (userLogin && now < userLogin.expiryDateUtc) {
-          const tokenValue = deserializeObject<{
-            access_token: string;
-            refresh_token: string;
-          }>(userLogin.tokenValue);
-          const { access_token, expires_in } = await this.refreshTokenAsync(
-            tokenValue.refresh_token,
-          );
-          if (accessToken !== '') {
-            userLogin.tokenValue = serializeObject({
-              access_token,
-              refresh_token: tokenValue.refresh_token,
-            });
-            userLogin.expiryDateUtc = new Date(
-              Date.now() + 100 * 24 * 60 * 60 * 1000,
-            ); // 100 days
-            await this.userLoginRepository.updateAsync(userLogin);
-          }
+          userLogin.tokenValue = access_token;
+          userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
+          await this.userLoginRepository.updateAsync(userLogin);
+
           accessToken = access_token;
           expiresIn = expires_in;
         }
-      } else {
-        accessToken = facebookAccessToken;
       }
     } else {
+      // No token provided → use stored login
       const userLogin =
         await this.userLoginRepository.getByUserIdAndProviderAsync(
           userId,
           _const.PLATFORMS.FACEBOOK,
         );
-      const tokenValue = deserializeObject<{
-        access_token: string;
-        refresh_token: string;
-        expires_in: number;
-      }>(userLogin.tokenValue);
+
       const isTokenValid = await this.verifyAccessTokenAsync(
-        tokenValue.access_token,
+        userLogin.tokenValue,
       );
       if (!isTokenValid) {
         const { access_token, expires_in } = await this.refreshTokenAsync(
-          tokenValue.refresh_token,
+          userLogin.tokenValue,
         );
-        userLogin.tokenValue = serializeObject({
-          access_token,
-          refresh_token: tokenValue.refresh_token,
-        });
-        userLogin.expiryDateUtc = new Date(
-          Date.now() + 100 * 24 * 60 * 60 * 1000,
-        ); // 100 days
+
+        userLogin.tokenValue = access_token;
+        userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
         await this.userLoginRepository.updateAsync(userLogin);
+
         accessToken = access_token;
         expiresIn = expires_in;
       } else {
-        accessToken = tokenValue.access_token;
-        expiresIn = tokenValue.expires_in;
+        accessToken = userLogin.tokenValue;
+        expiresIn = Math.floor(
+          (userLogin.expiryDateUtc.getTime() - Date.now()) / 1000,
+        );
       }
     }
 
@@ -201,6 +184,7 @@ export class FacebookSearchQueryHandler
       );
 
       return false;
+      // throw new ApplicationException("Something went wrong while verifying the Facebook access token. Please try again later.");
     }
   }
 

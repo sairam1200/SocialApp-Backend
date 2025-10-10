@@ -7,10 +7,10 @@ import { FacebookSearchQuery, FacebookSearchRequestModel } from "./facebook-sear
 
 @ApiTags('Integrations')
 @Controller({
-  path: `/integrations/youtube`,
+  path: `/integrations/facebook`,
   version: '1',
 })
-export class YoutubeSearchController {
+export class FacebookSearchController {
   constructor(
     private readonly queryBus: QueryBus
   ) { }
