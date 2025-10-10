@@ -50,15 +50,17 @@ export enum YouTubeOnlineFilters {
 
 export enum FacebookUserContentFilters { 
     Feed = "feed",
-    Post = "post",
+    Posts = "posts",
     Likes = "likes",
-    Group = "group",
+    Groups = "groups",
+    Events = "events",
+    Videos = "videos",
 }
 
 export enum FacebookOnlineFilters { 
-    Post = "post",
-    Page = "page",
-    Group = "group",
-    Event = "event",
-    Place = "place",
+    Posts = "posts",
+    Pages = "pages",
+    Groups = "groups",
+    Events = "events",
+    People = "people",
 }

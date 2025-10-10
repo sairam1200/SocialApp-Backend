@@ -32,7 +32,7 @@ export function mapToFacebookOnlineModel(
   return {
     id: data.id,
     title: data.name ?? data.message ?? 'Facebook Post',
-    type: data.type ?? 'Feed',
+    type: data.type ?? 'feed',
     platform: _const.PLATFORMS.FACEBOOK,
     externalId: data.id,
     description: data.description ?? '',
@@ -63,4 +63,16 @@ export function mapFacebookOnlineResponseToContentStream(
   facebookOnlineContent.metaData = rest;
 
   return facebookOnlineContent;
+}
+
+export function mapContentStreamToFacebookOnlineModel(content: ContentStream) : FacebookOnlineModel {
+  const {type, externalId, title, ...rest} = content
+  return {
+    id: content.id,
+    type: content.subType,
+    platform: content.platform,
+    title: content.title,
+    externalId: content.externalId,
+    ...rest.metaData
+  } as FacebookOnlineModel
 }

@@ -36,14 +36,24 @@ import {
   mapToYoutubeUploadedVideosModel,
   mapYouTubeOnlineResponseToContentStream,
 } from 'domain/mappers/youtube.mapper';
-import { YouTubeUserContentFilters, YouTubeOnlineFilters } from 'domain/enums';
+import {
+  YouTubeUserContentFilters,
+  YouTubeOnlineFilters,
+  FacebookOnlineFilters,
+  FacebookUserContentFilters,
+} from 'domain/enums';
 import { LinkedInProfileModel } from 'domain/contracts/linkedin.model';
 import { IGeneralRepository } from 'domain/repositories/igeneral.repository';
 import {
   FacebookSearchParamsModel,
   FacebookSearchResponseModel,
 } from 'domain/contracts/facebook.model';
-import { mapFacebookOnlineResponseToContentStream } from 'domain/mappers/facebook.mapper';
+import {
+  mapContentStreamToFacebookOnlineModel,
+  mapFacebookOnlineResponseToContentStream,
+  mapToFacebookOnlineModel,
+  mapToFacebookProfileModel,
+} from 'domain/mappers/facebook.mapper';
 
 @Injectable()
 export class SearchService implements ISearchService {
@@ -80,20 +90,19 @@ export class SearchService implements ISearchService {
       filters.platform = _const.PLATFORMS.FACEBOOK;
     }
 
-    const skipContentStreamSerch =
+    const skipContentStreamSearch =
       filters.type &&
       !['Profile', 'Content', 'Community'].includes(filters.type);
     const skipUserContentSearch =
-      filters.type && !['video', 'playlist'].includes(filters.type);
+      filters.type && !['feed', 'likes', 'video'].includes(filters.type);
     const skipLinkedAccountSearch =
-      filters.type && !['channel'].includes(filters.type);
+      filters.type && !['page', 'group', 'event'].includes(filters.type);
     const skipOnlineSearch = page > 1 && !pageToken;
 
-    // Determine which sections to skip (for simplicity, we’ll check all)
     const skips: SectionSkipMap = {
-      contentStream: false,
-      userContent: false,
-      linkedAccount: false,
+      contentStream: skipContentStreamSearch,
+      userContent: skipUserContentSearch,
+      linkedAccount: skipLinkedAccountSearch,
       manualProfile: false,
     };
 
@@ -137,9 +146,126 @@ export class SearchService implements ISearchService {
       console.log('this are the external id  of the bulk insert', result);
     }
 
-    // Step 5: Assign results to response
-    response.results.posts.data = fbOnlineResults.data;
-    response.results.posts.paging = fbOnlineResults.paging;
+    // 5️ Allocate section limits
+    const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
+    console.log('this is the section limits', sectionLimits);
+
+    // 6️ Fetch local results from DB (contentStreams, userContents, linkedAccounts)
+    const [contentStreamResults, userContentResults, linkedAccountResults] =
+      await Promise.all([
+        this.searchContentStreamAsync(skipContentStreamSearch, {
+          page,
+          filter: filters,
+          searchQuery: normalizedQuery,
+          pageSize: sectionLimits.contentStream,
+        } as QueryOptions),
+        this.searchUserContentAsync(skipUserContentSearch, {
+          page,
+          filter: filters,
+          searchQuery: normalizedQuery,
+          pageSize: sectionLimits.userContent,
+        } as QueryOptions),
+        this.searchLinkedAccountAsync(skipLinkedAccountSearch, {
+          page,
+          filter: filters,
+          searchQuery: normalizedQuery,
+          pageSize: sectionLimits.linkedAccount,
+        } as QueryOptions),
+      ]);
+
+    // 7️ Process content stream results
+    if (contentStreamResults[0].length !== 0) {
+      console.log(
+        'this is the content stream results and limit',
+        contentStreamResults[0],
+        sectionLimits.contentStream,
+      );
+
+      contentStreamResults[0].forEach((content: ContentStream) => {
+        const mappedContent = mapContentStreamToFacebookOnlineModel(content);
+        switch (mappedContent.type) {
+          case FacebookOnlineFilters.Posts:
+            response.results.posts.data.push(mappedContent);
+            break;
+          case FacebookOnlineFilters.Pages:
+            response.results.pages.data.push(mappedContent);
+            break;
+          case FacebookOnlineFilters.Groups:
+            response.results.groups.data.push(mappedContent);
+            break;
+          case FacebookOnlineFilters.Events:
+            response.results.events.data.push(mappedContent);
+            break;
+          case FacebookOnlineFilters.People:
+            response.results.people.data.push(mappedContent);
+            break;
+        }
+      });
+    }
+
+    // 8️ Process user content results
+    if (userContentResults[0].length > 0) {
+      console.log(
+        'this is the user content results and limit',
+        userContentResults[0],
+        sectionLimits.userContent,
+      );
+
+      userContentResults[0].forEach((content: UserContent) => {
+        switch (content.type) {
+          case FacebookUserContentFilters.Feed:
+            response.results.feeds.data.push(content);
+            break;
+          case FacebookUserContentFilters.Posts:
+            response.results.posts.data.push(content);
+            break;
+          case FacebookUserContentFilters.Likes:
+            response.results.likes.data.push(content);
+            break;
+          case FacebookUserContentFilters.Groups:
+            response.results.groups.data.push(content);
+            break;
+          case FacebookUserContentFilters.Events:
+            response.results.events.data.push(content);
+            break;
+          case FacebookUserContentFilters.Videos:
+            response.results.videos.data.push(content);
+            break;
+          default:
+            break;
+        }
+      });
+    }
+
+    // 9️ Process linked account results
+    if (linkedAccountResults[0].length !== 0) {
+      console.log(
+        'this is the linked account results and limit',
+        linkedAccountResults[0],
+        sectionLimits.linkedAccount,
+      );
+
+      linkedAccountResults[0].forEach((account: LinkedAccount) => {
+        const mappedLinkedAccount = mapToFacebookProfileModel(account);
+        console.log("mapped linked account", mappedLinkedAccount);
+        response.results.accounts.push(mappedLinkedAccount);
+      });
+    }
+
+    //  Merge new online data into response
+    if (fbOnlineResults?.data?.length > 0) {
+      fbOnlineResults.data.forEach((item) => {
+        const exists = response.results.posts.data.find(
+          (p) => p.id === item.id,
+        );
+        if (!exists) {
+          response.results.posts.data.push(item);
+        }
+      });
+    }
+
+    // Assign paging info from Facebook API
+    // response.results.posts.paging = fbOnlineResults.paging;
 
     return response;
   }

@@ -125,7 +125,6 @@ export interface FacebookSearchItemModel {
   via?: Record<string, any>;
 }
 
-
 export interface FacebookPaging {
   cursors?: {
     before?: string;
@@ -141,22 +140,31 @@ export interface FacebookResponseModel {
 }
 
 export class FacebookSearchResponseModel {
-  @ApiProperty()
   query: string;
-
-  @ApiProperty()
   results: {
-    posts: FacebookResponseModel;
+    feeds?: FacebookResponseModel;
+    posts?: FacebookResponseModel;
+    likes?: FacebookResponseModel;
+    pages?: FacebookResponseModel;
+    groups?: FacebookResponseModel;
+    events?: FacebookResponseModel;
+    people?: FacebookResponseModel;
+    videos?: FacebookResponseModel;
+    accounts?: any; // TODO: confirm proper type
   };
 
   constructor() {
-    this.query = "";
+    this.query = '';
     this.results = {
-      posts: {
-        data: [],
-        paging: undefined,
-      },
-      
+      feeds: { data: [], paging: undefined },
+      posts: { data: [], paging: undefined },
+      likes: { data: [], paging: undefined },
+      pages: { data: [], paging: undefined },
+      groups: { data: [], paging: undefined },
+      events: { data: [], paging: undefined },
+      people: { data: [], paging: undefined },
+      videos: { data: [], paging: undefined },
+      accounts: []
     };
   }
 }
