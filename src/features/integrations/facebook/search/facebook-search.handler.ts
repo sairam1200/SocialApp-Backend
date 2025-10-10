@@ -64,7 +64,6 @@ export class FacebookSearchQueryHandler
             userId,
             _const.PLATFORMS.FACEBOOK,
           );
-        console.log('User Login', userLogin);
         if (userLogin && now < userLogin.expiryDateUtc) {
           const { access_token, expires_in } = await this.refreshTokenAsync(
             userLogin.tokenValue,
@@ -191,7 +190,7 @@ export class FacebookSearchQueryHandler
   private async normalizeQueryAsync(query: string): Promise<string> {
     const searchHistory =
       await this.searchHistoryRepository.findSimilarQueriesAsync(query);
-    console.log('Search history:', searchHistory);
+      
     let normalizedQuery;
     if (searchHistory.length > 0) {
       const queries = searchHistory.map((item) => item.normalizedQuery);
