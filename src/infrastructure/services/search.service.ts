@@ -1,24 +1,62 @@
-import axios from "axios";
-import _const from "../../core/utils/const";
-import logger from "../../core/utils/winston.util";
-import { Inject, Injectable } from "@nestjs/common";
-import { Queue } from "bullmq";
-import { InjectQueue } from "@nestjs/bullmq";
-import { ContentStream, LinkedAccount, UserContent } from "../../domain/entities";
-import { QueryOptions } from "../../domain/types/queryOptions.type";
-import { ISearchService } from "../../domain/services/isearch.service";
-import limitAllocatorUtil, { SectionSkipMap } from "../../core/utils/limitAllocator.util";
-import { SearchResponseModel, YouTubeSearchParamsModel, YouTubeSearchResponseModel } from "../../domain/contracts/youtube.model";
-import { IContentStreamRepository, ILinkedAccountRepository, IUserContentRepository } from "../../domain/repositories";
-import { mapToLinkedInProfileModel } from "domain/mappers/linkedin.mapper";
-import { mapContentStreamToYouTubeOnlineModel, mapToYoutubeActivityModel, mapToYoutubeChannelInfoModel, mapToYoutubeOnlineModel, mapToYoutubePlaylisVideoModel, mapToYoutubePlaylistModel, mapToYoutubeSubscriptionsModel, mapToYoutubeUploadedVideosModel, mapYouTubeOnlineResponseToContentStream } from "domain/mappers/youtube.mapper";
-import { YouTubeUserContentFilters,YouTubeOnlineFilters } from "domain/enums";
-import { LinkedInProfileModel } from "domain/contracts/linkedin.model";
-import { IGeneralRepository } from "domain/repositories/igeneral.repository";
+import axios from 'axios';
+import _const from '../../core/utils/const';
+import logger from '../../core/utils/winston.util';
+import { Inject, Injectable } from '@nestjs/common';
+import { Queue } from 'bullmq';
+import { InjectQueue } from '@nestjs/bullmq';
+import {
+  ContentStream,
+  LinkedAccount,
+  UserContent,
+} from '../../domain/entities';
+import { QueryOptions } from '../../domain/types/queryOptions.type';
+import { ISearchService } from '../../domain/services/isearch.service';
+import limitAllocatorUtil, {
+  SectionSkipMap,
+} from '../../core/utils/limitAllocator.util';
+import {
+  SearchResponseModel,
+  YouTubeSearchParamsModel,
+  YouTubeSearchResponseModel,
+} from '../../domain/contracts/youtube.model';
+import {
+  IContentStreamRepository,
+  ILinkedAccountRepository,
+  IUserContentRepository,
+} from '../../domain/repositories';
+import { mapToLinkedInProfileModel } from 'domain/mappers/linkedin.mapper';
+import {
+  mapContentStreamToYouTubeOnlineModel,
+  mapToYoutubeActivityModel,
+  mapToYoutubeChannelInfoModel,
+  mapToYoutubeOnlineModel,
+  mapToYoutubePlaylisVideoModel,
+  mapToYoutubePlaylistModel,
+  mapToYoutubeSubscriptionsModel,
+  mapToYoutubeUploadedVideosModel,
+  mapYouTubeOnlineResponseToContentStream,
+} from 'domain/mappers/youtube.mapper';
+import {
+  YouTubeUserContentFilters,
+  YouTubeOnlineFilters,
+  FacebookOnlineFilters,
+  FacebookUserContentFilters,
+} from 'domain/enums';
+import { IGeneralRepository } from 'domain/repositories/igeneral.repository';
+import {
+  FacebookAPIResponseModel,
+  FacebookSearchParamsModel,
+  FacebookSearchResponseModel,
+} from 'domain/contracts/facebook.model';
+import {
+  mapContentStreamToFacebookOnlineModel,
+  mapFacebookOnlineResponseToContentStream,
+  mapToFacebookOnlineModel,
+  mapToFacebookProfileModel,
+} from 'domain/mappers/facebook.mapper';
 
 @Injectable()
 export class SearchService implements ISearchService {
-
   constructor(
     @Inject(_const.ICONTENTSTREAM_REPOSITORY)
     private readonly contenStreamRepository: IContentStreamRepository,
@@ -30,45 +68,265 @@ export class SearchService implements ISearchService {
     private readonly contentStreamImportQueue: Queue,
     @Inject(_const.IGENERAL_REPOSITORY)
     private readonly generalRepository: IGeneralRepository,
-  ) { }
+  ) {}
 
-  public async searchFacebookAsync(access_token: string): Promise<any> {
+  public async searchFacebookAsync(
+    params: FacebookSearchParamsModel,
+  ): Promise<FacebookSearchResponseModel> {
+    const response = new FacebookSearchResponseModel();
+    response.query = params.originalQuery;
 
-    return;
+    console.log("Facebook params:",params);
+
+    const {
+      filters,
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      pageToken,
+      page,
+    } = params;
+
+    if (!filters?.platform || filters.platform !== _const.PLATFORMS.FACEBOOK) {
+      filters.platform = _const.PLATFORMS.FACEBOOK;
+    }
+
+    const skipContentStreamSearch =
+      filters.type &&
+      !['Profile', 'Content', 'Community'].includes(filters.type);
+    const skipUserContentSearch =
+      filters.type && !['feed', 'likes', 'video'].includes(filters.type);
+    const skipLinkedAccountSearch =
+      filters.type && !['page', 'group', 'event'].includes(filters.type);
+    const skipOnlineSearch = page > 1 && !pageToken;
+
+    const skips: SectionSkipMap = {
+      contentStream: skipContentStreamSearch,
+      userContent: skipUserContentSearch,
+      linkedAccount: skipLinkedAccountSearch,
+      manualProfile: false,
+    };
+
+    // Fetch data from Facebook Graph API
+    const fbOnlineResults = await this.fetchFacebookOnlineAsync(
+      skipOnlineSearch,
+      normalizedQuery,
+      limit,
+      filters,
+      accessToken,
+    );
+
+    // Map Facebook results into ContentStream entities
+    const mappedFbOnlineResults = await Promise.all(
+      fbOnlineResults.data.map((item) =>
+        mapFacebookOnlineResponseToContentStream(item),
+      ),
+    );
+
+    // Check which ones are new
+    const fbOnlineExternalIds = mappedFbOnlineResults.map(
+      (content) => content.externalId,
+    );
+
+    const listIds = await this.generalRepository.checkExistingItemsAsync(
+      fbOnlineExternalIds,
+      _const.PLATFORMS.FACEBOOK,
+    );
+
+    const newContents = mappedFbOnlineResults.filter((content) =>
+      listIds.includes(content.externalId),
+    );
+
+    // Insert new contents if any
+    if (newContents.length > 0) {
+      const result = await this.generalRepository.createAsync(newContents);
+    }
+
+    // Allocate section limits
+    const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
+
+    // Fetch local results from DB (contentStreams, userContents, linkedAccounts)
+    const [contentStreamResults, userContentResults, linkedAccountResults] =
+      await Promise.all([
+        this.searchContentStreamAsync(skipContentStreamSearch, {
+          page,
+          filter: filters,
+          searchQuery: normalizedQuery,
+          pageSize: sectionLimits.contentStream,
+        } as QueryOptions),
+        this.searchUserContentAsync(skipUserContentSearch, {
+          page,
+          filter: filters,
+          searchQuery: normalizedQuery,
+          pageSize: sectionLimits.userContent,
+        } as QueryOptions),
+        this.searchLinkedAccountAsync(skipLinkedAccountSearch, {
+          page,
+          filter: filters,
+          searchQuery: normalizedQuery,
+          pageSize: sectionLimits.linkedAccount,
+        } as QueryOptions),
+      ]);
+
+    // Process content stream results
+    if (contentStreamResults[0].length !== 0) {
+
+      contentStreamResults[0].forEach((content: ContentStream) => {
+        const mappedContent = mapContentStreamToFacebookOnlineModel(content);
+        switch (mappedContent.type) {
+          case FacebookOnlineFilters.Posts:
+            response.results.posts.data.push(mappedContent);
+            break;
+          case FacebookOnlineFilters.Pages:
+            response.results.pages.data.push(mappedContent);
+            break;
+          case FacebookOnlineFilters.Groups:
+            response.results.groups.data.push(mappedContent);
+            break;
+          case FacebookOnlineFilters.Events:
+            response.results.events.data.push(mappedContent);
+            break;
+          case FacebookOnlineFilters.People:
+            response.results.people.data.push(mappedContent);
+            break;
+        }
+      });
+    }
+
+    // Process user content results
+    if (userContentResults[0].length > 0) {
+      userContentResults[0].forEach((content: UserContent) => {
+        switch (content.type) {
+          case FacebookUserContentFilters.Feed:
+            response.results.feeds.data.push(content);
+            break;
+          case FacebookUserContentFilters.Posts:
+            response.results.posts.data.push(content);
+            break;
+          case FacebookUserContentFilters.Likes:
+            response.results.likes.data.push(content);
+            break;
+          case FacebookUserContentFilters.Groups:
+            response.results.groups.data.push(content);
+            break;
+          case FacebookUserContentFilters.Events:
+            response.results.events.data.push(content);
+            break;
+          case FacebookUserContentFilters.Videos:
+            response.results.videos.data.push(content);
+            break;
+          default:
+            break;
+        }
+      });
+    }
+
+    // Process linked account results
+    if (linkedAccountResults[0].length !== 0) {
+
+      linkedAccountResults[0].forEach((account: LinkedAccount) => {
+        const mappedLinkedAccount = mapToFacebookProfileModel(account);
+        response.results.accounts.push(mappedLinkedAccount);
+      });
+    }
+
+    //  Merge new online data into response
+    // if (fbOnlineResults?.data?.length > 0) {
+    //   fbOnlineResults.data.forEach((item) => {
+    //     const exists = response.results.posts.data.find(
+    //       (p) => p.id === item.id,
+    //     );
+    //     if (!exists) {
+    //       response.results.posts.data.push(item);
+    //     }
+    //   });
+    // }
+
+    // Assign paging info from Facebook API
+    // response.results.posts.paging = fbOnlineResults.paging;
+
+    return response;
+  }
+
+  private async fetchFacebookOnlineAsync(
+    skipSearch: boolean,
+    query: string,
+    limit: number,
+    filters: Record<string, string | number> = {},
+    accessToken: string,
+    pageToken?: string,
+  ): Promise<FacebookAPIResponseModel> {
+    const emptyResult = { data: [] };
+
+    if (skipSearch) {
+      return emptyResult;
+    }
+
+    try {
+      const baseUrl = `https://graph.facebook.com/v23.0/search`;
+
+      const params: Record<string, string | number> = {
+        q: query,
+        type: filters.type || 'posts', // can be page, post, grousp, events
+        limit: limit,
+        // fields: 'id,name,about,picture{url},category,message',
+        access_token: accessToken,
+      };
+
+      const response = await axios.get(baseUrl, { params });
+      return response.data;
+    } catch (error: any) {
+      logger.error(
+        'Error fetching Facebook data:',
+        error?.response?.data || error.message || error,
+      );
+      return emptyResult;
+    }
   }
 
   public async searchInstagramAsync(access_token: string): Promise<any> {
-
     return;
   }
 
   public async searchPinterestAsync(access_token: string): Promise<any> {
-
     return;
   }
 
   public async searchTwitterAsync(access_token: string): Promise<any> {
-
     return;
   }
 
   public async searchSpotifyAsync(access_token: string): Promise<any> {
-
     return;
   }
 
-  public async searchYoutubeAsync(params: YouTubeSearchParamsModel): Promise<SearchResponseModel> {
+  public async searchYoutubeAsync(
+    params: YouTubeSearchParamsModel,
+  ): Promise<SearchResponseModel> {
     const response = new SearchResponseModel();
-    const { filters, limit, normalizedQuery, originalQuery, accessToken, pageToken, page } = params;
+    const {
+      filters,
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      pageToken,
+      page,
+    } = params;
 
-    response.query = originalQuery
+    response.query = originalQuery;
 
     if (!filters?.platform || filters.platform !== _const.PLATFORMS.YOUTUBE) {
       filters.platform = _const.PLATFORMS.YOUTUBE;
     }
-    const skipContentStreamSerch = filters.type && !["Profile", "Content", "Community"].includes(filters.type)
-    const skipUserContentSearch = filters.type && !['video', 'playlist'].includes(filters.type);
-    const skipLinkedAccountSearch = filters.type && !['channel'].includes(filters.type);
+    const skipContentStreamSerch =
+      filters.type &&
+      !['Profile', 'Content', 'Community'].includes(filters.type);
+    const skipUserContentSearch =
+      filters.type && !['video', 'playlist'].includes(filters.type);
+    const skipLinkedAccountSearch =
+      filters.type && !['channel'].includes(filters.type);
     const skipOnlineSearch = page > 1 && !pageToken;
 
     const skips: SectionSkipMap = {
@@ -76,43 +334,77 @@ export class SearchService implements ISearchService {
       userContent: skipUserContentSearch,
       linkedAccount: skipLinkedAccountSearch,
       manualProfile: false,
-     
     };
     // loop and check in every table if the content exist if not add to the response
-    const ytOnlineResults =  await  this.fetchYouTubeOnlineAsync(skipOnlineSearch, originalQuery, limit, filters, accessToken)
+    const ytOnlineResults = await this.fetchYouTubeOnlineAsync(
+      skipOnlineSearch,
+      originalQuery,
+      limit,
+      filters,
+      accessToken,
+    );
     // am mapping it becuase of how the ids are structured
-    const mappedYtOnlineResults = await Promise.all(ytOnlineResults.items.map((item)=>mapYouTubeOnlineResponseToContentStream(item)))
-    
+    const mappedYtOnlineResults = await Promise.all(
+      ytOnlineResults.items.map((item) =>
+        mapYouTubeOnlineResponseToContentStream(item),
+      ),
+    );
 
-    if(ytOnlineResults){
-       const contentsToAdd : ContentStream[] = []
-       const ytOnlineExternalIds = mappedYtOnlineResults.map(content => content.externalId)
-       console.log("this is the list of ids to check",ytOnlineExternalIds)
-       const listIds = await this.generalRepository.checkExistingItemsAsync(ytOnlineExternalIds, _const.PLATFORMS.YOUTUBE)
-       console.log("this is the list of ids that doesn't exist" ,listIds)
-       listIds.forEach(id=>{
-          mappedYtOnlineResults.forEach(content=> id == content.externalId ? contentsToAdd.push(content) : null)
-       })
-       console.log("this is the list of contents to add",contentsToAdd)
-       // pass the content to add to the general repository and make sure to use sql script
-        if(contentsToAdd.length > 0){
-          const result= await this.generalRepository.createAsync(contentsToAdd)
-          console.log("this are the external id  of the bulk insert",result)
-        }
+    if (ytOnlineResults) {
+      const contentsToAdd: ContentStream[] = [];
+      const ytOnlineExternalIds = mappedYtOnlineResults.map(
+        (content) => content.externalId,
+      );
+      console.log('this is the list of ids to check', ytOnlineExternalIds);
+      const listIds = await this.generalRepository.checkExistingItemsAsync(
+        ytOnlineExternalIds,
+        _const.PLATFORMS.YOUTUBE,
+      );
+      console.log("this is the list of ids that doesn't exist", listIds);
+      listIds.forEach((id) => {
+        mappedYtOnlineResults.forEach((content) =>
+          id == content.externalId ? contentsToAdd.push(content) : null,
+        );
+      });
+      console.log('this is the list of contents to add', contentsToAdd);
+      // pass the content to add to the general repository and make sure to use sql script
+      if (contentsToAdd.length > 0) {
+        const result = await this.generalRepository.createAsync(contentsToAdd);
+        console.log('this are the external id  of the bulk insert', result);
+      }
     }
     const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
-    console.log("this is the section limits",sectionLimits)
-    const [contentStreamResults, userContentResults, linkedAccountResults] = await Promise.all([
-      this.searchContentStreamAsync(skipContentStreamSerch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.contentStream } as QueryOptions),
-      this.searchUserContentAsync(skipUserContentSearch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.userContent } as QueryOptions),
-      this.searchLinkedAccountAsync(skipLinkedAccountSearch, { page, filter: filters, searchQuery: normalizedQuery, pageSize: sectionLimits.linkedAccount } as QueryOptions),
-    ]);
-
+    console.log('this is the section limits', sectionLimits);
+    const [contentStreamResults, userContentResults, linkedAccountResults] =
+      await Promise.all([
+        this.searchContentStreamAsync(skipContentStreamSerch, {
+          page,
+          filter: filters,
+          searchQuery: normalizedQuery,
+          pageSize: sectionLimits.contentStream,
+        } as QueryOptions),
+        this.searchUserContentAsync(skipUserContentSearch, {
+          page,
+          filter: filters,
+          searchQuery: normalizedQuery,
+          pageSize: sectionLimits.userContent,
+        } as QueryOptions),
+        this.searchLinkedAccountAsync(skipLinkedAccountSearch, {
+          page,
+          filter: filters,
+          searchQuery: normalizedQuery,
+          pageSize: sectionLimits.linkedAccount,
+        } as QueryOptions),
+      ]);
 
     if (contentStreamResults[0].length !== 0) {
-      console.log("this is the content stream results and limit",contentStreamResults[0],sectionLimits.contentStream)
+      console.log(
+        'this is the content stream results and limit',
+        contentStreamResults[0],
+        sectionLimits.contentStream,
+      );
       contentStreamResults[0].forEach((content: ContentStream) => {
-        const mappedContent = mapContentStreamToYouTubeOnlineModel(content)
+        const mappedContent = mapContentStreamToYouTubeOnlineModel(content);
         switch (mappedContent.type) {
           case YouTubeOnlineFilters.Channals:
             response.results.channels.push(mappedContent);
@@ -126,50 +418,63 @@ export class SearchService implements ISearchService {
           default:
             break;
         }
-      })
+      });
     }
-    
+
     if (userContentResults[0].length > 0) {
-      console.log("this is the user content results and limit",userContentResults[0],sectionLimits.userContent)
-      userContentResults[0].forEach((content : UserContent)=>{
+      console.log(
+        'this is the user content results and limit',
+        userContentResults[0],
+        sectionLimits.userContent,
+      );
+      userContentResults[0].forEach((content: UserContent) => {
         switch (content.type) {
           case YouTubeUserContentFilters.Channals:
-            response.results.channels.push(mapToYoutubeChannelInfoModel(content));
+            response.results.channels.push(
+              mapToYoutubeChannelInfoModel(content),
+            );
             break;
           case YouTubeUserContentFilters.Videos:
-            response.results.videos.push(mapToYoutubeUploadedVideosModel(content));
+            response.results.videos.push(
+              mapToYoutubeUploadedVideosModel(content),
+            );
             break;
           case YouTubeUserContentFilters.Playlists:
             response.results.playlist.push(mapToYoutubePlaylistModel(content));
             break;
           case YouTubeUserContentFilters.Activities:
-            response.results.activities.push(mapToYoutubeActivityModel(content));
+            response.results.activities.push(
+              mapToYoutubeActivityModel(content),
+            );
             break;
           case YouTubeUserContentFilters.PlaylistVideos:
-            response.results.playlistVideo.push(mapToYoutubePlaylisVideoModel(content));
+            response.results.playlistVideo.push(
+              mapToYoutubePlaylisVideoModel(content),
+            );
             break;
           case YouTubeUserContentFilters.Subscriptions:
-            const results = mapToYoutubeSubscriptionsModel(content)
-         
+            const results = mapToYoutubeSubscriptionsModel(content);
+
             response.results.subscriptions.push(results);
             break;
           default:
-           
             break;
         }
-      })
-
+      });
     }
 
     if (linkedAccountResults[0].length !== 0) {
-      console.log("this is the linked account results and limit",linkedAccountResults[0],sectionLimits.linkedAccount)
+      console.log(
+        'this is the linked account results and limit',
+        linkedAccountResults[0],
+        sectionLimits.linkedAccount,
+      );
       linkedAccountResults[0].forEach((account: LinkedAccount) => {
-        const mappedLinkedAccount = mapToLinkedInProfileModel(account)
-        response.results.accounts.push(mappedLinkedAccount)
-      })
-      
+        const mappedLinkedAccount = mapToLinkedInProfileModel(account);
+        response.results.accounts.push(mappedLinkedAccount);
+      });
     }
-     
+
     /*
     if (ytOnlineResults.items.length !== 0) {
       var countAdded = 0
@@ -233,31 +538,37 @@ export class SearchService implements ISearchService {
   
     }
     */
-    return response
+    return response;
   }
 
-  private async searchLinkedAccountAsync(skipSearch: boolean, params: QueryOptions): Promise<[LinkedAccount[], number]> {
-
+  private async searchLinkedAccountAsync(
+    skipSearch: boolean,
+    params: QueryOptions,
+  ): Promise<[LinkedAccount[], number]> {
     if (skipSearch) {
-      return [[], 0]
+      return [[], 0];
     }
 
     return await this.linkedAccountRepository.getEntriesAsync(params);
   }
 
-  private async searchUserContentAsync(skipSearch: boolean, params: QueryOptions): Promise<[UserContent[], number]> {
-
+  private async searchUserContentAsync(
+    skipSearch: boolean,
+    params: QueryOptions,
+  ): Promise<[UserContent[], number]> {
     if (skipSearch) {
-      return [[], 0]
+      return [[], 0];
     }
 
     return await this.userContentRepository.getEntriesAsync(params);
   }
 
-  private async searchContentStreamAsync(skipSearch: boolean, params: QueryOptions): Promise<[ContentStream[], number]> {
-
+  private async searchContentStreamAsync(
+    skipSearch: boolean,
+    params: QueryOptions,
+  ): Promise<[ContentStream[], number]> {
     if (skipSearch) {
-      return [[], 0]
+      return [[], 0];
     }
 
     return await this.contenStreamRepository.getEntriesAsync(params);
@@ -271,8 +582,13 @@ export class SearchService implements ISearchService {
     accessToken: string,
     pageToken?: string,
   ): Promise<YouTubeSearchResponseModel> {
-
-    const emptyResult = { kind: '', etag: '', regionCode: '', pageInfo: { totalResults: 0, resultsPerPage: 0, }, items: [] };
+    const emptyResult = {
+      kind: '',
+      etag: '',
+      regionCode: '',
+      pageInfo: { totalResults: 0, resultsPerPage: 0 },
+      items: [],
+    };
     if (skipSearch) {
       return emptyResult;
     }
@@ -301,10 +617,12 @@ export class SearchService implements ISearchService {
 
       return response.data;
     } catch (error: any) {
-      logger.error('Error fetching YouTube videos:', error?.response?.data || error.message || error);
+      logger.error(
+        'Error fetching YouTube videos:',
+        error?.response?.data || error.message || error,
+      );
 
       return emptyResult;
     }
   }
-
 }
