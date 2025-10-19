@@ -28,8 +28,39 @@ export enum PlaylistMemberRole {
 
 export enum StreamEntityType {
     Profile = "Profile",
-    Post = "Post",
-    Comment = "Comment",
-    Group = "Group",
-    Channel = "Channel"
+    Content = "Content",
+    Community = "Community",
+}
+
+export enum YouTubeUserContentFilters { 
+    Channals = "channel",
+    Videos = "uploaded_video",
+    Shorts = "short",
+    Playlists = "playlist",
+    Subscriptions = "subscription",
+    Activities = "activity",
+    PlaylistVideos = "playlist_video"
+}
+
+export enum YouTubeOnlineFilters {
+    Channals = "youtube#channel",
+    Videos = "youtube#video",
+    Playlists = "youtube#playlist"
+}
+
+export enum FacebookUserContentFilters { 
+    Feed = "feed",
+    Posts = "posts",
+    Likes = "likes",
+    Groups = "groups",
+    Events = "events",
+    Videos = "videos",
+}
+
+export enum FacebookOnlineFilters { 
+    Posts = "posts",
+    Pages = "pages",
+    Groups = "groups",
+    Events = "events",
+    People = "people",
 }

@@ -142,6 +142,12 @@ const envVarsSchema = Joi.object()
       .description('TikTok OAuth client secret'),
     TIKTOK_CALLBACK_URL: Joi.string()
       .description('TikTok OAuth callback URL'),
+    LINKEDIN_CLIENT_ID: Joi.string()
+      .description('LinkedIn OAuth client ID'),
+    LINKEDIN_CLIENT_SECRET: Joi.string()
+      .description('LinkedIn OAuth client secret'),
+    LINKEDIN_CALLBACK_URL: Joi.string()
+      .description('LinkedIn OAuth callback URL'),
     TOKEN_EXPIRATION_TIME: Joi.number()
       .default(900000)
       .description('Token expiration time in milliseconds'),
@@ -176,13 +182,14 @@ const envVarsSchema = Joi.object()
       .default('Doe'),
     GUEST_USERNAME: Joi.string()
       .default('Doe'),
-
     CLOUDINARY_CLOUD_NAME: Joi.string()
       .description('Cloudinary cloud name for media storage'),
     CLOUDINARY_API_KEY: Joi.string()
       .description('Cloudinary API key for media storage'),
     CLOUDINARY_API_SECRET: Joi.string()
       .description('Cloudinary API secret for media storage'),
+    TURNSTILE_SECRET_KEY: Joi.string()
+      .description('Cloudflare Turnstile secret key'),
   })
   .unknown();
 
@@ -307,5 +314,13 @@ export default {
     firstName: envVars.GUEST_USER_FIRST_NAME,
     lastName: envVars.GUEST_USER_LAST_NAME,
     userName: envVars.GUEST_USERNAME,
+  },
+  turnstile: {
+    secretKey: envVars.TURNSTILE_SECRET_KEY,
+  },
+  linkedin: {
+    clientId: envVars.LINKEDIN_CLIENT_ID,
+    clientSecret: envVars.LINKEDIN_CLIENT_SECRET,
+    redirectUri: envVars.LINKEDIN_CALLBACK_URL,
   },
 }

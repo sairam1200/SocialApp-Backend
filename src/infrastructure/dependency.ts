@@ -1,5 +1,6 @@
 import _const from "../core/utils/const";
-import { ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, UserContentRepository, UserLoginRepository, UserRepository, UserRoleRepository } from "./repositories";
+import { ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, UserContentRepository, UserLoginRepository, UserRepository, UserRoleRepository } from "./repositories";
+import { GeneralRepository } from "./repositories/general.repository";
 import { ManualProfileRepository } from "./repositories/manualProfile.repository";
 import { EmailService, NotificationService, SearchService, TokenService } from "./services";
 
@@ -57,10 +58,13 @@ export const dependency = {
     provide: _const.IMANUALPROFILE_REPOSITORY,
     useClass: ManualProfileRepository
   },
-
   ContentStreamRepository: {
     provide: _const.ICONTENTSTREAM_REPOSITORY,
     useClass: ContentStreamRepository
+  },
+  SearchHistoryRepository: {
+    provide: _const.ISEARCHHISTORY_REPOSITORY,
+    useClass: SearchHistoryRepository
   },
 
   TokenService: {
@@ -78,5 +82,9 @@ export const dependency = {
   SearchService: {
     provide: _const.ISEARCH_SERVICE,
     useClass: SearchService,
-  }
+  },
+  GeneralRepository: {
+    provide: _const.IGENERAL_REPOSITORY,
+    useClass: GeneralRepository,
+  },
 };

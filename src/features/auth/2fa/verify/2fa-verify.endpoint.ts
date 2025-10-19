@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { TokenResponseModel } from "../../tokenResponse.model";
+import { TokenResponseModel } from "../../../../domain/contracts/tokenResponse.model";
 import { TwoFAVerificationGuard } from "../../../../core/passport";
 import { Verify2FACommand, Verify2FARequestModel } from "./2fa-verify.handler";
 import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";

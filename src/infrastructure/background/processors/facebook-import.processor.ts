@@ -1,30 +1,43 @@
-import axios from "axios";
-import { Job } from "bullmq";
-import { Inject } from "@nestjs/common";
-import _const from "../../../core/utils/const";
-import { InjectQueue, Processor } from "@nestjs/bull";
-import logger from "../../../core/utils/winston.util";
-import { OnWorkerEvent, WorkerHost } from "@nestjs/bullmq";
-import { stringUtil } from "../../../core/utils/string.util";
-import { UserContent } from "../../../domain/entities/userContent.entity";
-import { NotificationStatus, NotificationType } from "../../../domain/enums";
-import { LinkedAccount } from "../../../domain/entities/linkedAccount.entity";
-import { NotificationModel } from "../../../domain/contracts/notification.model";
-import { IUserContentRepository } from "domain/repositories/iuserContent.repository";
-import { mapToNotificationModel } from "../../../domain/mappers/notification.mapper";
-import { INotificationService } from "../../../domain/services/inotification.service";
-import { ImportGateway } from "../../../infrastructure/websocket/gateways/import.gateway";
-import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
+import axios from 'axios';
+import { Job } from 'bullmq';
+import { Inject } from '@nestjs/common';
+import _const from '../../../core/utils/const';
+import {
+  InjectQueue,
+  Processor,
+  OnWorkerEvent,
+  WorkerHost,
+} from '@nestjs/bullmq';
+import logger from '../../../core/utils/winston.util';
+import { stringUtil } from '../../../core/utils/string.util';
+import { UserContent } from '../../../domain/entities/userContent.entity';
+import { NotificationStatus, NotificationType } from '../../../domain/enums';
+import { LinkedAccount } from '../../../domain/entities/linkedAccount.entity';
+import { NotificationModel } from '../../../domain/contracts/notification.model';
+import { IUserContentRepository } from 'domain/repositories/iuserContent.repository';
+import { mapToNotificationModel } from '../../../domain/mappers/notification.mapper';
+import { INotificationService } from '../../../domain/services/inotification.service';
+import { ImportGateway } from '../../../infrastructure/websocket/gateways/import.gateway';
+import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
 
-interface CursorMap {
-  [key: string]: string | null;
+function extractParams(nextUrl: string): Record<string, string> {
+  try {
+    const urlObj = new URL(nextUrl);
+    const params: Record<string, string> = {};
+    for (const [key, value] of urlObj.searchParams.entries()) {
+      params[key] = value;
+    }
+    return params;
+  } catch (e) {
+    logger.warn(`[FacebookImport] Failed to parse next URL: ${nextUrl}`);
+    return {};
+  }
 }
 
 export const InjectFacebookImportQueue = (): ParameterDecorator =>
   InjectQueue(_const.BULL_QUEUES.FACEBOOK_IMPORT);
 @Processor(_const.BULL_QUEUES.FACEBOOK_IMPORT)
 export class FacebookImportProcessor extends WorkerHost {
-
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
@@ -33,19 +46,17 @@ export class FacebookImportProcessor extends WorkerHost {
     @Inject(_const.INOTIFICATION_SERVICE)
     private readonly notificationService: INotificationService,
     private readonly gateway: ImportGateway,
-  ) { super() }
+  ) {
+    super();
+    logger.info(`[FacebookImport] Processor initialized`);
+  }
 
-  async process(job: Job<{ account: LinkedAccount, accessToken: string }>): Promise<void> {
+  async process(
+    job: Job<{ account: LinkedAccount; accessToken: string }>,
+  ): Promise<void> {
+    const { account, accessToken } = job.data;
 
-    const { account, accessToken } = job.data
-    const lastCursors: CursorMap = {};
-
-    const fields: Record<string, { endpoint: string; type: string }> = {
-      posts: { endpoint: '/me/posts', type: 'Posts' },
-      likes: { endpoint: '/me/likes', type: 'Likes' },
-      events: { endpoint: '/me/events', type: 'Events' },
-      // events: { endpoint: '/me/group', type: 'Groups' },
-    };
+    logger.info(`[FacebookImport] Starting import for user ${account.userId}`);
 
     const progressReports: {
       [type: string]: {
@@ -56,11 +67,34 @@ export class FacebookImportProcessor extends WorkerHost {
       };
     } = {};
 
+    const fields: Record<
+      string,
+      { endpoint: string; type: string; deprecated?: boolean }
+    > = {
+      feed: {
+        endpoint: `/me`,
+        type: 'Feed',
+      },
+      // likes: { endpoint: `/me?fields=${this.getFieldsForType('Likes')}`, type: 'Likes' },
+    };
+
     let notification: NotificationModel;
     let encounteredError = false;
 
-    for (const [key, { endpoint, type }] of Object.entries(fields)) {
-      let cursor: string | null = null;
+    for (const [key, { endpoint, type, deprecated }] of Object.entries(
+      fields,
+    )) {
+      logger.debug(`📥 Fetching ${type} from ${endpoint}`);
+      if (deprecated) {
+        logger.warn(
+          `[FacebookImport] Skipping deprecated endpoint: ${endpoint}`,
+        );
+        continue;
+      }
+
+      const requestUrl = `https://graph.facebook.com/v23.0${endpoint}`;
+      let nextPageParams: Record<string, string> | null = null;
+      let currentRequestLoop = 0;
 
       progressReports[type] = {
         totalItem: 0,
@@ -71,182 +105,338 @@ export class FacebookImportProcessor extends WorkerHost {
 
       try {
         while (true) {
-          const response = await axios.get(`https://graph.facebook.com/v19.0${endpoint}`, {
-            params: {
-              summary: true,
-              access_token: accessToken,
-              after: cursor || undefined,
-            },
-          });
-
-          const data = response.data;
-          const items = data.data;
-          const paging = data.paging;
-          const summary = data.summary;
-
-          if (summary?.total_count) {
-            progressReports[type].totalItem = summary.total_count;
+          // Stop fetching once we reach 100 posts
+          if (progressReports[type].itemProcessed >= 100) {
+            logger.info(
+              `[FacebookImport] Reached 100 posts limit for ${type}, stopping further fetches.`,
+            );
+            break;
           }
 
-          console.log(`Fetched ${items.length} items from ${type}`);
+          const params: any = {
+            access_token: accessToken,
+            ...(nextPageParams || {}),
+            fields: `${type.toLowerCase()}.limit(100){${this.getFieldsForType(type)}}`,
+          };
+          const headers = { Authorization: `Bearer ${accessToken}` };
 
-          for (const item of items) {
+          const response = await this.fetchDataWithRateLimit(
+            requestUrl,
+            headers,
+            params,
+          );
+          const data = response.data;
+
+          let facebookContents: any[] = [];
+          let paging: any = null;
+
+          if (type === 'Feed') {
+            facebookContents = data.feed?.data || [];
+            paging = data.feed?.paging;
+          } else if (type === 'Likes') {
+            facebookContents = data.likes?.data || [];
+            paging = data.likes?.paging;
+          }
+
+          for (const facebookContent of facebookContents) {
+            if (progressReports[type].itemProcessed >= 100) {
+              logger.info(
+                `[FacebookImport] Hit 100-post limit inside ${type} page, stopping.`,
+              );
+              break;
+            }
+            logger.debug(
+              `🧩 Mapping ${type} item: ${facebookContent.name || facebookContent.id}`,
+            );
 
             let content = new UserContent({
               userId: account.userId,
               platform: _const.PLATFORMS.FACEBOOK,
-              externalId: item.id,
+              externalId: facebookContent.id,
             });
 
-            if (type === 'Posts') {
-              content.type = "post";
-              content.title = item.name ?? stringUtil.trimWithEllipsis(item.message);
+            if (type === 'Feed') {
+              content.type = 'feed';
+              content.title =
+                facebookContent.name ??
+                facebookContent.message ??
+                'Facebook Post';
               content.metaData = {
-                from: item.from,
-                link: item.link,
-                type: item.type,
-                story: item.story,
-                message: item.message,
-                reactions: item.reactions.summary,
-                likesCount: item.likes?.summary?.total_count,
-                commentCount: item.comments?.length,
-                permalinkUrl: item.permalink_url,
-                sharesCount: item.shares?.count,
-                statusType: item.status_type,
-                createdAt: item.created_time,
-                updatedAt: item.updated_time,
-                isPopular: item.is_popular,
-                isHidden: item.is_hidden,
-                picture: item.picture,
-                via: item.via,
+                from: facebookContent.from,
+                link: facebookContent.link,
+                type: facebookContent.type,
+                story: facebookContent.story,
+                message: facebookContent.message,
+                reactions: facebookContent.reactions,
+                commentCount: facebookContent.comments?.length,
+                permalinkUrl: facebookContent.permalink_url,
+                sharesCount: facebookContent.shares?.count,
+                createdAt: facebookContent.created_time,
+                updatedAt: facebookContent.updated_time,
+                isPopular: facebookContent.is_popular,
+                isHidden: facebookContent.is_hidden,
+                picture: facebookContent.full_picture,
+                via: facebookContent.via,
               };
-            } else if (key === 'Likes') {
-              content.type = "likes";
-              content.title = item.name;
+            } else if (type === 'Likes') {
+              content.type = 'likes';
+              content.title = facebookContent.name;
               content.metaData = {
-                category: item.category,
-                createdAt: item.created_time,
-              }
-            } else if (key === 'Events') {
-              content.type = "events";
-              content.title = item.name;
-              content.metaData = {
-                startDate: item.start_time,
-                endDate: item.end_time,
-                description: item.description,
-                place: item.place,
-                owner: item.owner,
-                attendingCount: item.attending_count,
-                interestedCount: item.interested_count,
-                declinedCount: item.declined_count,
-                maybeCount: item.maybe_count,
-                noreplyCount: item.noreply_count,
-                isCanceled: item.is_canceled,
-                isPageOwned: item.is_page_owned,
-                guestListEnabled: item.guest_list_enabled,
-                timezone: item.timezone,
-                type: item.type,
-                updatedDate: item.updated_time,
-              }
+                category: facebookContent.category,
+                createdAt: facebookContent.created_time,
+              };
             }
 
             content = await this.userContentRepository.createAsync(content);
-            this.gateway.emitNewImportContent(account.userId, _const.PLATFORMS.FACEBOOK, content);
+            this.gateway.emitNewImportContent(
+              account.userId,
+              _const.PLATFORMS.FACEBOOK,
+              content,
+            );
 
             // Update progress counts
             progressReports[type].itemProcessed++;
-            progressReports[type].progressPercent = progressReports[type].totalItem
-              ? Math.round((progressReports[type].itemProcessed / progressReports[type].totalItem) * 100)
-              : 0;
+
+            if (progressReports[type].totalItem > 0) {
+              progressReports[type].progressPercent = Math.min(
+                Math.round(
+                  (progressReports[type].itemProcessed /
+                    progressReports[type].totalItem) *
+                    100,
+                ),
+                100,
+              );
+            }
 
             // Convert object to array for metadata
-            const reportArray = Object.entries(progressReports).map(([type, report]) => ({
-              type,
-              ...report,
-            }));
+            const reportArray = Object.entries(progressReports).map(
+              ([type, report]) => ({
+                type,
+                ...report,
+              }),
+            );
 
             if (!notification) {
-              const notificationResult = await this.notificationService.notifyAsync(
-                account.userId,
-                NotificationType.Import,
-                "📥 Importing your Facebook data...",
-                "",
-                true,
-                {
-                  status: NotificationStatus.InProgress,
-                  reports: reportArray
-                }
-              );
+              const notificationResult =
+                await this.notificationService.notifyAsync(
+                  account.userId,
+                  NotificationType.Import,
+                  '📥 Importing your Facebook data...',
+                  '',
+                  true,
+                  {
+                    status: NotificationStatus.InProgress,
+                    reports: reportArray,
+                  },
+                );
 
               notification = mapToNotificationModel(notificationResult);
+              logger.info('facebook notification', notification);
             } else {
-              await this.notificationService.updateAsync(notification.id, true, {
-                metaData: {
-                  status: NotificationStatus.InProgress,
-                  reports: reportArray,
+              await this.notificationService.updateAsync(
+                notification.id,
+                true,
+                {
+                  metaData: {
+                    status: NotificationStatus.InProgress,
+                    reports: reportArray,
+                  },
                 },
-              });
+              );
             }
           }
 
-          if (paging?.cursors?.after) {
-            cursor = paging.cursors.after;
+          if (progressReports[type].itemProcessed >= 100) break;
+
+          if (paging?.next) {
+            nextPageParams = extractParams(paging.next);
           } else {
             progressReports[type].status = NotificationStatus.Completed;
-            break; // no more pages
+            break;
           }
+          currentRequestLoop++;
         }
       } catch (err: any) {
         encounteredError = true;
         progressReports[type].status = NotificationStatus.Cancelled;
-        logger.error(`Error occured while importing Facebook user ${type}:`, err.message);
-        if (cursor) {
-          lastCursors[type] = cursor;
-        }
-        continue;
+
+        const errorDetails = {
+          message: err.message,
+          stack: err.stack,
+          url: requestUrl,
+          params: nextPageParams,
+          responseData: err.response?.data,
+          status: err.response?.status,
+          headers: err.response?.headers,
+        };
+
+        logger.error(
+          `[FacebookImport] Error importing ${type} for user ${account.userId}`,
+          errorDetails,
+        );
       }
     }
 
-    const finalReportArray = Object.entries(progressReports).map(([type, report]) => ({
-      type,
-      ...report,
-    }));
+    const finalReportArray = Object.entries(progressReports).map(
+      ([type, report]) => ({
+        type,
+        ...report,
+      }),
+    );
+
+    logger.info('Facebook final report:', finalReportArray);
 
     if (notification) {
-
       if (encounteredError) {
-        await this.notificationService.updateAsync(notification.id,
+        await this.notificationService.updateAsync(
+          notification.id,
           false,
           {
             status: NotificationStatus.Completed,
             reports: finalReportArray,
           },
-          "⚠️ Facebook import completed with issues",
+          '⚠️ Facebook import completed with issues',
         );
       } else {
-        await this.notificationService.updateAsync(notification.id,
+        await this.notificationService.updateAsync(
+          notification.id,
           false,
           {
             status: NotificationStatus.Completed,
             reports: finalReportArray,
           },
-          "✅ Facebook import completed!",
+          '✅ Facebook import completed!',
         );
       }
 
       account.allowImport = true;
       await this.linkedAccountRepository.updateAsync(account);
-
     } else {
-      // # TODO #: Handle failed
-      await this.notificationService.updateAsync(notification.id,
+      // TODO #: Handle failed
+      await this.notificationService.notifyAsync(
+        account.userId,
+        NotificationType.Import,
+        '⚠️ Facebook import could not start',
+        'Unable to initialize Facebook data import.',
         false,
         {
           status: NotificationStatus.Cancelled,
           reports: finalReportArray,
         },
-        "⚠️ Facebook import could not start",
       );
+    }
+  }
+
+  private getFieldsForType(type: string): string {
+    switch (type) {
+      case 'Feed':
+        return `
+        id,
+        name,
+        message,
+        story,
+        created_time,
+        updated_time,
+        type,
+        status_type,
+        from,
+        link,
+        full_picture,
+        permalink_url,
+        is_popular,
+        is_hidden,
+        via,
+        shares,
+        reactions,
+        comments`;
+      case 'Likes':
+        return `
+        id,
+        name,
+        category,
+        created_time,
+        about,
+        link
+      `;
+      default:
+        return 'id,name';
+    }
+  }
+
+  async fetchDataWithRateLimit(
+    url: string,
+    headers: any,
+    params: any,
+    attempt = 1,
+  ) {
+    try {
+      const response = await axios.get(url, { headers, params });
+
+      const usage = response.headers['x-app-usage']
+        ? JSON.parse(response.headers['x-app-usage'])
+        : null;
+
+      if (usage) {
+        const { call_count, total_time, total_cputime } = usage;
+        if (call_count > 80 || total_time > 80 || total_cputime > 80) {
+          const waitTime = 15 * 60_000; // 15 min
+          logger.warn(
+            `[FacebookImport] High app usage detected (${JSON.stringify(
+              usage,
+            )}). Backing off ${waitTime / 1000}s before next call.`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+        }
+      }
+
+      return response;
+    } catch (error: any) {
+      const status = error.response?.status;
+      const fbError = error.response?.data?.error;
+
+      if (status === 429) {
+        const resetTime = parseInt(
+          error.response.headers['x-rate-limit-reset'],
+          10,
+        );
+        const waitTime = isNaN(resetTime)
+          ? 60_000
+          : Math.max(resetTime * 1000 - Date.now(), 5000);
+
+        logger.warn(
+          `[FacebookImport] Rate limit (429) hit for ${url}. Waiting ${
+            waitTime / 1000
+          }s before retrying...`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+        return this.fetchDataWithRateLimit(url, headers, params, attempt + 1);
+      }
+
+      if (status === 403 && fbError?.code === 4) {
+        const waitTime = Math.min(15 * 60 * 1000, attempt * 60_000);
+        logger.warn(
+          `[FacebookImport] App-level rate limit (403 code=4) hit for ${url}. Backing off ${
+            waitTime / 1000
+          }s (attempt ${attempt})...`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+        return this.fetchDataWithRateLimit(url, headers, params, attempt + 1);
+      }
+
+      if (status === 403) {
+        logger.warn(
+          `[FacebookImport] Skipping ${url}: Forbidden (no permission or scope missing).`,
+        );
+        return null;
+      }
+
+      logger.error(
+        `[FacebookImport] Error fetching ${url} (status ${status || 'N/A'}): ${
+          error.message
+        }`,
+        { fbError, headers: error.response?.headers },
+      );
+      throw error;
     }
   }
 
@@ -264,5 +454,4 @@ export class FacebookImportProcessor extends WorkerHost {
   onFailed(job: Job) {
     logger.info(`Failed ${job.id}`);
   }
-
 }

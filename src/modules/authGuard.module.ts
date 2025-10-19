@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { AdminAccoutGuard, GuestAccoutGuard, UserAccoutGuard } from "../core/passport/account.guard";
+import { TurnstileGuard, AdminAccoutGuard, GuestAccoutGuard, UserAccoutGuard} from "core/passport";
 
 @Module({
   providers: [
@@ -8,11 +8,13 @@ import { AdminAccoutGuard, GuestAccoutGuard, UserAccoutGuard } from "../core/pas
     UserAccoutGuard,
     AdminAccoutGuard,
     GuestAccoutGuard,
+    TurnstileGuard
   ],
   exports: [
     UserAccoutGuard,
     AdminAccoutGuard,
     GuestAccoutGuard,
+    TurnstileGuard,
   ],
 })
 export class AuthGuardsModule { }

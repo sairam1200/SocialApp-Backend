@@ -11,6 +11,7 @@ export { RateLimitLog } from './rateLimitLog.entity';
 export { Notification } from './notification.entity';
 export { ContentStream } from './contentStream.entity';
 export { ManualProfile } from './manualProfile.entity';
+export { SearchHistory } from './searchHistroy.entity';
 export { LinkedAccount } from './linkedAccount.entity';
 export { PlaylistMember } from './playlistMember.entity';
 export { PlaylistContent } from './playlistContent.entity';

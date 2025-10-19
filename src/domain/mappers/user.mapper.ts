@@ -1,6 +1,6 @@
-import { User } from "../../domain/entities/user.entity";
-import { LinkedAccountModel, UserModel } from "../../domain/contracts/user.model";
-import { LinkedAccount } from "domain/entities";
+import { LinkedAccount } from "../entities";
+import { User } from "../entities/user.entity";
+import { LinkedAccountModel, UserModel } from "../contracts/user.model";
 
 export function mapToUserModel(user: User): UserModel {
   return {

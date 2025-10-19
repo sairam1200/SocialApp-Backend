@@ -2,12 +2,12 @@ import configs from './configs';
 import { NestFactory } from '@nestjs/core';
 import redis from './core/utils/redis.util';
 import logger from './core/utils/winston.util';
+import { VersioningType } from '@nestjs/common';
 import { AppModule } from './modules/app.module';
 import dataSource from './infrastructure/persistence/data.source';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { addScalarApiDocs, addSwaggerApiDocs } from './core/utils/apiDocs.util';
 import { ErrorHandlersFilter } from './core/exceptions/exceptionHandler.filter';
-import { NotFoundException, ValidationPipe, VersioningType } from '@nestjs/common';
 import { ApiDocRedirectMiddleware } from './core/middlewares/apiDocRedirect.middleware';
 
 async function bootstrap() {
@@ -35,7 +35,6 @@ async function bootstrap() {
     addScalarApiDocs(app);
   }
 
-  // app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.use(ApiDocRedirectMiddleware);
   app.useGlobalFilters(new ErrorHandlersFilter());
 
