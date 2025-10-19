@@ -29,12 +29,12 @@ export class RegisterModel {
 
   @ApiProperty()
   gender: string;
-  
+
   @ApiProperty()
   userName: string;
 
-  @ApiProperty()
-  phoneNumber: string;
+  // @ApiProperty()
+  // phoneNumber: string;
 
   constructor(request: Partial<RegisterModel> = {}) {
     Object.assign(this, request);
@@ -54,7 +54,7 @@ const createUserValidations = Joi.object({
   password: Joi.string().required().custom(password),
   firstName: Joi.string().required(),
   lastName: Joi.string().required(),
-  phoneNumber: Joi.string().required(),
+  // phoneNumber: Joi.string().required(),
   userName: Joi.string().optional().custom(userName),
   gender: Joi.string().required()
 });
@@ -88,7 +88,7 @@ export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> 
         lastName: model.lastName,
         email: model.email,
         gender: model.gender,
-        phoneNumber: model.phoneNumber,
+        phoneNumber: "",
         type: UserType.User,
         userName: model.userName,
         profileImage: avatar.secure_url,
