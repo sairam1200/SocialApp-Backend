@@ -35,6 +35,12 @@ async function bootstrap() {
     addScalarApiDocs(app);
   }
 
+  app.enableCors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-turnstile-token'],
+  });
+
   app.use(ApiDocRedirectMiddleware);
   app.useGlobalFilters(new ErrorHandlersFilter());
 
