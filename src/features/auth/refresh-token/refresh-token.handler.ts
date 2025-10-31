@@ -113,7 +113,7 @@ export class RefreshTokenCommandHandler implements ICommandHandler<RefreshTokenC
       access_token: accessToken,
       refresh_token: userLogin.tokenValue,
       succeeded: true,
-      refreshTokenExpiryTime: userLogin.expiryDateUtc.toDateString(),
+      refreshTokenExpiryTime: Math.floor(userLogin.expiryDateUtc.getTime() / 1000),
     });
   }
 } 

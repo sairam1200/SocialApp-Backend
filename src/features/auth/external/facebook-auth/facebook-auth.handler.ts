@@ -71,7 +71,7 @@ export class FacebookCallbackTokenResponseModel {
   isTwoFARequired: boolean;
 
   @ApiProperty()
-  refreshTokenExpiryTime: string;
+  refreshTokenExpiryTime: number;
 
   @ApiProperty({ required: false })
   facebookAccessToken?: string;
@@ -141,12 +141,12 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
 
     // Try to find existing user by email
     let user = await this.userRepository.getUserByEmailAsync(userData.email);
-    
+
     if (!user) {
       // Create new user if doesn't exist
       const firstName = userData.name?.split(' ')[0] || 'Facebook';
       const lastName = userData.name?.split(' ').slice(1).join(' ') || 'User';
-      
+
       // Generate profile image with initials if no picture available
       let profileImage = userData.picture?.data?.url;
       if (!profileImage) {
@@ -247,7 +247,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
 
     // Generate JWT token for the user
     const access_token_jwt = await this.tokenService.generateJwtAsync(user);
-    
+
     return new FacebookCallbackTokenResponseModel({
       accessToken: access_token_jwt,
       refreshToken: '', // No refresh token for external auth
@@ -356,7 +356,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       succeeded: true,
       isLockedOut: false,
       userImage: user.profileImage,
-      refreshTokenExpiryTime: userToken.expiryDateUtc.toISOString(),
+      refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
     });
   }
 

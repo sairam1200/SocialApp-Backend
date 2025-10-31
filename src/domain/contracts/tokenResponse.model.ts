@@ -23,7 +23,7 @@ export class TokenResponseModel {
     isTwoFARequired: boolean;
 
     @ApiProperty()
-    refreshTokenExpiryTime: string;
+    refreshTokenExpiryTime: number;
 
     constructor(request: Partial<TokenResponseModel> = {}) {
         Object.assign(this, request);
