@@ -49,7 +49,7 @@ export class GoogleCallbaclTokenResponseModel {
   isLockedOut: boolean;
 
   @ApiProperty()
-  refreshTokenExpiryTime: string;
+  refreshTokenExpiryTime: number;
 
   constructor(request: Partial<GoogleCallbaclTokenResponseModel> = {}) {
     Object.assign(this, request);
@@ -376,7 +376,7 @@ export class GoogleConnectCallbackQueryHandler
       succeeded: true,
       isLockedOut: false,
       userImage: user.profileImage,
-      refreshTokenExpiryTime: userToken.expiryDateUtc.toISOString(),
+      refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
     });
   }
 
