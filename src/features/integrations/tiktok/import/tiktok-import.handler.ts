@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Queue } from 'bull';
+import { Queue } from 'bullmq';
 import configs from '../../../../configs';
 import { InjectQueue } from '@nestjs/bull';
 import { ApiProperty } from '@nestjs/swagger';
@@ -115,7 +115,7 @@ export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportC
       throw new NotFoundException("No matching Twitter profile was found!");
     }
 
-    this.importQueue.add({ account, accessToken }, {
+    this.importQueue.add(_const.BULL_QUEUES.TIKTOK_IMPORT, { account, accessToken }, {
       attempts: 3,
       backoff: 5000
     });

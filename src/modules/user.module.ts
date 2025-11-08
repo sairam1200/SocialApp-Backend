@@ -4,7 +4,8 @@ import { JwtService } from '@nestjs/jwt';
 import { CqrsModule } from "@nestjs/cqrs";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { dependency } from '../infrastructure/dependency';
-import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole } from '../domain/entities';
+import { EmailCleanupCron } from '../infrastructure/background/cron/jobs/email-cleanup.cron';
+import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole, UserLogin } from '../domain/entities';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole } from '../do
       RoleClaim,
       LinkedAccount,
       UserClaim,
-      UserRole
+      UserRole,
+      UserLogin
     ])
   ],
   controllers: [
@@ -27,7 +29,9 @@ import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole } from '../do
     dependency.UserRepository,
     dependency.RoleRepository,
     dependency.UserRoleRepository,
-    dependency.LinkedAccountRepository
+    dependency.LinkedAccountRepository,
+    dependency.UserLoginRepository,
+    EmailCleanupCron
   ],
   exports: [],
 })

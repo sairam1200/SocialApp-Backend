@@ -32,6 +32,15 @@ export class User extends BaseEntity {
     phoneNumber?: string;
 
     @Column({ nullable: true })
+    newEmail?: string;
+
+    @Column({ type: 'timestamp', nullable: true })
+    lastEmailModifiedAt?: Date;
+
+    @Column({ type: 'timestamp', nullable: true })
+    lastUserNameModifiedAt?: Date;
+
+    @Column({ nullable: true })
     normalizedEmail?: string;
 
     @Column({ nullable: true })
@@ -48,6 +57,9 @@ export class User extends BaseEntity {
 
     @Column({ nullable: true })
     passwordHash: string;
+
+    @Column({ type: 'timestamp', nullable: true })
+    lastPasswordModifiedAt?: Date;
 
     @Column({ default: false })
     isLockedOut?: boolean;

@@ -7,7 +7,9 @@ import { RefreshTokenCommandHandler } from "./refresh-token/refresh-token.handle
 import { RegisterCommandHandler } from "./register/register.handler";
 import { ResetPasswordCommandHandler } from "./reset-password/reset-password.handler";
 import { Verify2FACommandHandler } from "./2fa/verify/2fa-verify.handler";
+import { LogoutCommandHandler } from "./logout/logout.handler";
 import { Disable2FAController } from "./2fa/disable/2fa-disable.endpoint";
+import { LogoutController } from "./logout/logout.endpoint";
 import { Enable2FAController } from "./2fa/enable/2fa-enable.endpoint";
 import { Setup2FAController } from "./2fa/setup/2fa-setup.endpoint";
 import { Verify2FAController } from "./2fa/verify/2fa-verify.endpoint";
@@ -52,6 +54,9 @@ export { Verify2FACommandHandler } from "./2fa/verify/2fa-verify.handler"
 export { Enable2FAController } from "./2fa/enable/2fa-enable.endpoint"
 export { Enable2FACommandHandler } from "./2fa/enable/2fa-enable.handler"
 
+export { LogoutController } from "./logout/logout.endpoint";
+export { LogoutCommandHandler } from "./logout/logout.handler";
+
 const controllers = [
   LoginController,
   RegisterController,
@@ -62,7 +67,8 @@ const controllers = [
   Setup2FAController,
   Enable2FAController,
   Verify2FAController,
-  Disable2FAController
+  Disable2FAController,
+  LogoutController,
 ];
 
 const handlers = [
@@ -78,6 +84,7 @@ const handlers = [
   GoogleConnectCallbackQueryHandler,
   FacebookConnectQueryHandler,
   FacebookConnectCallbackQueryHandler,
+  LogoutCommandHandler,
 ];
 
 const authentication = {

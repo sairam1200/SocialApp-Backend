@@ -1,8 +1,8 @@
 import { Inject } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../core/utils/const";
+import _const from "../../../../core/utils/const";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { IUserRepository } from "../../../domain/repositories";
+import { IUserRepository } from "../../../../domain/repositories";
 
 export class SuggestUserNameResponseModel {
   @ApiProperty({ type: [String] })

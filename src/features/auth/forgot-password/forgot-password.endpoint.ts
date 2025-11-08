@@ -31,7 +31,6 @@ export class ForgotPasswordController {
   ): Promise<Response | void> {
 
     await this.commandBus.execute(new ForgotPasswordCommand({ model }));
-
     return res.status(HttpStatus.OK).json({ message: "If an account with that email exists, a password reset link has been sent." });
   }
 }

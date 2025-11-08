@@ -18,7 +18,6 @@ export class EmailInUseCommandHandler implements ICommandHandler<EmailInuseComma
   }
 
   async execute(command: EmailInuseCommand): Promise<Boolean> {
-    const existingUser = await this.userRepository.getUserByEmailAsync(command.email.toLocaleLowerCase());
-    return existingUser ? true : false;
+    return await this.userRepository.isEmailInuseAsync(command.email);
   }
 } 
