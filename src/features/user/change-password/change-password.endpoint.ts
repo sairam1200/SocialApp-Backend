@@ -29,7 +29,6 @@ export class ChangePasswordController {
   ): Promise<Response | void> {
 
     await this.commandBus.execute(new ChangePasswordCommand({ model }));
-
-    return res.status(HttpStatus.OK).json({ message: "" });
+    return res.status(HttpStatus.OK).json({ message: "Password changed successfully" });
   }
 }

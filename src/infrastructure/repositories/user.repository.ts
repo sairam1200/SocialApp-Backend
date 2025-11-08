@@ -138,7 +138,7 @@ export class UserRepository implements IUserRepository {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.passwordHash = hashedPassword;
-
+    user.lastPasswordModifiedAt = new Date();
     user.securityStamp = cryptoUtils.generateEncryptionKey(32);
     const updateResult = await this.userContext.update(user.id, user);
 

@@ -58,6 +58,9 @@ export class User extends BaseEntity {
     @Column({ nullable: true })
     passwordHash: string;
 
+    @Column({ type: 'timestamp', nullable: true })
+    lastPasswordModifiedAt?: Date;
+
     @Column({ default: false })
     isLockedOut?: boolean;
 
