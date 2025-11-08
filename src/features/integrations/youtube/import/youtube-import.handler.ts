@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Queue } from "bull";
+import { Queue } from "bullmq";
 import configs from "../../../../configs";
 import { InjectQueue } from "@nestjs/bull";
 import { ApiProperty } from "@nestjs/swagger";

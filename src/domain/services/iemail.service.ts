@@ -13,7 +13,7 @@ export interface IEmailService {
    * Sends an email using a pre-defined template and dynamic context.
    */
   sendTemplatedAsync(options: {
-    from: string;
+    from?: string;
     to: string;
     subject: string;
     templatePath: string;

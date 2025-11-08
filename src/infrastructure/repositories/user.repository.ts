@@ -9,6 +9,7 @@ import { generateTimestampUUID } from '../../core/utils/time.util';
 import { BadRequestException, forwardRef, Inject, Injectable } from "@nestjs/common";
 import { IRoleRepository, IUserRepository, IUserRoleRepository } from '../../domain/repositories';
 import { RoleNotFoundException, ClaimAlreadyExistsException, ApplicationException, UserAlreadyExistsException, UserAlreadyInRoleException, UserNotFoundException, ClaimNotFoundException } from "../../core/exceptions";
+import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 
 @Injectable()
 export class UserRepository implements IUserRepository {
@@ -144,6 +145,53 @@ export class UserRepository implements IUserRepository {
     return updateResult.affected > 0;
   }
 
+  public async isEmailInuseAsync(email: string): Promise<boolean> {
+    const normalizedEmail = email?.toUpperCase();
+    const currentUserId = HttpContext.getCurrentUserId;
+
+    const userByEmail = await this.userContext.findOne({
+      where: { normalizedEmail }
+    });
+
+    if (userByEmail) {
+      if (currentUserId && userByEmail.id === currentUserId) {
+        return false;
+      }
+      return true; // Email is in use by another user
+    }
+
+    const userByNewEmail = await this.userContext
+      .createQueryBuilder('user')
+      .where('LOWER(user.newEmail) = LOWER(:email)', { email })
+      .getOne();
+
+    if (userByNewEmail) {
+      if (currentUserId && userByNewEmail.id === currentUserId) {
+        return false;
+      }
+      return true; // Email is pending change for another user
+    }
+
+    return false; // Email is not in use
+  }
+
+  public async cleanupExpiredEmailChangesAsync(expirationHours: number = 24): Promise<number> {
+    const expirationDate = new Date();
+    expirationDate.setHours(expirationDate.getHours() - expirationHours);
+
+    const result = await this.userContext
+      .createQueryBuilder()
+      .update(User)
+      .set({
+        newEmail: null,
+      })
+      .where('newEmail IS NOT NULL')
+      .andWhere('lastEmailModifiedAt < :expirationDate', { expirationDate })
+      .execute();
+
+    return result.affected || 0;
+  }
+
   public async setEmailAsync(user: User, email: string): Promise<boolean> {
 
     const duplicateUser = await this.getUserByEmailAsync(email);
@@ -159,7 +207,7 @@ export class UserRepository implements IUserRepository {
     user.emailConfirmed = false;
     user.normalizedEmail = email.toUpperCase();
     user.concurrencyStamp = generateTimestampUUID();
-    const result = await this.userContext.update(user.id as string | number, user as any);
+    const result = await this.userContext.update(user.id, user);
     return result.affected > 0;
   }
 

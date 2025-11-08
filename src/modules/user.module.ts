@@ -5,6 +5,7 @@ import { CqrsModule } from "@nestjs/cqrs";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { dependency } from '../infrastructure/dependency';
 import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole } from '../domain/entities';
+import { EmailCleanupCron } from '../infrastructure/background/cron/jobs/email-cleanup.cron';
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole } from '../do
     dependency.UserRepository,
     dependency.RoleRepository,
     dependency.UserRoleRepository,
-    dependency.LinkedAccountRepository
+    dependency.LinkedAccountRepository,
+    EmailCleanupCron
   ],
   exports: [],
 })

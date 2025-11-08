@@ -2,6 +2,7 @@ import { Job } from "bullmq";
 import configs from "../../../configs";
 import * as nodemailer from 'nodemailer';
 import _const from "../../../core/utils/const";
+import { Globals } from "../../../core/globals";
 import logger from "../../../core/utils/winston.util";
 import { InjectQueue, Processor, WorkerHost } from "@nestjs/bullmq";
 
@@ -16,7 +17,7 @@ export class EmailProcessor extends WorkerHost {
   ) { super() }
 
   async process(job: Job<{
-    from: string;
+    from?: string;
     to: string;
     subject:
     string;
@@ -42,7 +43,7 @@ export class EmailProcessor extends WorkerHost {
     const { from, to, subject, html, attachments } = job.data;
     try {
       await transporter.sendMail({
-        from: from || '"Gaddr" <team@gaddr.com>',
+        from: from ?? Globals.Email.DefaultFrom,
         to,
         subject,
         html,

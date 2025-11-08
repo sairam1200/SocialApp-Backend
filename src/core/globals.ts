@@ -22,4 +22,8 @@ export namespace Globals {
 
         public static readonly Permission = "permission";
     }
+
+    export class Email {
+        public static readonly DefaultFrom = '"Gaddr" <team@gaddr.com>';
+    }
 } 
