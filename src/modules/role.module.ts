@@ -7,7 +7,7 @@ import { Permissions } from '../core/utils/permissions.util';
 import { DiscoveryService, MetadataScanner } from '@nestjs/core';
 import { DataSeeder } from '../infrastructure/services/data.seeder';
 import { GetRolesHandler } from "../features/role/get-roles/get-roles.handler";
-import { Role, RoleClaim, User, UserClaim, UserRole } from '../domain/entities';
+import { User, Role, UserClaim, UserRole, RoleClaim } from '../domain/entities';
 import { GetRoleController } from "../features/role/get-role/get-role.endpoint";
 import { GetRolesController } from "../features/role/get-roles/get-roles.endpoint";
 import { CreateRoleHandler } from "../features/role/create-role/create-role.handler";

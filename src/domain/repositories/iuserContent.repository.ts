@@ -8,8 +8,16 @@ export interface IUserContentRepository {
 
   deleteAsync(content: UserContent): Promise<void>;
   getByIdAsync(id: string): Promise<UserContent>;
-  getByPlatformAndContentIdAsync(platform: string, contentId: string): Promise<UserContent>;
-  getByUserIdAsync(userId: string, platform: string, cursor: string): Promise<[UserContent[], string]>;
+  getByPlatformAndContentIdAsync(
+    platform: string,
+    contentId: string
+  ): Promise<UserContent>;
 
-  getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]>
+  getByUserIdAsync(
+    userId: string,
+    platform: string,
+    cursor: string
+  ): Promise<[UserContent[], string]>;
+
+  getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]>;
 }

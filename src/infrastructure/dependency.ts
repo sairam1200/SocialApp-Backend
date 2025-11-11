@@ -2,7 +2,7 @@ import _const from "../core/utils/const";
 import { ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, UserContentRepository, UserLoginRepository, UserRepository, UserRoleRepository } from "./repositories";
 import { GeneralRepository } from "./repositories/general.repository";
 import { ManualProfileRepository } from "./repositories/manualProfile.repository";
-import { EmailService, NotificationService, SearchService, TokenService } from "./services";
+import { EmailService, NotificationService, SearchService, SearchCacheService, TokenService } from "./services";
 
 /* This is the dependency object that holds all the repositories & services
 * used in the application. It is used to provide the dependencies to the
@@ -58,6 +58,7 @@ export const dependency = {
     provide: _const.IMANUALPROFILE_REPOSITORY,
     useClass: ManualProfileRepository
   },
+
   ContentStreamRepository: {
     provide: _const.ICONTENTSTREAM_REPOSITORY,
     useClass: ContentStreamRepository
@@ -82,6 +83,10 @@ export const dependency = {
   SearchService: {
     provide: _const.ISEARCH_SERVICE,
     useClass: SearchService,
+  },
+  SearchCacheService: {
+    provide: 'SearchCacheService',
+    useClass: SearchCacheService,
   },
   GeneralRepository: {
     provide: _const.IGENERAL_REPOSITORY,

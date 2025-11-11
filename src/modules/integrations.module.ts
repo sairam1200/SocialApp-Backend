@@ -23,9 +23,9 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
       UserClaim,
       UserContent,
       LinkedAccount,
-      DataProtectionKey,
       SearchHistory,
-      ContentStream,
+      DataProtectionKey,
+      ContentStream
     ])
   ],
   controllers: [
@@ -34,22 +34,20 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
   providers: [
     ImportGateway,
     JwtService,
-
     ...integrations.addHandlers(),
 
-    dependency.SearchService,
     dependency.RoleRepository,
     dependency.UserRepository,
     dependency.UserRoleRepository,
     dependency.UserLoginRepository,
     dependency.UserContentRepository,
-    dependency.UserContentRepository,
     dependency.LinkedAccountRepository,
-    dependency.ContentStreamRepository,
-    dependency.ContentStreamRepository,
-    dependency.SearchHistoryRepository,
     dependency.DataProtectionKeyRepository,
     dependency.GeneralRepository,
+    dependency.ContentStreamRepository,
+    dependency.SearchService,
+    dependency.SearchCacheService,
+    dependency.SearchHistoryRepository,
   ],
   exports: [],
 })

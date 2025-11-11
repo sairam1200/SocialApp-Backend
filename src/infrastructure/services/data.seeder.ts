@@ -4,16 +4,12 @@ import { Globals } from '../../core/globals';
 import logger from '../../core/utils/winston.util';
 import { Injectable, Inject } from '@nestjs/common';
 import { RoleType, UserType } from '../../domain/enums';
-import { User } from '../../domain/entities/user.entity';
-import { Role } from '../../domain/entities/role.entity';
 import { stringUtil } from '../../core/utils/string.util';
+import { User, Role, RoleClaim } from '../../domain/entities';
 import { Permissions } from '../../core/utils/permissions.util';
-import { RoleClaim } from '../../domain/entities/roleClaim.entity';
 import { generateInitialImage } from '../../core/utils/canvas.util';
-import { IUserRepository } from '../../domain/repositories/iuser.repository';
-import { IRoleRepository } from '../../domain/repositories/irole.repository';
 import { uploadBase64ToCloudinaryAsync } from '../../core/utils/cloudinary.util';
-import { IRoleClaimRepository } from '../../domain/repositories/iroleClaim.repository';
+import { IUserRepository, IRoleRepository, IRoleClaimRepository } from '../../domain/repositories';
 
 @Injectable()
 export class DataSeeder {

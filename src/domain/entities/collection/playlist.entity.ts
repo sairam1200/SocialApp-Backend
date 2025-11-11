@@ -7,8 +7,8 @@ import {
 } from 'typeorm';
 import slugify from 'slugify';
 import { nanoid } from 'nanoid';
-import { User } from './user.entity';
-import { BaseEntity } from '../baseEntity';
+import { User } from '../identity/user.entity';
+import { BaseEntity } from '../../baseEntity';
 import { PlaylistMember } from './playlistMember.entity';
 import { PlaylistContent } from './playlistContent.entity';
 

@@ -4,7 +4,7 @@ import { RoleModel } from "../../../domain/contracts/role.model";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
 import { RoleType } from "../../../domain/enums";
-import { Role } from "../../../domain/entities/role.entity";
+import { Role } from "../../../domain/entities/identity/role.entity";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { IRoleRepository } from "../../../domain/repositories/irole.repository";
 import { RoleAlreadyExistsException } from "../../../core/exceptions/role.exception";

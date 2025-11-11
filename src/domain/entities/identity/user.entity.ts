@@ -1,8 +1,8 @@
-import { UserType } from "../enums";
-import { BaseEntity } from "../baseEntity";
-import { Playlist } from "./playlist.entity";
+import { UserType } from "../../enums";
+import { BaseEntity } from "../../baseEntity";
+import { Playlist } from "../collection/playlist.entity";
 import { Entity, Column, OneToMany } from "typeorm";
-import { PlaylistMember } from "./playlistMember.entity";
+import { PlaylistMember } from "../collection/playlistMember.entity";
 
 @Entity({ name: 'users', schema: 'identity' })
 export class User extends BaseEntity {

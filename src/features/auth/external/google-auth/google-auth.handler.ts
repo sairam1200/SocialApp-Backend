@@ -4,9 +4,9 @@ import { Inject } from '@nestjs/common';
 import configs from '../../../../configs';
 import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
+import { User } from '../../../../domain/entities';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { User } from '../../../../domain/entities/user.entity';
 import { ITokenService } from '../../../../domain/services/itoken.service';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
@@ -19,7 +19,6 @@ import {
   YoutubeChannelDataModel,
 } from '../../../../domain/contracts/youtube.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
-import { serializeObject } from 'core/utils/serialization.util';
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
 
@@ -114,7 +113,7 @@ export class GoogleConnectQueryHandler
     const { model } = command;
     await googleConnectValidations.validateAsync(model);
 
-    const value = serializeObject({
+    const value = JSON.stringify({
       deviceId: model.deviceId,
       userAgent: model.userAgent,
       ipAddress: model.ipAddress,

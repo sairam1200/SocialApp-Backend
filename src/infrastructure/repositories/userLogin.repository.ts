@@ -1,10 +1,10 @@
 import configs from '../../configs';
 import { Repository } from "typeorm";
 import { Injectable } from '@nestjs/common';
+import { UserLogin } from "../../domain/entities";
 import { InjectRepository } from "@nestjs/typeorm";
 import { cryptoUtils } from '../../core/utils/crypto.util';
 import { addDurationToNow } from '../../core/utils/time.util';
-import { UserLogin } from "../../domain/entities/userLogin.entity";
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { IUserLoginRepository } from "../../domain/repositories/irefreshtoken.repository";
 
@@ -59,10 +59,10 @@ export class UserLoginRepository implements IUserLoginRepository {
     }
 
     public async updateAsync(userLogin: UserLogin): Promise<void> {
-        
+
         if (HttpContext.user) {
             //userLogin.setCurrentUser(HttpContext.getCurrentUserId);
-            console.log("this is from rep:",HttpContext.getCurrentUserId);
+            console.log("this is from rep:", HttpContext.getCurrentUserId);
         }
         await this.userLoginContext.update(userLogin.id, userLogin);
     }

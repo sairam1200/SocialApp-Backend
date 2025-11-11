@@ -2,4 +2,5 @@ export { DataSeeder } from "./data.seeder";
 export { EmailService } from "./email.service";
 export { TokenService } from "./token.service";
 export { SearchService } from "./search.service";
+export { SearchCacheService } from "./searchCache.service";
 export { NotificationService } from "./notification.service";

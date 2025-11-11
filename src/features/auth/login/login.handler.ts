@@ -2,7 +2,7 @@ import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
-import { User } from "../../../domain/entities/user.entity";
+import { User } from "../../../domain/entities";
 import { TokenResponseModel } from "../../../domain/contracts/tokenResponse.model";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { ITokenService } from "../../../domain/services/itoken.service";

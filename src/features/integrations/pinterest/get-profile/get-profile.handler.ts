@@ -1,7 +1,7 @@
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
 import { Inject, NotFoundException } from "@nestjs/common";
-import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
+import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { PinterestProfileModel } from "../../../../domain/contracts/pinterest.model";
 import { mapToPinterestProfileModel } from "../../../../domain/mappers/pinterest.mapper";
@@ -20,8 +20,8 @@ export class PinterestProfileQuery {
   }
 }
 
-@QueryHandler(PinterestProfileQuery)
-export class PinterestProfileQueryHandler implements IQueryHandler<PinterestProfileQuery> {
+@CommandHandler(PinterestProfileQuery)
+export class PinterestProfileQueryHandler implements ICommandHandler<PinterestProfileQuery> {
 
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)

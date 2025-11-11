@@ -2,19 +2,19 @@ export default {
   // Repository Interfaces
   IUSER_REPOSITORY: "IUserRepository",
   IROLE_REPOSITORY: "IRoleRepository",
+  IGENERAL_REPOSITORY: "IGeneralRepository",
   IUSERROLE_REPOSITORY: "IUserRoleRepository",
   IPLAYLIST_REPOSITORY: "IPlaylistRepository",
   IRATELIMIT_REPOSITORY: "IRateLimitRepository",
   IROLECLAIM_REPOSITORY: "IRoleClaimRepository",
   IUSERLOGIN_REPOSITORY: "IUserLoginRepository",
+  ISEARCHHISTORY_REPOSITORY: "ISearchRepository",
   IUSERCONTENT_REPOSITORY: "IUserContentRepository",
   INOTIFICATION_REPOSITORY: "INotificationRepository",
-  IMANUALPROFILE_REPOSITORY: "IManualProfileRepository",
   ILINKEDACCOUNT_REPOSITORY: "ILinkedAccountRepository",
   ICONTENTSTREAM_REPOSITORY: "IContentStreamRepository",
-  ISEARCHHISTORY_REPOSITORY: "ISearchHistoryRepository",
+  IMANUALPROFILE_REPOSITORY: "IManualProfileRepository",
   IDATAPROTECTIONKEY_REPOSITORY: "IDataProtectionKeyRepository",
-  IGENERAL_REPOSITORY: "IGeneralRepository",
 
   // Service Interfaces
   IEMAIL_SERVICE: "IEmailService",
@@ -33,7 +33,6 @@ export default {
     REDDIT_IMPORT: "reddit-import",
     TIKTOK_IMPORT: "tiktok-import",
     LINKEDIN_IMPORT: "linkedin-import",
-    CONTENT_STREAM_IMPORT: "content-stream-import",
   },
 
   EMAILTEMPLATES: {
@@ -90,5 +89,12 @@ export default {
       RESET_PASSWORD: 'resetpassword',
       CONFIRM_EMAIL: 'emailconfirmation'
     }
+  },
+
+  // Cache configuration (in milliseconds)
+  CACHE: {
+    YOUTUBE_SEARCH_FRESHNESS_MS: 60 * 60 * 1000, // 1 hour - how long cached results are considered fresh
+    YOUTUBE_QUERY_CACHE_TTL_SEC: 5 * 60, // 5 minutes - Redis cache TTL for search queries
+    YOUTUBE_QUERY_LOCK_TTL_SEC: 30, // 30 seconds - Lock TTL to prevent duplicate API calls
   }
 }

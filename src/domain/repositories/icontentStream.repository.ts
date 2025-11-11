@@ -1,8 +1,6 @@
-import { ContentStream } from "../entities";
-import { QueryOptions } from "../types/queryOptions.type";
+import { QueryOptions } from "domain/types/queryOptions.type";
+import { ContentStream } from "../entities/contentStream.entity";
 
 export interface IContentStreamRepository {
   getEntriesAsync(params: QueryOptions): Promise<[ContentStream[], number]>;
-  createAsync(content: ContentStream);
-  getContentByIdAndTypeAsync(externalId: string, type: string , subType: string , title: string, platform: string): Promise<ContentStream[] | null>;
 }

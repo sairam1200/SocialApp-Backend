@@ -6,9 +6,9 @@ import { InjectQueue } from "@nestjs/bull";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
+import { UserLogin } from "../../../../domain/entities";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { UserLogin } from "../../../../domain/entities/userLogin.entity";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { Inject, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import ApplicationException from "../../../../core/exceptions/application.exception";
@@ -83,8 +83,8 @@ export class PinterestImportCommandHandler implements ICommandHandler<PinterestI
     if (!account) {
       throw new NotFoundException("No matching Pinterest profile was found!");
     }
-    try{
-      await this.importQueue.add("PINTEREST_IMPORT",{ account, accessToken }, {
+    try {
+      await this.importQueue.add("PINTEREST_IMPORT", { account, accessToken }, {
         attempts: 3,
         backoff: 5000
       });
@@ -102,18 +102,18 @@ export class PinterestImportCommandHandler implements ICommandHandler<PinterestI
   private async refreshTokenAsync(refreshToken: string)
     : Promise<{ access_token: string, expires_in: number, refresh_token: string, refresh_token_expires_in: number }> {
 
-    const basicAuth = Buffer.from(`${configs.pinterest.clientId}:${configs.pinterest.clientSecret}`).toString('base64'); 
+    const basicAuth = Buffer.from(`${configs.pinterest.clientId}:${configs.pinterest.clientSecret}`).toString('base64');
 
     try {
       const response = await axios.post(
         'https://api.pinterest.com/v5/oauth/token',
         `grant_type=refresh_token` +
-        `&refresh_token=${encodeURIComponent(refreshToken)}` 
-      ,
+        `&refresh_token=${encodeURIComponent(refreshToken)}`
+        ,
         {
-          headers: { 
+          headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${basicAuth}` 
+            'Authorization': `Basic ${basicAuth}`
           },
         },
       );
