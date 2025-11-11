@@ -6,10 +6,10 @@ import { Like, Repository, SelectQueryBuilder } from "typeorm";
 import { cryptoUtils } from '../../core/utils/crypto.util';
 import { User, UserClaim, UserRole } from '../../domain/entities';
 import { generateTimestampUUID } from '../../core/utils/time.util';
+import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { BadRequestException, forwardRef, Inject, Injectable } from "@nestjs/common";
 import { IRoleRepository, IUserRepository, IUserRoleRepository } from '../../domain/repositories';
-import { RoleNotFoundException, ClaimAlreadyExistsException, ApplicationException, UserAlreadyExistsException, UserAlreadyInRoleException, UserNotFoundException, ClaimNotFoundException } from "../../core/exceptions";
-import { HttpContext } from '../../core/middlewares/httpContext.middleware';
+import { RoleNotFoundException, ClaimAlreadyExistsException, ApplicationException, UserAlreadyExistsException, UserAlreadyInRoleException, ClaimNotFoundException } from "../../core/exceptions";
 
 @Injectable()
 export class UserRepository implements IUserRepository {

@@ -2,6 +2,7 @@ import { Repository } from "typeorm";
 import { Injectable } from "@nestjs/common";
 import { Globals } from "../../core/globals";
 import { InjectRepository } from "@nestjs/typeorm";
+import { QueryOptions } from "../../domain/types/queryOptions.type";
 import { LinkedAccount } from "../../domain/entities/linkedAccount.entity";
 import { HttpContext } from "../../core/middlewares/httpContext.middleware";
 import { ILinkedAccountRepository } from "../../domain/repositories/ilinkedAccount.repository";
@@ -14,6 +15,77 @@ export class LinkedAccountRepository implements ILinkedAccountRepository {
     @InjectRepository(LinkedAccount)
     private readonly linkedAccountContext: Repository<LinkedAccount>
   ) { }
+
+  public async getEntriesAsync(params: QueryOptions): Promise<[LinkedAccount[], number]> {
+    let { page, pageSize, orderBy, order, searchQuery, filter } = params;
+    console.log('Query Options:', searchQuery);
+    const queryBuilder = this.linkedAccountContext.createQueryBuilder("account");
+
+    if (!orderBy) {
+      orderBy = "userName";
+    }
+
+    const whereConditions: string[] = [];
+    const parameters: any = {};
+
+    if (searchQuery) {
+      whereConditions.push(`
+        (
+          account.userName ILIKE :searchQuery
+          OR EXISTS (
+            SELECT 1
+            FROM json_each_text(account.metaData) AS kv(key, value)
+            WHERE value ILIKE :searchQuery
+          )
+        )
+      `);
+
+      parameters.searchQuery = `%${searchQuery}%`;
+    }
+
+    if (filter?.platform) {
+      whereConditions.push("content.platform = :platform");
+      parameters.platform = filter.platform;
+    }
+
+    if (filter?.verified) {
+      whereConditions.push("content.verified = :verified");
+      parameters.verified = filter.verified;
+    }
+
+    if (filter?.externalId) {
+      whereConditions.push("account.externalId = :externalId");
+      parameters.externalId = filter.externalId;
+    }
+
+    if (filter?.type) {
+      whereConditions.push("account.type = :type");
+      parameters.type = filter.type;
+    }
+
+    if (whereConditions.length > 0) {
+      queryBuilder.where(whereConditions.join(" AND "), parameters);
+    }
+
+    if (searchQuery) {
+      queryBuilder.orderBy(
+        `CASE WHEN account.userName ILIKE :exactSearch THEN 0 
+                 WHEN account.userName ILIKE :searchQuery THEN 1 
+                 ELSE 2 END`,
+        "ASC"
+      )
+        .addOrderBy(`account.${orderBy}`, order)
+        .setParameter("exactSearch", searchQuery.toLowerCase());
+    } else {
+      queryBuilder.orderBy(`account.${orderBy}`, order);
+    }
+
+    queryBuilder.skip((page - 1) * pageSize)
+      .take(pageSize);
+    const result = await queryBuilder.getManyAndCount();
+    console.log('Query Result:', result);
+    return result
+  }
 
   public async createAsync(linkedAccount: LinkedAccount): Promise<LinkedAccount> {
 

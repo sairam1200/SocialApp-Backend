@@ -1,6 +1,6 @@
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
-import { UserRole } from "../../domain/entities/userRole.entity";
+import { UserRole } from "../../domain/entities/identity/userRole.entity";
 import { IUserRoleRepository } from "../../domain/repositories/iuserRole.repository";
 
 export class UserRoleRepository implements IUserRoleRepository {

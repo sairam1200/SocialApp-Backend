@@ -2,15 +2,12 @@ import { Module } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { CqrsModule } from "@nestjs/cqrs";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { Role } from "../domain/entities/role.entity";
-import { User } from "../domain/entities/user.entity";
 import { dependency } from '../infrastructure/dependency';
 import { Permissions } from '../core/utils/permissions.util';
-import { UserRole } from "../domain/entities/userRole.entity";
-import { RoleClaim } from "../domain/entities/roleClaim.entity";
 import { DiscoveryService, MetadataScanner } from '@nestjs/core';
 import { DataSeeder } from '../infrastructure/services/data.seeder';
 import { GetRolesHandler } from "../features/role/get-roles/get-roles.handler";
+import { User, Role, UserClaim, UserRole, RoleClaim } from '../domain/entities';
 import { GetRoleController } from "../features/role/get-role/get-role.endpoint";
 import { GetRolesController } from "../features/role/get-roles/get-roles.endpoint";
 import { CreateRoleHandler } from "../features/role/create-role/create-role.handler";
@@ -28,7 +25,6 @@ import { GetPermissionsController } from '../features/role/get-permissions/get-p
 import { DeactivateRoleController } from '../features/role/deactivate-role/deactivate-role.endpoint';
 import { UpdatePermissionsHandler } from '../features/role/update-permissions/update-permissions.handler';
 import { UpdatePermissionsController } from '../features/role/update-permissions/update-permissions.endpoint';
-import { UserClaim } from 'domain/entities';
 
 @Module({
   imports: [CqrsModule, TypeOrmModule.forFeature([

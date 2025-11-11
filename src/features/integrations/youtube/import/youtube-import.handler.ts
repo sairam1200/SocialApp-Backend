@@ -5,9 +5,9 @@ import { InjectQueue } from "@nestjs/bull";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
+import { UserLogin } from "../../../../domain/entities";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { UserLogin } from "../../../../domain/entities/userLogin.entity";
 import { Inject, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
@@ -91,23 +91,9 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     if (!account) {
       throw new NotFoundException("No matching Youtube profile was found!");
     }
-    /*
-    const sanitizedAccount = (obj:{})=>{
-      Object.entries(obj).forEach(([key, value]) => {
-        if (value === null || value === undefined) {
-          obj[key] = '';
-        } else if(typeof obj[key] === "object" && !Array.isArray(obj[key]) ){
-          sanitizedAccount(obj[key]);
-        }
-        })
-      return obj;
-    }
-     const newAccount = await JSON.parse(JSON.stringify(sanitizedAccount(account)));
-    console.log(newAccount);
-    */
 
     try {
-      await this.importQueue.add("YOUTUBE_IMPORT", { account, accessToken }, {
+      await this.importQueue.add(_const.BULL_QUEUES.YOUTUBE_IMPORT, { account, accessToken }, {
         attempts: 3,
         backoff: 5000
       });
@@ -117,7 +103,6 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
       throw new ApplicationException('Failed to initiate Youtube import. Please try again later.');
     }
-
 
     return {
       accessToken,

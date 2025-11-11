@@ -1,6 +1,6 @@
 import { RoleClaim } from './roleClaim.entity';
-import { BaseEntity } from "../baseEntity";
-import { RoleType } from '../enums';
+import { BaseEntity } from "../../baseEntity";
+import { RoleType } from '../../enums';
 import { Entity, Column, OneToMany } from 'typeorm';
 
 @Entity({ name: 'roles', schema: 'identity' })

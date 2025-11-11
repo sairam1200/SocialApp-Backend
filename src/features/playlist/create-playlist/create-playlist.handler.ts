@@ -3,7 +3,7 @@ import { Inject } from "@nestjs/common";
 import _const from "../../../core/utils/const";
 import { ApiProperty } from "@nestjs/swagger";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { Playlist } from "../../../domain/entities/playlist.entity";
+import { Playlist } from "../../../domain/entities/collection/playlist.entity";
 import { PlaylistModel } from "../../../domain/contracts/playlist.model";
 import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
 import { mapToPlaylistModel } from "../../../domain/mappers/playlist.mpper";

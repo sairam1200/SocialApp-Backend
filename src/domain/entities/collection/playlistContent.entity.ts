@@ -1,4 +1,4 @@
-import { BaseEntity } from "../baseEntity";
+import { BaseEntity } from "../../baseEntity";
 import { Playlist } from "./playlist.entity";
 import { PlaylistMember } from "./playlistMember.entity";
 import { Column, Entity, JoinColumn, ManyToOne } from "typeorm";

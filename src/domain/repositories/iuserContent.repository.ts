@@ -1,3 +1,4 @@
+import { QueryOptions } from "../types/queryOptions.type";
 import { UserContent } from "../entities/userContent.entity";
 
 export interface IUserContentRepository {
@@ -18,11 +19,5 @@ export interface IUserContentRepository {
     cursor: string
   ): Promise<[UserContent[], string]>;
 
-  getEntriesAsync(
-    page: number,
-    pageSize: number,
-    orderBy: string,
-    order: "ASC" | "DESC",
-    searchTerm?: string
-  ): Promise<[UserContent[], number]>;
+  getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]>;
 }

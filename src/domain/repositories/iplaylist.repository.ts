@@ -1,7 +1,7 @@
 import { PlaylistMemberRole } from "../enums";
-import { Playlist } from "../entities/playlist.entity";
-import { PlaylistMember } from "../entities/playlistMember.entity";
-import { PlaylistContent } from "../entities/playlistContent.entity";
+import { Playlist } from "../entities/collection/playlist.entity";
+import { PlaylistMember } from "../entities/collection/playlistMember.entity";
+import { PlaylistContent } from "../entities/collection/playlistContent.entity";
 
 export interface IPlaylistRepository {
 
@@ -16,7 +16,7 @@ export interface IPlaylistRepository {
   removeContentAsync(referenceId: string, content: PlaylistContent): Promise<void>;
   addContentAsync(referenceId: string, content: PlaylistContent): Promise<PlaylistContent>;
   getContentAsync(referenceId: string, contentId: string): Promise<PlaylistContent | null>;
-  
+
   getMembersAsync(referenceId: string): Promise<PlaylistMember[]>;
   removeMemberAsync(referenceId: string, member: PlaylistMember): Promise<void>;
   getMemberAsync(referenceId: string, memberId: string): Promise<PlaylistMember | null>;

@@ -7,6 +7,7 @@ export { IRoleClaimRepository } from './iroleClaim.repository';
 export { IUserLoginRepository } from './irefreshtoken.repository';
 export { IUserContentRepository } from './iuserContent.repository';
 export { INotificationRepository } from './inotification.repository';
+export { ISearchHistoryRepository } from './isearchHistory.repository';
 export { ILinkedAccountRepository } from './ilinkedAccount.repository';
 export { IManualProfileRepository } from './imanualProfile.repository';
 export { IDataProtectionKeyRepository } from './idataProtectionKey.repository';

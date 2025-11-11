@@ -2,17 +2,17 @@ import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
+import { User } from "../../../domain/entities";
 import { UserType } from "../../../domain/enums";
-import { User } from "../../../domain/entities/user.entity";
 import { stringUtil } from "../../../core/utils/string.util";
+import { IUserRepository } from "../../../domain/repositories";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { UserModel } from "../../../domain/contracts/user.model";
 import { mapToUserModel } from "../../../domain/mappers/user.mapper";
+import { UserAlreadyExistsException } from "../../../core/exceptions";
 import { generateInitialImage } from "../../../core/utils/canvas.util";
 import { password, userName } from "../../../core/utils/validation.util";
-import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 import { uploadBase64ToCloudinaryAsync } from "../../../core/utils/cloudinary.util";
-import { UserAlreadyExistsException } from "../../../core/exceptions/user.exception";
 
 export class RegisterModel {
   @ApiProperty()

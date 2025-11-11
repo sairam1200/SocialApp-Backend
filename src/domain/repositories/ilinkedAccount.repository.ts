@@ -1,5 +1,5 @@
+import { LinkedAccount } from "../entities";
 import { QueryOptions } from "domain/types/queryOptions.type";
-import { LinkedAccount } from "../entities/linkedAccount.entity";
 
 export interface ILinkedAccountRepository {
   createAsync(linkedAccount: LinkedAccount): Promise<LinkedAccount>;

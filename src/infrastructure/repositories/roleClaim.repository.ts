@@ -1,6 +1,6 @@
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
-import { RoleClaim } from "../../domain/entities/roleClaim.entity";
+import { RoleClaim } from "../../domain/entities/identity/roleClaim.entity";
 import { IRoleClaimRepository } from "../../domain/repositories/iroleClaim.repository";
 
 export class RoleClaimRepository implements IRoleClaimRepository {

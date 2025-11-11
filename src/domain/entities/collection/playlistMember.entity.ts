@@ -1,6 +1,6 @@
-import { User } from "./user.entity";
-import { BaseEntity } from "../baseEntity";
-import { PlaylistMemberRole } from "../enums";
+import { User } from "../identity/user.entity";
+import { BaseEntity } from "../../baseEntity";
+import { PlaylistMemberRole } from "../../enums";
 import { Playlist } from "./playlist.entity";
 import { Column, CreateDateColumn, DeleteDateColumn, Entity, Index, ManyToOne } from "typeorm";
 

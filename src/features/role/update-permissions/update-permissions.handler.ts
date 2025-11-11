@@ -5,7 +5,7 @@ import { Globals } from "../../../core/globals";
 import _const from "../../../core/utils/const";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { RoleClaimModel } from "../../../domain/contracts/role.model";
-import { RoleClaim } from "../../../domain/entities/roleClaim.entity";
+import { RoleClaim } from "../../../domain/entities/identity/roleClaim.entity";
 import { IRoleRepository } from "../../../domain/repositories/irole.repository";
 import { RoleNotFoundException } from "../../../core/exceptions/role.exception";
 import { IRoleClaimRepository } from "../../../domain/repositories/iroleClaim.repository";

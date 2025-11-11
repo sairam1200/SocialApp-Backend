@@ -93,3 +93,68 @@ export class YoutubeProfileModel {
     thumbthumbnail: string;
   };
 }
+
+export class YouTubeSearchParamsModel {
+  @ApiProperty()
+  page: number;
+
+  @ApiProperty()
+  originalQuery: string;
+
+  @ApiProperty()
+  normalizedQuery: string;
+
+  @ApiProperty()
+  limit: number;
+
+  @ApiProperty()
+  accessToken?: string;
+
+  @ApiProperty()
+  filters?: Record<string, any>;
+
+  @ApiProperty()
+  pageToken?: string;
+
+  @ApiProperty({ required: false, default: false })
+  forceRefresh?: boolean; // If true, always fetch from YouTube API regardless of cache
+}
+
+export interface YouTubeSearchResponseModel {
+  kind: string;
+  etag: string;
+  regionCode: string;
+  pageInfo: {
+    totalResults: number;
+    resultsPerPage: number;
+  };
+  items: any[];
+  nextPageToken?: string;
+  prevPageToken?: string;
+}
+
+export class SearchResponseModel {
+  query: string;
+  results: {
+    channels: any[];
+    videos: any[];
+    playlist: any[];
+    playlistVideo: any[];
+    activities: any[];
+    subscriptions: any[];
+    accounts: any[];
+  };
+
+  constructor() {
+    this.query = '';
+    this.results = {
+      channels: [],
+      videos: [],
+      playlist: [],
+      playlistVideo: [],
+      activities: [],
+      subscriptions: [],
+      accounts: [],
+    };
+  }
+}

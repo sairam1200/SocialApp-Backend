@@ -1,4 +1,4 @@
-import { UserRole } from "../entities/userRole.entity";
+import { UserRole } from "../entities/identity/userRole.entity";
 
 export interface IUserRoleRepository {
 

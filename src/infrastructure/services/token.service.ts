@@ -2,12 +2,12 @@ import configs from '../../configs';
 import { JwtService } from '@nestjs/jwt';
 import _const from '../../core/utils/const';
 import { Globals } from '../../core/globals';
+import { User } from "../../domain/entities";
 import logger from '../../core/utils/winston.util';
 import { Inject, Injectable } from "@nestjs/common";
-import { User } from "../../domain/entities/user.entity";
 import { JwtPayload } from '../../core/passport/jwtPayload';
+import { IRoleRepository } from "../../domain/repositories";
 import { ITokenService } from "../../domain/services/itoken.service";
-import { IRoleRepository } from "../../domain/repositories/irole.repository";
 
 @Injectable()
 export class TokenService implements ITokenService {
