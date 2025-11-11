@@ -1,3 +1,4 @@
+import { QueryOptions } from "domain/types/queryOptions.type";
 import { LinkedAccount } from "../entities/linkedAccount.entity";
 
 export interface ILinkedAccountRepository {
@@ -6,7 +7,7 @@ export interface ILinkedAccountRepository {
   getByIdAsync(id: string): Promise<LinkedAccount | null>;
   getByUserIdAsync(userId: string): Promise<LinkedAccount[]>;
   getByEmailAsync(email: string): Promise<LinkedAccount | null>;
-
+  getEntriesAsync(params: QueryOptions): Promise<[LinkedAccount[], number]>
   deleteAsync(linkedAccount: LinkedAccount): Promise<LinkedAccount>;
   getByPlatformAndUserIdAsync(platform: string, id: string): Promise<LinkedAccount | null>;
   getByPlatformAndUserNameAsync(platform: string, username: string): Promise<LinkedAccount | null>;

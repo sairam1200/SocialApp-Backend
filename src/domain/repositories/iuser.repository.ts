@@ -5,12 +5,15 @@ export interface IUserRepository {
   deleteAsync(user: User): Promise<void>;
   updateAsync(user: User): Promise<boolean>;
   createAsync(user: User, password: string): Promise<User>;
-  
+
   getAsync(): Promise<User[]>;
   getUserByIdAsync(id: string): Promise<User | null>;
   getUserByEmailAsync(email: string): Promise<User | null>;
   getUserByNameAsync(userName: string): Promise<User | null>;
   getSimilarUserNamesAsync(userName: string): Promise<string[]>;
+
+  isEmailInuseAsync(email: string): Promise<boolean>;
+  cleanupExpiredEmailChangesAsync(expirationHours?: number): Promise<number>;
 
   setEmailAsync(user: User, email: string): Promise<boolean>;
   changeEmailAsync(newEmail: string, token: string): Promise<boolean>;

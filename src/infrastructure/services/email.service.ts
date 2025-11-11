@@ -15,7 +15,7 @@ export class EmailService implements IEmailService {
   ) { }
 
   public async sendAsync(options: {
-    from: string;
+    from?: string;
     to: string;
     subject: string;
     html: string;
@@ -34,7 +34,7 @@ export class EmailService implements IEmailService {
   }
 
   public async sendTemplatedAsync(options: {
-    from: string;
+    from?: string;
     to: string;
     subject: string;
     templatePath: string;

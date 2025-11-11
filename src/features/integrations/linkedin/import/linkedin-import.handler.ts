@@ -1,14 +1,13 @@
 import axios from "axios";
-import * as Joi from "joi";
-import { Queue } from "bull";
+import { Queue } from "bullmq";
 import { Inject } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bull";
+import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
+import { NotFoundException } from "@nestjs/common";
 import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { ApiProperty } from "@nestjs/swagger";
-import { NotFoundException } from "@nestjs/common";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
@@ -46,9 +45,9 @@ export class LinkedInImportCommandHandler implements ICommandHandler<LinkedInImp
 
     let expiresIn: number;
     const now = new Date();
-    
+
     const linkedInAccessToken = command.model?.linkedInAccessToken;
-    
+
     let accessToken: string | undefined;
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
 

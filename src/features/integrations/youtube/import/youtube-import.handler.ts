@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Queue } from "bull";
+import { Queue } from "bullmq";
 import configs from "../../../../configs";
 import { InjectQueue } from "@nestjs/bull";
 import { ApiProperty } from "@nestjs/swagger";
@@ -13,6 +13,7 @@ import { HttpContext } from "../../../../core/middlewares/httpContext.middleware
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
 
 export class YoutubeImportRequestModel {
   @ApiProperty()
@@ -47,12 +48,21 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     const { youtubeAccessToken } = command.model;
     let accessToken: string | undefined;
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-   
+
     if (youtubeAccessToken) {
       const isTokenValid = await this.verifyAccessTokenAsync(youtubeAccessToken);
       if (!isTokenValid) {
         const userLogin = await this.getUserLoginAsync(userId);
-        const { access_token, expires_in } = await this.refreshTokenAsync(userLogin.tokenValue);
+        const tokenValue = deserializeObject<{ access_token: string, refresh_token: string }>(userLogin.tokenValue);
+        const {
+          access_token,
+          expires_in
+        } = await this.refreshTokenAsync(tokenValue.refresh_token);
+        if (access_token) {
+          userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token, expires_in });
+          userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
+          await this.userLoginRepository.updateAsync(userLogin);
+        }
         accessToken = access_token;
         expiresIn = expires_in;
       } else {
@@ -60,10 +70,20 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
       }
     } else {
       const userLogin = await this.getUserLoginAsync(userId);
-      const { access_token, expires_in } = await this.refreshTokenAsync(userLogin.tokenValue);
+      const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
+      const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
+      if (!isTokenValid) {
+        const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
+        userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
+        userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
+        await this.userLoginRepository.updateAsync(userLogin);
 
-      accessToken = access_token;
-      expiresIn = expires_in;
+        accessToken = access_token;
+        expiresIn = expires_in;
+      } else {
+        accessToken = tokenValue.access_token;
+        expiresIn = tokenValue.expires_in;
+      }
     }
 
     const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.YOUTUBE, userId);
@@ -85,19 +105,19 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
      const newAccount = await JSON.parse(JSON.stringify(sanitizedAccount(account)));
     console.log(newAccount);
     */
-   
-    try{
-      await this.importQueue.add("YOUTUBE_IMPORT",{account, accessToken }, {
+
+    try {
+      await this.importQueue.add("YOUTUBE_IMPORT", { account, accessToken }, {
         attempts: 3,
-        backoff:5000
+        backoff: 5000
       });
-    }catch (error) {
+    } catch (error) {
       console.log(error)
       logger.error(`An error occurred while adding the Youtube import job to the queue: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
       throw new ApplicationException('Failed to initiate Youtube import. Please try again later.');
     }
-   
+
 
     return {
       accessToken,

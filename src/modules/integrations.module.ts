@@ -42,6 +42,7 @@ import { DataProtectionKey, LinkedAccount, Role, User, UserClaim, UserContent, U
     dependency.UserContentRepository,
     dependency.LinkedAccountRepository,
     dependency.DataProtectionKeyRepository,
+    dependency.GeneralRepository,
   ],
   exports: [],
 })

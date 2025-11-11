@@ -4,7 +4,6 @@ import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
 import { User } from "../../../domain/entities/user.entity";
 import { TokenResponseModel } from "../../../domain/contracts/tokenResponse.model";
-import { password } from "../../../core/utils/validation.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { ITokenService } from "../../../domain/services/itoken.service";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
@@ -33,7 +32,7 @@ export class TokenRequestModel {
 
 const loginValidations = Joi.object({
   email: Joi.string().email().required(),
-  password: Joi.string().required().custom(password),
+  password: Joi.string().required(),
   userAgent: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
   ipAddress: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
   deviceId: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
@@ -109,7 +108,7 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
         access_token,
         refresh_token: userToken.tokenValue,
         succeeded: true,
-        refreshTokenExpiryTime: userToken.expiryDateUtc.toDateString(),
+        refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
       });
     }
   }

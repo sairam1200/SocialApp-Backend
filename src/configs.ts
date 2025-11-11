@@ -151,6 +151,9 @@ const envVarsSchema = Joi.object()
     TOKEN_EXPIRATION_TIME: Joi.number()
       .default(900000)
       .description('Token expiration time in milliseconds'),
+    USER_PROFILE_CHANGE_COOLDOWN_DAYS: Joi.number()
+      .default(60)
+      .description('Cooldown period in days before user can change email or username again'),
     GOOGLE_REDIRECT_URI: Joi.string()
       .description('Google OAuth redirect URI'),
     SMTP_HOST: Joi.string()
@@ -190,6 +193,9 @@ const envVarsSchema = Joi.object()
       .description('Cloudinary API secret for media storage'),
     TURNSTILE_SECRET_KEY: Joi.string()
       .description('Cloudflare Turnstile secret key'),
+    FRONTEND_URL: Joi.string()
+      .default('https://gaddr.com')
+      .description('Frontend application URL'),
   })
   .unknown();
 
@@ -291,6 +297,9 @@ export default {
   Token: {
     expirationTime: envVars.TOKEN_EXPIRATION_TIME
   },
+  user: {
+    profileChangeCooldownDays: envVars.USER_PROFILE_CHANGE_COOLDOWN_DAYS
+  },
   smtp: {
     host: envVars.SMTP_HOST,
     port: envVars.SMTP_PORT,
@@ -322,5 +331,8 @@ export default {
     clientId: envVars.LINKEDIN_CLIENT_ID,
     clientSecret: envVars.LINKEDIN_CLIENT_SECRET,
     redirectUri: envVars.LINKEDIN_CALLBACK_URL,
+  },
+  frontend: {
+    url: envVars.FRONTEND_URL,
   },
 }

@@ -13,6 +13,7 @@ export default {
   ILINKEDACCOUNT_REPOSITORY: "ILinkedAccountRepository",
   ICONTENTSTREAM_REPOSITORY: "IContentStreamRepository",
   IDATAPROTECTIONKEY_REPOSITORY: "IDataProtectionKeyRepository",
+  IGENERAL_REPOSITORY: "IGeneralRepository",
 
   // Service Interfaces
   IEMAIL_SERVICE: "IEmailService",

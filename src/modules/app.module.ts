@@ -8,6 +8,7 @@ import { QueuesModule } from './queues.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProfileModule } from './profile.module';
 import { PassportModule } from '@nestjs/passport';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PlaylistModule } from './playlist.module';
 import { IntegrationsModule } from './integrations.module';
 import { NotificationModule } from './notification.module';
@@ -17,7 +18,9 @@ import { HttpContextMiddleware } from '../core/middlewares/httpContext.middlewar
 import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '@nestjs/common';
 
 @Module({
-  imports: [PassportModule,
+  imports: [
+    PassportModule,
+    ScheduleModule.forRoot(),
     JwtModule.register({
       secret: configs.jwt.secret,
       signOptions: { expiresIn: configs.jwt.accessTokenExpiration },
@@ -31,7 +34,7 @@ import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '
     QueuesModule.register(),
     NotificationModule,
     IntegrationsModule,
-   
+
   ],
 })
 export class AppModule implements OnApplicationBootstrap, NestModule {

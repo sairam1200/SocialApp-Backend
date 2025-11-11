@@ -17,7 +17,6 @@ import { ValidationError } from 'joi';
 import { serializeObject } from '../utils/serialization.util';
 import { ApplicationException } from './application.exception';
 
-
 @Catch()
 export class ErrorHandlersFilter implements ExceptionFilter {
   public catch(err: any, host: ArgumentsHost): any {
@@ -104,10 +103,10 @@ export class ErrorHandlersFilter implements ExceptionFilter {
         type: HttpException.name,
         title: err.message,
         detail: err.stack,
-        status: err.getStatus()
+        status: err.getStatus(),
       });
 
-      response.status(HttpStatus.CONFLICT).json(problem);
+      response.status(err.getStatus()).json(problem);
 
       Logger.error(serializeObject(problem));
 

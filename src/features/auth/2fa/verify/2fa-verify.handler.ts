@@ -85,7 +85,7 @@ export class Verify2FACommandHandler implements ICommandHandler<Verify2FACommand
       access_token,
       refresh_token: userToken.tokenValue,
       succeeded: true,
-      refreshTokenExpiryTime: userToken.expiryDateUtc.toDateString(),
+      refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
     });
   }
 

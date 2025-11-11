@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { Queue } from 'bull';
+import { Queue } from 'bullmq';
 import configs from '../../../../configs';
-import { InjectQueue } from '@nestjs/bull';
+import { InjectQueue } from '@nestjs/bullmq';
 import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import { Globals } from '../../../../core/globals';
@@ -48,7 +48,7 @@ export class FacebookImportCommandHandler
     command: FacebookImportCommand,
   ): Promise<{ accessToken: string; expiresIn: number }> {
     let expiresIn: number;
-    const now = new Date();
+
     const { facebookAccessToken } = command.model;
     let accessToken: string | undefined;
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
@@ -65,17 +65,37 @@ export class FacebookImportCommandHandler
           userLogin.tokenValue,
         );
 
+        userLogin.tokenValue = access_token;
+        userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
+        await this.userLoginRepository.updateAsync(userLogin);
+
         accessToken = access_token;
         expiresIn = expires_in;
       }
     } else {
       // No token provided → use stored login
       const userLogin = await this.getUserLoginAsync(userId);
-      const { access_token, expires_in } = await this.refreshTokenAsync(
+
+      const isTokenValid = await this.verifyAccessTokenAsync(
         userLogin.tokenValue,
       );
-      accessToken = access_token;
-      expiresIn = expires_in;
+      if (!isTokenValid) {
+        const { access_token, expires_in } = await this.refreshTokenAsync(
+          userLogin.tokenValue,
+        );
+
+        userLogin.tokenValue = access_token;
+        userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
+        await this.userLoginRepository.updateAsync(userLogin);
+
+        accessToken = access_token;
+        expiresIn = expires_in;
+      } else {
+        accessToken = userLogin.tokenValue;
+        expiresIn = Math.floor(
+          (userLogin.expiryDateUtc.getTime() - Date.now()) / 1000,
+        );
+      }
     }
 
     const account =
@@ -89,7 +109,7 @@ export class FacebookImportCommandHandler
 
     try {
       await this.importQueue.add(
-        'FACEBOOK_IMPORT',
+        _const.BULL_QUEUES.FACEBOOK_IMPORT,
         { account, accessToken },
         {
           attempts: 3,
