@@ -20,6 +20,8 @@ import { RefreshTokenController } from "./refresh-token/refresh-token.endpoint";
 import { RegisterController } from "./register/register.endpoint";
 import { ResetPasswordController } from "./reset-password/reset-password.endpoint";
 import { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./external/facebook-auth/facebook-auth.handler";
+import { VerifyCodeController } from "./verify-code/verify-code.endpoint";
+import { VerifyCodeCommandHandler } from "./verify-code/verify-code.handler";
 
 export { LoginController } from "./login/login.endpoint";
 export { LoginCommandHandler } from "./login/login.handler";
@@ -69,6 +71,7 @@ const controllers = [
   Verify2FAController,
   Disable2FAController,
   LogoutController,
+  VerifyCodeController,
 ];
 
 const handlers = [
@@ -85,6 +88,7 @@ const handlers = [
   FacebookConnectQueryHandler,
   FacebookConnectCallbackQueryHandler,
   LogoutCommandHandler,
+  VerifyCodeCommandHandler
 ];
 
 const authentication = {
