@@ -1,7 +1,9 @@
 import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
+import _const from '../../core/utils/const';
 import { Globals } from '../../core/globals';
 import { UserType } from "../../domain/enums";
+import redis from '../../core/utils/redis.util';
 import logger from "../../core/utils/winston.util";
 import { extractTokenFromHeader, getUserFromAccessTokenAsync } from "../../core/utils/jwt.util";
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
@@ -41,6 +43,12 @@ function createAccountGuard(type?: UserType, allowTwoFARequired: boolean = false
         logger.error('[AccountGuard] 2FA required but not allowed');
         throw new UnauthorizedException('Unauthorized: Two-factor authentication code is required');
       }
+
+      const userId = claimsPrinciple[Globals.ClaimTypes.UserId];
+      const securityStamp = claimsPrinciple[Globals.ClaimTypes.SecurityStamp];
+      const concurrencyStamp = claimsPrinciple[Globals.ClaimTypes.ConcurrencyStamp];
+      const accountKey = redis.getRedisKey<string>(`${userId}${_const.REDIS.USER.ACCOUNT}`);
+      const userAccount = await redis.getFromRedisAsync<{ concurrencyStamp: string; securityStamp: string; }>(accountKey);
 
       if (type && type != undefined) {
         const userType = claimsPrinciple[Globals.ClaimTypes.UserType] as UserType;

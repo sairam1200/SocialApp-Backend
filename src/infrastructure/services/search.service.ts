@@ -595,7 +595,7 @@ export class SearchService implements ISearchService {
       return { staleCount: 0, stalePercentage: 1.0, totalCount: 0 };
     }
 
-    const thresholdTime = new Date(Date.now() - _const.CACHE.YOUTUBE_SEARCH_FRESHNESS_MS);
+    const thresholdTime = new Date(Date.now() - _const.SEARCH_CACHE.RESULT_FRESHNESS_WINDOW_MS);
     const staleCount = contents.filter(
       content => new Date(content.lastRefreshed) < thresholdTime
     ).length;

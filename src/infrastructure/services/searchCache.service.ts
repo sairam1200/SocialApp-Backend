@@ -56,7 +56,7 @@ export class SearchCacheService {
   async setCachedResults<T extends object>(params: SearchCacheParams, results: T): Promise<void> {
     try {
       const cacheKey = this.generateCacheKey(params);
-      const ttl = _const.CACHE.YOUTUBE_QUERY_CACHE_TTL_SEC;
+      const ttl = _const.SEARCH_CACHE.QUERY_CACHE_TTL_SEC;
       await redis.storeInRedisAsync(cacheKey, results, ttl);
     } catch (error) {
       logger.error(`Error caching results for ${params.platform}:`, error);
@@ -66,7 +66,7 @@ export class SearchCacheService {
   async acquireLock(params: SearchCacheParams): Promise<boolean> {
     try {
       const lockKey = this.generateLockKey(params);
-      const ttl = _const.CACHE.YOUTUBE_QUERY_LOCK_TTL_SEC;
+      const ttl = _const.SEARCH_CACHE.QUERY_LOCK_TTL_SEC;
       const result = await redis.instance.set(lockKey, Date.now().toString(), 'EX', ttl, 'NX');
       return result === 'OK';
     } catch (error) {

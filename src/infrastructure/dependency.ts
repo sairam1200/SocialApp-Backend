@@ -84,10 +84,6 @@ export const dependency = {
     provide: _const.ISEARCH_SERVICE,
     useClass: SearchService,
   },
-  SearchCacheService: {
-    provide: 'SearchCacheService',
-    useClass: SearchCacheService,
-  },
   GeneralRepository: {
     provide: _const.IGENERAL_REPOSITORY,
     useClass: GeneralRepository,

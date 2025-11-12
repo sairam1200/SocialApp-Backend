@@ -91,10 +91,15 @@ export default {
     }
   },
 
-  // Cache configuration (in milliseconds)
-  CACHE: {
-    YOUTUBE_SEARCH_FRESHNESS_MS: 60 * 60 * 1000, // 1 hour - how long cached results are considered fresh
-    YOUTUBE_QUERY_CACHE_TTL_SEC: 5 * 60, // 5 minutes - Redis cache TTL for search queries
-    YOUTUBE_QUERY_LOCK_TTL_SEC: 30, // 30 seconds - Lock TTL to prevent duplicate API calls
-  }
+  SEARCH_CACHE: {
+    RESULT_FRESHNESS_WINDOW_MS: 60 * 60 * 1000, // 1 hour - how long cached results are considered fresh
+    QUERY_CACHE_TTL_SEC: 5 * 60, // 5 minutes - Redis cache TTL for search queries
+    QUERY_LOCK_TTL_SEC: 30, // 30 seconds - Lock TTL to prevent duplicate API calls
+  },
+
+  REDIS: {
+    USER: {
+      ACCOUNT: '_user_account'
+    }
+  },
 }
