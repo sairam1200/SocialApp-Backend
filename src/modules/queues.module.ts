@@ -10,7 +10,7 @@ import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { UserContent } from "../domain/entities/userContent.entity";
-import { Notification } from "../domain/entities/notification.entity";
+import { Notification } from "../domain/entities/notification/notification.entity";
 import { LinkedAccount } from "../domain/entities/linkedAccount.entity";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
 import { BullBoardAuthMiddleware } from "../core/middlewares/bullBoardAuth.middleware";
@@ -22,7 +22,7 @@ import { FacebookImportProcessor, InjectFacebookImportQueue } from "../infrastru
 import { InjectPinterestImportQueue, PinterestImportProcessor } from "../infrastructure/background/processors/pinterest-import.processor";
 import { InjectInstagramImportQueue, InstagramImportProcessor } from "../infrastructure/background/processors/instagram-import.processor";
 import { RedditImportProcessor, InjectRedditImportQueue } from "../infrastructure/background/processors/reddit-import.processor";
-import { InjectTwitterImportQueue,TwitterImportProcessor } from "../infrastructure/background/processors/twitter-import.processor";
+import { InjectTwitterImportQueue, TwitterImportProcessor } from "../infrastructure/background/processors/twitter-import.processor";
 import { InjectLinkedInImportQueue, LinkedInImportProcessor } from "../infrastructure/background/processors/linkedin-import.processor";
 @Module({})
 export class QueuesModule implements NestModule {

@@ -1,7 +1,7 @@
 export enum UserType {
     Admin = 'Admin',
-    User = 'User',
     Guest = 'Guest',
+    User = 'User',
 }
 
 export enum RoleType {

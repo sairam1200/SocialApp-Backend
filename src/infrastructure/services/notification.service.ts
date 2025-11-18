@@ -2,7 +2,7 @@ import _const from "../../core/utils/const";
 import { Globals } from "../../core/globals";
 import { NotificationType } from "../../domain/enums";
 import { forwardRef, Inject, Injectable } from "@nestjs/common";
-import { Notification } from "../../domain/entities/notification.entity";
+import { Notification } from "../../domain/entities/notification/notification.entity";
 import { HttpContext } from "../../core/middlewares/httpContext.middleware";
 import { mapToNotificationModel } from "../../domain/mappers/notification.mapper";
 import { INotificationService } from "../../domain/services/inotification.service";

@@ -1,7 +1,7 @@
 import { Repository } from "typeorm";
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Notification } from "../../domain/entities/notification.entity";
+import { Notification } from "../../domain/entities/notification/notification.entity";
 import { INotificationRepository } from "../../domain/repositories/inotification.repository";
 
 @Injectable()

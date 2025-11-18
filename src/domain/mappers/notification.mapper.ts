@@ -1,5 +1,5 @@
 import { NotificationModel } from "../contracts/notification.model";
-import { Notification } from "../entities/notification.entity";
+import { Notification } from "../entities/notification/notification.entity";
 
 export function mapToNotificationModel(data: Notification): NotificationModel {
   return {
