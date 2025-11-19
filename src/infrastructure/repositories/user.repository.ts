@@ -1,15 +1,16 @@
 import * as bcrypt from 'bcrypt';
 import configs from '../../configs';
 import _const from '../../core/utils/const';
+import redis from '../../core/utils/redis.util';
 import { InjectRepository } from "@nestjs/typeorm";
 import { Like, Repository, SelectQueryBuilder } from "typeorm";
 import { cryptoUtils } from '../../core/utils/crypto.util';
 import { User, UserClaim, UserRole } from '../../domain/entities';
 import { generateTimestampUUID } from '../../core/utils/time.util';
+import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { BadRequestException, forwardRef, Inject, Injectable } from "@nestjs/common";
 import { IRoleRepository, IUserRepository, IUserRoleRepository } from '../../domain/repositories';
-import { RoleNotFoundException, ClaimAlreadyExistsException, ApplicationException, UserAlreadyExistsException, UserAlreadyInRoleException, UserNotFoundException, ClaimNotFoundException } from "../../core/exceptions";
-import { HttpContext } from '../../core/middlewares/httpContext.middleware';
+import { RoleNotFoundException, ClaimAlreadyExistsException, ApplicationException, UserAlreadyExistsException, UserAlreadyInRoleException, ClaimNotFoundException } from "../../core/exceptions";
 
 @Injectable()
 export class UserRepository implements IUserRepository {
@@ -39,8 +40,10 @@ export class UserRepository implements IUserRepository {
       throw new UserAlreadyExistsException(user.email, 'email');
     }
 
-    if (await this.getUserByNameAsync(user.userName)) {
-      throw new UserAlreadyExistsException(user.userName, 'username');
+    if (user.userName) {
+      if (await this.getUserByNameAsync(user.userName)) {
+        throw new UserAlreadyExistsException(user.userName, 'username');
+      }
     }
 
     if (password) {
@@ -67,11 +70,19 @@ export class UserRepository implements IUserRepository {
 
     user.concurrencyStamp = generateTimestampUUID();
     const result = await this.userContext.update(user.id, user);
+    const key = redis.getRedisKey<string>(`${user.id}${_const.REDIS.USER.ACCOUNT}`);
+    await redis.storeInRedisAsync(key, {
+      concurrencyStamp: user.concurrencyStamp,
+      securityStamp: user.securityStamp,
+      // Add more user account related 
+    }, 899)
     return result.affected > 0;
   }
 
   // TODO: Carry out checks before proceeding.
   public async deleteAsync(user: User): Promise<void> {
+    const key = redis.getRedisKey<string>(`${user.id}${_const.REDIS.USER.ACCOUNT}`);
+    await redis.removeFromRedisAsync(key);
     // TODO: Handle proper delete 
     await this.userContext.remove(user);
   }
@@ -141,6 +152,8 @@ export class UserRepository implements IUserRepository {
     user.lastPasswordModifiedAt = new Date();
     user.securityStamp = cryptoUtils.generateEncryptionKey(32);
     const updateResult = await this.userContext.update(user.id, user);
+    const key = redis.getRedisKey<string>(`${user.id}${_const.REDIS.USER.ACCOUNT}`);
+    await redis.removeFromRedisAsync(key);
 
     return updateResult.affected > 0;
   }

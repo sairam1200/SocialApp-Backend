@@ -9,13 +9,10 @@ import {
 } from "../../core/exceptions/playlist.exception";
 import { InjectRepository } from "@nestjs/typeorm";
 import { PlaylistMemberRole } from "../../domain/enums";
-import { User } from "../../domain/entities/user.entity";
-import { Playlist } from "../../domain/entities/playlist.entity";
+import { UserNotFoundException } from "../../core/exceptions";
+import { IPlaylistRepository } from "../../domain/repositories";
 import { HttpContext } from "../../core/middlewares/httpContext.middleware";
-import { UserNotFoundException } from "../../core/exceptions/user.exception";
-import { PlaylistMember } from "../../domain/entities/playlistMember.entity";
-import { PlaylistContent } from "../../domain/entities/playlistContent.entity";
-import { IPlaylistRepository } from "../../domain/repositories/iplaylist.repository";
+import { User, PlaylistMember, PlaylistContent, Playlist } from "../../domain/entities";
 
 @Injectable()
 export class PlaylistRepository implements IPlaylistRepository {
@@ -70,7 +67,7 @@ export class PlaylistRepository implements IPlaylistRepository {
       relations: ['owner', 'members'],
     });
   }
-  
+
   public async getContentsAsync(referenceId: string): Promise<PlaylistContent[]> {
     return await this.playlistContentContext.find({
       where: { playlist: { referenceId } },
@@ -303,6 +300,4 @@ export class PlaylistRepository implements IPlaylistRepository {
 
     return member;
   }
-
-  /// Search
 }

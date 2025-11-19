@@ -1,4 +1,4 @@
-import { UserLogin } from "../entities/userLogin.entity";
+import { UserLogin } from "../entities";
 
 export interface IUserLoginRepository {
 

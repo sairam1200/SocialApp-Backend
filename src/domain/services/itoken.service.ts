@@ -1,5 +1,5 @@
-import { User } from "../entities/user.entity";
 import { JwtPayload } from "../../core/passport/jwtPayload";
+import { User } from "../entities";
 
 export interface ITokenService {
   generateEncryptedToken(claims: any): string;

@@ -1,5 +1,5 @@
 import { NotificationType } from "../enums";
-import { Notification } from "../entities/notification.entity";
+import { Notification } from "../entities/notification/notification.entity";
 
 export interface INotificationService {
   notifyAsync(userId: string, type: NotificationType, title: string, body: string, isLive: boolean, metaData?: any): Promise<Notification>;

@@ -1,4 +1,4 @@
-import { RoleClaim } from "../entities/roleClaim.entity";
+import { RoleClaim } from "../entities/identity/roleClaim.entity";
 
 export interface IRoleClaimRepository {
 

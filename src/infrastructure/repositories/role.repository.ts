@@ -2,13 +2,10 @@ import { In, Repository } from "typeorm";
 import _const from "../../core/utils/const";
 import { Globals } from "../../core/globals";
 import { InjectRepository } from "@nestjs/typeorm";
+import { User, Role } from "../../domain/entities";
 import { Inject, Injectable } from "@nestjs/common";
-import { Role } from "../../domain/entities/role.entity";
-import { User } from "../../domain/entities/user.entity";
-import { JwtPayload } from "../../core/passport/jwtPayload";
-import { IRoleRepository } from "../../domain/repositories/irole.repository";
-import { IUserRepository } from "../../domain/repositories/iuser.repository";
-import { RoleAlreadyExistsException } from "../../core/exceptions/role.exception";
+import { RoleAlreadyExistsException } from "../../core/exceptions";
+import { IUserRepository, IRoleRepository } from "../../domain/repositories";
 import { HttpContext } from "../../core/middlewares/httpContext.middleware";
 
 @Injectable()

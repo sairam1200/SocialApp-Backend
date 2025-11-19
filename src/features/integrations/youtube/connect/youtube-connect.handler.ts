@@ -21,7 +21,6 @@ import {
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
 import { UserNotFoundException } from 'core/exceptions';
-import { serializeObject } from 'core/utils/serialization.util';
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
 
@@ -107,21 +106,20 @@ export class YoutubeConnectCallbackQueryHandler
     console.log(userData);
 
     const user = configs.env !== "production" ? await this.userRepository.getUserByIdAsync(dataProtectionKey.userId) : await this.userRepository.getUserByEmailAsync(userData.profile.email);
+
     if (!user || user.id !== dataProtectionKey.userId) {
       throw new UserNotFoundException(userData.profile.email, 'email');
     }
-
-    const existingAccount = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(_const.PLATFORMS.YOUTUBE, userData.channel.items[0].id);
-    if (existingAccount && existingAccount.userId !== user.id) {
-      throw new ApplicationException('This Youtube account is already connected to another user.');
-    }
-
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.YOUTUBE, user.id);
+    let linkedAccount =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.YOUTUBE,
+        user.id,
+      );
     if (linkedAccount) {
       console.log(linkedAccount);
-      linkedAccount.userName = userData.profile.name;
+      linkedAccount.userName = '';
       linkedAccount.profileImage = userData.profile.picture;
-      linkedAccount.externalUrl = `https://www.youtube.com/channel/${userData.channel.items[0].id}`;
+      linkedAccount.externalUrl= `https://www.youtube.com/channel/${userData.channel.items[0].id}`;
       (linkedAccount.followersCount = Number.parseInt(
         userData.channel.items[0].statistics.subscriberCount,
       )),
@@ -147,9 +145,9 @@ export class YoutubeConnectCallbackQueryHandler
           userId: user.id,
           email: userData.profile.email,
           externalId: userData.profile.id,
-          userName: userData.profile.name,
+          userName: '',
           profileImage: userData.profile.picture,
-          externalUrl: `https://www.youtube.com/channel/${userData.channel.items[0].id}`,
+          externalUrl:  `https://www.youtube.com/channel/${userData.channel.items[0].id}`,
           followersCount: Number.parseInt(
             userData.channel.items[0].statistics.subscriberCount,
           ),
@@ -178,7 +176,7 @@ export class YoutubeConnectCallbackQueryHandler
       );
 
     if (existingAccountLogin) {
-      existingAccountLogin.tokenValue = serializeObject({ access_token, refresh_token, expires_in });
+      existingAccountLogin.tokenValue = refresh_token;
       existingAccountLogin.addedDateUtc = new Date();
       existingAccountLogin.expiryDateUtc = new Date(
         Date.now() + 100 * 24 * 60 * 60 * 1000,
@@ -191,7 +189,7 @@ export class YoutubeConnectCallbackQueryHandler
         '',
         '',
         '',
-        serializeObject({ access_token, refresh_token, expires_in }),
+        refresh_token,
         new Date(Date.now() + 100 * 24 * 60 * 60 * 1000),
       );
     }

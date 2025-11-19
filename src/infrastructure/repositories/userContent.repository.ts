@@ -1,9 +1,9 @@
 import { Repository } from "typeorm";
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { UserContent } from "../../domain/entities";
+import { IUserContentRepository } from "../../domain/repositories";
 import { QueryOptions } from "../../domain/types/queryOptions.type";
-import { UserContent } from "../../domain/entities/userContent.entity";
-import { IUserContentRepository } from "../../domain/repositories/iuserContent.repository";
 
 @Injectable()
 export class UserContentRepository implements IUserContentRepository {
@@ -58,9 +58,9 @@ export class UserContentRepository implements IUserContentRepository {
     return [result, nextCursor];
   }
 
-  public async getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]> {
-
+  async getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]> {
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;
+    console.log('Query Options:', searchQuery);
     const queryBuilder = this.userContentContext.createQueryBuilder("content");
 
     if (!orderBy) {
@@ -72,27 +72,17 @@ export class UserContentRepository implements IUserContentRepository {
 
     if (searchQuery) {
       whereConditions.push(`
-          (
-            content.title ILIKE :searchQuery
-            OR EXISTS (
-              SELECT 1
-              FROM json_each_text(content.metaData) AS kv(key, value)
-              WHERE value ILIKE :searchQuery
-            )
+        (
+          content.title ILIKE :searchQuery
+          OR EXISTS (
+            SELECT 1
+            FROM json_each_text(content.metaData) AS kv(key, value)
+            WHERE value ILIKE :searchQuery
           )
-        `);
+        )
+      `);
 
       parameters.searchQuery = `%${searchQuery}%`;
-    }
-
-    if (filter?.platform) {
-      whereConditions.push("content.platform = :platform");
-      parameters.platform = filter.platform;
-    }
-
-    if (filter?.userId) {
-      whereConditions.push("content.userId = :userId");
-      parameters.userId = filter.userId;
     }
 
     if (filter?.externalId) {
@@ -112,8 +102,8 @@ export class UserContentRepository implements IUserContentRepository {
     if (searchQuery) {
       queryBuilder.orderBy(
         `CASE WHEN content.title ILIKE :exactSearch THEN 0 
-                   WHEN content.title ILIKE :searchQuery THEN 1 
-                   ELSE 2 END`,
+                 WHEN content.title ILIKE :searchQuery THEN 1 
+                 ELSE 2 END`,
         "ASC"
       )
         .addOrderBy(`content.${orderBy}`, order)
@@ -124,7 +114,8 @@ export class UserContentRepository implements IUserContentRepository {
 
     queryBuilder.skip((page - 1) * pageSize)
       .take(pageSize);
- 
-      return await queryBuilder.getManyAndCount();
+    const result = await queryBuilder.getManyAndCount();
+    console.log('Query Result:', result);
+    return result
   }
 }

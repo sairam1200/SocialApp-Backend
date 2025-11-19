@@ -1,7 +1,7 @@
 export enum UserType {
     Admin = 'Admin',
-    User = 'User',
     Guest = 'Guest',
+    User = 'User',
 }
 
 export enum RoleType {
@@ -32,7 +32,7 @@ export enum StreamEntityType {
     Community = "Community",
 }
 
-export enum YouTubeUserContentFilters { 
+export enum YouTubeUserContentFilters {
     Channals = "channel",
     Videos = "uploaded_video",
     Shorts = "short",
@@ -48,7 +48,7 @@ export enum YouTubeOnlineFilters {
     Playlists = "youtube#playlist"
 }
 
-export enum FacebookUserContentFilters { 
+export enum FacebookUserContentFilters {
     Feed = "feed",
     Posts = "posts",
     Likes = "likes",
@@ -57,7 +57,7 @@ export enum FacebookUserContentFilters {
     Videos = "videos",
 }
 
-export enum FacebookOnlineFilters { 
+export enum FacebookOnlineFilters {
     Posts = "posts",
     Pages = "pages",
     Groups = "groups",

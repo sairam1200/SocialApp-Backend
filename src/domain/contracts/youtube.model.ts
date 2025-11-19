@@ -1,7 +1,4 @@
-
 import { ApiProperty } from "@nestjs/swagger";
-import { LinkedAccount } from "domain/entities";
-import { LinkedInProfileModel } from "./linkedin.model";
 
 export class GoogleUserDataModel {
   id: string;
@@ -19,58 +16,25 @@ export interface YoutubeChannelDataModel {
   etag: string;
   items: YoutubeChannelModel[];
 }
-export interface YouTubeSearchResponseModel {
-  kind: string;
-  etag: string;
-  nextPageToken?: string;
-  regionCode: string;
-  pageInfo: {
-    totalResults: number;
-    resultsPerPage: number;
-  };
-  items: YoutubeSearchItemModel[];
-}
-export interface YoutubeSearchItemModel {
-  kind: string;
-  etag: string;
-  id: {
-    kind: string;
-    videoId?: string;
-    channelId?: string;
-    playlistId?: string
-  };
-  snippet: {
-    publishedAt: Date;
-    channelId: string;
-    title: string;
-    description: string;
-    thumbnails: YoutubeThumbnails;
-    channelTitle: string;
-    liveBroadcastContent?: string;
-  };
-}
-interface YoutubeThumbnails {
-  default?: { url: string };
-  medium?: { url: string };
-  high?: { url: string };
-  standard?: { url: string };
-  maxres?: { url: string };
-}
-interface YoutubeStatistics {
-  viewCount: string; // Total views
-  subscriberCount: string; // Total subscribers
-  hiddenSubscriberCount: boolean; // Whether subscribers are hidden
-  videoCount: string; // Number of videos uploaded
-};
+
 interface YoutubeChannelModel {
   kind: string;
   id: string; // Channel ID
   snippet: {
     title: string; // Channel title
     description: string; // Channel description
-    thumbnails: YoutubeThumbnails;
+    thumbnails: {
+      default: { url: string };
+      medium: { url: string };
+      high: { url: string };
+    };
   };
-  statistics: YoutubeStatistics;
+  statistics: {
+    viewCount: string; // Total views
+    subscriberCount: string; // Total subscribers
+    hiddenSubscriberCount: boolean; // Whether subscribers are hidden
+    videoCount: string; // Number of videos uploaded
+  };
   contentDetails: {
     relatedPlaylists: {
       uploads: string; // Playlist ID for the user's uploaded videos
@@ -83,114 +47,6 @@ interface YoutubeChannelModel {
     };
   };
 }
-
-
-
-
-export interface YoutubeSubscriptionsModel{
-  id: string;
-  type: string;
-  title: string;
-  externalId: string;
-  description: string;
-  publishedAt: String;
-  thumbnails: YoutubeThumbnails;
-}
-export interface YoutubePlaylistModel {
-  id: string;
-  title: string;
-  type: string;
-  externalId?: string;
-  platfrom?: string;
-  playlistId?: string;
-  description: string;
-  itemCount?: number;
-  publishedAt: string;
-  thumbnails: YoutubeThumbnails;
-  etag?: string;
-  channelId?: string;
-  liveBroadcastContent?: string;
-  publishTime?: string;
-  channelTitle?: string;
-  
-}
-
-export interface YoutubePlaylistVideoModel {
-  id: string;
-  platform: string;
-  type: string;
-  title: string;
-  externalId?: string;
-  videoId: string;
-  publishedAt: string;
-  description: string;
-  thumbnails: YoutubeThumbnails;
-  playlistId?: string;
-  etag?: string;
-  channelId?: string;
-  liveBroadcastContent?: string;
-  publishTime?: string;
-  channelTitle?: string;
-}
-
-export interface YoutubeActivitiesModel {
-  id: string;
-  type: string;
-  title: string;
-  externalId: string;
-  publishedAt: string;
-  channelId: string;
-  description: string;
-  thumbnails: YoutubeThumbnails;
-}
-export interface YoutubeChannelInfoModel {
-  id: string;
-  type: string;
-  title: string;
-  externalId?: string;
-  description: string;
-  publishedAt: string;
-  thumbnails?: YoutubeThumbnails;
-  statistics?: YoutubeStatistics;
-  etag?: string;
-  channelId?: string;
-  liveBroadcastContent?: string;
-  publishTime?: string;
-  channelTitle?: string;
-}
-export interface YoutubeVideosModel {
-  id: string;
-  platform: string;
-  type: string;
-  title: string;
-  externalId?: string;
-  videoId?: string;
-  publishedAt: string;
-  description: string;
-  thumbnails: YoutubeThumbnails;
-  etag?: string;
-  channelId?: string;
-  liveBroadcastContent?: string;
-  publishTime?: string;
-  channelTitle?: string;
-}
-export interface YoutubeOnlineModel{
-  id: string;
-  type: string;
-  platform: string;
-  description: string;
-  externalId: string;
-  thumbnails: YoutubeThumbnails;
-  channelTitle: string
-  subType?: string;
-  etag: string;
-  liveBroadcastContent: string;
-  publishedAt: string;
-  channelId: string;
-  title: string;
-  publishTime: string;
-}
-
 
 export class YoutubeProfileModel {
   @ApiProperty()
@@ -239,7 +95,6 @@ export class YoutubeProfileModel {
 }
 
 export class YouTubeSearchParamsModel {
-
   @ApiProperty()
   page: number;
 
@@ -260,47 +115,46 @@ export class YouTubeSearchParamsModel {
 
   @ApiProperty()
   pageToken?: string;
+
+  @ApiProperty({ required: false, default: false })
+  forceRefresh?: boolean; // If true, always fetch from YouTube API regardless of cache
+}
+
+export interface YouTubeSearchResponseModel {
+  kind: string;
+  etag: string;
+  regionCode: string;
+  pageInfo: {
+    totalResults: number;
+    resultsPerPage: number;
+  };
+  items: any[];
+  nextPageToken?: string;
+  prevPageToken?: string;
 }
 
 export class SearchResponseModel {
-
-  @ApiProperty()
   query: string;
-  
-  @ApiProperty()
   results: {
-    subscriptions: YoutubeSubscriptionsModel[],
-    playlistVideo: YoutubePlaylistVideoModel[],
-    activities: YoutubeActivitiesModel[],
-    channels: YoutubeChannelInfoModel[],  
-    videos: YoutubeVideosModel[],
-    shorts: YoutubeVideosModel[],
-    playlist: YoutubePlaylistModel[],
-    accounts: LinkedInProfileModel[];
-    pageInfo?: {
-      page: number;
-      pageToken: string;
-      pageSize: number;
-    }
+    channels: any[];
+    videos: any[];
+    playlist: any[];
+    playlistVideo: any[];
+    activities: any[];
+    subscriptions: any[];
+    accounts: any[];
   };
 
   constructor() {
-    this.query = "";
+    this.query = '';
     this.results = {
-      subscriptions: [],
+      channels: [],
+      videos: [],
+      playlist: [],
       playlistVideo: [],
       activities: [],
-      channels: [],  
-      videos: [],
-      shorts: [],
-      playlist: [],
+      subscriptions: [],
       accounts: [],
-      pageInfo:  {
-        page: 0,
-        pageToken: "",
-        pageSize: 0,
-      }
     };
-   
   }
 }

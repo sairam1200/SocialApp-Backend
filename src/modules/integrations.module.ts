@@ -7,6 +7,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import integrations from "../features/integrations";
 import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
+import { SearchCacheService } from "infrastructure/services";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
 import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
 
@@ -23,9 +24,9 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
       UserClaim,
       UserContent,
       LinkedAccount,
-      DataProtectionKey,
       SearchHistory,
-      ContentStream,
+      DataProtectionKey,
+      ContentStream
     ])
   ],
   controllers: [
@@ -34,22 +35,20 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
   providers: [
     ImportGateway,
     JwtService,
-
+    SearchCacheService,
     ...integrations.addHandlers(),
 
-    dependency.SearchService,
     dependency.RoleRepository,
     dependency.UserRepository,
     dependency.UserRoleRepository,
     dependency.UserLoginRepository,
     dependency.UserContentRepository,
-    dependency.UserContentRepository,
     dependency.LinkedAccountRepository,
-    dependency.ContentStreamRepository,
-    dependency.ContentStreamRepository,
-    dependency.SearchHistoryRepository,
     dependency.DataProtectionKeyRepository,
     dependency.GeneralRepository,
+    dependency.ContentStreamRepository,
+    dependency.SearchService,
+    dependency.SearchHistoryRepository,
   ],
   exports: [],
 })

@@ -4,35 +4,17 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { ContentStream } from "../../domain/entities";
 import { QueryOptions } from "../../domain/types/queryOptions.type";
 import { IContentStreamRepository } from "../../domain/repositories/icontentStream.repository";
-import { StreamEntityType } from "domain/enums";
-
 
 @Injectable()
 export class ContentStreamRepository implements IContentStreamRepository {
+
 
   constructor(
     @InjectRepository(ContentStream)
     private readonly contentStreamContext: Repository<ContentStream>
   ) { }
-  public async createAsync(content: ContentStream){
-    console.info(`Saving content with externalId ${content.externalId} and type ${content.type}`);
-    await this.contentStreamContext.save(content);
-  }
 
-  public async getContentByIdAndTypeAsync(externalId: string, type: StreamEntityType , subType: string , title: string, platform: string): Promise<ContentStream[] | null> {
-    return await this.contentStreamContext.find({
-      where: {
-        externalId: externalId,
-        type: type,
-        subType: subType,
-        title: title,
-        platform: platform,
-      }
-    })
-  }
-  
-  public async getEntriesAsync(params: QueryOptions): Promise<[ContentStream[], number]> {
-
+  async getEntriesAsync(params: QueryOptions): Promise<[ContentStream[], number]> {
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;
     console.log('Query Options:', searchQuery);
     const queryBuilder = this.contentStreamContext.createQueryBuilder("content");
@@ -82,7 +64,7 @@ export class ContentStreamRepository implements IContentStreamRepository {
     if (whereConditions.length > 0) {
       queryBuilder.where(whereConditions.join(" AND "), parameters);
     }
-  
+
     if (searchQuery) {
       queryBuilder.orderBy(
         `CASE WHEN content.title ILIKE :exactSearch THEN 0 
@@ -98,8 +80,8 @@ export class ContentStreamRepository implements IContentStreamRepository {
 
     queryBuilder.skip((page - 1) * pageSize)
       .take(pageSize);
-      const result = await queryBuilder.getManyAndCount();
-      console.log('Query Result:', result);
-      return result
+    const result = await queryBuilder.getManyAndCount();
+    console.log('Query Result:', result);
+    return result
   }
 }

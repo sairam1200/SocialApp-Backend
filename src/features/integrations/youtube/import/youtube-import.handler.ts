@@ -4,15 +4,16 @@ import configs from "../../../../configs";
 import { InjectQueue } from "@nestjs/bull";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
+import { Globals } from "../../../../core/globals";
+import { UserLogin } from "../../../../domain/entities";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { UserLogin } from "../../../../domain/entities/userLogin.entity";
 import { Inject, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
-import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
 
 export class YoutubeImportRequestModel {
   @ApiProperty()
@@ -42,11 +43,11 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
 
   public async execute(command: YoutubeImportCommand)
     : Promise<{ accessToken: string, expiresIn: number }> {
-    const { youtubeAccessToken } = command.model;
 
     let expiresIn: number;
+    const { youtubeAccessToken } = command.model;
     let accessToken: string | undefined;
-    const userId = HttpContext.getCurrentUserId;
+    const userId = HttpContext.user[Globals.ClaimTypes.UserId];
 
     if (youtubeAccessToken) {
       const isTokenValid = await this.verifyAccessTokenAsync(youtubeAccessToken);
@@ -56,14 +57,12 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
         const {
           access_token,
           expires_in
-     
         } = await this.refreshTokenAsync(tokenValue.refresh_token);
-        if (accessToken) {
-          userLogin.tokenValue = serializeObject({ access_token,refresh_token: tokenValue.refresh_token, expires_in });
+        if (access_token) {
+          userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token, expires_in });
           userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
           await this.userLoginRepository.updateAsync(userLogin);
         }
-
         accessToken = access_token;
         expiresIn = expires_in;
       } else {
@@ -71,11 +70,10 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
       }
     } else {
       const userLogin = await this.getUserLoginAsync(userId);
-      const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number; }>(userLogin.tokenValue);
+      const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
       const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
-
       if (!isTokenValid) {
-        const { access_token, expires_in} = await this.refreshTokenAsync(tokenValue.refresh_token);
+        const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
         userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
         userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
         await this.userLoginRepository.updateAsync(userLogin);
@@ -89,14 +87,22 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     }
 
     const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.YOUTUBE, userId);
+    console.log(account);
     if (!account) {
       throw new NotFoundException("No matching Youtube profile was found!");
     }
 
-    await this.importQueue.add(_const.BULL_QUEUES.YOUTUBE_IMPORT, { account, accessToken }, {
-      attempts: 3,
-      backoff: 5000
-    });
+    try {
+      await this.importQueue.add(_const.BULL_QUEUES.YOUTUBE_IMPORT, { account, accessToken }, {
+        attempts: 3,
+        backoff: 5000
+      });
+    } catch (error) {
+      console.log(error)
+      logger.error(`An error occurred while adding the Youtube import job to the queue: 
+        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
+      throw new ApplicationException('Failed to initiate Youtube import. Please try again later.');
+    }
 
     return {
       accessToken,
@@ -120,7 +126,7 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
         },
       });
 
-      const { access_token, expires_in} = response.data;
+      const { access_token, expires_in } = response.data;
       if (!access_token) {
         throw new ApplicationException('Your Youtube session has expired or the access token is invalid. Please log in to Youtube again to continue.');
       }

@@ -1,5 +1,6 @@
 import { Response } from "express";
-import { QueryBus } from "@nestjs/cqrs";
+import { CommandBus } from "@nestjs/cqrs";
+import { Globals } from "../../../../core/globals";
 import { YoutubeProfileQuery } from "./get-profile.handler";
 import { ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
@@ -14,7 +15,7 @@ import { BadRequestException, Controller, Get, HttpStatus, Query, Res, UseGuards
 export class YoutubeProfileController {
 
   constructor(
-    private readonly queryBus: QueryBus
+    private readonly commandBus: CommandBus
   ) { }
 
   @Get('me')
@@ -27,8 +28,8 @@ export class YoutubeProfileController {
     @Res() res: Response
   ): Promise<Response | void> {
 
-    const userId = HttpContext.getCurrentUserId;
-    const result = await this.queryBus.execute(new YoutubeProfileQuery({ model: { userId } }));
+    const userId = HttpContext.user[Globals.ClaimTypes.UserId];
+    const result = await this.commandBus.execute(new YoutubeProfileQuery({ model: { userId } }));
 
     return res.status(HttpStatus.OK).json(result);
   }
@@ -53,7 +54,8 @@ export class YoutubeProfileController {
       throw new BadRequestException('Only one of the following query parameters should be provided: userId, userName, or youtubeId.',);
     }
 
-    const result = await this.queryBus.execute(new YoutubeProfileQuery({ model: { userId, userName, youtubeId } }));
+    const result = await this.commandBus.execute(new YoutubeProfileQuery({ model: { userId, userName, youtubeId } }));
+
     return res.status(HttpStatus.OK).json(result);
   }
 }

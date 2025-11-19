@@ -14,7 +14,6 @@ import { ImportGateway } from "../../../infrastructure/websocket/gateways/import
 import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
 import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
 import { console } from "inspector";
-import { mapToYoutubeActivityModel, mapToYoutubeChannelInfoModel, mapToYoutubePlaylisVideoModel, mapToYoutubePlaylistModel, mapToYoutubeSubscriptionsModel, mapToYoutubeUploadedVideosModel } from "domain/mappers/youtube.mapper";
 
 interface CursorMap {
   [key: string]: string | null;
@@ -34,13 +33,13 @@ export class YoutubeImportProcessor extends WorkerHost {
     @Inject(_const.INOTIFICATION_SERVICE)
     private readonly notificationService: INotificationService,
     private readonly gateway: ImportGateway,
-  ) { 
-    super() 
+  ) {
+    super()
     logger.info(`[YoutubeImport] Processor initialized`);
   }
 
   async process(job: Job<{ account: LinkedAccount, accessToken: string }>): Promise<void> {
-    console.log("helo:",job)
+    console.log("helo:", job)
     const { account, accessToken } = job.data
     const lastCursors: CursorMap = {};
 
@@ -114,7 +113,7 @@ export class YoutubeImportProcessor extends WorkerHost {
           const items = response.data.items ?? [];
           const pageInfo = response.data.pageInfo ?? {};
           nextPageToken = response.data.nextPageToken ?? null;
-          
+
           logger.debug(`✅ Retrieved ${items.length} items of ${type}`);
 
           if (!nextPageToken) {
@@ -144,18 +143,11 @@ export class YoutubeImportProcessor extends WorkerHost {
                 publishedAt: item.snippet.publishedAt,
                 thumbnails: item.snippet.thumbnails,
               };
-              content = await this.userContentRepository.createAsync(content);
-              const subscription = mapToYoutubeSubscriptionsModel(content)
-              this.gateway.emitNewImportContent(
-                account.userId,
-                _const.PLATFORMS.YOUTUBE,
-                subscription,
-              );
             } else if (type === 'Playlists') {
-             //logger.debug(JSON.stringify(item, null, 2));
+              //logger.debug(JSON.stringify(item, null, 2));
               content.type = 'playlist';
               content.title = item.snippet.title;
-              content.externalId=item.id;
+              content.externalId = item.id;
               content.metaData = {
                 playlistId: item.id,
                 description: item.snippet.description,
@@ -163,16 +155,8 @@ export class YoutubeImportProcessor extends WorkerHost {
                 publishedAt: item.snippet.publishedAt,
                 thumbnails: item.snippet.thumbnails,
               };
-              
               logger.debug(`▶️ Fetching videos from playlist ${item.id}`);
               // Fetch videos for this playlist
-              content = await this.userContentRepository.createAsync(content);
-              const playlist = mapToYoutubePlaylistModel(content)
-              this.gateway.emitNewImportContent(
-                account.userId,
-                _const.PLATFORMS.YOUTUBE,
-                playlist,
-              );
               const videos = await this.fetchPlaylistVideos(accessToken, item.id);
               logger.debug(`📹 Found ${videos.length} videos in playlist`);
               for (const video of videos) {
@@ -191,16 +175,16 @@ export class YoutubeImportProcessor extends WorkerHost {
                     playlistId: item.id,
                   },
                 });
-                try{
+                try {
                   videoContent = await this.userContentRepository.createAsync(videoContent);
                   logger.debug("this is the video content: ");
-                  const playlist_video = mapToYoutubePlaylisVideoModel(content)
+                  //logger.debug(JSON.stringify(videoContent, null, 2));
                   this.gateway.emitNewImportContent(
                     account.userId,
                     _const.PLATFORMS.YOUTUBE,
-                    playlist_video,
+                    videoContent,
                   );
-                  }catch (err) {
+                } catch (err) {
                   logger.error(`Error saving video content for playlist ${item.id}:`, err.message);
                 }
               }
@@ -216,13 +200,6 @@ export class YoutubeImportProcessor extends WorkerHost {
                 thumbnails: item.snippet.thumbnails,
                 type: item.snippet.type,
               };
-              content = await this.userContentRepository.createAsync(content);
-              const activity = mapToYoutubeActivityModel(content)
-              this.gateway.emitNewImportContent(
-                account.userId,
-                _const.PLATFORMS.YOUTUBE,
-                activity,
-              );
             } else if (type === 'ChannelInfo') {
               //logger.debug("channel item: ",JSON.stringify(item, null, 2));
               content.type = 'channel';
@@ -234,19 +211,17 @@ export class YoutubeImportProcessor extends WorkerHost {
                 thumbnails: item.snippet.thumbnails,
                 statistics: item.statistics,
               };
-              uploadsPlaylistId=item.contentDetails?.relatedPlaylists?.uploads || null;
+              uploadsPlaylistId = item.contentDetails?.relatedPlaylists?.uploads || null;
               logger.debug(`📥 the new Uploads playlist ID: ${uploadsPlaylistId}`);
+            }
+            try {
               content = await this.userContentRepository.createAsync(content);
-              const channelInfo = mapToYoutubeChannelInfoModel(content)
               this.gateway.emitNewImportContent(
                 account.userId,
                 _const.PLATFORMS.YOUTUBE,
-                channelInfo,
+                content,
               );
-            }
-            try{
-            
-            }catch (err) {
+            } catch (err) {
               logger.error(`Error saving content for ${type}:`, err.message);
             }
 
@@ -333,20 +308,19 @@ export class YoutubeImportProcessor extends WorkerHost {
               thumbnails: item.snippet.thumbnails,
             },
           });
-          try{
-          //logger.debug(JSON.stringify(content, null, 2));
-          content = await this.userContentRepository.createAsync(content);
-          const uploadedVedio = mapToYoutubeUploadedVideosModel(content)
-          //logger.debug(JSON.stringify(content, null, 2));
-          this.gateway.emitNewImportContent(
-            account.userId,
-            _const.PLATFORMS.YOUTUBE,
-            uploadedVedio,
-          );
-          }catch (err) {
+          try {
+            //logger.debug(JSON.stringify(content, null, 2));
+            content = await this.userContentRepository.createAsync(content);
+            //logger.debug(JSON.stringify(content, null, 2));
+            this.gateway.emitNewImportContent(
+              account.userId,
+              _const.PLATFORMS.YOUTUBE,
+              content,
+            );
+          } catch (err) {
             logger.error(`Error saving uploaded video content:`, err.message);
           }
-          
+
 
           // Update progress
           progressReports[type].itemProcessed++;
@@ -451,27 +425,27 @@ export class YoutubeImportProcessor extends WorkerHost {
     logger.debug(`📡 Fetching videos for playlist ID: ${playlistId}`);
 
     do {
-      try{
+      try {
 
-      
-      const response = await axios.get('https://www.googleapis.com/youtube/v3/playlistItems', {
-        params: {
-          part: 'snippet,contentDetails',
-          playlistId,
-          maxResults: 50,
-          pageToken: nextPageToken ?? undefined,
-        },
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
 
-      videos = videos.concat(response.data.items);
-      nextPageToken = response.data.nextPageToken ?? null;
-    } catch (err) {
-      console.log(`Error fetching videos for playlist ${playlistId}:`, err);
-      throw new Error(`Failed to fetch videos for playlist ${playlistId}`);
-    }
+        const response = await axios.get('https://www.googleapis.com/youtube/v3/playlistItems', {
+          params: {
+            part: 'snippet,contentDetails',
+            playlistId,
+            maxResults: 50,
+            pageToken: nextPageToken ?? undefined,
+          },
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        videos = videos.concat(response.data.items);
+        nextPageToken = response.data.nextPageToken ?? null;
+      } catch (err) {
+        console.log(`Error fetching videos for playlist ${playlistId}:`, err);
+        throw new Error(`Failed to fetch videos for playlist ${playlistId}`);
+      }
 
     } while (nextPageToken);
     logger.debug(`📥 Retrieved ${videos.length} total videos for playlist ${playlistId}`);

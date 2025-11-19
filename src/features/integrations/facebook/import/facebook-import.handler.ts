@@ -11,8 +11,8 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { UserLogin } from '../../../../domain/entities';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { UserLogin } from '../../../../domain/entities/userLogin.entity';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
@@ -33,8 +33,7 @@ export class FacebookImportCommand {
 
 @CommandHandler(FacebookImportCommand)
 export class FacebookImportCommandHandler
-  implements ICommandHandler<FacebookImportCommand>
-{
+  implements ICommandHandler<FacebookImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
@@ -42,7 +41,7 @@ export class FacebookImportCommandHandler
     private readonly userLoginRepository: IUserLoginRepository,
     @InjectQueue(_const.BULL_QUEUES.FACEBOOK_IMPORT)
     private readonly importQueue: Queue,
-  ) {}
+  ) { }
 
   public async execute(
     command: FacebookImportCommand,

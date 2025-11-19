@@ -34,8 +34,7 @@ export class FacebookSearchQuery {
 
 @QueryHandler(FacebookSearchQuery)
 export class FacebookSearchQueryHandler
-  implements IQueryHandler<FacebookSearchQuery>
-{
+  implements IQueryHandler<FacebookSearchQuery> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,
@@ -43,7 +42,7 @@ export class FacebookSearchQueryHandler
     private readonly searchHistoryRepository: ISearchHistoryRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-  ) {}
+  ) { }
 
   public async execute(command: FacebookSearchQuery): Promise<any> {
     const { searchTerm, filter, facebookAccessToken } = command.model;
@@ -188,24 +187,39 @@ export class FacebookSearchQueryHandler
   }
 
   private async normalizeQueryAsync(query: string): Promise<string> {
-    const searchHistory =
-      await this.searchHistoryRepository.findSimilarQueriesAsync(query);
-      
-    let normalizedQuery;
-    if (searchHistory.length > 0) {
-      const queries = searchHistory.map((item) => item.normalizedQuery);
-      normalizedQuery = fuseUtil.normalizeSearchTerm(query, queries);
-    } else {
-      normalizedQuery = fuseUtil.normalizeSearchTerm(query, []);
+    const trimmedQuery = (query ?? '').trim();
+    if (!trimmedQuery) {
+      return '';
     }
 
-    await this.searchHistoryRepository.createAsync(
-      new SearchHistory({
-        originalQuery: query,
-        userId: HttpContext.getCurrentUserId,
-        normalizedQuery,
-      }),
-    );
+    const similarQueries =
+      (await this.searchHistoryRepository.findSimilarQueriesAsync(trimmedQuery)) ?? [];
+
+    const candidateValues = similarQueries
+      .map((item) => item.normalizedQuery)
+      .filter(Boolean)
+      .slice(0, 50);
+
+    const normalizedQuery = fuseUtil.normalizeSearchTerm(trimmedQuery, candidateValues);
+
+    const hasExistingEntry = similarQueries.some((item) => {
+      const original = (item.originalQuery ?? '').trim().toLowerCase();
+      return (
+        original === trimmedQuery.toLowerCase() ||
+        item.normalizedQuery === normalizedQuery
+      );
+    });
+
+    if (!hasExistingEntry && normalizedQuery) {
+      await this.searchHistoryRepository.createAsync(
+        new SearchHistory({
+          originalQuery: trimmedQuery,
+          userId: HttpContext.getCurrentUserId,
+          normalizedQuery,
+        }),
+      );
+    }
+
     return normalizedQuery;
   }
 }

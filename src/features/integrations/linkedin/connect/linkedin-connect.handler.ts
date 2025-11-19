@@ -17,7 +17,9 @@ import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinke
 import { LinkedInProfileModel, LinkedInUserDataModel } from "../../../../domain/contracts/linkedin.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 
+const PLATFORM = 'linkedin';
 const API_BASE = 'https://api.linkedin.com/v2';
+
 export class LinkedInConnectQuery {
   model: {
     state: string;
@@ -96,7 +98,7 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
       throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
-    const existingAccount = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(_const.PLATFORMS.LINKEDIN, userData.id);
+    const existingAccount = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(PLATFORM, userData.id);
     if (existingAccount && existingAccount.userId !== user.id) {
       throw new ApplicationException('This LinkedIn account is already connected to another user.');
     }
@@ -105,7 +107,7 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
     if (!linkedAccount) {
       linkedAccount = new LinkedAccount();
       linkedAccount.userId = user.id;
-      linkedAccount.platform = _const.PLATFORMS.LINKEDIN;
+      linkedAccount.platform = PLATFORM;
       linkedAccount.externalId = userData.id;
     }
 

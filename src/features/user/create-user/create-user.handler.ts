@@ -1,14 +1,14 @@
 import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
-import { UserModel } from "../../../domain/contracts/user.model";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
+import { User } from "../../../domain/entities";
 import { UserType } from "../../../domain/enums";
-import { User } from "../../../domain/entities/user.entity";
 import { password } from "../../../core/utils/validation.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { IUserRepository } from "../../../domain/repositories/iuser.repository";
-import { UserAlreadyExistsException } from "../../../core/exceptions/user.exception";
+import { IUserRepository } from "../../../domain/repositories";
+import { UserModel } from "../../../domain/contracts/user.model";
+import { UserAlreadyExistsException } from "../../../core/exceptions";
 
 export class CreateUserModel {
     @ApiProperty()

@@ -1,6 +1,6 @@
-import { Playlist } from "../entities/playlist.entity";
-import { PlaylistMember } from "../entities/playlistMember.entity";
-import { PlaylistContent } from "../entities/playlistContent.entity";
+import { Playlist } from "../entities/collection/playlist.entity";
+import { PlaylistMember } from "../entities/collection/playlistMember.entity";
+import { PlaylistContent } from "../entities/collection/playlistContent.entity";
 import { PlaylistContentModel, PlaylistMemberModel, PlaylistModel } from "../contracts/playlist.model";
 
 export function mapToPlaylistModel(userCollection: Playlist): PlaylistModel {

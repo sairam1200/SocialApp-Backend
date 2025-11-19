@@ -8,23 +8,22 @@ import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
 @ApiTags('Users')
 @UseGuards()
 @Controller({
-    path: `/user`,
-    version: '1',
+  path: `/user`,
+  version: '1',
 })
 export class GetUserController {
-    constructor(
-        private readonly queryBus: CommandBus
-    ) { }
+  constructor(
+    private readonly queryBus: CommandBus
+  ) { }
 
-    @Get()
-    @ApiResponse({ status: 200, description: 'OK' })
-    @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
-    @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
-    @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-    public async GetById(@Query('userName') userName: string): Promise<UserModel> {
+  @Get()
+  @ApiResponse({ status: 200, description: 'OK' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
+  @ApiResponse({ status: 403, description: 'FORBIDDEN' })
+  public async GetById(@Query('userName') userName: string): Promise<UserModel> {
 
-        const result = await this.queryBus.execute(new GetUserQuery({ userName }));
-
-        return result;
-    }
+    const result = await this.queryBus.execute(new GetUserQuery({ userName }));
+    return result;
+  }
 }

@@ -8,7 +8,7 @@ import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
 import { Inject, NotFoundException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { UserLogin } from "../../../../domain/entities/userLogin.entity";
+import { UserLogin } from "../../../../domain/entities";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";

@@ -20,6 +20,8 @@ export class YoutubeSearchRequestModel {
   filter?: Record<string, any>;
   @ApiProperty()
   youtubeAccessToken?: string;
+  @ApiProperty({ required: false, default: false })
+  forceRefresh?: boolean; // If true, always fetch from YouTube API, ignoring cache
 }
 
 export class YoutubeSearchQuery {
@@ -78,9 +80,9 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
         const {
           access_token,
           expires_in
-          
+
         } = await this.refreshTokenAsync(tokenValue.refresh_token);
-        userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token});
+        userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
         userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
         await this.userLoginRepository.updateAsync(userLogin);
         accessToken = access_token;
@@ -92,7 +94,15 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
     }
 
     const normalizedQuery = await this.normalizeQueryAsync(searchTerm);
-    const data = await this.searchService.searchYoutubeAsync({ page : 1, normalizedQuery, originalQuery : searchTerm, limit : 25, filters : filter, accessToken});
+    const data = await this.searchService.searchYoutubeAsync({
+      page: 1,
+      normalizedQuery,
+      originalQuery: searchTerm,
+      limit: 25,
+      filters: filter,
+      accessToken,
+      forceRefresh: command.model.forceRefresh || false
+    });
     return data
   }
 
@@ -110,7 +120,7 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
           'Content-Type': 'application/x-www-form-urlencoded',
         },
       });
-      const { access_token, expires_in} = response.data;
+      const { access_token, expires_in } = response.data;
       if (!access_token) {
         throw new ApplicationException('Your Youtube session has expired or the access token is invalid. Please log in to Youtube again to continue.');
       }
@@ -143,22 +153,39 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
   }
 
   private async normalizeQueryAsync(query: string): Promise<string> {
-
-    const searchHistory = await this.searchHistoryRepository.findSimilarQueriesAsync(query);
-    console.log("Search history:", searchHistory);
-    let normalizedQuery;
-    if (searchHistory.length > 0) {
-      const queries = searchHistory.map(item => item.normalizedQuery);
-      normalizedQuery = fuseUtil.normalizeSearchTerm(query, queries);
-    } else {
-      normalizedQuery = fuseUtil.normalizeSearchTerm(query, []);
+    const trimmedQuery = (query ?? '').trim();
+    if (!trimmedQuery) {
+      return '';
     }
 
-    await this.searchHistoryRepository.createAsync(new SearchHistory({
-      originalQuery: query,
-      userId: HttpContext.getCurrentUserId,
-      normalizedQuery
-    }));
+    const similarQueries =
+      (await this.searchHistoryRepository.findSimilarQueriesAsync(trimmedQuery)) ?? [];
+
+    const candidateValues = similarQueries
+      .map((item) => item.normalizedQuery)
+      .filter(Boolean)
+      .slice(0, 50);
+
+    const normalizedQuery = fuseUtil.normalizeSearchTerm(trimmedQuery, candidateValues);
+
+    const hasExistingEntry = similarQueries.some((item) => {
+      const original = (item.originalQuery ?? '').trim().toLowerCase();
+      return (
+        original === trimmedQuery.toLowerCase() ||
+        item.normalizedQuery === normalizedQuery
+      );
+    });
+
+    if (!hasExistingEntry && normalizedQuery) {
+      await this.searchHistoryRepository.createAsync(
+        new SearchHistory({
+          originalQuery: trimmedQuery,
+          userId: HttpContext.getCurrentUserId,
+          normalizedQuery,
+        }),
+      );
+    }
+
     return normalizedQuery;
   }
 }

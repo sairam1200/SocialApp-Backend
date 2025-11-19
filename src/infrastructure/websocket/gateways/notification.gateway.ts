@@ -10,10 +10,10 @@ import {
 } from "@nestjs/websockets";
 import configs from "../../../configs";
 import { Server, Socket } from 'socket.io';
+import _const from "../../../core/utils/const";
 import { Globals } from "../../../core/globals";
 import { NotificationModel } from "../../../domain/contracts/notification.model";
 import { INotificationService } from "../../../domain/services/inotification.service";
-import _const from "core/utils/const";
 
 @Injectable()
 @WebSocketGateway({ namespace: '/notifications' })
