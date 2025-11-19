@@ -40,8 +40,10 @@ export class UserRepository implements IUserRepository {
       throw new UserAlreadyExistsException(user.email, 'email');
     }
 
-    if (await this.getUserByNameAsync(user.userName)) {
-      throw new UserAlreadyExistsException(user.userName, 'username');
+    if (user.userName) {
+      if (await this.getUserByNameAsync(user.userName)) {
+        throw new UserAlreadyExistsException(user.userName, 'username');
+      }
     }
 
     if (password) {

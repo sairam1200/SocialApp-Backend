@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import {notification} from "../features/notification";
+import notification from "../features/notification";
 import { dependency } from "../infrastructure/dependency";
 import { Notification } from "../domain/entities/notification/notification.entity";
 import { NotificationGateway } from "../infrastructure/websocket/gateways/notification.gateway";
