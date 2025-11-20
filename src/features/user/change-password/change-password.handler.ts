@@ -1,4 +1,5 @@
 import * as Joi from "joi";
+import configs from "../../../configs";
 import { Inject } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
@@ -6,8 +7,10 @@ import ipUtil from "../../../core/utils/ip.util";
 import logger from "../../../core/utils/winston.util";
 import { password } from "../../../core/utils/validation.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { parseUserAgent } from "../../../core/utils/userAgent.util";
 import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
 import { UserNotFoundException } from "../../../core/exceptions/user.exception";
+import { IEmailService } from "../../../domain/services/iemail.service";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 import { IUserLoginRepository } from "../../../domain/repositories/irefreshtoken.repository";
 import ApplicationException from "../../../core/exceptions/application.exception";
@@ -52,6 +55,7 @@ export class ChangePasswordCommandHandler implements ICommandHandler<ChangePassw
   constructor(
     @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY) private readonly userLoginRepository: IUserLoginRepository,
+    @Inject(_const.IEMAIL_SERVICE) private readonly emailService: IEmailService,
   ) { }
 
   public async execute(command: ChangePasswordCommand): Promise<void> {
@@ -74,7 +78,69 @@ export class ChangePasswordCommandHandler implements ICommandHandler<ChangePassw
     await this.invalidateOtherSessions(user.id, model.deviceId);
     logger.info(`Password changed for user ${user.id} from IP: ${model.ipAddress}, Device: ${model.deviceId}`);
 
-    // # TODO # send email
+    await this.sendPasswordChangedEmail(user, model);
+  }
+
+  private async sendPasswordChangedEmail(user: any, model: ChangePasswordRequestModel): Promise<void> {
+
+    try {
+
+      const geoInfo = ipUtil.getGeolocationDetails(model.ipAddress);
+      const location = geoInfo
+        ? `${geoInfo.city || 'Unknown'}, ${geoInfo.region || ''} ${geoInfo.country || 'Unknown'}`.trim()
+        : 'Unknown Location';
+
+      const parsedAgent = parseUserAgent(model.userAgent);
+      const deviceType = parsedAgent.isMobile ? 'Mobile' : parsedAgent.isDesktop ? 'Desktop' : 'Unknown';
+      const deviceInfo = `${parsedAgent.browser} on ${parsedAgent.os} (${deviceType})`;
+
+      const frontendUrl = this.getFrontendUrl();
+      const manageAccountLink = `${frontendUrl}/account/security`;
+
+      await this.emailService.sendTemplatedAsync({
+        to: user.email,
+        subject: "Your Gaddr Password Was Changed",
+        templatePath: "templates/email/password-changed-v1.html",
+        context: {
+          userName: user.userName || user.email.split('@')[0],
+          userEmail: user.email,
+          changeTimestamp: new Date().toLocaleString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZoneName: 'short'
+          }),
+          requestLocation: location,
+          requestIpAddress: model.ipAddress,
+          requestDevice: deviceInfo,
+          manageAccountLink: manageAccountLink,
+          year: new Date().getFullYear(),
+        },
+      });
+
+    } catch (error) {
+      logger.error(`Failed to send password changed email for user ${user.id}`, error);
+    }
+  }
+
+  private getFrontendUrl(): string {
+    let frontendUrl = configs.frontend.url;
+    if (configs.env !== 'production') {
+      const headers = HttpContext.headers;
+      if (headers) {
+        const clientOrigin = headers['x-client-origin'];
+        if (clientOrigin) {
+          const originValue = Array.isArray(clientOrigin) ? clientOrigin[0] : clientOrigin;
+          if (originValue && typeof originValue === 'string') {
+            frontendUrl = originValue.replace(/\/$/, '');
+          }
+        }
+      }
+    }
+    return frontendUrl;
   }
 
   private async checkDeviceAndIpSecurity(userId: string, deviceId: string, userAgent: string, ipAddress: string): Promise<void> {

@@ -1,4 +1,4 @@
-import { UserType } from "../../enums";
+import { UserType, ProfileImagePrivacy } from "../../enums";
 import { BaseEntity } from "../../baseEntity";
 import { Playlist } from "../collection/playlist.entity";
 import { Entity, Column, OneToMany } from "typeorm";
@@ -36,6 +36,12 @@ export class User extends BaseEntity {
 
     @Column({ type: 'timestamp', nullable: true })
     lastEmailModifiedAt?: Date;
+
+    @Column({ nullable: true })
+    newPhoneNumber?: string;
+
+    @Column({ type: 'timestamp', nullable: true })
+    lastPhoneNumberModifiedAt?: Date;
 
     @Column({ type: 'timestamp', nullable: true })
     lastUserNameModifiedAt?: Date;
@@ -85,6 +91,13 @@ export class User extends BaseEntity {
 
     @Column({ nullable: true })
     profileImage?: string;
+
+    @Column({
+        type: 'enum',
+        enum: ProfileImagePrivacy,
+        default: ProfileImagePrivacy.Everyone,
+    })
+    profileImagePrivacy: ProfileImagePrivacy;
 
     @OneToMany(() => Playlist, playlist => playlist.owner)
     ownedPlaylists: Playlist[];

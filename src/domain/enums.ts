@@ -64,3 +64,8 @@ export enum FacebookOnlineFilters {
     Events = "events",
     People = "people",
 }
+
+export enum ProfileImagePrivacy {
+    Everyone = 'Everyone',
+    Interactions = 'Interactions',
+}

@@ -17,6 +17,9 @@ export interface IUserRepository {
 
   setEmailAsync(user: User, email: string): Promise<boolean>;
   changeEmailAsync(newEmail: string, token: string): Promise<boolean>;
+  setPhoneNumberAsync(user: User, phoneNumber: string): Promise<boolean>;
+  changePhoneNumberAsync(newPhoneNumber: string, token: string): Promise<boolean>;
+  generatePhoneConfirmationTokenAsync(user: User, newPhoneNumber: string): Promise<string>;
 
   getRolesAsync(user: User): Promise<string[]>;
   isInRoleAsync(user: User, roleName: string): Promise<UserRole | null>;

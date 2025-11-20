@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Gaddr Email Address</title>
+    <style>
+      /* Reset styles */
+      body,
+      table,
+      td,
+      a {
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+
+      table,
+      td {
+        mso-table-lspace: 0pt;
+        mso-table-rspace: 0pt;
+      }
+
+      img {
+        -ms-interpolation-mode: bicubic;
+        border: 0;
+        height: auto;
+        line-height: 100%;
+        outline: none;
+        text-decoration: none;
+      }
+
+      table {
+        border-collapse: collapse !important;
+      }
+
+      /* Base styles */
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        background-color: #f4f4f9;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      }
+
+      .email-wrapper {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      }
+
+      .header {
+        padding: 32px 24px;
+        text-align: center;
+      }
+
+      .logo {
+        display: inline-block;
+        margin-bottom: 16px;
+      }
+
+      .logo img {
+        height: 40px;
+        width: auto;
+      }
+
+      .content {
+        padding: 40px 32px;
+        text-align: center;
+        color: #333333;
+      }
+
+      .title {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0 0 12px 0;
+        color: #2d1b69;
+      }
+
+      .subtitle {
+        font-size: 16px;
+        line-height: 1.5;
+        color: #666666;
+        margin: 0 0 32px 0;
+      }
+
+      .verification-code-container {
+        margin: 32px 0 24px 0;
+      }
+
+      .verification-code-label {
+        font-size: 14px;
+        font-weight: 600;
+        color: #666666;
+        margin: 0 0 12px 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .verification-code {
+        display: inline-block;
+        background: linear-gradient(135deg, #f8f5ff 0%, #e8e0ff 100%);
+        border: 2px dashed #6a5acd;
+        border-radius: 12px;
+        padding: 24px 40px;
+        margin: 16px 0;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 20px;
+        font-weight: 700;
+        color: #2d1b69;
+        letter-spacing: 8px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(106, 90, 205, 0.15);
+      }
+
+      .divider {
+        text-align: center;
+        margin: 32px 0;
+        color: #999999;
+        font-size: 14px;
+        font-weight: 500;
+        position: relative;
+        padding: 0 20px;
+      }
+
+      .divider::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        right: 0;
+        border-top: 1px solid #e0e0e0;
+      }
+
+      .divider span {
+        background-color: #ffffff;
+        padding: 0 16px;
+        position: relative;
+        display: inline-block;
+      }
+
+      .alternative-option {
+        margin-top: 24px;
+      }
+
+      .alternative-option-text {
+        font-size: 15px;
+        color: #666666;
+        margin: 0 0 20px 0;
+        line-height: 1.5;
+      }
+
+      .cta-button {
+        display: inline-block;
+        background: linear-gradient(135deg, #6a5acd 0%, #8a7cf7 100%);
+        color: #ffffff !important;
+        font-weight: 600;
+        font-size: 16px;
+        text-decoration: none;
+        padding: 14px 32px;
+        border-radius: 50px;
+        box-shadow: 0 6px 16px rgba(106, 90, 205, 0.4);
+        transition: all 0.3s ease;
+        margin-bottom: 32px;
+      }
+
+      .cta-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(106, 90, 205, 0.5);
+      }
+
+      .fallback-link {
+        font-size: 14px;
+        color: #666666;
+        margin: 24px 0;
+        line-height: 1.5;
+      }
+
+      .fallback-link a {
+        color: #6a5acd;
+        text-decoration: underline;
+        word-break: break-all;
+      }
+
+      .warning {
+        background-color: #fff9c4;
+        border-left: 4px solid #ffd700;
+        padding: 16px;
+        margin: 32px 0;
+        text-align: left;
+        border-radius: 0 8px 8px 0;
+      }
+
+      .warning p {
+        margin: 0;
+        font-size: 14px;
+        color: #5d4037;
+      }
+
+      .security-info {
+        background-color: #f8f9fa;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 24px 0;
+        text-align: left;
+      }
+
+      .security-info-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #666666;
+        margin: 0 0 12px 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .security-info-item {
+        font-size: 13px;
+        color: #555555;
+        margin: 8px 0;
+        line-height: 1.6;
+      }
+
+      .security-info-label {
+        font-weight: 600;
+        color: #333333;
+        display: inline-block;
+        min-width: 80px;
+      }
+
+      .security-info-value {
+        color: #666666;
+      }
+
+      .help {
+        font-size: 14px;
+        color: #888888;
+        margin: 32px 0 0 0;
+      }
+
+      .help a {
+        color: #6a5acd;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .footer {
+        background-color: #f8f5ff;
+        padding: 24px;
+        text-align: center;
+        font-size: 12px;
+        color: #999999;
+      }
+
+      .footer-logo {
+        height: 24px;
+        margin-bottom: 12px;
+      }
+
+      .footer-links {
+        margin: 16px 0;
+      }
+
+      .footer-links a {
+        color: #6a5acd;
+        text-decoration: none;
+        margin: 0 12px;
+        font-weight: 500;
+      }
+
+      .social-icons {
+        margin: 16px 0;
+      }
+
+      .social-icons a {
+        margin: 0 8px;
+        display: inline-block;
+      }
+
+      .social-icons img {
+        width: 24px;
+        height: 24px;
+      }
+
+      .copyright {
+        margin-top: 16px;
+        color: #bbbbbb;
+      }
+
+      /* Responsive */
+      @media only screen and (max-width: 480px) {
+        .email-wrapper {
+          margin: 16px;
+          border-radius: 16px;
+        }
+
+        .content {
+          padding: 32px 24px;
+        }
+
+        .title {
+          font-size: 20px;
+        }
+
+        .verification-code {
+          font-size: 24px;
+          letter-spacing: 4px;
+          padding: 20px 24px;
+        }
+
+        .security-info {
+          padding: 16px;
+        }
+
+        .security-info-label {
+          min-width: 70px;
+          display: block;
+          margin-bottom: 4px;
+        }
+      }
+    </style>
+  </head>
+
+  <body style="margin: 0; padding: 0; background-color: #f4f4f9;">
+    <center>
+      <table role="presentation" width="100%" style="background-color: #f4f4f9; padding: 32px 16px;">
+        <tr>
+          <td align="center">
+            <!-- Email Wrapper -->
+        <tr>
+          <td class="header">
+            <div class="logo">
+              <img src="https://mofhalneyki947nt.public.blob.vercel-storage.com/gaddr.svg" alt="Gaddr"
+                style="height: 40px;">
+            </div>
+          </td>
+        </tr>
+        <table role="presentation" class="email-wrapper" width="100%">
+          <!-- Header -->
+
+          <!-- Main Content -->
+          <tr>
+            <td class="content">
+              <div class="lock-icon" style="margin-bottom: 60px; margin-top: 60px;">
+                <img
+                  src="https://mofhalneyki947nt.public.blob.vercel-storage.com/c846ffebd883ce54dec7598e033951c15eff1027.png"
+                  style="height: 40px; display: block; margin: 0 auto; transform: scale(5.25);">
+              </div>
+
+              <h1 class="title">Verify your email</h1>
+              <p class="subtitle">{{confirmationMessage}}</p>
+
+              <div class="verification-code-container">
+                <p class="verification-code-label">Copy your verification code</p>
+                <div class="verification-code">{{verificationCode}}</div>
+                <p style="font-size: 14px; color: #888888; margin: 12px 0 0 0;">Paste this code on the email
+                  verification page</p>
+              </div>
+
+              <!-- Divider -->
+              <table role="presentation" width="100%" style="margin: 32px 0;">
+                <tr>
+                  <td align="center" style="padding: 0 20px;">
+                    <table role="presentation" width="100%">
+                      <tr>
+                        <td style="border-top: 1px solid #e0e0e0; padding: 0;"></td>
+                        <td style="width: 1px; padding: 0 16px; white-space: nowrap;">
+                          <span
+                            style="background-color: #ffffff; color: #999999; font-size: 14px; font-weight: 500;">OR</span>
+                        </td>
+                        <td style="border-top: 1px solid #e0e0e0; padding: 0;"></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <div class="alternative-option">
+                <p class="alternative-option-text">Click the button below to verify your email address</p>
+                <a href="{{confirmEmailLink}}" class="cta-button" style="color: #ffffff; text-decoration: none;">
+                  Verify Email
+                </a>
+              </div>
+
+              <div class="fallback-link">
+                <p>If the button doesn't work, copy and paste this link into your browser:</p>
+                <a href="{{confirmEmailLink}}">{{confirmEmailLink}}</a>
+              </div>
+
+              <div class="security-info">
+                <p class="security-info-title">Request Details</p>
+                <div class="security-info-item">
+                  <span class="security-info-label">Email:</span>
+                  <span class="security-info-value">{{userEmail}}</span>
+                </div>
+                <div class="security-info-item">
+                  <span class="security-info-label">Time:</span>
+                  <span class="security-info-value">{{requestTimestamp}}</span>
+                </div>
+                <div class="security-info-item">
+                  <span class="security-info-label">IP Address:</span>
+                  <span class="security-info-value">{{requestIpAddress}}</span>
+                </div>
+                <div class="security-info-item">
+                  <span class="security-info-label">Location:</span>
+                  <span class="security-info-value">{{requestLocation}}</span>
+                </div>
+                <div class="security-info-item">
+                  <span class="security-info-label">Device:</span>
+                  <span class="security-info-value">{{requestDevice}}</span>
+                </div>
+              </div>
+
+              <div class="warning">
+                <p><strong>Important:</strong> This confirmation link will expire in {{expirationTime}}.
+                  {{securityWarning}} If this request seems suspicious, please <a href="https://gaddr.com/contact"
+                    style="color: #6a5acd; text-decoration: underline;">contact us</a>
+                  immediately.
+                </p>
+              </div>
+
+              <p class="help">
+                Need help? <a href="https://gaddr.com/contact">Contact us</a>.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td class="footer">
+              <img src="https://mofhalneyki947nt.public.blob.vercel-storage.com/gaddr.svg" alt="Gaddr"
+                class="footer-logo">
+              <p style="margin: 0; color: #6a5acd; font-size: 13px;">Your social media, unified.</p>
+
+              <div class="footer-links">
+                <a href="https://gaddr.com/help">Help Center</a>
+                <a href="https://gaddr.com/contact">Contact Us</a>
+                <a href="https://gaddr.com/privacy">Privacy & Terms</a>
+              </div>
+
+              <div class="social-icons">
+                <a href="#"><img src="https://mofhalneyki947nt.public.blob.vercel-storage.com/gaddr-icon.svg"
+                    alt="Gaddr"></a>
+                <a href="#"><img src="https://mofhalneyki947nt.public.blob.vercel-storage.com/twitter.svg" alt="X"></a>
+                <a href="#"><img src="https://mofhalneyki947nt.public.blob.vercel-storage.com/linkedin.svg"
+                    alt="LinkedIn"></a>
+                <a href="#"><img src="https://mofhalneyki947nt.public.blob.vercel-storage.com/instagram.svg"
+                    alt="Instagram"></a>
+                <a href="#"><img src="https://mofhalneyki947nt.public.blob.vercel-storage.com/tiktok.svg"
+                    alt="TikTok"></a>
+              </div>
+
+              <p class="copyright">
+                Gaddr, Stockholm, Sweden<br>
+                © {{year}} Gaddr Search & Me. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+        </td>
+        </tr>
+      </table>
+    </center>
+  </body>
+
+</html>

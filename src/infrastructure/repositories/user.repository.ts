@@ -63,9 +63,11 @@ export class UserRepository implements IUserRepository {
       throw new UserAlreadyExistsException(user.email, 'email')
     }
 
-    const existingUserByUsername = await this.getUserByNameAsync(user.userName);
-    if (existingUserByUsername && existingUserByUsername.id !== user.id) {
-      throw new UserAlreadyExistsException(user.userName, 'username')
+    if (user.userName) {
+      const existingUserByUsername = await this.getUserByNameAsync(user.userName);
+      if (existingUserByUsername && existingUserByUsername.id !== user.id) {
+        throw new UserAlreadyExistsException(user.userName, 'username')
+      }
     }
 
     user.concurrencyStamp = generateTimestampUUID();
@@ -235,6 +237,35 @@ export class UserRepository implements IUserRepository {
     }
 
     return await this.setEmailAsync(user, newEmail);
+  }
+
+  public async setPhoneNumberAsync(user: User, phoneNumber: string): Promise<boolean> {
+    user.phoneNumber = phoneNumber;
+    user.newPhoneNumber = null;
+    user.lastPhoneNumberModifiedAt = new Date();
+    user.concurrencyStamp = generateTimestampUUID();
+    const result = await this.userContext.update(user.id, user);
+    return result.affected > 0;
+  }
+
+  public async changePhoneNumberAsync(newPhoneNumber: string, token: string): Promise<boolean> {
+    const purpose = _const.TOKEN.PURPOSE.CONFIRM_PHONE + ":" + newPhoneNumber;
+    const { isValid, userId } = await this.verifyUserTokenAsync(purpose, token);
+    const user = await this.getUserByIdAsync(userId);
+
+    if (!isValid || !user) {
+      throw new BadRequestException('The provided token is invalid or expired.');
+    }
+
+    if (user.newPhoneNumber !== newPhoneNumber) {
+      throw new BadRequestException('The phone number does not match the pending change request.');
+    }
+
+    return await this.setPhoneNumberAsync(user, newPhoneNumber);
+  }
+
+  public async generatePhoneConfirmationTokenAsync(user: User, newPhoneNumber: string): Promise<string> {
+    return await this.generateUserTokenAsync(user, _const.TOKEN.PURPOSE.CONFIRM_PHONE + ":" + newPhoneNumber);
   }
 
   public async getRolesAsync(user: User): Promise<string[]> {

@@ -13,6 +13,10 @@ export class UserRoleRepository implements IUserRoleRepository {
         return await this.userRoleContext.save(userRole);
     }
 
+    public async updateAsync(userRole: UserRole): Promise<void> {
+        await this.userRoleContext.save(userRole);
+    }
+
     public async getAsync(userId: string, roleId: string): Promise<UserRole> {
         return await this.userRoleContext.findOne({ where: { userId, roleId } });
     }

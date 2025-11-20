@@ -16,6 +16,7 @@ export class ReorderManualProfileController {
   constructor(private readonly commandBus: CommandBus) { }
 
   @Patch("manual-profile/re-order")
+  @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })

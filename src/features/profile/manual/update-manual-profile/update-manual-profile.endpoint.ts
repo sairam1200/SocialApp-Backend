@@ -17,6 +17,7 @@ export class UpdateManualProfileController {
   constructor(private readonly commandBus: CommandBus) { }
 
   @Put("manual-profile")
+  @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })

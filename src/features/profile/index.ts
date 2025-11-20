@@ -1,5 +1,7 @@
 import { GetUserLinkedAccountsController } from "./get-linked-accounts/get-linked-accounts.endpoint";
 import { GetUserLinkedAccountsQueryHandler } from "./get-linked-accounts/get-linked-accounts.handler";
+import { GetProfileController } from "./get/get-profile.endpoint";
+import { GetProfileQueryHandler } from "./get/get-profile.handler";
 import { CreateManualProfileController } from "./manual/create-manual-profile/create-manual-profile.endpoint";
 import { CreateManualProfileCommandHandler } from "./manual/create-manual-profile/create-manual-profile.handler";
 import { DeleteManualProfileController } from "./manual/delete-manual-profile/delete-manual-profile.endpoint";
@@ -25,6 +27,8 @@ export { GetUserManualProfilesController } from "./manual/get-manual-profiles/ge
 export { GetUserManualProfilesQueryHandler } from "./manual/get-manual-profiles/get-manual-profiles.handler";
 export { SearchManualProfileController } from "./manual/search-manual-profile/search-manual-profile.endpoint";
 export { SearchManualProfileQuery, SearchManualProfileQueryHandler } from "./manual/search-manual-profile/search-manual-profile.handler";
+export { GetProfileController } from "./get/get-profile.endpoint";
+export { GetProfileQuery, GetProfileQueryHandler } from "./get/get-profile.handler";
 
 const controllers = [
   GetUserLinkedAccountsController,
@@ -34,6 +38,7 @@ const controllers = [
   CreateManualProfileController,
   ReorderManualProfileController,
   SearchManualProfileController,
+  GetProfileController,
 ];
 
 const handlers = [
@@ -44,6 +49,7 @@ const handlers = [
   CreateManualProfileCommandHandler,
   ReorderManualProfileCommandHandler,
   SearchManualProfileQueryHandler,
+  GetProfileQueryHandler,
 ];
 
 const profile = {

@@ -5,13 +5,13 @@ import { CqrsModule } from "@nestjs/cqrs";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
-import { User, Role, UserRole, LinkedAccount, ManualProfile, RoleClaim, UserClaim } from "../domain/entities";
+import { User, Role, UserRole, LinkedAccount, ManualProfile, RoleClaim, UserClaim, PlaylistMember } from "../domain/entities";
 
 @Module({
   imports: [
     CqrsModule,
     NotificationModule,
-    TypeOrmModule.forFeature([
+      TypeOrmModule.forFeature([
       User,
       Role,
       RoleClaim,
@@ -19,6 +19,7 @@ import { User, Role, UserRole, LinkedAccount, ManualProfile, RoleClaim, UserClai
       UserRole,
       LinkedAccount,
       ManualProfile,
+      PlaylistMember,
     ])
   ],
   controllers: [

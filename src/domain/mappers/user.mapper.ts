@@ -2,25 +2,32 @@ import { LinkedAccount } from "../entities";
 import { User } from "../entities";
 import { LinkedAccountModel, UserModel } from "../contracts/user.model";
 
-export function mapToUserModel(user: User): UserModel {
+export function mapToUserModel(
+  user: User,
+  includeSensitiveFields: boolean = true,
+  canViewProfileImage: boolean = true
+): UserModel {
   return {
     id: user.id,
-    email: user.email,
+    email: includeSensitiveFields ? user.email : null,
     gender: user.gender,
     lastName: user.lastName,
-    photo: user.profileImage,
+    photo: canViewProfileImage ? user.profileImage : null,
     firstName: user.firstName,
-    phoneNumber: user.phoneNumber,
-    isEmailVerified: user.emailConfirmed,
+    phoneNumber: includeSensitiveFields ? user.phoneNumber : null,
+    isEmailVerified: includeSensitiveFields ? user.emailConfirmed : null,
   } as UserModel;
 }
 
 export function mapToLinkedAccountsModel(linkedAccount: LinkedAccount): LinkedAccountModel {
   return {
-    id:linkedAccount.id,
-    username:linkedAccount.userName,
-    isImported:linkedAccount.allowImport,
+    id: linkedAccount.id,
+    username: linkedAccount.userName,
+    isImported: linkedAccount.allowImport,
+    externalId: linkedAccount.externalId,
     externalUrl: linkedAccount.externalUrl,
+    followersCount: linkedAccount.followersCount,
+    followingCount: linkedAccount.followingCount,
     isVerified: linkedAccount.verified,
     platform: linkedAccount.platform,
   } as LinkedAccountModel;

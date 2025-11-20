@@ -87,7 +87,8 @@ export default {
   TOKEN: {
     PURPOSE: {
       RESET_PASSWORD: 'resetpassword',
-      CONFIRM_EMAIL: 'emailconfirmation'
+      CONFIRM_EMAIL: 'emailconfirmation',
+      CONFIRM_PHONE: 'phoneconfirmation'
     }
   },
 
