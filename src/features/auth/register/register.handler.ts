@@ -2,8 +2,8 @@ import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
-import { User } from "../../../domain/entities";
-import { UserType } from "../../../domain/enums";
+import { User, UserBiometric } from "../../../domain/entities";
+import { UserType, ProfileImagePrivacy } from "../../../domain/enums";
 import { stringUtil } from "../../../core/utils/string.util";
 import { IUserRepository } from "../../../domain/repositories";
 import { password } from "../../../core/utils/validation.util";
@@ -86,7 +86,11 @@ export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> 
         email: model.email,
         phoneNumber: "",
         type: UserType.User,
-        profileImage: avatar.secure_url,
+        biometrics: new UserBiometric({
+          profileImageUrl: null,
+          defaultProfileImageUrl: avatar.secure_url,
+          privacy: ProfileImagePrivacy.Everyone,
+        })
       }), model.password);
 
     await this.commandBus.execute(new SendVerificationEmailCommand({
@@ -97,6 +101,6 @@ export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> 
       }
     }));
 
-    return mapToUserModel(user);
+    return mapToUserModel(user, true, avatar.secure_url);
   }
 }

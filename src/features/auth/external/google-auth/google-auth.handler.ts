@@ -20,6 +20,8 @@ import {
   YoutubeChannelDataModel,
 } from '../../../../domain/contracts/youtube.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
+import { UserBiometric } from '../../../../domain/entities/identity/userBiometric.entity';
+import { ProfileImagePrivacy } from '../../../../domain/enums';
 import { SendVerificationEmailCommand } from '../../../user/email/send-verification/send-verification.handler';
 import { stringUtil } from 'core/utils/string.util';
 import { generateInitialImage } from 'core/utils/canvas.util';
@@ -170,20 +172,31 @@ export class GoogleConnectCallbackQueryHandler
         profileImage = avatar.secure_url;
       }
 
+      let defaultProfileImageUrl = profileImage;
+      if (userData?.profile?.picture) {
+        const initials = stringUtil.extractInitialsFromName(`${userData.profile.given_name} ${userData.profile.family_name}`);
+        const base64Image = generateInitialImage(initials);
+        const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
+        defaultProfileImageUrl = avatar.secure_url;
+      }
+
       const entry = new User({
         phoneNumber: "",
         type: UserType.User,
-        profileImage: profileImage,
         email: userData.profile.email,
         firstName: userData.profile.given_name,
         lastName: userData.profile.family_name,
+        biometrics: new UserBiometric({
+          profileImageUrl: userData?.profile?.picture || null,
+          defaultProfileImageUrl: defaultProfileImageUrl,
+          privacy: ProfileImagePrivacy.Everyone,
+        })
       });
 
       user = await this.userRepository.createAsync(entry, '');
 
       const parsedDataProtectionKeyValue = JSON.parse(dataProtectionKey.value);
 
-      // Send welcome email
       await this.sendWelcomeEmail(user);
       await this.commandBus.execute(new SendVerificationEmailCommand({
         model: {
@@ -395,7 +408,7 @@ export class GoogleConnectCallbackQueryHandler
       message: 'Login successful',
       succeeded: true,
       isLockedOut: false,
-      userImage: user.profileImage,
+      userImage: user.biometrics?.profileImageUrl || user.biometrics?.defaultProfileImageUrl || null,
       refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
     });
   }

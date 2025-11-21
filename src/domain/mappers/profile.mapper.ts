@@ -10,10 +10,10 @@ export function mapToProfileModel(
   linkedAccounts: LinkedAccount[],
   manualProfiles: ManualProfile[],
   includeSensitiveFields: boolean = false,
-  canViewProfileImage: boolean = true
+  profileImageUrl: string | null = null
 ): ProfileModel {
   return {
-    user: mapToUserModel(user, includeSensitiveFields, canViewProfileImage),
+    user: mapToUserModel(user, includeSensitiveFields, profileImageUrl),
     linkedAccounts: linkedAccounts.map(mapToLinkedAccountsModel),
     manualProfiles: manualProfiles.map(mapToManualProfileModel),
   } as ProfileModel;

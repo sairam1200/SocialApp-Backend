@@ -5,7 +5,8 @@ import redis from '../../core/utils/redis.util';
 import { InjectRepository } from "@nestjs/typeorm";
 import { Like, Repository, SelectQueryBuilder } from "typeorm";
 import { cryptoUtils } from '../../core/utils/crypto.util';
-import { User, UserClaim, UserRole } from '../../domain/entities';
+import { User, UserClaim, UserRole, UserBiometric } from '../../domain/entities';
+import { ProfileImagePrivacy } from '../../domain/enums';
 import { generateTimestampUUID } from '../../core/utils/time.util';
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { BadRequestException, forwardRef, Inject, Injectable } from "@nestjs/common";
@@ -18,6 +19,7 @@ export class UserRepository implements IUserRepository {
   constructor(
     @InjectRepository(User) private readonly userContext: Repository<User>,
     @InjectRepository(UserClaim) private readonly userClaimContext: Repository<UserClaim>,
+    @InjectRepository(UserBiometric) private readonly userBiometricsContext: Repository<UserBiometric>,
     @Inject(forwardRef(() => _const.IROLE_REPOSITORY)) private readonly roleRepository: IRoleRepository,
     @Inject(forwardRef(() => _const.IUSERROLE_REPOSITORY)) private readonly userRoleRepository: IUserRoleRepository
   ) { }
@@ -116,6 +118,7 @@ export class UserRepository implements IUserRepository {
 
     const queryBuilder: SelectQueryBuilder<User> = this.userContext
       .createQueryBuilder("user")
+      .leftJoinAndSelect("user.biometrics", "biometrics")
       .orderBy(`user.${orderBy}`, order)
       .skip(skip)
       .take(take);
@@ -408,6 +411,46 @@ export class UserRepository implements IUserRepository {
     }
 
     return { isValid: tokenPurpose === purpose, userId };
+  }
+
+  // UserBiometric methods
+  public async getUserBiometricAsync(userId: string): Promise<UserBiometric | null> {
+    return await this.userBiometricsContext.findOne({ where: { userId }, relations: ['user'] });
+  }
+
+  public async upsertUserBiometricAsync(userId: string, biometrics: UserBiometric): Promise<UserBiometric> {
+    const existing = await this.getUserBiometricAsync(userId);
+    if (existing) {
+      existing.profileImageUrl = biometrics.profileImageUrl ?? existing.profileImageUrl;
+      existing.defaultProfileImageUrl = biometrics.defaultProfileImageUrl ?? existing.defaultProfileImageUrl;
+      existing.privacy = biometrics.privacy ?? existing.privacy;
+      const currentUserId = HttpContext.getCurrentUserId;
+      if (currentUserId) {
+        existing.setCurrentUser(currentUserId);
+      }
+      return await this.userBiometricsContext.save(existing);
+    } else {
+      biometrics.userId = userId;
+      const currentUserId = HttpContext.getCurrentUserId;
+      if (currentUserId) {
+        biometrics.setCurrentUser(currentUserId);
+      }
+      return await this.userBiometricsContext.save(biometrics);
+    }
+  }
+
+  public async updateUserBiometricPrivacyAsync(userId: string, privacy: ProfileImagePrivacy): Promise<boolean> {
+    const biometrics = await this.getUserBiometricAsync(userId);
+    if (!biometrics) {
+      return false;
+    }
+    biometrics.privacy = privacy;
+    const currentUserId = HttpContext.getCurrentUserId;
+    if (currentUserId) {
+      biometrics.setCurrentUser(currentUserId);
+    }
+    const result = await this.userBiometricsContext.update(biometrics.id, biometrics);
+    return result.affected > 0;
   }
 
   // Private Methods

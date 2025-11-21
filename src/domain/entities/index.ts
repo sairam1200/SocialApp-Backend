@@ -17,3 +17,4 @@ export { RoleClaim } from './identity/roleClaim.entity';
 export { DataProtectionKey } from './dataProtectionKey.entity';
 export { PlaylistMember } from './collection/playlistMember.entity';
 export { PlaylistContent } from './collection/playlistContent.entity';
+export { UserBiometric } from './identity/userBiometric.entity';

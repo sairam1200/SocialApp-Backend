@@ -10,8 +10,7 @@ import { mapToUserModel } from "../../../domain/mappers/user.mapper";
 import { PlaylistMember } from "../../../domain/entities/collection/playlistMember.entity";
 import { PagedResult } from "../../../domain/contracts/pagination/pagedResult";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
-import { isProfileImageVisible } from "../../../core/utils/profileImagePrivacy.util";
-import { ProfileImagePrivacy } from "../../../domain/enums";
+import { getProfileImageUrl } from "../../../core/utils/profileImagePrivacy.util";
 
 export class GetUsersQuery {
   page = 1;
@@ -56,13 +55,20 @@ export class GetUsersQueryHandler implements ICommandHandler<GetUsersQuery> {
     const viewerUserId = HttpContext.getCurrentUserId;
     const users = await Promise.all(
       usersEntity.map(async (user) => {
-        const canViewProfileImage = await isProfileImageVisible(
-          user.profileImagePrivacy || ProfileImagePrivacy.Everyone,
-          user.id,
-          viewerUserId,
-          this.playlistMemberRepository
-        );
-        return mapToUserModel(user, false, canViewProfileImage);
+        let profileImageUrl: string | null = null;
+
+        if (user.biometrics) {
+          profileImageUrl = await getProfileImageUrl(
+            user.biometrics.profileImageUrl,
+            user.biometrics.defaultProfileImageUrl,
+            user.biometrics.privacy,
+            user.id,
+            viewerUserId,
+            this.playlistMemberRepository
+          );
+        }
+
+        return mapToUserModel(user, false, profileImageUrl);
       })
     );
     return new PagedResult<UserModel[]>(users, total);

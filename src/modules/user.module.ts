@@ -6,7 +6,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { EmailModule } from './email.module';
 import { dependency } from '../infrastructure/dependency';
 import { EmailCleanupCron } from '../infrastructure/background/cron/jobs/email-cleanup.cron';
-import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole, UserLogin, DataProtectionKey, PlaylistMember } from '../domain/entities';
+import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole, UserLogin, DataProtectionKey, PlaylistMember, UserBiometric } from '../domain/entities';
 
 @Module({
   imports: [
@@ -21,7 +21,8 @@ import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole, UserLogin, D
       UserRole,
       UserLogin,
       DataProtectionKey,
-      PlaylistMember
+      PlaylistMember,
+      UserBiometric
     ])
   ],
   controllers: [

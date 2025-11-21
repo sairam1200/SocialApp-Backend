@@ -1,4 +1,5 @@
-import { User, UserClaim, UserRole } from "../entities";
+import { User, UserClaim, UserRole, UserBiometric } from "../entities";
+import { ProfileImagePrivacy } from "../enums";
 
 export interface IUserRepository {
 
@@ -49,4 +50,7 @@ export interface IUserRepository {
     searchTerm?: string
   ): Promise<[User[], number]>;
 
+  getUserBiometricAsync(userId: string): Promise<UserBiometric | null>;
+  upsertUserBiometricAsync(userId: string, biometrics: UserBiometric): Promise<UserBiometric>;
+  updateUserBiometricPrivacyAsync(userId: string, privacy: ProfileImagePrivacy): Promise<boolean>;
 }

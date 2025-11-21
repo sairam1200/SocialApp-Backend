@@ -41,8 +41,7 @@ export class UpdateProfileImagePrivacyCommandHandler implements ICommandHandler<
       throw new UserNotFoundException();
     }
 
-    user.profileImagePrivacy = model.privacy;
-    await this.userRepository.updateAsync(user);
+    await this.userRepository.updateUserBiometricPrivacyAsync(user.id, model.privacy);
   }
 }
 

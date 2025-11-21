@@ -7,6 +7,7 @@ import { UserNotFoundException } from "../../../../core/exceptions";
 import { generateInitialImage } from "../../../../core/utils/canvas.util";
 import { ProfileImagePrivacy } from "../../../../domain/enums";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
+import { UserBiometric } from "../../../../domain/entities/identity/userBiometric.entity";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
 import { uploadBase64ToCloudinaryAsync, deleteFromCloudinaryAsync } from "../../../../core/utils/cloudinary.util";
 
@@ -43,13 +44,10 @@ export class UpdateProfileImageCommandHandler implements ICommandHandler<UpdateP
       throw new UserNotFoundException();
     }
 
-    if (user.profileImage) {
-      await this.deleteOldProfileImage(user.profileImage);
-    }
-
-    let profileImageUrl: string;
+    let biometrics = user.biometrics || await this.userRepository.getUserBiometricAsync(user.id);
 
     if (command.file) {
+      // Validate file
       const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!allowedMimeTypes.includes(command.file.mimetype)) {
         throw new BadRequestException('Invalid file type. Only images are allowed.');
@@ -60,25 +58,67 @@ export class UpdateProfileImageCommandHandler implements ICommandHandler<UpdateP
         throw new BadRequestException('File size exceeds the maximum limit of 5MB.');
       }
 
+      // Delete old custom image if exists
+      if (biometrics?.profileImageUrl) {
+        await this.deleteOldProfileImage(biometrics.profileImageUrl);
+      }
+
+      // Upload new custom image
       const base64Image = `data:${command.file.mimetype};base64,${command.file.buffer.toString('base64')}`;
       const uploadResult = await uploadBase64ToCloudinaryAsync(base64Image, "users");
-      profileImageUrl = uploadResult.secure_url;
+
+      // Create or update UserBiometrics
+      if (!biometrics) {
+        // Generate initials image if UserBiometrics doesn't exist
+        const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email.split('@')[0];
+        const initials = stringUtil.extractInitialsFromName(fullName);
+        const base64InitialsImage = generateInitialImage(initials);
+        const initialsUploadResult = await uploadBase64ToCloudinaryAsync(base64InitialsImage, "users");
+
+        biometrics = new UserBiometric({
+          userId: user.id,
+          profileImageUrl: uploadResult.secure_url,
+          defaultProfileImageUrl: initialsUploadResult.secure_url,
+          privacy: command.privacy || ProfileImagePrivacy.Everyone,
+        });
+        await this.userRepository.upsertUserBiometricAsync(user.id, biometrics);
+      } else {
+        biometrics.profileImageUrl = uploadResult.secure_url;
+        if (command.privacy !== undefined) {
+          biometrics.privacy = command.privacy;
+        }
+        await this.userRepository.upsertUserBiometricAsync(user.id, biometrics);
+      }
     } else {
       const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email.split('@')[0];
       const initials = stringUtil.extractInitialsFromName(fullName);
       const base64Image = generateInitialImage(initials);
       const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
-      profileImageUrl = avatar.secure_url;
+
+      if (biometrics?.defaultProfileImageUrl) {
+        await this.deleteOldProfileImage(biometrics.defaultProfileImageUrl);
+      }
+      if (biometrics?.profileImageUrl) {
+        await this.deleteOldProfileImage(biometrics.profileImageUrl);
+      }
+
+      if (!biometrics) {
+        biometrics = new UserBiometric({
+          userId: user.id,
+          profileImageUrl: null,
+          defaultProfileImageUrl: avatar.secure_url,
+          privacy: command.privacy || ProfileImagePrivacy.Everyone,
+        });
+        await this.userRepository.upsertUserBiometricAsync(user.id, biometrics);
+      } else {
+        biometrics.profileImageUrl = null;
+        biometrics.defaultProfileImageUrl = avatar.secure_url;
+        if (command.privacy !== undefined) {
+          biometrics.privacy = command.privacy;
+        }
+        await this.userRepository.upsertUserBiometricAsync(user.id, biometrics);
+      }
     }
-
-    user.profileImage = profileImageUrl;
-
-    // Update privacy setting if provided
-    if (command.privacy !== undefined) {
-      user.profileImagePrivacy = command.privacy;
-    }
-
-    await this.userRepository.updateAsync(user);
   }
 
   private async deleteOldProfileImage(imageUrl: string): Promise<void> {

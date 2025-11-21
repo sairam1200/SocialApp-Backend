@@ -1,8 +1,9 @@
-import { UserType, ProfileImagePrivacy } from "../../enums";
+import { UserType } from "../../enums";
 import { BaseEntity } from "../../baseEntity";
 import { Playlist } from "../collection/playlist.entity";
-import { Entity, Column, OneToMany } from "typeorm";
+import { Entity, Column, OneToMany, OneToOne } from "typeorm";
 import { PlaylistMember } from "../collection/playlistMember.entity";
+import { UserBiometric } from "./userBiometric.entity";
 
 @Entity({ name: 'users', schema: 'identity' })
 export class User extends BaseEntity {
@@ -89,15 +90,8 @@ export class User extends BaseEntity {
     })
     type: UserType;
 
-    @Column({ nullable: true })
-    profileImage?: string;
-
-    @Column({
-        type: 'enum',
-        enum: ProfileImagePrivacy,
-        default: ProfileImagePrivacy.Everyone,
-    })
-    profileImagePrivacy: ProfileImagePrivacy;
+    @OneToOne(() => UserBiometric, biometrics => biometrics.user, { cascade: true, eager: false })
+    biometrics?: UserBiometric;
 
     @OneToMany(() => Playlist, playlist => playlist.owner)
     ownedPlaylists: Playlist[];

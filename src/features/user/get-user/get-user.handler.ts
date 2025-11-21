@@ -11,7 +11,7 @@ import { PlaylistMember } from "../../../domain/entities/collection/playlistMemb
 import { ProfileImagePrivacy } from "../../../domain/enums";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 import { UserNotFoundException } from "../../../core/exceptions/user.exception";
-import { isProfileImageVisible } from "../../../core/utils/profileImagePrivacy.util";
+import { getProfileImageUrl } from "../../../core/utils/profileImagePrivacy.util";
 
 
 export class GetUserQuery {
@@ -41,19 +41,24 @@ export class GetUserQueryHandler implements ICommandHandler<GetUserQuery> {
     await getUserQueryValidations.params.validateAsync(query);
 
     const user = await this.userRepository.getUserByNameAsync(query.userName);
-
     if (!user) {
-      throw new UserNotFoundException();
+      throw new UserNotFoundException(query.userName, 'username');
     }
 
     const viewerUserId = HttpContext.getCurrentUserId;
-    const canViewProfileImage = await isProfileImageVisible(
-      user.profileImagePrivacy || ProfileImagePrivacy.Everyone,
-      user.id,
-      viewerUserId,
-      this.playlistMemberRepository
-    );
+    let profileImageUrl: string | null = null;
 
-    return mapToUserModel(user, true, canViewProfileImage);
+    if (user.biometrics) {
+      profileImageUrl = await getProfileImageUrl(
+        user.biometrics.profileImageUrl,
+        user.biometrics.defaultProfileImageUrl,
+        user.biometrics.privacy,
+        user.id,
+        viewerUserId,
+        this.playlistMemberRepository
+      );
+    }
+
+    return mapToUserModel(user, true, profileImageUrl);
   }
 }  

@@ -15,6 +15,8 @@ import { IUserLoginRepository } from '../../../../domain/repositories/irefreshto
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { FacebookUserDataModel } from '../../../../domain/contracts/facebook.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
+import { UserBiometric } from '../../../../domain/entities/identity/userBiometric.entity';
+import { ProfileImagePrivacy } from '../../../../domain/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { generateInitialImage } from '../../../../core/utils/canvas.util';
 import { uploadBase64ToCloudinaryAsync } from '../../../../core/utils/cloudinary.util';
@@ -139,31 +141,39 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
 
     const userData = await this.fetchUserData(access_token);
 
-    // Try to find existing user by email
     let user = await this.userRepository.getUserByEmailAsync(userData.email);
 
     if (!user) {
-      // Create new user if doesn't exist
       const firstName = userData.name?.split(' ')[0] || 'Facebook';
       const lastName = userData.name?.split(' ').slice(1).join(' ') || 'User';
 
-      // Generate profile image with initials if no picture available
       let profileImage = userData.picture?.data?.url;
+      let defaultProfileImageUrl = profileImage;
       if (!profileImage) {
         const initials = stringUtil.extractInitialsFromName(`${firstName} ${lastName}`);
         const base64Image = generateInitialImage(initials);
         const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
         profileImage = avatar.secure_url;
+        defaultProfileImageUrl = avatar.secure_url;
+      } else if (userData.picture?.data?.url) {
+        const initials = stringUtil.extractInitialsFromName(`${firstName} ${lastName}`);
+        const base64Image = generateInitialImage(initials);
+        const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
+        defaultProfileImageUrl = avatar.secure_url;
       }
 
       const entry = new User({
         email: userData.email,
         firstName: firstName,
         lastName: lastName,
-        profileImage: profileImage,
         emailConfirmed: true,
         type: UserType.User,
         userName: `${firstName.toLowerCase()}${lastName.toLowerCase()}`.replace(/\s/g, ''),
+        biometrics: new UserBiometric({
+          profileImageUrl: userData.picture?.data?.url || null,
+          defaultProfileImageUrl: defaultProfileImageUrl,
+          privacy: ProfileImagePrivacy.Everyone,
+        })
       });
 
       user = await this.userRepository.createAsync(entry, ''); // Empty password for OAuth users
@@ -355,7 +365,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       message: 'Login successful',
       succeeded: true,
       isLockedOut: false,
-      userImage: user.profileImage,
+      userImage: user.biometrics?.profileImageUrl || user.biometrics?.defaultProfileImageUrl || null,
       refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
     });
   }

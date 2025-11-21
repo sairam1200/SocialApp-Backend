@@ -5,14 +5,14 @@ import { LinkedAccountModel, UserModel } from "../contracts/user.model";
 export function mapToUserModel(
   user: User,
   includeSensitiveFields: boolean = true,
-  canViewProfileImage: boolean = true
+  profileImageUrl: string | null = null
 ): UserModel {
   return {
     id: user.id,
     email: includeSensitiveFields ? user.email : null,
     gender: user.gender,
     lastName: user.lastName,
-    photo: canViewProfileImage ? user.profileImage : null,
+    photo: profileImageUrl || null,
     firstName: user.firstName,
     phoneNumber: includeSensitiveFields ? user.phoneNumber : null,
     isEmailVerified: includeSensitiveFields ? user.emailConfirmed : null,

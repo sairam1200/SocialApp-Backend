@@ -5,13 +5,12 @@ import { Repository } from "typeorm";
 import _const from "../../../../core/utils/const";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { ProfileImagePrivacy } from "../../../../domain/enums";
 import { PlaylistMember } from "../../../../domain/entities/collection/playlistMember.entity";
 import { IManualProfileRepository } from "../../../../domain/repositories";
 import { PagedResult } from "../../../../domain/contracts/pagination/pagedResult";
 import { ManualProfileSearchResponseModel } from "../../../../domain/contracts/manualProfile.model";
 import { mapToManualProfileSearchResponseModel } from "../../../../domain/mappers/manualProfile.mapper";
-import { isProfileImageVisible } from "../../../../core/utils/profileImagePrivacy.util";
+import { getProfileImageUrl } from "../../../../core/utils/profileImagePrivacy.util";
 
 export class SearchManualProfileQuery {
   page = 1;
@@ -54,16 +53,20 @@ export class SearchManualProfileQueryHandler implements ICommandHandler<SearchMa
     const viewerUserId = HttpContext.getCurrentUserId;
     const manualProfiles = await Promise.all(
       manualProfileEntity.map(async (profile) => {
-        let canViewProfileImage = true;
-        if (profile.user) {
-          canViewProfileImage = await isProfileImageVisible(
-            profile.user.profileImagePrivacy || ProfileImagePrivacy.Everyone,
+        let profileImageUrl: string | null = null;
+
+        if (profile.user?.biometrics) {
+          profileImageUrl = await getProfileImageUrl(
+            profile.user.biometrics.profileImageUrl,
+            profile.user.biometrics.defaultProfileImageUrl,
+            profile.user.biometrics.privacy,
             profile.user.id,
             viewerUserId,
             this.playlistMemberRepository
           );
         }
-        return mapToManualProfileSearchResponseModel(profile, canViewProfileImage);
+
+        return mapToManualProfileSearchResponseModel(profile, profileImageUrl);
       })
     );
 

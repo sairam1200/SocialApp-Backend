@@ -13,7 +13,7 @@ export function mapToManualProfileModel(data: ManualProfile): ManualProfileModel
 
 export function mapToManualProfileSearchResponseModel(
   data: ManualProfile,
-  canViewProfileImage: boolean = true
+  profileImageUrl: string | null = null
 ): ManualProfileSearchResponseModel {
   return {
     id: data.id,
@@ -24,7 +24,7 @@ export function mapToManualProfileSearchResponseModel(
     user: {
       firstName: data.user?.firstName,
       lastName: data.user?.lastName,
-      profileImage: canViewProfileImage ? data.user?.profileImage : null,
+      profileImage: profileImageUrl || null,
       userName: data.user?.userName
     }
   } as ManualProfileSearchResponseModel;

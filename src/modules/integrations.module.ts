@@ -9,7 +9,7 @@ import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
 import { SearchCacheService } from "infrastructure/services";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
-import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
+import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserBiometric, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
 
 @Module({
   imports: [
@@ -22,6 +22,7 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
       UserLogin,
       Role,
       UserClaim,
+      UserBiometric,
       UserContent,
       LinkedAccount,
       SearchHistory,

@@ -4,7 +4,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import _const from "../../../core/utils/const";
 import { Globals } from "../../../core/globals";
-import { UserType, ProfileImagePrivacy } from "../../../domain/enums";
+import { UserType } from "../../../domain/enums";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { UserNotFoundException } from "../../../core/exceptions";
 import { ProfileModel } from "../../../domain/contracts/profile.model";
@@ -14,7 +14,7 @@ import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
 import { IManualProfileRepository } from "../../../domain/repositories/imanualProfile.repository";
-import { isProfileImageVisible } from "../../../core/utils/profileImagePrivacy.util";
+import { getProfileImageUrl } from "../../../core/utils/profileImagePrivacy.util";
 
 export class GetProfileQuery {
   userName: string;
@@ -62,14 +62,20 @@ export class GetProfileQueryHandler implements ICommandHandler<GetProfileQuery, 
     const manualProfiles = await this.manualProfileRepository.getByUserIdAsync(user.id) || [];
 
     const viewerUserId = HttpContext.getCurrentUserId;
-    const canViewProfileImage = await isProfileImageVisible(
-      user.profileImagePrivacy || ProfileImagePrivacy.Everyone,
-      user.id,
-      viewerUserId,
-      this.playlistMemberRepository
-    );
+    let profileImageUrl: string | null = null;
 
-    return mapToProfileModel(user, linkedAccounts, manualProfiles, includeSensitiveFields, canViewProfileImage);
+    if (user.biometrics) {
+      profileImageUrl = await getProfileImageUrl(
+        user.biometrics.profileImageUrl,
+        user.biometrics.defaultProfileImageUrl,
+        user.biometrics.privacy,
+        user.id,
+        viewerUserId,
+        this.playlistMemberRepository
+      );
+    }
+
+    return mapToProfileModel(user, linkedAccounts, manualProfiles, includeSensitiveFields, profileImageUrl);
   }
 }
 
