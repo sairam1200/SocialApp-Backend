@@ -36,7 +36,7 @@ export class GetUserManualProfilesQueryHandler implements ICommandHandler<GetUse
     await getUserQueryValidations.params.validateAsync(query);
 
     const user = await this.userRepository.getUserByIdAsync(query.userName);
-    if (!user && user.type !== UserType.User) {
+    if (!user || user.type !== UserType.User) {
       throw new UserNotFoundException();
     }
 

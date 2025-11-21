@@ -4,8 +4,8 @@ export class UserModel {
     @ApiProperty()
     id: string;
 
-    @ApiProperty()
-    email: string;
+    @ApiProperty({ required: false, nullable: true })
+    email: string | null;
 
     @ApiProperty()
     firstName: string;
@@ -13,14 +13,14 @@ export class UserModel {
     @ApiProperty()
     lastName: string;
 
-    @ApiProperty()
-    isEmailVerified: boolean;
+    @ApiProperty({ required: false, nullable: true })
+    isEmailVerified: boolean | null;
 
     @ApiProperty()
     gender: string;
 
-    @ApiProperty()
-    phoneNumber: string;
+    @ApiProperty({ required: false, nullable: true })
+    phoneNumber: string | null;
 
     @ApiProperty()
     photo: string;

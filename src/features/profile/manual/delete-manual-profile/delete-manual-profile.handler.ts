@@ -33,14 +33,14 @@ export class DeleteManualProfileCommandHandler implements ICommandHandler<Delete
 
     await deleteUserValidations.validateAsync(id);
 
-    const user = await this.userRepository.getUserByEmailAsync(HttpContext.getCurrentUserId)
-    if (!user && user.type !== UserType.User) {
+    const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
+    if (!user || user.type !== UserType.User) {
       throw new UserNotFoundException();
     }
 
     const manualProfile = await this.manualProfileRepository.getByIdAsync(id);
-    if (!manualProfile && manualProfile.userId !== user.id) {
-      throw new ApplicationException('Prevented: Manual profile not found.') 
+    if (!manualProfile || manualProfile.userId !== user.id) {
+      throw new ApplicationException('Prevented: Manual profile not found.')
     }
 
     await this.manualProfileRepository.deleteAsync(manualProfile);

@@ -8,7 +8,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthGuardsModule } from './authGuard.module';
 import { dependency } from '../infrastructure/dependency';
 import { NotificationModule } from './notification.module';
-import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, DataProtectionKey } from '../domain/entities';
+import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, DataProtectionKey, UserBiometric } from '../domain/entities';
 
 @Module({
   imports: [
@@ -25,6 +25,7 @@ import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, D
       UserRole,
       DataProtectionKey,
       LinkedAccount,
+      UserBiometric,
     ]),
   ],
   providers: [

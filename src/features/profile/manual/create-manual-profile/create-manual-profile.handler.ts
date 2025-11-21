@@ -36,8 +36,8 @@ export class CreateManualProfileCommandHandler implements ICommandHandler<Create
     const { model } = command;
     await createUserValidations.validateAsync(model);
 
-    const user = await this.userRepository.getUserByEmailAsync(HttpContext.getCurrentUserId)
-    if (!user && user.type !== UserType.User) {
+    const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
+    if (!user || user.type !== UserType.User) {
       throw new UserNotFoundException();
     }
 

@@ -1,8 +1,9 @@
 import { UserType } from "../../enums";
 import { BaseEntity } from "../../baseEntity";
 import { Playlist } from "../collection/playlist.entity";
-import { Entity, Column, OneToMany } from "typeorm";
+import { Entity, Column, OneToMany, OneToOne } from "typeorm";
 import { PlaylistMember } from "../collection/playlistMember.entity";
+import { UserBiometric } from "./userBiometric.entity";
 
 @Entity({ name: 'users', schema: 'identity' })
 export class User extends BaseEntity {
@@ -36,6 +37,12 @@ export class User extends BaseEntity {
 
     @Column({ type: 'timestamp', nullable: true })
     lastEmailModifiedAt?: Date;
+
+    @Column({ nullable: true })
+    newPhoneNumber?: string;
+
+    @Column({ type: 'timestamp', nullable: true })
+    lastPhoneNumberModifiedAt?: Date;
 
     @Column({ type: 'timestamp', nullable: true })
     lastUserNameModifiedAt?: Date;
@@ -83,8 +90,8 @@ export class User extends BaseEntity {
     })
     type: UserType;
 
-    @Column({ nullable: true })
-    profileImage?: string;
+    @OneToOne(() => UserBiometric, biometrics => biometrics.user, { cascade: true, eager: false })
+    biometrics?: UserBiometric;
 
     @OneToMany(() => Playlist, playlist => playlist.owner)
     ownedPlaylists: Playlist[];

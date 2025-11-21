@@ -23,7 +23,6 @@ const getUserQueryValidations = {
   })
 };
 
-
 @CommandHandler(GetUserLinkedAccountsQuery)
 export class GetUserLinkedAccountsQueryHandler implements ICommandHandler<GetUserLinkedAccountsQuery, LinkedAccountModel[]> {
   constructor(
@@ -39,12 +38,16 @@ export class GetUserLinkedAccountsQueryHandler implements ICommandHandler<GetUse
     if (!user && user.type !== UserType.User) {
       throw new UserNotFoundException(query.userName, 'username');
     }
-    const linkedAccount = await this.linkedAccountRepository.getByUserIdAsync(user.id)
 
+    if (user.type !== UserType.User) {
+      throw new UserNotFoundException(query.userName, 'username');
+    }
+
+    const linkedAccount = await this.linkedAccountRepository.getByUserIdAsync(user.id)
     if (!linkedAccount) {
       return []
     }
 
     return linkedAccount.map(mapToLinkedAccountsModel);
   }
-}  
+}

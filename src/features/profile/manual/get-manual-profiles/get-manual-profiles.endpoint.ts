@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { GetUserManualProfilesQuery } from "./get-manual-profiles.handler";
 import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 import { ManualProfileModel } from "../../../../domain/contracts/manualProfile.model";
+import { UserAccoutGuard } from "core/passport";
 
 @ApiBearerAuth()
 @ApiTags('User Profiles')
@@ -18,6 +19,7 @@ export class GetUserManualProfilesController {
   ) { }
 
   @Get("manual-profiles")
+  @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 200, description: 'OK', type: [ManualProfileModel] })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })

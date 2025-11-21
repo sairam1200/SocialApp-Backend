@@ -1,4 +1,5 @@
-import { User, UserClaim, UserRole } from "../entities";
+import { User, UserClaim, UserRole, UserBiometric } from "../entities";
+import { ProfileImagePrivacy } from "../enums";
 
 export interface IUserRepository {
 
@@ -8,7 +9,7 @@ export interface IUserRepository {
 
   getAsync(): Promise<User[]>;
   getUserByIdAsync(id: string): Promise<User | null>;
-  getUserByEmailAsync(email: string): Promise<User | null>;
+  getUserByEmailAsync(email: string, includeNewEmail?: boolean): Promise<User | null>;
   getUserByNameAsync(userName: string): Promise<User | null>;
   getSimilarUserNamesAsync(userName: string): Promise<string[]>;
 
@@ -17,6 +18,9 @@ export interface IUserRepository {
 
   setEmailAsync(user: User, email: string): Promise<boolean>;
   changeEmailAsync(newEmail: string, token: string): Promise<boolean>;
+  setPhoneNumberAsync(user: User, phoneNumber: string): Promise<boolean>;
+  changePhoneNumberAsync(newPhoneNumber: string, token: string): Promise<boolean>;
+  generatePhoneConfirmationTokenAsync(user: User, newPhoneNumber: string): Promise<string>;
 
   getRolesAsync(user: User): Promise<string[]>;
   isInRoleAsync(user: User, roleName: string): Promise<UserRole | null>;
@@ -46,4 +50,7 @@ export interface IUserRepository {
     searchTerm?: string
   ): Promise<[User[], number]>;
 
+  getUserBiometricAsync(userId: string): Promise<UserBiometric | null>;
+  upsertUserBiometricAsync(userId: string, biometrics: UserBiometric): Promise<UserBiometric>;
+  updateUserBiometricPrivacyAsync(userId: string, privacy: ProfileImagePrivacy): Promise<boolean>;
 }

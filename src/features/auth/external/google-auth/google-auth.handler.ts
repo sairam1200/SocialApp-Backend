@@ -6,8 +6,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import { User } from '../../../../domain/entities';
 import logger from '../../../../core/utils/winston.util';
-import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { ITokenService } from '../../../../domain/services/itoken.service';
+import { IEmailService } from '../../../../domain/services/iemail.service';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
 import ApplicationException from '../../../../core/exceptions/application.exception';
@@ -19,6 +20,13 @@ import {
   YoutubeChannelDataModel,
 } from '../../../../domain/contracts/youtube.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
+import { UserBiometric } from '../../../../domain/entities/identity/userBiometric.entity';
+import { ProfileImagePrivacy } from '../../../../domain/enums';
+import { SendVerificationEmailCommand } from '../../../user/email/send-verification/send-verification.handler';
+import { stringUtil } from 'core/utils/string.util';
+import { generateInitialImage } from 'core/utils/canvas.util';
+import { uploadBase64ToCloudinaryAsync } from 'core/utils/cloudinary.util';
+import { UserType } from 'domain/enums';
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
 
@@ -80,25 +88,15 @@ export class GoogleConnectCallbackQuery {
 }
 
 const googleConnectValidations = Joi.object({
-  state: Joi.string()
-    .required()
-    .messages({ 'any.required': 'Invalid request' }),
-  userAgent: Joi.string()
-    .required()
-    .messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
-  ipAddress: Joi.string()
-    .required()
-    .messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
-  deviceId: Joi.string()
-    .required()
-    .messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  state: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
+  userAgent: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  ipAddress: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  deviceId: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
 });
 
 const googleConnectCallbackValidations = Joi.object({
   code: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
-  state: Joi.string()
-    .required()
-    .messages({ 'any.required': 'Invalid request' }),
+  state: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
 });
 
 @CommandHandler(GoogleConnectQuery)
@@ -137,6 +135,9 @@ export class GoogleConnectCallbackQueryHandler
   constructor(
     @Inject(_const.ITOKEN_SERVICE)
     private readonly tokenService: ITokenService,
+    @Inject(_const.IEMAIL_SERVICE)
+    private readonly emailService: IEmailService,
+    private readonly commandBus: CommandBus,
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
@@ -162,16 +163,48 @@ export class GoogleConnectCallbackQueryHandler
       userData.profile.email,
     );
     if (!user) {
+      let profileImage = userData?.profile?.picture
+
+      if (!profileImage) {
+        const initials = stringUtil.extractInitialsFromName(`${userData.profile.given_name} ${userData.profile.family_name}`);
+        const base64Image = generateInitialImage(initials);
+        const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
+        profileImage = avatar.secure_url;
+      }
+
+      let defaultProfileImageUrl = profileImage;
+      if (userData?.profile?.picture) {
+        const initials = stringUtil.extractInitialsFromName(`${userData.profile.given_name} ${userData.profile.family_name}`);
+        const base64Image = generateInitialImage(initials);
+        const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
+        defaultProfileImageUrl = avatar.secure_url;
+      }
+
       const entry = new User({
+        phoneNumber: "",
+        type: UserType.User,
         email: userData.profile.email,
         firstName: userData.profile.given_name,
         lastName: userData.profile.family_name,
-        profileImage: userData.profile.picture,
-        emailConfirmed: true,
+        biometrics: new UserBiometric({
+          profileImageUrl: userData?.profile?.picture || null,
+          defaultProfileImageUrl: defaultProfileImageUrl,
+          privacy: ProfileImagePrivacy.Everyone,
+        })
       });
 
       user = await this.userRepository.createAsync(entry, '');
-      console.log('user', user);
+
+      const parsedDataProtectionKeyValue = JSON.parse(dataProtectionKey.value);
+
+      await this.sendWelcomeEmail(user);
+      await this.commandBus.execute(new SendVerificationEmailCommand({
+        model: {
+          userAgent: parsedDataProtectionKeyValue.userAgent,
+          ipAddress: parsedDataProtectionKeyValue.ipAddress,
+          email: user.email,
+        }
+      }));
     }
 
     if (this.isAccountLockedOrInactive(user)) {
@@ -179,6 +212,7 @@ export class GoogleConnectCallbackQueryHandler
     }
 
     const parsedDataProtectionKeyValue = JSON.parse(dataProtectionKey.value);
+
     const result = await this.handleSuccessfulLogin(
       user,
       parsedDataProtectionKeyValue,
@@ -374,7 +408,7 @@ export class GoogleConnectCallbackQueryHandler
       message: 'Login successful',
       succeeded: true,
       isLockedOut: false,
-      userImage: user.profileImage,
+      userImage: user.biometrics?.profileImageUrl || user.biometrics?.defaultProfileImageUrl || null,
       refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
     });
   }
@@ -400,5 +434,20 @@ export class GoogleConnectCallbackQueryHandler
 
   private createErrorResponse(message: string): GoogleCallbaclTokenResponseModel {
     return new GoogleCallbaclTokenResponseModel({ message, succeeded: false });
+  }
+
+  private async sendWelcomeEmail(user: User): Promise<void> {
+    try {
+      await this.emailService.sendTemplatedAsync({
+        to: user.email,
+        subject: "Welcome to Gaddr",
+        templatePath: "templates/email/welcome-email-v1.html",
+        context: {
+          year: new Date().getFullYear(),
+        },
+      });
+    } catch (error) {
+      logger.error(`Failed to send welcome email for user ${user.id}`, error);
+    }
   }
 }

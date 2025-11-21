@@ -2,16 +2,17 @@ import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
-import { User } from "../../../domain/entities";
-import { UserType } from "../../../domain/enums";
+import { User, UserBiometric } from "../../../domain/entities";
+import { UserType, ProfileImagePrivacy } from "../../../domain/enums";
 import { stringUtil } from "../../../core/utils/string.util";
 import { IUserRepository } from "../../../domain/repositories";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { password } from "../../../core/utils/validation.util";
 import { UserModel } from "../../../domain/contracts/user.model";
 import { mapToUserModel } from "../../../domain/mappers/user.mapper";
+import { SendVerificationEmailCommand } from "../../../features/user";
 import { UserAlreadyExistsException } from "../../../core/exceptions";
 import { generateInitialImage } from "../../../core/utils/canvas.util";
-import { password, userName } from "../../../core/utils/validation.util";
+import { CommandBus, CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { uploadBase64ToCloudinaryAsync } from "../../../core/utils/cloudinary.util";
 
 export class RegisterModel {
@@ -27,14 +28,11 @@ export class RegisterModel {
   @ApiProperty()
   lastName: string;
 
-  // @ApiProperty()
-  // gender: string;
+  @ApiProperty()
+  userAgent: string;
 
-  // @ApiProperty()
-  // userName: string;
-
-  // @ApiProperty()
-  // phoneNumber: string;
+  @ApiProperty()
+  ipAddress: string;
 
   constructor(request: Partial<RegisterModel> = {}) {
     Object.assign(this, request);
@@ -54,15 +52,15 @@ const createUserValidations = Joi.object({
   password: Joi.string().required().custom(password),
   firstName: Joi.string().required(),
   lastName: Joi.string().required(),
-  // phoneNumber: Joi.string().required(),
-  // userName: Joi.string().optional().custom(userName),
-  // gender: Joi.string().required()
+  userAgent: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  ipAddress: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
 });
 
 @CommandHandler(RegisterCommand)
 export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> {
   constructor(
     @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
+    private readonly commandBus: CommandBus,
   ) { }
 
   public async execute(command: RegisterCommand): Promise<UserModel> {
@@ -72,7 +70,6 @@ export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> 
     await createUserValidations.validateAsync(model);
 
     const existUser = await this.userRepository.getUserByEmailAsync(model.email);
-
     if (existUser) {
       throw new UserAlreadyExistsException(model.email, "email");
     }
@@ -87,14 +84,23 @@ export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> 
         firstName: model.firstName,
         lastName: model.lastName,
         email: model.email,
-        // gender: model.gender,
         phoneNumber: "",
         type: UserType.User,
-        // userName: model.userName,
-        profileImage: avatar.secure_url,
+        biometrics: new UserBiometric({
+          profileImageUrl: null,
+          defaultProfileImageUrl: avatar.secure_url,
+          privacy: ProfileImagePrivacy.Everyone,
+        })
       }), model.password);
 
-    // TODO: Send Email  
-    return mapToUserModel(user);
+    await this.commandBus.execute(new SendVerificationEmailCommand({
+      model: {
+        userAgent: model.userAgent,
+        ipAddress: model.ipAddress,
+        email: user.email,
+      }
+    }));
+
+    return mapToUserModel(user, true, avatar.secure_url);
   }
-} 
+}

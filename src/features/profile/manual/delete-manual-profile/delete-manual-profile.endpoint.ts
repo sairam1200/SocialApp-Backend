@@ -16,6 +16,7 @@ export class DeleteManualProfileController {
   constructor(private readonly commandBus: CommandBus) { }
 
   @Delete("manual-profile/:id")
+  @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })

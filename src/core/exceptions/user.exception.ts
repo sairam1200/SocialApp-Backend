@@ -31,7 +31,7 @@ export class UserNotFoundException extends NotFoundException {
     } else {
 
       let message: string;
-      message = `A user with the ${purpose} "${value}" already exists.`;
+      message = `User not found with the ${purpose} "${value}".`;
       super(message);
     }
 

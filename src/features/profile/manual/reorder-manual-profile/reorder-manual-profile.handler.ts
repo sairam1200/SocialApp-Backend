@@ -43,14 +43,14 @@ export class ReorderManualProfileCommandHandler implements ICommandHandler<Reord
 
     await updateUserValidations.validateAsync(model);
 
-    const user = await this.userRepository.getUserByEmailAsync(HttpContext.getCurrentUserId)
-    if (!user && user.type !== UserType.User) {
+    const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
+    if (!user || user.type !== UserType.User) {
       throw new UserNotFoundException();
     }
 
     const manualProfile = await this.manualProfileRepository.getByIdAsync(model.id);
-    if (!manualProfile && manualProfile.userId !== user.id) {
-      throw new ApplicationException('Prevented: Manual profile not found.') 
+    if (!manualProfile || manualProfile.userId !== user.id) {
+      throw new ApplicationException('Prevented: Manual profile not found.')
     }
 
     await this.manualProfileRepository.reorderAsync(model.id, model.displayOrder);

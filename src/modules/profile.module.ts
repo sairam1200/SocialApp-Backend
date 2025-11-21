@@ -5,7 +5,7 @@ import { CqrsModule } from "@nestjs/cqrs";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
-import { User, Role, UserRole, LinkedAccount, ManualProfile, RoleClaim, UserClaim } from "../domain/entities";
+import { User, Role, UserRole, LinkedAccount, ManualProfile, RoleClaim, UserClaim, PlaylistMember, UserBiometric } from "../domain/entities";
 
 @Module({
   imports: [
@@ -19,6 +19,8 @@ import { User, Role, UserRole, LinkedAccount, ManualProfile, RoleClaim, UserClai
       UserRole,
       LinkedAccount,
       ManualProfile,
+      PlaylistMember,
+      UserBiometric,
     ])
   ],
   controllers: [
