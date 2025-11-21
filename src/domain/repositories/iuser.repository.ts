@@ -9,7 +9,7 @@ export interface IUserRepository {
 
   getAsync(): Promise<User[]>;
   getUserByIdAsync(id: string): Promise<User | null>;
-  getUserByEmailAsync(email: string): Promise<User | null>;
+  getUserByEmailAsync(email: string, includeNewEmail?: boolean): Promise<User | null>;
   getUserByNameAsync(userName: string): Promise<User | null>;
   getSimilarUserNamesAsync(userName: string): Promise<string[]>;
 

@@ -95,9 +95,18 @@ export class UserRepository implements IUserRepository {
     return await this.userContext.findOne({ where: { id } });
   }
 
-  public async getUserByEmailAsync(email: string): Promise<User | null> {
+  public async getUserByEmailAsync(email: string, includeNewEmail?: boolean): Promise<User | null> {
     const normalizedEmail = email?.toUpperCase();
-    return await this.userContext.findOne({ where: { normalizedEmail } });
+    const user = await this.userContext.findOne({ where: { normalizedEmail } });
+
+    if (user || !includeNewEmail) {
+      return user;
+    }
+
+    return await this.userContext
+      .createQueryBuilder('user')
+      .where('LOWER(user.newEmail) = LOWER(:email)', { email })
+      .getOne();
   }
 
   public async getUserByNameAsync(userName: string): Promise<User | null> {
@@ -222,7 +231,8 @@ export class UserRepository implements IUserRepository {
     }
 
     user.email = email;
-    user.emailConfirmed = false;
+    user.newEmail = null;
+    user.emailConfirmed = true;
     user.normalizedEmail = email.toUpperCase();
     user.concurrencyStamp = generateTimestampUUID();
     const result = await this.userContext.update(user.id, user);

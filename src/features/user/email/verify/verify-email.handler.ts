@@ -51,42 +51,50 @@ export class VerifyEmailCommandHandler implements ICommandHandler<VerifyEmailCom
 
     await verifyEmailValidations.validateAsync(model);
 
-    const user = await this.userRepository.getUserByEmailAsync(model.email);
+    const user = await this.userRepository.getUserByEmailAsync(model.email, true);
+
     if (!user) {
       throw new UserNotFoundException();
     }
 
-    // Check if email is already verified
-    if (user.emailConfirmed) {
-      return {
-        success: true,
-        message: "Email is already verified",
-      };
+    const isEmailChange = user.newEmail && user.newEmail.toLowerCase() === model.email.toLowerCase();
+
+    const dataProtectionKey = await this.validateVerificationCode(user.id, model.code, isEmailChange ? model.email : undefined);
+
+    if (isEmailChange) {
+      await this.userRepository.setEmailAsync(user, user.newEmail);
+    } else {
+      if (user.emailConfirmed) {
+        await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
+        return {
+          success: true,
+          message: "Email is already verified",
+        };
+      }
+      user.emailConfirmed = true;
+      await this.userRepository.updateAsync(user);
     }
-
-    const dataProtectionKey = await this.validateVerificationCode(user.id, model.code);
-
-    // Update email as confirmed
-    user.emailConfirmed = true;
-    await this.userRepository.updateAsync(user);
 
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
 
-    logger.info(`Email verified for user ${user.id}: ${model.email}`);
+    logger.info(`Email verified for user ${user.id}: ${model.email}${isEmailChange ? ' (email change completed)' : ''}`);
 
     return {
       success: true,
-      message: "Email verified successfully",
+      message: isEmailChange ? "Email changed and verified successfully" : "Email verified successfully",
     };
   }
 
-  private async validateVerificationCode(userId: string, code: string): Promise<DataProtectionKey> {
+  private async validateVerificationCode(userId: string, code: string, email?: string): Promise<DataProtectionKey> {
     const verificationKeys = await this.dataProtectionKeyRepository.getByUserIdAsync(userId);
     const currentTime = Math.floor(Date.now() / 1000);
 
+    const basePurpose = _const.TOKEN.PURPOSE.CONFIRM_EMAIL;
+    const expectedKey = email ? `${basePurpose}:${email}` : basePurpose;
+
     const dataProtectionKey = verificationKeys.find(
       key =>
-        key.key === _const.TOKEN.PURPOSE.CONFIRM_EMAIL &&
+        key.key === expectedKey &&
         key.value === code &&
         key.expiresIn &&
         key.expiresIn >= currentTime
