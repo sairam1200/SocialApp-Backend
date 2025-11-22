@@ -33,7 +33,7 @@ export class EmailProcessor extends WorkerHost {
     const transporter = nodemailer.createTransport({
       host: configs.smtp.host,
       port: +configs.smtp.port,
-      secure: false,
+      secure: configs.smtp.secure,
       auth: {
         user: configs.smtp.user,
         pass: configs.smtp.password,
@@ -41,6 +41,12 @@ export class EmailProcessor extends WorkerHost {
     });
 
     const { from, to, subject, html, attachments } = job.data;
+    logger.info(`Sending email`, {
+      jobId: job.id,
+      from: from ?? Globals.Email.DefaultFrom,
+      to,
+      subject,
+    });
     try {
       await transporter.sendMail({
         from: from ?? Globals.Email.DefaultFrom,

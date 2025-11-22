@@ -8,7 +8,6 @@ import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
 import { UserModel } from "../../../domain/contracts/user.model";
 import { mapToUserModel } from "../../../domain/mappers/user.mapper";
 import { PlaylistMember } from "../../../domain/entities/collection/playlistMember.entity";
-import { ProfileImagePrivacy } from "../../../domain/enums";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 import { UserNotFoundException } from "../../../core/exceptions/user.exception";
 import { getProfileImageUrl } from "../../../core/utils/profileImagePrivacy.util";
