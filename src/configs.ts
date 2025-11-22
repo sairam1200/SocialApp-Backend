@@ -162,6 +162,8 @@ const envVarsSchema = Joi.object()
       .description('SMTP server port'),
     SMTP_USER: Joi.string()
       .description('SMTP username'),
+    SMTP_SECURE: Joi.boolean()
+      .description('SMTP secure'),
     SMTP_PASSWORD: Joi.string()
       .description('SMTP password'),
     LOG_PATH: Joi.string()
@@ -304,6 +306,7 @@ export default {
     host: envVars.SMTP_HOST,
     port: envVars.SMTP_PORT,
     user: envVars.SMTP_USER,
+    secure: envVars.SMTP_SECURE,
     password: envVars.SMTP_PASSWORD
   },
   cloudinary: {

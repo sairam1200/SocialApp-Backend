@@ -2,6 +2,7 @@ import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
+import logger from '../../../core/utils/winston.util';
 import { User, UserBiometric } from "../../../domain/entities";
 import { UserType, ProfileImagePrivacy } from "../../../domain/enums";
 import { stringUtil } from "../../../core/utils/string.util";
@@ -12,6 +13,7 @@ import { mapToUserModel } from "../../../domain/mappers/user.mapper";
 import { SendVerificationEmailCommand } from "../../../features/user";
 import { UserAlreadyExistsException } from "../../../core/exceptions";
 import { generateInitialImage } from "../../../core/utils/canvas.util";
+import { IEmailService } from "../../../domain/services/iemail.service";
 import { CommandBus, CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { uploadBase64ToCloudinaryAsync } from "../../../core/utils/cloudinary.util";
 
@@ -61,6 +63,8 @@ export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> 
   constructor(
     @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
     private readonly commandBus: CommandBus,
+    @Inject(_const.IEMAIL_SERVICE)
+    private readonly emailService: IEmailService,
   ) { }
 
   public async execute(command: RegisterCommand): Promise<UserModel> {
@@ -101,6 +105,22 @@ export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> 
       }
     }));
 
+    this.sendWelcomeEmail(user)
     return mapToUserModel(user, true, avatar.secure_url);
+  }
+
+  private async sendWelcomeEmail(user: User): Promise<void> {
+    try {
+      await this.emailService.sendTemplatedAsync({
+        to: user.email,
+        subject: "Welcome to Gaddr",
+        templatePath: "templates/email/welcome-email-v1.html",
+        context: {
+          year: new Date().getFullYear(),
+        },
+      });
+    } catch (error) {
+      logger.error(`Failed to send welcome email for user ${user.id}`, error);
+    }
   }
 }
