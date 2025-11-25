@@ -390,7 +390,6 @@ export class GoogleConnectCallbackQueryHandler
   ): Promise<GoogleCallbaclTokenResponseModel> {
     user.accessFailedCount = 0;
 
-    // Avoid destructuring or manual omission; instead, let TypeORM ignore relations by passing the same user (biometrics is not persisted by updateAsync anyway)
     await this.userRepository.updateAsync(user);
 
     const access_token = await this.tokenService.generateJwtAsync(user);
@@ -401,6 +400,8 @@ export class GoogleConnectCallbackQueryHandler
       model.userAgent,
       model.ipAddress,
     );
+
+    await this.userRepository.cacheUserAccountAsync(user, _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC);
 
     // TODO: Send email notification of login with new ipAddress and deviceInfo
     return new GoogleCallbaclTokenResponseModel({

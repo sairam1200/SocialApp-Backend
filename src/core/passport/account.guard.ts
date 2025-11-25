@@ -5,6 +5,7 @@ import { Globals } from '../../core/globals';
 import { UserType } from "../../domain/enums";
 import redis from '../../core/utils/redis.util';
 import logger from "../../core/utils/winston.util";
+import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { extractTokenFromHeader, getUserFromAccessTokenAsync } from "../../core/utils/jwt.util";
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 
@@ -24,18 +25,27 @@ function createAccountGuard(type?: UserType, allowTwoFARequired: boolean = false
       logger.info(`[AccountGuard] Expected user type: ${type || 'Any'}`);
       logger.info(`[AccountGuard] Authorization header: ${request.headers.authorization ? 'Present' : 'Missing'}`);
 
-      const access_token = extractTokenFromHeader(request);
-      if (!access_token) {
-        logger.error('[AccountGuard] No access token found');
-        throw new UnauthorizedException('Unauthorized: You need to log in to access this resource.');
+      const claimsPrinciple = HttpContext.user;
+      if (!claimsPrinciple) {
+        if (request.headers.authorization) {
+          throw new UnauthorizedException('Unauthorized: Invalid or expired token.');
+        } else {
+          throw new UnauthorizedException('Unauthorized: You need to log in to access this resource.');
+        }
       }
 
-      logger.info('[AccountGuard] Access token found, validating...');
-      const claimsPrinciple = await getUserFromAccessTokenAsync(access_token, response, this.jwtService, ignoreExpiration);
-      if (!claimsPrinciple || claimsPrinciple === undefined) {
-        logger.error('[AccountGuard] Invalid or expired token');
-        throw new UnauthorizedException('Unauthorized: Invalid or expired token.');
-      }
+      // const access_token = extractTokenFromHeader(request);
+      // if (!access_token) {
+      //   logger.error('[AccountGuard] No access token found');
+      //   throw new UnauthorizedException('Unauthorized: You need to log in to access this resource.');
+      // }
+
+      // logger.info('[AccountGuard] Access token found, validating...');
+      // const claimsPrinciple = await getUserFromAccessTokenAsync(access_token, response, this.jwtService, ignoreExpiration);
+      // if (!claimsPrinciple || claimsPrinciple === undefined) {
+      //   logger.error('[AccountGuard] Invalid or expired token');
+      //   throw new UnauthorizedException('Unauthorized: Invalid or expired token.');
+      // }
 
       logger.info(`[AccountGuard] User validated. User type: ${claimsPrinciple[Globals.ClaimTypes.UserType]}`);
 
@@ -49,6 +59,19 @@ function createAccountGuard(type?: UserType, allowTwoFARequired: boolean = false
       const concurrencyStamp = claimsPrinciple[Globals.ClaimTypes.ConcurrencyStamp];
       const accountKey = redis.getRedisKey<string>(`${userId}${_const.REDIS.USER.ACCOUNT}`);
       const userAccount = await redis.getFromRedisAsync<{ concurrencyStamp: string; securityStamp: string; }>(accountKey);
+
+      if (userAccount) {
+        if (concurrencyStamp !== userAccount.concurrencyStamp) {
+          response.setHeader('X-Token-Refresh-Required', 'true');
+          logger.info(`[AccountGuard] ConcurrencyStamp changed for user ${userId}, token refresh recommended`);
+        }
+
+        if (securityStamp !== userAccount.securityStamp) {
+          logger.warn(`[AccountGuard] SecurityStamp mismatch for user ${userId} - forcing re-authentication`);
+          response.setHeader('X-Password-Change', 'true');
+          throw new UnauthorizedException('Your session has been invalidated. Please log in again.');
+        }
+      }
 
       if (type && type != undefined) {
         const userType = claimsPrinciple[Globals.ClaimTypes.UserType] as UserType;

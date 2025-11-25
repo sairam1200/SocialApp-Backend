@@ -2,26 +2,26 @@ import axios from 'axios';
 import * as Joi from 'joi';
 import { Inject } from '@nestjs/common';
 import configs from '../../../../configs';
+import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import { User } from '../../../../domain/entities';
+import { UserType } from '../../../../domain/enums';
 import logger from '../../../../core/utils/winston.util';
+import { ProfileImagePrivacy } from '../../../../domain/enums';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { stringUtil } from '../../../../core/utils/string.util';
+import { generateInitialImage } from '../../../../core/utils/canvas.util';
+import { ITokenService } from '../../../../domain/services/itoken.service';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { FacebookUserDataModel } from '../../../../domain/contracts/facebook.model';
 import ApplicationException from '../../../../core/exceptions/application.exception';
+import { uploadBase64ToCloudinaryAsync } from '../../../../core/utils/cloudinary.util';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
-import { ITokenService } from '../../../../domain/services/itoken.service';
+import { UserBiometric } from '../../../../domain/entities/identity/userBiometric.entity';
 import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
-import { FacebookUserDataModel } from '../../../../domain/contracts/facebook.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
-import { UserBiometric } from '../../../../domain/entities/identity/userBiometric.entity';
-import { ProfileImagePrivacy } from '../../../../domain/enums';
-import { ApiProperty } from '@nestjs/swagger';
-import { generateInitialImage } from '../../../../core/utils/canvas.util';
-import { uploadBase64ToCloudinaryAsync } from '../../../../core/utils/cloudinary.util';
-import { stringUtil } from '../../../../core/utils/string.util';
-import { UserType } from '../../../../domain/enums';
 
 const GRAPH_BASE = 'https://graph.facebook.com/v23.0';
 
@@ -358,6 +358,8 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       model.userAgent,
       model.ipAddress,
     );
+
+    await this.userRepository.cacheUserAccountAsync(user, _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC);
 
     return new FacebookCallbackTokenResponseModel({
       accessToken: access_token,

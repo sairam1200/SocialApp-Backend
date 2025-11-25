@@ -75,12 +75,25 @@ export class UserRepository implements IUserRepository {
     user.concurrencyStamp = generateTimestampUUID();
     const result = await this.userContext.update(user.id, user);
     const key = redis.getRedisKey<string>(`${user.id}${_const.REDIS.USER.ACCOUNT}`);
+    const existingCache = await redis.getFromRedisAsync(key);
+    if (existingCache) {
+      await redis.storeInRedisAsync(key, {
+        concurrencyStamp: user.concurrencyStamp,
+        securityStamp: user.securityStamp,
+        // Add more user account related 
+      }, _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC);
+    }
+    return result.affected > 0;
+  }
+
+  public async cacheUserAccountAsync(user: User, ttl?: number): Promise<void> {
+    const key = redis.getRedisKey<string>(`${user.id}${_const.REDIS.USER.ACCOUNT}`);
+    const cacheTtl = ttl ?? _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC;
     await redis.storeInRedisAsync(key, {
       concurrencyStamp: user.concurrencyStamp,
       securityStamp: user.securityStamp,
       // Add more user account related 
-    }, 899)
-    return result.affected > 0;
+    }, cacheTtl);
   }
 
   // TODO: Carry out checks before proceeding.

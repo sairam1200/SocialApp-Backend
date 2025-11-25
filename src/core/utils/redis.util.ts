@@ -36,9 +36,13 @@ async function connectToRedis() {
   }
 }
 
-async function storeInRedisAsync(key: string, data: object, duration: number) {
-  const value = serializeObject(data)
-  await instance.set(key, value, 'EX', duration);
+async function storeInRedisAsync(key: string, data: object, duration?: number) {
+  const value = serializeObject(data);
+  if (!duration) {
+    await instance.set(key, value);
+  } else {
+    await instance.set(key, value, 'EX', duration);
+  }
   return true;
 }
 

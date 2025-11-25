@@ -81,6 +81,8 @@ export class TokenService implements ITokenService {
       [Globals.ClaimTypes.UserName]: user.userName,
       [Globals.ClaimTypes.GivenName]: user.firstName,
       [Globals.ClaimTypes.FamilyName]: user.lastName,
+      [Globals.ClaimTypes.SecurityStamp]: user.securityStamp,
+      [Globals.ClaimTypes.ConcurrencyStamp]: user.concurrencyStamp,
       [Globals.ClaimTypes.ProfileImage]: user.biometrics?.profileImageUrl || user.biometrics?.defaultProfileImageUrl || null,
       [Globals.ClaimTypes.FullName]: `${user.lastName} ${user.firstName}`,
       [Globals.ClaimTypes.UserType]: user.type,
