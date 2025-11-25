@@ -57,7 +57,11 @@ export class TokenService implements ITokenService {
 
   public generateEncryptedToken(claims: any, tokenExpiration?: string): string {
     const expiresIn = tokenExpiration ?? configs.jwt.accessTokenExpiration;
-    const token = this.jwtService.sign(claims, {
+
+    // Remove JWT metadata properties (exp, iat, iss, aud) to avoid conflicts when re-signing
+    const { exp, iat, iss, aud, ...cleanClaims } = claims;
+
+    const token = this.jwtService.sign(cleanClaims, {
       secret: configs.jwt.secret,
       expiresIn,
       issuer: configs.jwt.issuer,
