@@ -185,15 +185,15 @@ export class GoogleConnectCallbackQueryHandler
         type: UserType.User,
         email: userData.profile.email,
         firstName: userData.profile.given_name,
-        lastName: userData.profile.family_name,
-        biometrics: new UserBiometric({
-          profileImageUrl: userData?.profile?.picture || null,
-          defaultProfileImageUrl: defaultProfileImageUrl,
-          privacy: ProfileImagePrivacy.Everyone,
-        })
+        lastName: userData.profile.family_name
       });
 
       user = await this.userRepository.createAsync(entry, '');
+      this.userRepository.upsertUserBiometricAsync(user.id, new UserBiometric({
+        profileImageUrl: userData?.profile?.picture || null,
+        defaultProfileImageUrl: defaultProfileImageUrl,
+        privacy: ProfileImagePrivacy.Everyone,
+      }))
 
       const parsedDataProtectionKeyValue = JSON.parse(dataProtectionKey.value);
 
@@ -389,6 +389,8 @@ export class GoogleConnectCallbackQueryHandler
     },
   ): Promise<GoogleCallbaclTokenResponseModel> {
     user.accessFailedCount = 0;
+
+    // Avoid destructuring or manual omission; instead, let TypeORM ignore relations by passing the same user (biometrics is not persisted by updateAsync anyway)
     await this.userRepository.updateAsync(user);
 
     const access_token = await this.tokenService.generateJwtAsync(user);
@@ -401,7 +403,6 @@ export class GoogleConnectCallbackQueryHandler
     );
 
     // TODO: Send email notification of login with new ipAddress and deviceInfo
-
     return new GoogleCallbaclTokenResponseModel({
       accessToken: access_token,
       refreshToken: userToken.tokenValue,

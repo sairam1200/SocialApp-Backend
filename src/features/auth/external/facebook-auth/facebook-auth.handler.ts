@@ -169,14 +169,14 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         emailConfirmed: true,
         type: UserType.User,
         userName: `${firstName.toLowerCase()}${lastName.toLowerCase()}`.replace(/\s/g, ''),
-        biometrics: new UserBiometric({
-          profileImageUrl: userData.picture?.data?.url || null,
-          defaultProfileImageUrl: defaultProfileImageUrl,
-          privacy: ProfileImagePrivacy.Everyone,
-        })
       });
 
-      user = await this.userRepository.createAsync(entry, ''); // Empty password for OAuth users
+      user = await this.userRepository.createAsync(entry, '');
+      await this.userRepository.upsertUserBiometricAsync(user.id, new UserBiometric({
+        profileImageUrl: userData.picture?.data?.url || null,
+        defaultProfileImageUrl: defaultProfileImageUrl,
+        privacy: ProfileImagePrivacy.Everyone,
+      }))
     }
 
     if (this.isAccountLockedOrInactive(user)) {
