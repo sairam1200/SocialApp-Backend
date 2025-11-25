@@ -195,7 +195,7 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
       return response.data;
     } catch (error) {
       logger.error('Error fetching token from Spotify', error);
-      throw new Error('Unexpected error during authentication with Spotify');
+      throw new ApplicationException('Unexpected error during authentication with Spotify');
     }
   }
 
@@ -215,7 +215,7 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
       };
     } catch (error) {
       logger.error('Error fetching user data from Spotify', error);
-      throw new Error('Unexpected error during authentication with Spotify');
+      throw new ApplicationException('Unexpected error during authentication with Spotify');
     }
   }
 

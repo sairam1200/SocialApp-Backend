@@ -14,6 +14,7 @@ import { ImportGateway } from "../../../infrastructure/websocket/gateways/import
 import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
 import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
 import { console } from "inspector";
+import { ApplicationException } from "core/exceptions";
 
 interface CursorMap {
   [key: string]: string | null;
@@ -444,7 +445,7 @@ export class YoutubeImportProcessor extends WorkerHost {
         nextPageToken = response.data.nextPageToken ?? null;
       } catch (err) {
         console.log(`Error fetching videos for playlist ${playlistId}:`, err);
-        throw new Error(`Failed to fetch videos for playlist ${playlistId}`);
+        throw new ApplicationException(`Failed to fetch videos for playlist ${playlistId}`);
       }
 
     } while (nextPageToken);

@@ -326,7 +326,7 @@ export class GoogleConnectCallbackQueryHandler
       return response.data;
     } catch (error) {
       logger.error('Error fetching token from Google', error);
-      throw new Error('Unexpected error during authentication with Google');
+      throw new ApplicationException('Unexpected error during authentication with Google');
     }
   }
 
@@ -361,7 +361,7 @@ export class GoogleConnectCallbackQueryHandler
       };
     } catch (error) {
       logger.error('Error fetching user data from Google', error);
-      throw new Error('Unexpected error during authentication with Google');
+      throw new ApplicationException('Unexpected error during authentication with Google');
     }
   }
 

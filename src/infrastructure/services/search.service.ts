@@ -44,6 +44,7 @@ import {
   mapToFacebookProfileModel,
 } from 'domain/mappers/facebook.mapper';
 import { SearchCacheService } from './searchCache.service';
+import { ApplicationException } from 'core/exceptions';
 
 @Injectable()
 export class SearchService implements ISearchService {
@@ -668,11 +669,11 @@ export class SearchService implements ISearchService {
       return response.data || emptyResult;
     } catch (error: any) {
       const status = error?.response?.status;
-      if (status === 401) throw new Error('YouTube API authentication failed. Please refresh your token.');
-      if (status === 403) throw new Error('YouTube API access forbidden. Please check your API quota.');
-      if (status === 429) throw new Error('YouTube API rate limit exceeded. Please try again later.');
+      if (status === 401) throw new ApplicationException('YouTube API authentication failed. Please refresh your token.');
+      if (status === 403) throw new ApplicationException('YouTube API access forbidden. Please check your API quota.');
+      if (status === 429) throw new ApplicationException('YouTube API rate limit exceeded. Please try again later.');
       if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
-        throw new Error('YouTube API request timeout. Please try again.');
+        throw new ApplicationException('YouTube API request timeout. Please try again.');
       }
       logger.error(`Error fetching YouTube videos for "${query}":`, error?.response?.data || error?.message);
       throw error;

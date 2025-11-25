@@ -186,7 +186,7 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
       return response.data;
     } catch (error) {
       //console.log('Error fetching token from Pinterest', error);
-      throw new Error('Unexpected error during authentication with Pinterest');
+      throw new ApplicationException('Unexpected error during authentication with Pinterest');
     }
   }
 
@@ -201,7 +201,7 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
       return response.data;
     } catch (error) {
       console.log('Error fetching user data from Pinterest', error);
-      throw new Error('Unexpected error during authentication with Pinterest');
+      throw new ApplicationException('Unexpected error during authentication with Pinterest');
     }
   }
 

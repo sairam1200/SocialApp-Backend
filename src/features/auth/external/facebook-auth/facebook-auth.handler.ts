@@ -281,7 +281,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       return access_token;
     } catch (error) {
       logger.error('Error fetching short-lived token from Facebook', error);
-      throw new Error('Unexpected error during authentication with Facebook');
+      throw new ApplicationException('Unexpected error during authentication with Facebook');
     }
   }
 
@@ -303,7 +303,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       return response.data;
     } catch (error) {
       logger.error('Error fetching long-lived token from Facebook', error);
-      throw new Error('Unexpected error during authentication with Facebook');
+      throw new ApplicationException('Unexpected error during authentication with Facebook');
     }
   }
 

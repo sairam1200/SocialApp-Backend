@@ -110,7 +110,7 @@ export class SpotifyImportCommandHandler implements ICommandHandler<SpotifyImpor
       )
       const { access_token, expires_in } = response.data;
       if (!access_token) {
-        throw new Error('Spotify did not return an access token.');
+        throw new ApplicationException('Spotify did not return an access token.');
       }
 
       return {

@@ -165,7 +165,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
 
     } catch (error) {
       logger.error('Error fetching short-lived token from Facebook', error);
-      throw new Error('Unexpected error during authentication with Facebook');
+      throw new ApplicationException('Unexpected error during authentication with Facebook');
     }
   }
 

@@ -8,6 +8,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { JwtPayload } from '../../core/passport/jwtPayload';
 import { IRoleRepository } from "../../domain/repositories";
 import { ITokenService } from "../../domain/services/itoken.service";
+import { ApplicationException } from 'core/exceptions';
 
 @Injectable()
 export class TokenService implements ITokenService {
@@ -45,12 +46,12 @@ export class TokenService implements ITokenService {
     try {
       const payload: JwtPayload = this.jwtService.decode(token);
       if (!payload) {
-        throw new Error('Invalid token: Decoding failed');
+        throw new ApplicationException('Invalid token: Decoding failed');
       }
       return payload;
     } catch (error) {
       logger.error('Error decoding token:', error);
-      throw new Error('Invalid token');
+      throw new ApplicationException('Invalid token');
     }
   }
 
