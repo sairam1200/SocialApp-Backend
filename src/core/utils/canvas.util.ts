@@ -1,5 +1,6 @@
 import * as path from "path";
 import { generateRandomColorSet } from "./color.util";
+import { ApplicationException } from "../../core/exceptions";
 import { createCanvas, loadImage, registerFont } from 'canvas';
 
 const fontPath = path.resolve(
@@ -21,7 +22,7 @@ export function generateInitialImage(initials: string, size = 200): string {
   const canvas = createCanvas(size, size);
   const ctx = canvas.getContext('2d');
 
-  if (!ctx) throw new Error('Canvas context not available');
+  if (!ctx) throw new ApplicationException('Canvas context not available');
 
   // Background
   ctx.fillStyle = backgroundColor;
@@ -29,7 +30,7 @@ export function generateInitialImage(initials: string, size = 200): string {
 
   // Text
   ctx.fillStyle = textColor;
-  ctx.font = `500 ${Math.floor(size/3)}px Poppins`;
+  ctx.font = `500 ${Math.floor(size / 3)}px Poppins`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(initials, size / 2, size / 2);

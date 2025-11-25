@@ -1,6 +1,6 @@
 import * as Joi from "joi";
 import { ApiProperty } from "@nestjs/swagger";
-import { Inject } from "@nestjs/common";
+import { Inject, UnauthorizedException } from "@nestjs/common";
 import _const from "../../../core/utils/const";
 import logger from "../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
@@ -37,7 +37,7 @@ export class LogoutCommandHandler implements ICommandHandler<LogoutCommand> {
 
     const userId = HttpContext.getCurrentUserId;
     if (!userId) {
-      throw new Error("User not found in context.");
+      throw new UnauthorizedException("User not logged In");
     }
 
     const userLogins = await this.userLoginRepository.getByUserIdAsync(userId);

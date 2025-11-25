@@ -13,6 +13,7 @@ import { ITokenService } from "../../../domain/services/itoken.service";
 import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 import { IUserLoginRepository } from "../../../domain/repositories/irefreshtoken.repository";
+import { ApplicationException } from "core/exceptions";
 
 export class RefreshTokenRequestModel {
 
@@ -67,7 +68,7 @@ export class RefreshTokenCommandHandler implements ICommandHandler<RefreshTokenC
 
     const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
     if (!user) {
-      throw new Error("User associated with the token does not exist.");
+      throw new ApplicationException("User associated with the token does not exist.");
     }
 
     const userLogin = await this.userLoginRepository.getByTokenValueAndDeviceIdAsync(
@@ -76,12 +77,12 @@ export class RefreshTokenCommandHandler implements ICommandHandler<RefreshTokenC
     );
 
     if (!userLogin) {
-      throw new Error("Invalid refresh token or device mismatch.");
+      throw new ApplicationException("Invalid refresh token or device mismatch.");
     }
 
     const currentUtcDate = new Date();
     if (userLogin.expiryDateUtc < currentUtcDate) {
-      throw new Error("Refresh token has expired. Please log in again.");
+      throw new ApplicationException("Refresh token has expired. Please log in again.");
     }
 
     if (user.securityStamp !== HttpContext.user[Globals.ClaimTypes.SecurityStamp]) {

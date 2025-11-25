@@ -180,7 +180,7 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
       return response.data.data.user 
     } catch (error) {
       logger.error('Error fetching user data from Tiktok', error);
-      throw new Error('Unexpected error during authentication with Tiktok');
+      throw new ApplicationException('Unexpected error during authentication with Tiktok');
     }
   }
 

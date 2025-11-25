@@ -176,7 +176,7 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
 
     } catch (error) {
       logger.error('Error fetching short-lived token from Instagram', error);
-      throw new Error('Unexpected error during authentication with Instagram');
+      throw new ApplicationException('Unexpected error during authentication with Instagram');
     }
   }
 
@@ -195,7 +195,7 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
       return response.data;
     } catch (error) {
       logger.error('Error fetching long-lived token from Instagram', error);
-      throw new Error('Unexpected error during authentication with Instagram');
+      throw new ApplicationException('Unexpected error during authentication with Instagram');
     }
   }
 
@@ -211,7 +211,7 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
       return response.data;
     } catch (error) {
       logger.error('Error fetching user data from Instagram', error);
-      throw new Error('Unexpected error during authentication with Instagram');
+      throw new ApplicationException('Unexpected error during authentication with Instagram');
     }
   }
 

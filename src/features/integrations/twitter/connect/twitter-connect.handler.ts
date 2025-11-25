@@ -205,7 +205,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
       return response.data;
     } catch (error) {
       console.log('Error fetching token from Twitter', error);
-      throw new Error('Unexpected error during authentication with Twitter');
+      throw new ApplicationException('Unexpected error during authentication with Twitter');
     }
   }
 
@@ -237,7 +237,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     } catch (error) {
       console.log(error)
       logger.error('Error fetching user data from Twitter', error);
-      throw new Error('Unexpected error during authentication with Twiiter');
+      throw new ApplicationException('Unexpected error during authentication with Twiiter');
     }
   }
 
