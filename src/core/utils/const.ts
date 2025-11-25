@@ -100,7 +100,8 @@ export default {
 
   REDIS: {
     USER: {
-      ACCOUNT: '_user_account'
+      ACCOUNT: '_user_account',
+      ACCOUNT_SESSION_TTL_SEC: 604800, //  7 days - - TTL for session cache during login/2FA/refresh/update
     }
   },
 }

@@ -79,6 +79,9 @@ export class Verify2FACommandHandler implements ICommandHandler<Verify2FACommand
       model.ipAddress
     );
 
+    // Cache user account data in Redis with TTL for account guard validation
+    await this.userRepository.cacheUserAccountAsync(user, _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC);
+
     // TODO: Send email notification of login with new ipAddress and deviceInfo
 
     return new TokenResponseModel({

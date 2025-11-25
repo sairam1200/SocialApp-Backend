@@ -3,10 +3,10 @@ import { Inject } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
 import { User } from "../../../domain/entities";
-import { TokenResponseModel } from "../../../domain/contracts/tokenResponse.model";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { ITokenService } from "../../../domain/services/itoken.service";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
+import { TokenResponseModel } from "../../../domain/contracts/tokenResponse.model";
 import { IUserLoginRepository } from "../../../domain/repositories/irefreshtoken.repository";
 
 export class TokenRequestModel {
@@ -102,6 +102,7 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
         model.ipAddress
       );
 
+      await this.userRepository.cacheUserAccountAsync(user, _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC);
       // TODO: Send email notification of login with new ipAddress and deviceInfo
 
       return new TokenResponseModel({
