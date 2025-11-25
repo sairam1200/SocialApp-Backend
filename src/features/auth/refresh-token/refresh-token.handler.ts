@@ -27,9 +27,6 @@ export class RefreshTokenRequestModel {
   deviceId: string;
 
   @ApiProperty()
-  accessToken: string;
-
-  @ApiProperty()
   refreshToken: string;
 
   constructor(request: Partial<RefreshTokenRequestModel> = {}) {
@@ -49,7 +46,6 @@ const refreshTokenValidations = Joi.object({
   userAgent: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
   ipAddress: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
   deviceId: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
-  accessToken: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
   refreshToken: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
 });
 
