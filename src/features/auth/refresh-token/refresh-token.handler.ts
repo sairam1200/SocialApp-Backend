@@ -93,8 +93,6 @@ export class RefreshTokenCommandHandler implements ICommandHandler<RefreshTokenC
       accessToken = this.tokenService.generateEncryptedToken(HttpContext.user);
     } else {
       accessToken = await this.tokenService.generateJwtAsync(user);
-      // Update cache when concurrencyStamp changed (new JWT generated)
-      await this.userRepository.cacheUserAccountAsync(user, _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC);
     }
 
     userLogin.tokenValue = cryptoUtils.generateEncryptionKey(32);
