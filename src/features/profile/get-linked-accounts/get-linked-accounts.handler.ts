@@ -34,7 +34,7 @@ export class GetUserLinkedAccountsQueryHandler implements ICommandHandler<GetUse
 
     await getUserQueryValidations.params.validateAsync(query);
 
-    const user = await this.userRepository.getUserByIdAsync(query.userName);
+    const user = await this.userRepository.getUserByNameAsync(query.userName);
     if (!user && user.type !== UserType.User) {
       throw new UserNotFoundException(query.userName, 'username');
     }
