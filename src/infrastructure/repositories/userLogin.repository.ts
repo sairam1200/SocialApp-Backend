@@ -61,8 +61,7 @@ export class UserLoginRepository implements IUserLoginRepository {
     public async updateAsync(userLogin: UserLogin): Promise<void> {
 
         if (HttpContext.user) {
-            //userLogin.setCurrentUser(HttpContext.getCurrentUserId);
-            console.log("this is from rep:", HttpContext.getCurrentUserId);
+            userLogin.setCurrentUser(HttpContext.getCurrentUserId);
         }
         await this.userLoginContext.update(userLogin.id, userLogin);
     }

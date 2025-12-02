@@ -1,11 +1,12 @@
 import { Module } from "@nestjs/common";
-import { QueuesModule } from "./queues.module";
 import { dependency } from "../infrastructure/dependency";
+import { EmailListener } from "../infrastructure/background/listeners/email.listener";
 
 @Module({
-  imports: [QueuesModule.register()],
+  imports: [],
   providers: [
     dependency.EmailService,
+    EmailListener,
   ],
   exports: [
     dependency.EmailService,

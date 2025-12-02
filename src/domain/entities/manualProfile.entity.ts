@@ -11,7 +11,7 @@ export class ManualProfile extends BaseEntity {
   @Column()
   platform: string;
 
-  @Column()
+  @Column({ default: true })
   isActive: boolean;
 
   @Column()

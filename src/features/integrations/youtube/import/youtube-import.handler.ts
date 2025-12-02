@@ -1,19 +1,19 @@
 import axios from "axios";
-import { Queue } from "bullmq";
 import configs from "../../../../configs";
-import { InjectQueue } from "@nestjs/bull";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
 import { UserLogin } from "../../../../domain/entities";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { Inject, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
+import { YoutubeImportEvent } from "../../../../domain/events";
 
 export class YoutubeImportRequestModel {
   @ApiProperty()
@@ -37,8 +37,7 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    @InjectQueue(_const.BULL_QUEUES.YOUTUBE_IMPORT)
-    private readonly importQueue: Queue
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(command: YoutubeImportCommand)
@@ -93,13 +92,9 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     }
 
     try {
-      await this.importQueue.add(_const.BULL_QUEUES.YOUTUBE_IMPORT, { account, accessToken }, {
-        attempts: 3,
-        backoff: 5000
-      });
+      this.eventEmitter.emit('youtube.import', new YoutubeImportEvent({ account, accessToken }));
     } catch (error) {
-      console.log(error)
-      logger.error(`An error occurred while adding the Youtube import job to the queue: 
+      logger.error(`An error occurred while emitting the Youtube import event: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
       throw new ApplicationException('Failed to initiate Youtube import. Please try again later.');
     }

@@ -47,6 +47,7 @@ export class CreateManualProfileCommandHandler implements ICommandHandler<Create
         url: model.url,
         icon: model.icon,
         userId: user.id,
+        isActive: true
       }));
 
 

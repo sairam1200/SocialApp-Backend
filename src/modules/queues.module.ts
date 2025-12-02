@@ -15,10 +15,7 @@ import { LinkedAccount } from "../domain/entities/linkedAccount.entity";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
 import { BullBoardAuthMiddleware } from "../core/middlewares/bullBoardAuth.middleware";
 import { DynamicModule, MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
-import { EmailProcessor, InjectEmailQueue } from "../infrastructure/background/processors/email.processor";
 import { InjectSpotifyImportQueue, SpotifyImportProcessor } from "../infrastructure/background/processors/spotify-import.processor";
-import { InjectYoutubeImportQueue, YoutubeImportProcessor } from "../infrastructure/background/processors/youtube-import.processor";
-import { FacebookImportProcessor, InjectFacebookImportQueue } from "../infrastructure/background/processors/facebook-import.processor";
 import { InjectPinterestImportQueue, PinterestImportProcessor } from "../infrastructure/background/processors/pinterest-import.processor";
 import { InjectInstagramImportQueue, InstagramImportProcessor } from "../infrastructure/background/processors/instagram-import.processor";
 import { RedditImportProcessor, InjectRedditImportQueue } from "../infrastructure/background/processors/reddit-import.processor";
@@ -28,12 +25,6 @@ import { InjectLinkedInImportQueue, LinkedInImportProcessor } from "../infrastru
 export class QueuesModule implements NestModule {
   static register(): DynamicModule {
     const queues = BullModule.registerQueue(
-      {
-        name: _const.BULL_QUEUES.FACEBOOK_IMPORT,
-      },
-      {
-        name: _const.BULL_QUEUES.YOUTUBE_IMPORT,
-      },
       {
         name: _const.BULL_QUEUES.PINTEREST_IMPORT,
       },
@@ -45,9 +36,6 @@ export class QueuesModule implements NestModule {
       },
       {
         name: _const.BULL_QUEUES.TWITTER_IMPORT,
-      },
-      {
-        name: _const.BULL_QUEUES.EMAIL,
       },
       {
         name: _const.BULL_QUEUES.REDDIT_IMPORT,
@@ -84,12 +72,9 @@ export class QueuesModule implements NestModule {
 
         PinterestImportProcessor,
         InstagramImportProcessor,
-        FacebookImportProcessor,
-        YoutubeImportProcessor,
         TwitterImportProcessor,
         SpotifyImportProcessor,
         RedditImportProcessor,
-        EmailProcessor,
         ImportGateway,
 
         dependency.UserContentRepository,
@@ -98,11 +83,8 @@ export class QueuesModule implements NestModule {
       exports: [
         InstagramImportProcessor,
         PinterestImportProcessor,
-        FacebookImportProcessor,
-        YoutubeImportProcessor,
         RedditImportProcessor,
         ...queues.exports,
-        EmailProcessor,
       ],
     };
   }
@@ -110,12 +92,9 @@ export class QueuesModule implements NestModule {
   constructor(
     @InjectPinterestImportQueue() private readonly pinterestImportQueue: Queue,
     @InjectInstagramImportQueue() private readonly instagramImportQueue: Queue,
-    @InjectFacebookImportQueue() private readonly facebookImportQueue: Queue,
-    @InjectYoutubeImportQueue() private readonly youtubeImportQueue: Queue,
     @InjectSpotifyImportQueue() private readonly spotifyImportQueue: Queue,
     @InjectRedditImportQueue() private readonly redditImportQueue: Queue,
     @InjectTwitterImportQueue() private readonly twitterImportQueue: Queue,
-    @InjectEmailQueue() private readonly emailQueue: Queue,
   ) { }
 
   configure(consumer: MiddlewareConsumer) {
@@ -124,11 +103,8 @@ export class QueuesModule implements NestModule {
 
     createBullBoard({
       queues: [
-        new BullMQAdapter(this.facebookImportQueue),
-        new BullMQAdapter(this.youtubeImportQueue),
         new BullMQAdapter(this.instagramImportQueue),
         new BullMQAdapter(this.redditImportQueue),
-        new BullMQAdapter(this.emailQueue),
       ],
       serverAdapter,
     });

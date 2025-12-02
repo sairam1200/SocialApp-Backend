@@ -9,6 +9,8 @@ import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
 import { SearchCacheService } from "infrastructure/services";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
+import { FacebookImportListener } from "../infrastructure/background/listeners/facebook-import.listener";
+import { YoutubeImportListener } from "../infrastructure/background/listeners/youtube-import.listener";
 import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserBiometric, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
 
 @Module({
@@ -37,6 +39,8 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     ImportGateway,
     JwtService,
     SearchCacheService,
+    FacebookImportListener,
+    YoutubeImportListener,
     ...integrations.addHandlers(),
 
     dependency.RoleRepository,

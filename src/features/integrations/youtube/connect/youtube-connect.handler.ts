@@ -69,7 +69,7 @@ export class YoutubeConnectQueryHandler
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       '', // value is not used
-      HttpContext.user[Globals.ClaimTypes.UserId],
+      HttpContext.getCurrentUserId,
       expiresIn,
     );
   }

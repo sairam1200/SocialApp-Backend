@@ -1,30 +1,24 @@
 import axios from "axios";
-import { Job } from "bullmq";
 import { Inject } from "@nestjs/common";
+import { OnEvent } from "@nestjs/event-emitter";
 import _const from "../../../core/utils/const";
 import logger from "../../../core/utils/winston.util";
-import { InjectQueue, Processor, WorkerHost } from "@nestjs/bullmq";
 import { UserContent } from "../../../domain/entities/userContent.entity";
 import { NotificationStatus, NotificationType } from "../../../domain/enums";
-import { LinkedAccount } from "../../../domain/entities/linkedAccount.entity";
 import { NotificationModel } from "../../../domain/contracts/notification.model";
 import { mapToNotificationModel } from "../../../domain/mappers/notification.mapper";
 import { INotificationService } from "../../../domain/services/inotification.service";
 import { ImportGateway } from "../../../infrastructure/websocket/gateways/import.gateway";
 import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
 import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
-import { console } from "inspector";
-import { ApplicationException } from "core/exceptions";
+import { ApplicationException } from "../../../core/exceptions";
+import { YoutubeImportEvent } from "../../../domain/events";
 
 interface CursorMap {
   [key: string]: string | null;
 }
 
-export const InjectYoutubeImportQueue = (): ParameterDecorator =>
-  InjectQueue(_const.BULL_QUEUES.YOUTUBE_IMPORT);
-
-@Processor(_const.BULL_QUEUES.YOUTUBE_IMPORT)
-export class YoutubeImportProcessor extends WorkerHost {
+export class YoutubeImportListener {
 
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
@@ -35,17 +29,16 @@ export class YoutubeImportProcessor extends WorkerHost {
     private readonly notificationService: INotificationService,
     private readonly gateway: ImportGateway,
   ) {
-    super()
-    logger.info(`[YoutubeImport] Processor initialized`);
+    logger.info(`[YoutubeImport] Listener initialized`);
   }
 
-  async process(job: Job<{ account: LinkedAccount, accessToken: string }>): Promise<void> {
-    console.log("helo:", job)
-    const { account, accessToken } = job.data
+  @OnEvent('youtube.import', { async: true })
+  async handleYoutubeImport(event: YoutubeImportEvent): Promise<void> {
+    const { account, accessToken } = event.data;
     const lastCursors: CursorMap = {};
 
-    logger.info(`[RedditImport] Starting import for user ${account.userId}`);
-    logger.debug(`[RedditImport] Using access token: ${accessToken}`);
+    logger.info(`[YoutubeImport] Starting import for user ${account.userId}`);
+    logger.debug(`[YoutubeImport] Using access token: ${accessToken}`);
 
     const progressReports: {
       [type: string]: {
@@ -145,7 +138,6 @@ export class YoutubeImportProcessor extends WorkerHost {
                 thumbnails: item.snippet.thumbnails,
               };
             } else if (type === 'Playlists') {
-              //logger.debug(JSON.stringify(item, null, 2));
               content.type = 'playlist';
               content.title = item.snippet.title;
               content.externalId = item.id;
@@ -161,7 +153,6 @@ export class YoutubeImportProcessor extends WorkerHost {
               const videos = await this.fetchPlaylistVideos(accessToken, item.id);
               logger.debug(`📹 Found ${videos.length} videos in playlist`);
               for (const video of videos) {
-                //logger.debug(`🎥 Processing video: ${JSON.stringify(video, null, 2)}`);
                 let videoContent = new UserContent({
                   userId: account.userId,
                   platform: _const.PLATFORMS.YOUTUBE,
@@ -179,7 +170,6 @@ export class YoutubeImportProcessor extends WorkerHost {
                 try {
                   videoContent = await this.userContentRepository.createAsync(videoContent);
                   logger.debug("this is the video content: ");
-                  //logger.debug(JSON.stringify(videoContent, null, 2));
                   this.gateway.emitNewImportContent(
                     account.userId,
                     _const.PLATFORMS.YOUTUBE,
@@ -190,7 +180,6 @@ export class YoutubeImportProcessor extends WorkerHost {
                 }
               }
             } else if (type === 'Activities') {
-              //logger.debug(`Processing activity item: ${JSON.stringify(item, null, 2)}`);
               content.type = 'activity';
               content.title = item.snippet.title;
               content.externalId = item.id;
@@ -202,7 +191,6 @@ export class YoutubeImportProcessor extends WorkerHost {
                 type: item.snippet.type,
               };
             } else if (type === 'ChannelInfo') {
-              //logger.debug("channel item: ",JSON.stringify(item, null, 2));
               content.type = 'channel';
               content.title = item.snippet.title;
               content.externalId = item.id;
@@ -242,7 +230,7 @@ export class YoutubeImportProcessor extends WorkerHost {
             }));
 
             if (!notification) {
-              logger.debug(`[yOUTUBEImport] Creating initial notification`);
+              logger.debug(`[YoutubeImport] Creating initial notification`);
               logger.debug(`NotificationType.Import: ${NotificationType.Import}`);
               const notificationResult = await this.notificationService.notifyAsync(
                 account.userId,
@@ -295,7 +283,6 @@ export class YoutubeImportProcessor extends WorkerHost {
 
         for (const item of items) {
           logger.debug("this is teh item")
-          //logger.debug(JSON.stringify(item, null, 2));
           let content = new UserContent({
             userId: account.userId,
             platform: _const.PLATFORMS.YOUTUBE,
@@ -310,9 +297,7 @@ export class YoutubeImportProcessor extends WorkerHost {
             },
           });
           try {
-            //logger.debug(JSON.stringify(content, null, 2));
             content = await this.userContentRepository.createAsync(content);
-            //logger.debug(JSON.stringify(content, null, 2));
             this.gateway.emitNewImportContent(
               account.userId,
               _const.PLATFORMS.YOUTUBE,
@@ -407,13 +392,16 @@ export class YoutubeImportProcessor extends WorkerHost {
 
     } else {
       // # TODO #: Handle failed
-      await this.notificationService.updateAsync(notification.id,
+      await this.notificationService.notifyAsync(
+        account.userId,
+        NotificationType.Import,
+        "⚠️ Youtube import could not start",
+        "Unable to initialize Youtube data import.",
         false,
         {
           status: NotificationStatus.Cancelled,
           reports: finalReportArray,
         },
-        "⚠️ Youtube import could not start",
       );
       logger.warn(`⚠️ No notification initialized during YouTube import for user ${account.userId}`);
     }
@@ -427,7 +415,6 @@ export class YoutubeImportProcessor extends WorkerHost {
 
     do {
       try {
-
 
         const response = await axios.get('https://www.googleapis.com/youtube/v3/playlistItems', {
           params: {
@@ -444,7 +431,7 @@ export class YoutubeImportProcessor extends WorkerHost {
         videos = videos.concat(response.data.items);
         nextPageToken = response.data.nextPageToken ?? null;
       } catch (err) {
-        console.log(`Error fetching videos for playlist ${playlistId}:`, err);
+        logger.error(`Error fetching videos for playlist ${playlistId}:`, err);
         throw new ApplicationException(`Failed to fetch videos for playlist ${playlistId}`);
       }
 
@@ -453,3 +440,4 @@ export class YoutubeImportProcessor extends WorkerHost {
     return videos;
   }
 }
+

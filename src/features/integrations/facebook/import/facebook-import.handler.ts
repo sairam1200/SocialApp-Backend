@@ -1,7 +1,5 @@
 import axios from 'axios';
-import { Queue } from 'bullmq';
 import configs from '../../../../configs';
-import { InjectQueue } from '@nestjs/bullmq';
 import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import { Globals } from '../../../../core/globals';
@@ -13,10 +11,12 @@ import {
 } from '@nestjs/common';
 import { UserLogin } from '../../../../domain/entities';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
+import { FacebookImportEvent } from '../../../../domain/events';
 
 export class FacebookImportRequestModel {
   @ApiProperty()
@@ -39,8 +39,7 @@ export class FacebookImportCommandHandler
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    @InjectQueue(_const.BULL_QUEUES.FACEBOOK_IMPORT)
-    private readonly importQueue: Queue,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(
@@ -107,17 +106,10 @@ export class FacebookImportCommandHandler
     }
 
     try {
-      await this.importQueue.add(
-        _const.BULL_QUEUES.FACEBOOK_IMPORT,
-        { account, accessToken },
-        {
-          attempts: 3,
-          backoff: 5000,
-        },
-      );
+      this.eventEmitter.emit('facebook.import', new FacebookImportEvent({ account, accessToken }));
     } catch (error) {
       logger.error(
-        `An error occurred while adding the Facebook import job to the queue: 
+        `An error occurred while emitting the Facebook import event: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`,
         { error },
       );
