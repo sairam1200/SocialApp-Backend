@@ -12,6 +12,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { PlaylistModule } from './playlist.module';
 import { IntegrationsModule } from './integrations.module';
 import { NotificationModule } from './notification.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DataSeeder } from '../infrastructure/services/data.seeder';
 import { postgresOptions } from '../infrastructure/persistence/data.source';
 import { HttpContextMiddleware } from '../core/middlewares/httpContext.middleware';
@@ -21,6 +22,7 @@ import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '
   imports: [
     PassportModule,
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     JwtModule.register({
       secret: configs.jwt.secret,
       signOptions: { expiresIn: configs.jwt.accessTokenExpiration },

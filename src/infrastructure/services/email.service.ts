@@ -1,17 +1,15 @@
-import { Queue } from "bullmq";
 import * as Handlebars from "handlebars";
 import { Injectable } from "@nestjs/common";
-import _const from "../../core/utils/const";
-import { InjectQueue } from "@nestjs/bullmq";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import fileUtil from "../../core/utils/file.util";
 import { IEmailService } from "../../domain/services/iemail.service";
+import { SendEmailEvent } from "../../domain/events";
 
 @Injectable()
 export class EmailService implements IEmailService {
 
   constructor(
-    @InjectQueue(_const.BULL_QUEUES.EMAIL)
-    private readonly emailQueue: Queue
+    private readonly eventEmitter: EventEmitter2
   ) { }
 
   public async sendAsync(options: {
@@ -26,11 +24,7 @@ export class EmailService implements IEmailService {
       contentType?: string;
     }[]
   }): Promise<void> {
-    await this.emailQueue.add('send-email', options, {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 2000 },
-      removeOnComplete: true,
-    });
+    this.eventEmitter.emit('email.send', new SendEmailEvent(options));
   }
 
   public async sendTemplatedAsync(options: {

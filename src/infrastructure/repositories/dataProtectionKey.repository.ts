@@ -41,8 +41,7 @@ export class DataProtectionKeyRepository implements IDataProtectionKeyRepository
     });
 
     if (HttpContext.user) {
-      const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-      newKey.setCurrentUser(userId);
+      newKey.setCurrentUser(HttpContext.getCurrentUserId);
     }
     return await this.dataProtectionKeyContext.save(newKey);
   }
