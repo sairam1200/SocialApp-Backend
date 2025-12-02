@@ -1,0 +1,30 @@
+import configs from '../../configs';
+import { HttpContext } from '../middlewares/httpContext.middleware';
+
+/**
+ * Gets the redirect URL for OAuth callbacks.
+ * In non-production environments, it checks for the 'x-client-origin' header
+ * to allow dynamic frontend URLs for local development.
+ * 
+ * @param defaultRedirectUrl - The default redirect URL to use (usually from configs)
+ * @returns The redirect URL to use for OAuth callbacks
+ */
+export function getRedirectUrl(defaultRedirectUrl: string): string {
+  let frontendUrl = defaultRedirectUrl;
+  
+  if (configs.env !== 'production') {
+    const headers = HttpContext.headers;
+    if (headers) {
+      const clientOrigin = headers['x-client-origin'];
+      if (clientOrigin) {
+        const originValue = Array.isArray(clientOrigin) ? clientOrigin[0] : clientOrigin;
+        if (originValue && typeof originValue === 'string') {
+          frontendUrl = originValue.replace(/\/$/, '');
+        }
+      }
+    }
+  }
+  
+  return frontendUrl;
+}
+

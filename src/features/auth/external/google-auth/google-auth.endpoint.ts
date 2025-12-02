@@ -3,13 +3,13 @@ import { CommandBus } from '@nestjs/cqrs';
 import configs from '../../../../configs';
 import { ApiProperty, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { stringUtil } from '../../../../core/utils/string.util';
+import { getRedirectUrl } from '../../../../core/utils/redirectUrl.util';
 import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
 import {
   GoogleCallbaclTokenResponseModel,
   GoogleConnectCallbackQuery,
   GoogleConnectQuery,
 } from './google-auth.handler';
-import { HttpContext } from 'core/middlewares/httpContext.middleware';
 
 class ConnectResponseModel {
 
@@ -49,7 +49,7 @@ export class GoogleAuthenticationController {
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: configs.youtube.clientId,
-      redirect_uri: this.getRedirectUrl(),
+      redirect_uri: getRedirectUrl(configs.google.callbackUrl),
       scope: scopes,
       state: state,
       access_type: 'offline',
@@ -85,22 +85,5 @@ export class GoogleAuthenticationController {
     );
 
     return res.status(HttpStatus.OK).json(result);
-  }
-
-  private getRedirectUrl(): string {
-    let frontendUrl = configs.facebook.authCallbackUrl;
-    if (configs.env !== 'production') {
-      const headers = HttpContext.headers;
-      if (headers) {
-        const clientOrigin = headers['x-client-origin'];
-        if (clientOrigin) {
-          const originValue = Array.isArray(clientOrigin) ? clientOrigin[0] : clientOrigin;
-          if (originValue && typeof originValue === 'string') {
-            frontendUrl = originValue.replace(/\/$/, '');
-          }
-        }
-      }
-    }
-    return frontendUrl;
   }
 }
