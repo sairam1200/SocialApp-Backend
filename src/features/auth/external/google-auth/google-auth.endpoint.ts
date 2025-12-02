@@ -9,6 +9,7 @@ import {
   GoogleConnectCallbackQuery,
   GoogleConnectQuery,
 } from './google-auth.handler';
+import { HttpContext } from 'core/middlewares/httpContext.middleware';
 
 class ConnectResponseModel {
 
@@ -48,7 +49,7 @@ export class GoogleAuthenticationController {
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: configs.youtube.clientId,
-      redirect_uri: configs.google.callbackUrl,
+      redirect_uri: this.getRedirectUrl(),
       scope: scopes,
       state: state,
       access_type: 'offline',
@@ -84,5 +85,22 @@ export class GoogleAuthenticationController {
     );
 
     return res.status(HttpStatus.OK).json(result);
+  }
+
+  private getRedirectUrl(): string {
+    let frontendUrl = configs.facebook.authCallbackUrl;
+    if (configs.env !== 'production') {
+      const headers = HttpContext.headers;
+      if (headers) {
+        const clientOrigin = headers['x-client-origin'];
+        if (clientOrigin) {
+          const originValue = Array.isArray(clientOrigin) ? clientOrigin[0] : clientOrigin;
+          if (originValue && typeof originValue === 'string') {
+            frontendUrl = originValue.replace(/\/$/, '');
+          }
+        }
+      }
+    }
+    return frontendUrl;
   }
 }
