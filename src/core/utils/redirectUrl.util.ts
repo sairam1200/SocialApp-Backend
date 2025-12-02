@@ -15,7 +15,7 @@ export function getRedirectUrl(defaultRedirectUrl: string): string {
   if (configs.env !== 'production') {
     const headers = HttpContext.headers;
     if (headers) {
-      const clientOrigin = headers['x-client-origin'];
+      const clientOrigin = headers['x-redirect-url'];
       if (clientOrigin) {
         const originValue = Array.isArray(clientOrigin) ? clientOrigin[0] : clientOrigin;
         if (originValue && typeof originValue === 'string') {
