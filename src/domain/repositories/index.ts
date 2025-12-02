@@ -11,3 +11,5 @@ export { ISearchHistoryRepository } from './isearchHistory.repository';
 export { ILinkedAccountRepository } from './ilinkedAccount.repository';
 export { IManualProfileRepository } from './imanualProfile.repository';
 export { IDataProtectionKeyRepository } from './idataProtectionKey.repository';
+export { IUserProfileRepository } from './iuserProfile.repository';
+export { IUserFollowRepository } from './iuserFollow.repository';

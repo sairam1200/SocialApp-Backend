@@ -1,14 +1,14 @@
 import _const from "../core/utils/const";
-import { ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, UserContentRepository, UserLoginRepository, UserRepository, UserRoleRepository } from "./repositories";
+import { ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, UserContentRepository, UserFollowRepository, UserLoginRepository, UserRepository, UserRoleRepository, UserProfileRepository } from "./repositories";
 import { GeneralRepository } from "./repositories/general.repository";
 import { ManualProfileRepository } from "./repositories/manualProfile.repository";
 import { EmailService, NotificationService, SearchService, SearchCacheService, TokenService } from "./services";
 
 /* This is the dependency object that holds all the repositories & services
-* used in the application. It is used to provide the dependencies to the
-* modules in the application. This is a good practice to keep the
-* dependencies in one place and make it easy to manage them.
-*/
+ * used in the application. It is used to provide the dependencies to the
+ * modules in the application. This is a good practice to keep the
+ * dependencies in one place and make it easy to manage them.
+ */
 export const dependency = {
   UserRepository: {
     provide: _const.IUSER_REPOSITORY,
@@ -17,6 +17,10 @@ export const dependency = {
   UserRoleRepository: {
     provide: _const.IUSERROLE_REPOSITORY,
     useClass: UserRoleRepository,
+  },
+  UserProfileRepository: {
+    provide: _const.IUSERPROFILE_REPOSITORY,
+    useClass: UserProfileRepository,
   },
   RoleRepository: {
     provide: _const.IROLE_REPOSITORY,
@@ -59,6 +63,7 @@ export const dependency = {
     useClass: ManualProfileRepository
   },
 
+
   ContentStreamRepository: {
     provide: _const.ICONTENTSTREAM_REPOSITORY,
     useClass: ContentStreamRepository
@@ -66,6 +71,10 @@ export const dependency = {
   SearchHistoryRepository: {
     provide: _const.ISEARCHHISTORY_REPOSITORY,
     useClass: SearchHistoryRepository
+  },
+  UserFollowRepository: {
+    provide: _const.IUSERFOLLOW_REPOSITORY,
+    useClass: UserFollowRepository,
   },
 
   TokenService: {

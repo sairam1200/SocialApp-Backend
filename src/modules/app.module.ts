@@ -12,6 +12,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { PlaylistModule } from './playlist.module';
 import { IntegrationsModule } from './integrations.module';
 import { NotificationModule } from './notification.module';
+import { FollowModule } from './follow.module';
 import { DataSeeder } from '../infrastructure/services/data.seeder';
 import { postgresOptions } from '../infrastructure/persistence/data.source';
 import { HttpContextMiddleware } from '../core/middlewares/httpContext.middleware';
@@ -34,7 +35,7 @@ import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '
     QueuesModule.register(),
     NotificationModule,
     IntegrationsModule,
-
+    FollowModule,
   ],
 })
 export class AppModule implements OnApplicationBootstrap, NestModule {

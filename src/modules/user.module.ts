@@ -25,9 +25,7 @@ import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole, UserLogin, D
       UserBiometric
     ])
   ],
-  controllers: [
-    ...users.addControllers(),
-  ],
+  controllers: [...users.addControllers()],
   providers: [
     JwtService,
     ...users.addHandlers(),
@@ -41,4 +39,5 @@ import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole, UserLogin, D
   ],
   exports: [],
 })
-export class UserModule { }
+export class UserModule {}
+
