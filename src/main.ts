@@ -38,7 +38,7 @@ async function bootstrap() {
   app.enableCors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-turnstile-token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-turnstile-token', 'x-client-origin', 'x-redirect-url'],
   });
 
   app.use(ApiDocRedirectMiddleware);
