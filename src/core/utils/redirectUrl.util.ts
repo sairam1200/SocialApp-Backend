@@ -10,21 +10,23 @@ import { HttpContext } from '../middlewares/httpContext.middleware';
  * @returns The redirect URL to use for OAuth callbacks
  */
 export function getRedirectUrl(defaultRedirectUrl: string): string {
-  let frontendUrl = defaultRedirectUrl;
-  
+  let redirectUrl = defaultRedirectUrl;
+
   if (configs.env !== 'production') {
     const headers = HttpContext.headers;
     if (headers) {
+      console.log("Headers: ", headers)
       const clientOrigin = headers['x-redirect-url'];
       if (clientOrigin) {
         const originValue = Array.isArray(clientOrigin) ? clientOrigin[0] : clientOrigin;
         if (originValue && typeof originValue === 'string') {
-          frontendUrl = originValue.replace(/\/$/, '');
+          redirectUrl = originValue.replace(/\/$/, '');
+          console.log("This is the redirect url: ", redirectUrl)
         }
       }
     }
   }
-  
-  return frontendUrl;
+
+  return redirectUrl;
 }
 
