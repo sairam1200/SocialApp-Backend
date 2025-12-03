@@ -4,6 +4,7 @@ import { CommandBus } from '@nestjs/cqrs';
 import configs from '../../../../configs';
 import { ApiProperty, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { stringUtil } from '../../../../core/utils/string.util';
+import { getRedirectUrl } from '../../../../core/utils/redirectUrl.util';
 import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
 import {
   FacebookCallbackTokenResponseModel,
@@ -56,7 +57,7 @@ export class FacebookAuthenticationController {
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: configs.facebook.clientId,
-      redirect_uri: configs.facebook.authCallbackUrl, // Different from integration callback
+      redirect_uri: getRedirectUrl(configs.facebook.authCallbackUrl),
       scope: scopes,
       state: state,
       show_dialog: 'true', // Always show the login page

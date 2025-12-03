@@ -2,12 +2,12 @@ import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { stringUtil } from "../../../../core/utils/string.util";
+import { getRedirectUrl } from "../../../../core/utils/redirectUrl.util";
 import { ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { FacebookProfileModel } from "../../../../domain/contracts/facebook.model";
-import { Controller, Get, HttpStatus, Query, Req, Res, UseGuards } from "@nestjs/common";
+import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 import { FacebookConnectCallbackQuery, FacebookConnectQuery } from "./facebook-connect.handler";
-import { HttpContext } from "core/middlewares/httpContext.middleware";
 
 class ConnectResponseModel {
   @ApiProperty()
@@ -58,7 +58,7 @@ export class FacebookConnectController {
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: configs.facebook.clientId,
-      redirect_uri: this.getRedirectUrl(),
+      redirect_uri: getRedirectUrl(configs.facebook.redirectUri),
       scope: scopes,
       state: state,
       show_dialog: 'true', // Always show the login page
@@ -83,22 +83,5 @@ export class FacebookConnectController {
 
     const result = await this.commandBus.execute(new FacebookConnectCallbackQuery({ model: { code, state } }));
     return res.status(HttpStatus.OK).json(result);
-  }
-
-  private getRedirectUrl(): string {
-      let frontendUrl = configs.facebook.redirectUri;
-      if (configs.env !== 'production') {
-        const headers = HttpContext.headers;
-        if (headers) {
-          const clientOrigin = headers['x-client-origin'];
-          if (clientOrigin) {
-            const originValue = Array.isArray(clientOrigin) ? clientOrigin[0] : clientOrigin;
-            if (originValue && typeof originValue === 'string') {
-              frontendUrl = originValue.replace(/\/$/, '');
-            }
-          }
-        }
-      }
-      return frontendUrl;
   }
 }

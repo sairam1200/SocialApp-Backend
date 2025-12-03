@@ -3,6 +3,7 @@ import { CommandBus } from '@nestjs/cqrs';
 import configs from '../../../../configs';
 import { ApiProperty, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { stringUtil } from '../../../../core/utils/string.util';
+import { getRedirectUrl } from '../../../../core/utils/redirectUrl.util';
 import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
 import {
   GoogleCallbaclTokenResponseModel,
@@ -48,7 +49,7 @@ export class GoogleAuthenticationController {
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: configs.youtube.clientId,
-      redirect_uri: configs.google.callbackUrl,
+      redirect_uri: getRedirectUrl(configs.google.callbackUrl),
       scope: scopes,
       state: state,
       access_type: 'offline',

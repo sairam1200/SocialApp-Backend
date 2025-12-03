@@ -1,24 +1,17 @@
 import axios from 'axios';
-import { Job } from 'bullmq';
 import { Inject } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
 import _const from '../../../core/utils/const';
-import {
-  InjectQueue,
-  Processor,
-  OnWorkerEvent,
-  WorkerHost,
-} from '@nestjs/bullmq';
 import logger from '../../../core/utils/winston.util';
-import { stringUtil } from '../../../core/utils/string.util';
 import { UserContent } from '../../../domain/entities/userContent.entity';
 import { NotificationStatus, NotificationType } from '../../../domain/enums';
-import { LinkedAccount } from '../../../domain/entities/linkedAccount.entity';
 import { NotificationModel } from '../../../domain/contracts/notification.model';
-import { IUserContentRepository } from 'domain/repositories/iuserContent.repository';
+import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
 import { mapToNotificationModel } from '../../../domain/mappers/notification.mapper';
 import { INotificationService } from '../../../domain/services/inotification.service';
 import { ImportGateway } from '../../../infrastructure/websocket/gateways/import.gateway';
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
+import { FacebookImportEvent } from '../../../domain/events';
 
 function extractParams(nextUrl: string): Record<string, string> {
   try {
@@ -34,10 +27,7 @@ function extractParams(nextUrl: string): Record<string, string> {
   }
 }
 
-export const InjectFacebookImportQueue = (): ParameterDecorator =>
-  InjectQueue(_const.BULL_QUEUES.FACEBOOK_IMPORT);
-@Processor(_const.BULL_QUEUES.FACEBOOK_IMPORT)
-export class FacebookImportProcessor extends WorkerHost {
+export class FacebookImportListener {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
@@ -47,14 +37,12 @@ export class FacebookImportProcessor extends WorkerHost {
     private readonly notificationService: INotificationService,
     private readonly gateway: ImportGateway,
   ) {
-    super();
-    logger.info(`[FacebookImport] Processor initialized`);
+    logger.info(`[FacebookImport] Listener initialized`);
   }
 
-  async process(
-    job: Job<{ account: LinkedAccount; accessToken: string }>,
-  ): Promise<void> {
-    const { account, accessToken } = job.data;
+  @OnEvent('facebook.import', { async: true })
+  async handleFacebookImport(event: FacebookImportEvent): Promise<void> {
+    const { account, accessToken } = event.data;
 
     logger.info(`[FacebookImport] Starting import for user ${account.userId}`);
 
@@ -202,7 +190,7 @@ export class FacebookImportProcessor extends WorkerHost {
                 Math.round(
                   (progressReports[type].itemProcessed /
                     progressReports[type].totalItem) *
-                    100,
+                  100,
                 ),
                 100,
               );
@@ -404,8 +392,7 @@ export class FacebookImportProcessor extends WorkerHost {
           : Math.max(resetTime * 1000 - Date.now(), 5000);
 
         logger.warn(
-          `[FacebookImport] Rate limit (429) hit for ${url}. Waiting ${
-            waitTime / 1000
+          `[FacebookImport] Rate limit (429) hit for ${url}. Waiting ${waitTime / 1000
           }s before retrying...`,
         );
         await new Promise((resolve) => setTimeout(resolve, waitTime));
@@ -415,8 +402,7 @@ export class FacebookImportProcessor extends WorkerHost {
       if (status === 403 && fbError?.code === 4) {
         const waitTime = Math.min(15 * 60 * 1000, attempt * 60_000);
         logger.warn(
-          `[FacebookImport] App-level rate limit (403 code=4) hit for ${url}. Backing off ${
-            waitTime / 1000
+          `[FacebookImport] App-level rate limit (403 code=4) hit for ${url}. Backing off ${waitTime / 1000
           }s (attempt ${attempt})...`,
         );
         await new Promise((resolve) => setTimeout(resolve, waitTime));
@@ -431,27 +417,12 @@ export class FacebookImportProcessor extends WorkerHost {
       }
 
       logger.error(
-        `[FacebookImport] Error fetching ${url} (status ${status || 'N/A'}): ${
-          error.message
+        `[FacebookImport] Error fetching ${url} (status ${status || 'N/A'}): ${error.message
         }`,
         { fbError, headers: error.response?.headers },
       );
       throw error;
     }
   }
-
-  @OnWorkerEvent('active')
-  onActive(job: Job) {
-    logger.info(`Active ${job.id}`);
-  }
-
-  @OnWorkerEvent('completed')
-  onCompleted(job: Job) {
-    logger.info(`Completed ${job.id}`);
-  }
-
-  @OnWorkerEvent('failed')
-  onFailed(job: Job) {
-    logger.info(`Failed ${job.id}`);
-  }
 }
+
