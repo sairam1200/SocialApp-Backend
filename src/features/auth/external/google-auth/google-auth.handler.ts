@@ -13,7 +13,7 @@ import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity'
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
-import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
+import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import {
   GoogleUserDataModel,

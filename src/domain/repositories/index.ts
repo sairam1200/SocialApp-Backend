@@ -4,7 +4,7 @@ export { IUserRoleRepository } from './iuserRole.repository';
 export { IPlaylistRepository } from './iplaylist.repository';
 export { IRateLimitRepository } from './irateLimit.repository';
 export { IRoleClaimRepository } from './iroleClaim.repository';
-export { IUserLoginRepository } from './irefreshtoken.repository';
+export { IUserLoginRepository } from './iuserLogin.repository';
 export { IUserContentRepository } from './iuserContent.repository';
 export { INotificationRepository } from './inotification.repository';
 export { ISearchHistoryRepository } from './isearchHistory.repository';

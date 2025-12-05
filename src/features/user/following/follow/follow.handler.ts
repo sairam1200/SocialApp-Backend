@@ -6,7 +6,7 @@ import { UserFollow } from "../../../../domain/entities/userFollow.entity";
 import { mapToFollowModel } from "../../../../domain/mappers/follow.mapper";
 import _const from "../../../../core/utils/const";
 import { IUserRepository, IUserFollowRepository } from "../../../../domain/repositories";
-import { FollowCacheService } from "../../../../infrastructure/services/followCache.service";
+import redis from "../../../../core/utils/redis.util";
 
 export class FollowUserCommand {
   constructor(
@@ -49,8 +49,8 @@ export class FollowUserCommandHandler implements ICommandHandler<FollowUserComma
     );
 
     // Invalidate follow count caches for both users
-    await FollowCacheService.invalidateAsync(command.targetUserId);
-    await FollowCacheService.invalidateAsync(command.followerId);
+    await this.invalidateFollowCounts(command.targetUserId);
+    await this.invalidateFollowCounts(command.followerId);
 
     const hydrated = await this.follows.getWithUsersAsync(command.followerId, command.targetUserId);
     return mapToFollowModel(hydrated ?? new UserFollow({
@@ -58,5 +58,10 @@ export class FollowUserCommandHandler implements ICommandHandler<FollowUserComma
       followedId: command.targetUserId,
       status: FollowStatus.Accepted
     }));
+  }
+
+  private async invalidateFollowCounts(userId: string): Promise<void> {
+    const key = redis.getRedisKey('follow:counts', userId);
+    await redis.removeFromRedisAsync(key);
   }
 }

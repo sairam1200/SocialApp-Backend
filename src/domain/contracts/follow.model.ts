@@ -32,16 +32,6 @@ export class FollowModel {
   followedOn: Date;
 }
 
-export class FollowListModel {
-  @ApiProperty({ type: [FollowModel] })
-  items: FollowModel[];
-}
-
-export class FollowActionResultModel {
-  @ApiProperty()
-  succeeded: boolean;
-}
-
 export class FollowCountsModel {
   @ApiProperty()
   followers: number;

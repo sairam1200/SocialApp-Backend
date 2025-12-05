@@ -5,6 +5,9 @@ import { ApplicationException } from "./core/exceptions/application.exception";
 
 const nodeEnv = process.env.NODE_ENV || 'development';
 
+// Ensure NODE_ENV is always set for validation and downstream usage
+process.env.NODE_ENV = nodeEnv;
+
 // Load the appropriate .env file based on the environment
 dotenv.config({ path: path.join(process.cwd(), `.env.${nodeEnv}`) })
 dotenv.config({ override: true })

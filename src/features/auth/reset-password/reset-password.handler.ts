@@ -14,7 +14,7 @@ import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 import { UserNotFoundException } from "../../../core/exceptions/user.exception";
 import ApplicationException from "../../../core/exceptions/application.exception";
 import { DataProtectionKey } from "../../../domain/entities/dataProtectionKey.entity";
-import { IUserLoginRepository } from "../../../domain/repositories/irefreshtoken.repository";
+import { IUserLoginRepository } from "../../../domain/repositories/iuserLogin.repository";
 import { IDataProtectionKeyRepository } from "../../../domain/repositories/idataProtectionKey.repository";
 
 export class ResetPasswordRequestModel {

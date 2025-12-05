@@ -12,7 +12,7 @@ import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
 import { UserNotFoundException } from "../../../core/exceptions/user.exception";
 import { IEmailService } from "../../../domain/services/iemail.service";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
-import { IUserLoginRepository } from "../../../domain/repositories/irefreshtoken.repository";
+import { IUserLoginRepository } from "../../../domain/repositories/iuserLogin.repository";
 import ApplicationException from "../../../core/exceptions/application.exception";
 
 export class ChangePasswordRequestModel {

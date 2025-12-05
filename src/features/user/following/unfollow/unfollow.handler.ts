@@ -1,9 +1,8 @@
 import { Inject, NotFoundException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import _const from "../../../../core/utils/const";
-import { FollowActionResultModel } from "../../../../domain/contracts/follow.model";
+import redis from "../../../../core/utils/redis.util";
 import { IUserFollowRepository } from "../../../../domain/repositories/iuserFollow.repository";
-import { FollowCacheService } from "../../../../infrastructure/services/followCache.service";
 
 export class UnfollowUserCommand {
   constructor(
@@ -18,15 +17,19 @@ export class UnfollowUserCommandHandler implements ICommandHandler<UnfollowUserC
     @Inject(_const.IUSERFOLLOW_REPOSITORY) private readonly follows: IUserFollowRepository,
   ) { }
 
-  public async execute(command: UnfollowUserCommand): Promise<FollowActionResultModel> {
+  public async execute(command: UnfollowUserCommand): Promise<void> {
     const existing = await this.follows.getAsync(command.followerId, command.targetUserId);
     if (!existing) {
       throw new NotFoundException('Follow relationship not found.');
     }
 
     await this.follows.deleteAsync(existing);
-    await FollowCacheService.invalidateAsync(command.targetUserId);
-    await FollowCacheService.invalidateAsync(command.followerId);
-    return { succeeded: true };
+    await this.invalidateFollowCounts(command.targetUserId);
+    await this.invalidateFollowCounts(command.followerId);
+  }
+
+  private async invalidateFollowCounts(userId: string): Promise<void> {
+    const key = redis.getRedisKey('follow:counts', userId);
+    await redis.removeFromRedisAsync(key);
   }
 }

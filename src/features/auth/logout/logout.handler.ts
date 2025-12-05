@@ -5,7 +5,7 @@ import _const from "../../../core/utils/const";
 import logger from "../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
-import { IUserLoginRepository } from "../../../domain/repositories/irefreshtoken.repository";
+import { IUserLoginRepository } from "../../../domain/repositories/iuserLogin.repository";
 
 export class LogoutRequestModel {
   @ApiProperty()

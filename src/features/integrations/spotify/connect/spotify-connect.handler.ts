@@ -12,7 +12,7 @@ import { IUserRepository } from "../../../../domain/repositories/iuser.repositor
 import { mapToSpotifyProfileModel } from "../../../../domain/mappers/spotify.mapper";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey.entity";
-import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
+import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { SpotifyProfileModel, SpotifyUserDataModel } from "../../../../domain/contracts/spotify.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";

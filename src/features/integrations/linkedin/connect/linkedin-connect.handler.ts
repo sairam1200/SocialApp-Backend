@@ -12,7 +12,7 @@ import { HttpContext } from "../../../../core/middlewares/httpContext.middleware
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { mapToLinkedInProfileModel } from "../../../../domain/mappers/linkedin.mapper";
-import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
+import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { LinkedInProfileModel, LinkedInUserDataModel } from "../../../../domain/contracts/linkedin.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";

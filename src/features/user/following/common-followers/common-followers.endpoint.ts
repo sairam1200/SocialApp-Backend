@@ -1,7 +1,7 @@
 import { QueryBus } from "@nestjs/cqrs";
 import { ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Controller, Get, Param } from "@nestjs/common";
-import { FollowListModel } from "../../../../domain/contracts/follow.model";
+import { FollowModel } from "../../../../domain/contracts/follow.model";
 import { GetCommonFollowersQuery } from "./common-followers.handler";
 
 @ApiTags('Social')
@@ -16,11 +16,11 @@ export class CommonFollowersController {
   @Get(':userId/common-followers/:otherUserId')
   @ApiParam({ name: 'userId', description: 'Primary user' })
   @ApiParam({ name: 'otherUserId', description: 'Other user to compare with' })
-  @ApiResponse({ status: 200, description: 'OK', type: FollowListModel })
+  @ApiResponse({ status: 200, description: 'OK', type: [FollowModel] })
   public async getCommonFollowers(
     @Param('userId') userId: string,
     @Param('otherUserId') otherUserId: string
-  ): Promise<FollowListModel> {
+  ): Promise<FollowModel[]> {
 
     return this.queryBus.execute(
       new GetCommonFollowersQuery(userId, otherUserId)

@@ -12,7 +12,7 @@ import { IUserRepository } from '../../../../domain/repositories/iuser.repositor
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { mapToYoutubeProfileModel } from '../../../../domain/mappers/youtube.mapper';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
-import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
+import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import {
   GoogleUserDataModel,
   YoutubeChannelDataModel,
