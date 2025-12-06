@@ -35,6 +35,6 @@ export class UserNotFoundException extends NotFoundException {
       super(message);
     }
 
-    this.name = 'UserAlreadyExistsException';
+    this.name = 'UserNotFoundException';
   }
 } 

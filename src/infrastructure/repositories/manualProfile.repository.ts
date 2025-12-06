@@ -36,7 +36,7 @@ export class ManualProfileRepository implements IManualProfileRepository {
     if (HttpContext.user) {
       manualProfile.setCurrentUser(HttpContext.getCurrentUserId);
     }
-    await this.manualProfileContext.update(manualProfile.id, manualProfile);
+    await this.manualProfileContext.save(manualProfile);
   }
 
   public async deleteAsync(manualProfile: ManualProfile): Promise<void> {

@@ -73,7 +73,7 @@ export class UserRepository implements IUserRepository {
     }
 
     user.concurrencyStamp = generateTimestampUUID();
-    const result = await this.userContext.update(user.id, user);
+    await this.userContext.save(user);
     const key = redis.getRedisKey<string>(`${user.id}${_const.REDIS.USER.ACCOUNT}`);
     const existingCache = await redis.getFromRedisAsync(key);
     if (existingCache) {
@@ -83,7 +83,7 @@ export class UserRepository implements IUserRepository {
         // Add more user account related 
       }, _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC);
     }
-    return result.affected > 0;
+    return true;
   }
 
   public async cacheUserAccountAsync(user: User, ttl?: number): Promise<void> {
@@ -178,11 +178,11 @@ export class UserRepository implements IUserRepository {
     user.passwordHash = hashedPassword;
     user.lastPasswordModifiedAt = new Date();
     user.securityStamp = cryptoUtils.generateEncryptionKey(32);
-    const updateResult = await this.userContext.update(user.id, user);
+    await this.userContext.save(user);
     const key = redis.getRedisKey<string>(`${user.id}${_const.REDIS.USER.ACCOUNT}`);
     await redis.removeFromRedisAsync(key);
 
-    return updateResult.affected > 0;
+    return true;
   }
 
   public async isEmailInuseAsync(email: string): Promise<boolean> {
@@ -248,8 +248,8 @@ export class UserRepository implements IUserRepository {
     user.emailConfirmed = true;
     user.normalizedEmail = email.toUpperCase();
     user.concurrencyStamp = generateTimestampUUID();
-    const result = await this.userContext.update(user.id, user);
-    return result.affected > 0;
+    await this.userContext.save(user);
+    return true;
   }
 
   public async changeEmailAsync(newEmail: string, token: string): Promise<boolean> {
@@ -270,8 +270,8 @@ export class UserRepository implements IUserRepository {
     user.newPhoneNumber = null;
     user.lastPhoneNumberModifiedAt = new Date();
     user.concurrencyStamp = generateTimestampUUID();
-    const result = await this.userContext.update(user.id, user);
-    return result.affected > 0;
+    await this.userContext.save(user);
+    return true;
   }
 
   public async changePhoneNumberAsync(newPhoneNumber: string, token: string): Promise<boolean> {
@@ -402,8 +402,8 @@ export class UserRepository implements IUserRepository {
     existingClaim.claimType = newClaim.claimType;
     existingClaim.claimValue = newClaim.claimValue;
 
-    const result = await this.userClaimContext.update(existingClaim.id, existingClaim);
-    return result.affected > 0;
+    await this.userClaimContext.save(existingClaim);
+    return true;
   }
 
   public async generateUserTokenAsync(user: User, purpose: string): Promise<string> {
@@ -472,8 +472,8 @@ export class UserRepository implements IUserRepository {
     if (currentUserId) {
       biometrics.setCurrentUser(currentUserId);
     }
-    const result = await this.userBiometricsContext.update(biometrics.id, biometrics);
-    return result.affected > 0;
+    await this.userBiometricsContext.save(biometrics);
+    return true;
   }
 
   // Private Methods

@@ -107,7 +107,7 @@ export class LinkedAccountRepository implements ILinkedAccountRepository {
       const userId = HttpContext.user[Globals.ClaimTypes.UserId];
       linkedAccount.setCurrentUser(userId);
     }
-    await this.linkedAccountContext.update(linkedAccount.id, linkedAccount);
+    await this.linkedAccountContext.save(linkedAccount);
   }
 
   public async getByUserIdAsync(userId: string): Promise<LinkedAccount[]> {
