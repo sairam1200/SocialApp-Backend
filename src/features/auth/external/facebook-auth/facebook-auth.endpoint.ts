@@ -60,6 +60,7 @@ export class FacebookAuthenticationController {
       redirect_uri: getRedirectUrl(configs.facebook.authCallbackUrl),
       scope: scopes,
       state: state,
+      provider: 'facebook',
       show_dialog: 'true', // Always show the login page
     });
     const authorizeURL = `https://www.facebook.com/v23.0/dialog/oauth?${params.toString()}`;

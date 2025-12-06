@@ -6,6 +6,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import { User } from '../../../../domain/entities';
 import logger from '../../../../core/utils/winston.util';
+import { getRedirectUrl } from '../../../../core/utils/redirectUrl.util';
 import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { ITokenService } from '../../../../domain/services/itoken.service';
 import { IEmailService } from '../../../../domain/services/iemail.service';
@@ -317,7 +318,7 @@ export class GoogleConnectCallbackQueryHandler
     try {
       const response = await axios.post(`https://oauth2.googleapis.com/token`, {
         client_secret: configs.youtube.clientSecret,
-        redirect_uri: configs.google.callbackUrl,
+        redirect_uri: getRedirectUrl(configs.google.callbackUrl),
         client_id: configs.youtube.clientId,
         grant_type: 'authorization_code',
         code: code,
