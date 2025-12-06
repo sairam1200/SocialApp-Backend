@@ -39,9 +39,10 @@ export class GoogleAuthenticationController {
     @Query('userAgent') userAgent: string,
     @Query('ipAddress') ipAddress: string,
   ): Promise<Response | void> {
+
     const scopes = [
-      'https://www.googleapis.com/auth/userinfo.profile',
       'https://www.googleapis.com/auth/youtube.readonly',
+      'https://www.googleapis.com/auth/userinfo.profile',
       'https://www.googleapis.com/auth/userinfo.email',
     ].join(' ');
 
@@ -52,8 +53,8 @@ export class GoogleAuthenticationController {
       redirect_uri: getRedirectUrl(configs.google.callbackUrl),
       scope: scopes,
       state: state,
+      provider: 'google',
       access_type: 'offline',
-      include_granted_scopes: 'true',
       prompt: 'consent',
     });
     const authorizeURL = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
