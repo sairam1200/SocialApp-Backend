@@ -63,7 +63,7 @@ export class UserLoginRepository implements IUserLoginRepository {
         if (HttpContext.user) {
             userLogin.setCurrentUser(HttpContext.getCurrentUserId);
         }
-        await this.userLoginContext.update(userLogin.id, userLogin);
+        await this.userLoginContext.save(userLogin);
     }
 
     public async deleteAsync(refreshToken: UserLogin): Promise<UserLogin> {

@@ -176,8 +176,8 @@ export class PlaylistRepository implements IPlaylistRepository {
     }
 
     Object.assign(existing, playlist);
-    const result = await this.playlistContext.update(existing.id, existing);
-    return result.affected > 0;
+    await this.playlistContext.save(existing);
+    return true;
   }
 
   public async deleteAsync(playlist: Playlist): Promise<void> {
@@ -280,8 +280,8 @@ export class PlaylistRepository implements IPlaylistRepository {
     }
 
     existing.role = role;
-    const result = await this.playlistMemberContext.update(existing.id, existing);
-    return result.affected > 0;
+    await this.playlistMemberContext.save(existing);
+    return true;
   }
 
   public async getMemberAsync(referenceId: string, memberId: string): Promise<PlaylistMember | null> {

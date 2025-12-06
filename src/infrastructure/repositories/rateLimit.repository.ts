@@ -50,7 +50,7 @@ export class RateLimitRepository implements IRateLimitRepository {
       rateLimit.userId = userId;
     }
 
-    await this.rateLimitContext.update(rateLimit.id, rateLimit);
+    await this.rateLimitContext.save(rateLimit);
   }
 
   public async getAsync(ip: string, route: string): Promise<RateLimit | null> {

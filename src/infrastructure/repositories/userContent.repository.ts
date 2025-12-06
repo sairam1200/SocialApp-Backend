@@ -28,7 +28,7 @@ export class UserContentRepository implements IUserContentRepository {
   }
 
   public async updateAsync(content: UserContent): Promise<void> {
-    await this.userContentContext.update(content.id, content);
+    await this.userContentContext.save(content);
   }
 
   public async getByPlatformAndContentIdAsync(platform: string, contentId: string): Promise<UserContent | null> {
