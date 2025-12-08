@@ -141,7 +141,6 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         lastName: lastName,
         emailConfirmed: true,
         type: UserType.User,
-        userName: `${firstName.toLowerCase()}${lastName.toLowerCase()}`.replace(/\s/g, ''),
       });
 
       user = await this.userRepository.createAsync(entry, '');
