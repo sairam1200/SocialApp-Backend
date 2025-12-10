@@ -4,7 +4,6 @@ export default {
   IROLE_REPOSITORY: "IRoleRepository",
   IGENERAL_REPOSITORY: "IGeneralRepository",
   IUSERROLE_REPOSITORY: "IUserRoleRepository",
-  IUSERPROFILE_REPOSITORY: "IUserProfileRepository",
   IUSERFOLLOW_REPOSITORY: "IUserFollowRepository",
   IPLAYLIST_REPOSITORY: "IPlaylistRepository",
   IRATELIMIT_REPOSITORY: "IRateLimitRepository",

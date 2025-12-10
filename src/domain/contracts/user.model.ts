@@ -20,6 +20,9 @@ export class UserModel {
     gender: string;
 
     @ApiProperty({ required: false, nullable: true })
+    bio: string | null;
+
+    @ApiProperty({ required: false, nullable: true })
     phoneNumber: string | null;
 
     @ApiProperty()

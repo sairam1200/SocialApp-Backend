@@ -12,4 +12,3 @@ export { LinkedAccountRepository } from './linkedAccount.repository';
 export { ContentStreamRepository } from './contentStream.repository';
 export { DataProtectionKeyRepository } from './dataProtectionKey.repository';
 export { UserFollowRepository } from './userFollow.repository';
-export { UserProfileRepository } from './userProfile.repository';
