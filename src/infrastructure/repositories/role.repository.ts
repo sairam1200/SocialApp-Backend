@@ -65,7 +65,7 @@ export class RoleRepository implements IRoleRepository {
             role.setCurrentUser(userId);
         }
 
-        await this.roleContext.update(role.id, role);
+        await this.roleContext.save(role);
     }
 
     public async deleteAsync(role: Role): Promise<void> {

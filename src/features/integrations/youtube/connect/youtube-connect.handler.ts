@@ -1,26 +1,27 @@
 import axios from 'axios';
 import * as Joi from 'joi';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import configs from '../../../../configs';
 import _const from '../../../../core/utils/const';
-import { Globals } from '../../../../core/globals';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { UserNotFoundException } from '../../../../core/exceptions';
+import { serializeObject } from '../../../../core/utils/serialization.util';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { mapToYoutubeProfileModel } from '../../../../domain/mappers/youtube.mapper';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
-import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import {
   GoogleUserDataModel,
   YoutubeChannelDataModel,
   YoutubeProfileModel,
 } from '../../../../domain/contracts/youtube.model';
+import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
-import { UserNotFoundException } from 'core/exceptions';
+import { GoogleUserDataModel, YoutubeChannelDataModel, YoutubeProfileModel } from '../../../../domain/contracts/youtube.model';
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
 
@@ -102,6 +103,8 @@ export class YoutubeConnectCallbackQueryHandler
       model.code,
     );
 
+    const tokenValue = serializeObject({ access_token, refresh_token, expires_in });
+
     const userData = await this.fetchUserData(access_token);
     console.log(userData);
 
@@ -119,7 +122,7 @@ export class YoutubeConnectCallbackQueryHandler
       console.log(linkedAccount);
       linkedAccount.userName = '';
       linkedAccount.profileImage = userData.profile.picture;
-      linkedAccount.externalUrl= `https://www.youtube.com/channel/${userData.channel.items[0].id}`;
+      linkedAccount.externalUrl = `https://www.youtube.com/channel/${userData.channel.items[0].id}`;
       (linkedAccount.followersCount = Number.parseInt(
         userData.channel.items[0].statistics.subscriberCount,
       )),
@@ -147,7 +150,7 @@ export class YoutubeConnectCallbackQueryHandler
           externalId: userData.profile.id,
           userName: '',
           profileImage: userData.profile.picture,
-          externalUrl:  `https://www.youtube.com/channel/${userData.channel.items[0].id}`,
+          externalUrl: `https://www.youtube.com/channel/${userData.channel.items[0].id}`,
           followersCount: Number.parseInt(
             userData.channel.items[0].statistics.subscriberCount,
           ),
@@ -176,7 +179,7 @@ export class YoutubeConnectCallbackQueryHandler
       );
 
     if (existingAccountLogin) {
-      existingAccountLogin.tokenValue = refresh_token;
+      existingAccountLogin.tokenValue = tokenValue;
       existingAccountLogin.addedDateUtc = new Date();
       existingAccountLogin.expiryDateUtc = new Date(
         Date.now() + 100 * 24 * 60 * 60 * 1000,
@@ -189,7 +192,7 @@ export class YoutubeConnectCallbackQueryHandler
         '',
         '',
         '',
-        refresh_token,
+        tokenValue,
         new Date(Date.now() + 100 * 24 * 60 * 60 * 1000),
       );
     }

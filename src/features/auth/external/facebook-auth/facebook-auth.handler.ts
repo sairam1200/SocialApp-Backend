@@ -8,7 +8,7 @@ import { User } from '../../../../domain/entities';
 import { UserType } from '../../../../domain/enums';
 import logger from '../../../../core/utils/winston.util';
 import { ProfileImagePrivacy } from '../../../../domain/enums';
-import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { stringUtil } from '../../../../core/utils/string.util';
 import { generateInitialImage } from '../../../../core/utils/canvas.util';
 import { ITokenService } from '../../../../domain/services/itoken.service';
@@ -22,6 +22,9 @@ import { UserBiometric } from '../../../../domain/entities/identity/userBiometri
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
+import { TokenResponseModel } from 'domain/contracts/tokenResponse.model';
+import { IEmailService } from 'domain/services/iemail.service';
+import { SendVerificationEmailCommand } from 'features/user';
 
 const GRAPH_BASE = 'https://graph.facebook.com/v23.0';
 
@@ -50,30 +53,7 @@ export class FacebookConnectCallbackQuery {
 }
 
 // Facebook-specific token response model
-export class FacebookCallbackTokenResponseModel {
-  @ApiProperty()
-  accessToken: string;
-
-  @ApiProperty()
-  refreshToken: string;
-
-  @ApiProperty()
-  message: string;
-
-  @ApiProperty()
-  userImage: string;
-
-  @ApiProperty({ default: false })
-  succeeded: boolean;
-
-  @ApiProperty({ default: false })
-  isLockedOut: boolean;
-
-  @ApiProperty({ default: false })
-  isTwoFARequired: boolean;
-
-  @ApiProperty()
-  refreshTokenExpiryTime: number;
+export class FacebookCallbackTokenResponseModel extends TokenResponseModel {
 
   @ApiProperty({ required: false })
   facebookAccessToken?: string;
@@ -82,6 +62,7 @@ export class FacebookCallbackTokenResponseModel {
   facebookAccessTokenExpiresIn?: number;
 
   constructor(request: Partial<FacebookCallbackTokenResponseModel> = {}) {
+    super();
     Object.assign(this, request);
   }
 }
@@ -121,6 +102,9 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
   constructor(
     @Inject(_const.ITOKEN_SERVICE)
     private readonly tokenService: ITokenService,
+    @Inject(_const.IEMAIL_SERVICE)
+    private readonly emailService: IEmailService,
+    private readonly commandBus: CommandBus,
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
@@ -135,32 +119,21 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     const { model } = query;
     await facebookConnectCallbackValidations.validateAsync(model);
     const dataProtectionKey = await this.validateState(model.state);
+    const parsedDataProtectionKeyValue = JSON.parse(dataProtectionKey.value);
 
     const shortLivedToken = await this.fetchShortLivedToken(model.code);
     const { access_token, expires_in } = await this.fetchLongLivedToken(shortLivedToken);
 
     const userData = await this.fetchUserData(access_token);
-
     let user = await this.userRepository.getUserByEmailAsync(userData.email);
-
     if (!user) {
       const firstName = userData.name?.split(' ')[0] || 'Facebook';
       const lastName = userData.name?.split(' ').slice(1).join(' ') || 'User';
 
-      let profileImage = userData.picture?.data?.url;
-      let defaultProfileImageUrl = profileImage;
-      if (!profileImage) {
-        const initials = stringUtil.extractInitialsFromName(`${firstName} ${lastName}`);
-        const base64Image = generateInitialImage(initials);
-        const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
-        profileImage = avatar.secure_url;
-        defaultProfileImageUrl = avatar.secure_url;
-      } else if (userData.picture?.data?.url) {
-        const initials = stringUtil.extractInitialsFromName(`${firstName} ${lastName}`);
-        const base64Image = generateInitialImage(initials);
-        const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
-        defaultProfileImageUrl = avatar.secure_url;
-      }
+      const initials = stringUtil.extractInitialsFromName(`${firstName} ${lastName}`);
+      const base64Image = generateInitialImage(initials);
+      const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
+      const defaultProfileImageUrl = avatar.secure_url;
 
       const entry = new User({
         email: userData.email,
@@ -168,7 +141,6 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         lastName: lastName,
         emailConfirmed: true,
         type: UserType.User,
-        userName: `${firstName.toLowerCase()}${lastName.toLowerCase()}`.replace(/\s/g, ''),
       });
 
       user = await this.userRepository.createAsync(entry, '');
@@ -177,13 +149,21 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         defaultProfileImageUrl: defaultProfileImageUrl,
         privacy: ProfileImagePrivacy.Everyone,
       }))
+
+      await this.sendWelcomeEmail(user);
+      await this.commandBus.execute(new SendVerificationEmailCommand({
+        model: {
+          userAgent: parsedDataProtectionKeyValue.userAgent,
+          ipAddress: parsedDataProtectionKeyValue.ipAddress,
+          email: user.email,
+        }
+      }));
     }
 
     if (this.isAccountLockedOrInactive(user)) {
       return this.handleLockedOrInactiveAccount(user);
     }
 
-    const parsedDataProtectionKeyValue = JSON.parse(dataProtectionKey.value);
     const result = await this.handleSuccessfulLogin(
       user,
       parsedDataProtectionKeyValue,
@@ -255,15 +235,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       );
     }
 
-    // Generate JWT token for the user
-    const access_token_jwt = await this.tokenService.generateJwtAsync(user);
-
-    return new FacebookCallbackTokenResponseModel({
-      accessToken: access_token_jwt,
-      refreshToken: '', // No refresh token for external auth
-      message: 'Facebook authentication successful',
-      succeeded: true,
-    });
+    return result;
   }
 
   private async fetchShortLivedToken(code: string): Promise<string> {
@@ -362,12 +334,11 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     await this.userRepository.cacheUserAccountAsync(user, _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC);
 
     return new FacebookCallbackTokenResponseModel({
-      accessToken: access_token,
-      refreshToken: userToken.tokenValue,
+      access_token: access_token,
+      refresh_token: userToken.tokenValue,
       message: 'Login successful',
       succeeded: true,
       isLockedOut: false,
-      userImage: user.biometrics?.profileImageUrl || user.biometrics?.defaultProfileImageUrl || null,
       refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
     });
   }
@@ -393,5 +364,20 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
 
   private createErrorResponse(message: string): FacebookCallbackTokenResponseModel {
     return new FacebookCallbackTokenResponseModel({ message, succeeded: false });
+  }
+
+  private async sendWelcomeEmail(user: User): Promise<void> {
+    try {
+      await this.emailService.sendTemplatedAsync({
+        to: user.email,
+        subject: "Welcome to Gaddr",
+        templatePath: "templates/email/welcome-email-v1.html",
+        context: {
+          year: new Date().getFullYear(),
+        },
+      });
+    } catch (error) {
+      logger.error(`Failed to send welcome email for user ${user.id}`, error);
+    }
   }
 }

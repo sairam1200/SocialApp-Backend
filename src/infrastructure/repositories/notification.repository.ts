@@ -24,7 +24,7 @@ export class NotificationRepository implements INotificationRepository {
   }
 
   public async updateAsync(notification: Notification): Promise<void> {
-    await this.notificationContext.update(notification.id, notification);
+    await this.notificationContext.save(notification);
   }
 
   public async deleteAsync(notification: Notification): Promise<void> {

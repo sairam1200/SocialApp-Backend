@@ -6,6 +6,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import { User } from '../../../../domain/entities';
 import logger from '../../../../core/utils/winston.util';
+import { getRedirectUrl } from '../../../../core/utils/redirectUrl.util';
 import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { ITokenService } from '../../../../domain/services/itoken.service';
 import { IEmailService } from '../../../../domain/services/iemail.service';
@@ -27,38 +28,20 @@ import { stringUtil } from 'core/utils/string.util';
 import { generateInitialImage } from 'core/utils/canvas.util';
 import { uploadBase64ToCloudinaryAsync } from 'core/utils/cloudinary.util';
 import { UserType } from 'domain/enums';
+import { TokenResponseModel } from 'domain/contracts/tokenResponse.model';
+import { serializeObject } from 'core/utils/serialization.util';
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
 
-export class GoogleCallbaclTokenResponseModel {
-  @ApiProperty()
-  accessToken: string;
-
-  @ApiProperty()
-  refreshToken: string;
-
+export class GoogleCallbaclTokenResponseModel extends TokenResponseModel {
   @ApiProperty()
   googleAccessToken: string;
 
   @ApiProperty()
   googleAccessTokenExpiresIn: number;
 
-  @ApiProperty()
-  message: string;
-
-  @ApiProperty()
-  userImage: string;
-
-  @ApiProperty()
-  succeeded: boolean;
-
-  @ApiProperty()
-  isLockedOut: boolean;
-
-  @ApiProperty()
-  refreshTokenExpiryTime: number;
-
   constructor(request: Partial<GoogleCallbaclTokenResponseModel> = {}) {
+    super();
     Object.assign(this, request);
   }
 }
@@ -152,10 +135,12 @@ export class GoogleConnectCallbackQueryHandler
     const { model } = query;
     await googleConnectCallbackValidations.validateAsync(model);
     const dataProtectionKey = await this.validateState(model.state);
+    const parsedDataProtectionKeyValue = JSON.parse(dataProtectionKey.value);
 
     const { access_token, refresh_token, expires_in } = await this.fetchToken(
       model.code,
     );
+    const tokenValue = serializeObject({ access_token, refresh_token, expires_in });
 
     const userData = await this.fetchUserData(access_token);
 
@@ -163,22 +148,10 @@ export class GoogleConnectCallbackQueryHandler
       userData.profile.email,
     );
     if (!user) {
-      let profileImage = userData?.profile?.picture
-
-      if (!profileImage) {
-        const initials = stringUtil.extractInitialsFromName(`${userData.profile.given_name} ${userData.profile.family_name}`);
-        const base64Image = generateInitialImage(initials);
-        const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
-        profileImage = avatar.secure_url;
-      }
-
-      let defaultProfileImageUrl = profileImage;
-      if (userData?.profile?.picture) {
-        const initials = stringUtil.extractInitialsFromName(`${userData.profile.given_name} ${userData.profile.family_name}`);
-        const base64Image = generateInitialImage(initials);
-        const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
-        defaultProfileImageUrl = avatar.secure_url;
-      }
+      const initials = stringUtil.extractInitialsFromName(`${userData.profile.given_name} ${userData.profile.family_name}`);
+      const base64Image = generateInitialImage(initials);
+      const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
+      const defaultProfileImageUrl = avatar.secure_url;
 
       const entry = new User({
         phoneNumber: "",
@@ -195,7 +168,6 @@ export class GoogleConnectCallbackQueryHandler
         privacy: ProfileImagePrivacy.Everyone,
       }))
 
-      const parsedDataProtectionKeyValue = JSON.parse(dataProtectionKey.value);
 
       await this.sendWelcomeEmail(user);
       await this.commandBus.execute(new SendVerificationEmailCommand({
@@ -210,8 +182,6 @@ export class GoogleConnectCallbackQueryHandler
     if (this.isAccountLockedOrInactive(user)) {
       return this.handleLockedOrInactiveAccount(user);
     }
-
-    const parsedDataProtectionKeyValue = JSON.parse(dataProtectionKey.value);
 
     const result = await this.handleSuccessfulLogin(
       user,
@@ -287,7 +257,7 @@ export class GoogleConnectCallbackQueryHandler
         _const.PLATFORMS.YOUTUBE,
       );
     if (existingAccountLogin) {
-      existingAccountLogin.tokenValue = refresh_token;
+      existingAccountLogin.tokenValue = tokenValue;
       existingAccountLogin.addedDateUtc = new Date();
       existingAccountLogin.expiryDateUtc = new Date(
         Date.now() + 100 * 24 * 60 * 60 * 1000,
@@ -300,7 +270,7 @@ export class GoogleConnectCallbackQueryHandler
         '',
         '',
         '',
-        refresh_token,
+        tokenValue,
         new Date(Date.now() + 100 * 24 * 60 * 60 * 1000),
       );
     }
@@ -317,7 +287,7 @@ export class GoogleConnectCallbackQueryHandler
     try {
       const response = await axios.post(`https://oauth2.googleapis.com/token`, {
         client_secret: configs.youtube.clientSecret,
-        redirect_uri: configs.google.callbackUrl,
+        redirect_uri: getRedirectUrl(configs.google.callbackUrl),
         client_id: configs.youtube.clientId,
         grant_type: 'authorization_code',
         code: code,
@@ -405,12 +375,11 @@ export class GoogleConnectCallbackQueryHandler
 
     // TODO: Send email notification of login with new ipAddress and deviceInfo
     return new GoogleCallbaclTokenResponseModel({
-      accessToken: access_token,
-      refreshToken: userToken.tokenValue,
+      access_token: access_token,
+      refresh_token: userToken.tokenValue,
       message: 'Login successful',
       succeeded: true,
       isLockedOut: false,
-      userImage: user.biometrics?.profileImageUrl || user.biometrics?.defaultProfileImageUrl || null,
       refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
     });
   }
