@@ -11,7 +11,7 @@ import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
+import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 
 const PLATFORM = 'linkedin';
 const API_BASE = 'https://api.linkedin.com/v2';

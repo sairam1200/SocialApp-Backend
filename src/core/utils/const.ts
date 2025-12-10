@@ -4,6 +4,7 @@ export default {
   IROLE_REPOSITORY: "IRoleRepository",
   IGENERAL_REPOSITORY: "IGeneralRepository",
   IUSERROLE_REPOSITORY: "IUserRoleRepository",
+  IUSERFOLLOW_REPOSITORY: "IUserFollowRepository",
   IPLAYLIST_REPOSITORY: "IPlaylistRepository",
   IRATELIMIT_REPOSITORY: "IRateLimitRepository",
   IROLECLAIM_REPOSITORY: "IRoleClaimRepository",
@@ -17,22 +18,22 @@ export default {
   IDATAPROTECTIONKEY_REPOSITORY: "IDataProtectionKeyRepository",
 
   // Service Interfaces
-  IEMAIL_SERVICE: "IEmailService",
-  ISEARCH_SERVICE: "ISearchService",
-  ITOKEN_SERVICE: "ITokenService",
-  INOTIFICATION_SERVICE: "INotificationService",
+  IEMAIL_SERVICE: 'IEmailService',
+  ISEARCH_SERVICE: 'ISearchService',
+  ITOKEN_SERVICE: 'ITokenService',
+  INOTIFICATION_SERVICE: 'INotificationService',
 
   BULL_QUEUES: {
-    EMAIL: "email",
-    FACEBOOK_IMPORT: "facebook-import",
-    SPOTIFY_IMPORT: "spotify-import",
-    YOUTUBE_IMPORT: "youtube-import",
-    INSTAGRAM_IMPORT: "instagram-import",
-    PINTEREST_IMPORT: "pinterest-import",
-    TWITTER_IMPORT: "twitter-import",
-    REDDIT_IMPORT: "reddit-import",
-    TIKTOK_IMPORT: "tiktok-import",
-    LINKEDIN_IMPORT: "linkedin-import",
+    EMAIL: 'email',
+    FACEBOOK_IMPORT: 'facebook-import',
+    SPOTIFY_IMPORT: 'spotify-import',
+    YOUTUBE_IMPORT: 'youtube-import',
+    INSTAGRAM_IMPORT: 'instagram-import',
+    PINTEREST_IMPORT: 'pinterest-import',
+    TWITTER_IMPORT: 'twitter-import',
+    REDDIT_IMPORT: 'reddit-import',
+    TIKTOK_IMPORT: 'tiktok-import',
+    LINKEDIN_IMPORT: 'linkedin-import',
   },
 
   EMAILTEMPLATES: {
@@ -46,15 +47,15 @@ export default {
   },
 
   PLATFORMS: {
-    PINTEREST: "pinterest",
-    INSTAGRAM: "instagram",
-    FACEBOOK: "facebook",
-    TWITTER: "twitter",
-    YOUTUBE: "youtube",
-    SPOTIFY: "spotify",
-    REDDIT: "reddit",
-    TIKTOK: "tiktok",
-    LINKEDIN: "linkedin",
+    PINTEREST: 'pinterest',
+    INSTAGRAM: 'instagram',
+    FACEBOOK: 'facebook',
+    TWITTER: 'twitter',
+    YOUTUBE: 'youtube',
+    SPOTIFY: 'spotify',
+    REDDIT: 'reddit',
+    TIKTOK: 'tiktok',
+    LINKEDIN: 'linkedin',
   },
 
   KNOWN_PLATFORMS_URIS: [
@@ -81,7 +82,7 @@ export default {
     'flickr.com',
     'bilibili.com',
     'ok.ru',
-    'vk.com'
+    'vk.com',
   ],
 
   TOKEN: {
@@ -93,15 +94,15 @@ export default {
   },
 
   SEARCH_CACHE: {
-    RESULT_FRESHNESS_WINDOW_MS: 60 * 60 * 1000, // 1 hour - how long cached results are considered fresh
-    QUERY_CACHE_TTL_SEC: 5 * 60, // 5 minutes - Redis cache TTL for search queries
-    QUERY_LOCK_TTL_SEC: 30, // 30 seconds - Lock TTL to prevent duplicate API calls
+    RESULT_FRESHNESS_WINDOW_MS: 60 * 60 * 1000, // 1 hour
+    QUERY_CACHE_TTL_SEC: 5 * 60, // 5 minutes
+    QUERY_LOCK_TTL_SEC: 30, // 30 seconds
   },
 
   REDIS: {
     USER: {
       ACCOUNT: '_user_account',
-      ACCOUNT_SESSION_TTL_SEC: 604800, //  7 days - - TTL for session cache during login/2FA/refresh/update
+      ACCOUNT_SESSION_TTL_SEC: 604800, // 7 days
     }
   },
 }

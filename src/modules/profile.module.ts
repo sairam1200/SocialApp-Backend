@@ -23,9 +23,7 @@ import { User, Role, UserRole, LinkedAccount, ManualProfile, RoleClaim, UserClai
       UserBiometric,
     ])
   ],
-  controllers: [
-    ...profile.addControllers(),
-  ],
+  controllers: [...profile.addControllers()],
   providers: [
     JwtService,
 

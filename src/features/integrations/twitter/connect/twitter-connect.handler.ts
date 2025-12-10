@@ -12,7 +12,7 @@ import { IUserRepository } from "../../../../domain/repositories/iuser.repositor
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { mapToTwitterProfileModel } from "../../../../domain/mappers/twitter.mapper";
 import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey.entity";
-import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
+import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { TwitterProfileModel, TwitterUserDataModel } from "../../../../domain/contracts/twitter.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";

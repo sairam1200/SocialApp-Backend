@@ -11,6 +11,7 @@ export function mapToUserModel(
     id: user.id,
     email: includeSensitiveFields ? user.email : null,
     gender: user.gender,
+    bio: user.bio ?? null,
     lastName: user.lastName,
     photo: profileImageUrl || null,
     firstName: user.firstName,

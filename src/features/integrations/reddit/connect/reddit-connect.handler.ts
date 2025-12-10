@@ -11,7 +11,7 @@ import { HttpContext } from "../../../../core/middlewares/httpContext.middleware
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey.entity";
-import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
+import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 import { UserNotFoundException } from "core/exceptions";

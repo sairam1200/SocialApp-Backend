@@ -1,0 +1,28 @@
+import follows from '../features/user/following';
+import { Module, forwardRef } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { CqrsModule } from '@nestjs/cqrs';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { dependency } from '../infrastructure/dependency';
+import { Role, RoleClaim, User, UserBiometric, UserClaim, UserFollow, UserRole } from '../domain/entities';
+
+@Module({
+  imports: [
+    CqrsModule,
+    TypeOrmModule.forFeature([UserFollow, User, UserBiometric, UserClaim, Role, RoleClaim, UserRole]),
+  ],
+  controllers: [
+    ...follows.addControllers(),
+  ],
+  providers: [
+    JwtService,
+    ...follows.addHandlers(),
+    dependency.UserRepository,
+    dependency.RoleRepository,
+    dependency.UserRoleRepository,
+    dependency.RoleClaimRepository,
+    dependency.UserFollowRepository,
+  ],
+  exports: [],
+})
+export class FollowModule { }

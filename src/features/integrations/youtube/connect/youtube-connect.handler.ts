@@ -13,6 +13,11 @@ import { IUserRepository } from '../../../../domain/repositories/iuser.repositor
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { mapToYoutubeProfileModel } from '../../../../domain/mappers/youtube.mapper';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
+import {
+  GoogleUserDataModel,
+  YoutubeChannelDataModel,
+  YoutubeProfileModel,
+} from '../../../../domain/contracts/youtube.model';
 import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';

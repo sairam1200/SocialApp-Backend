@@ -11,7 +11,7 @@ import { HttpContext } from "../../../../core/middlewares/httpContext.middleware
 import { Inject, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { deserializeObject, serializeObject } from "core/utils/serialization.util";
 import ApplicationException from "../../../../core/exceptions/application.exception";
-import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
+import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 
 export class TwitterImportRequestModel {

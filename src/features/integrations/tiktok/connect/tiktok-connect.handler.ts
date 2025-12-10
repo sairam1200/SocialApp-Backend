@@ -14,7 +14,7 @@ import { IUserRepository } from '../../../../domain/repositories/iuser.repositor
 import { mapToTiktokProfileModel } from '../../../../domain/mappers/tiktok.mapper';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
-import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
+import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import { TiktokProfileModel, TiktokUserDataModel } from '../../../../domain/contracts/tiktok.model';
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';

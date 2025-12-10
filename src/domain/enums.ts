@@ -69,3 +69,9 @@ export enum ProfileImagePrivacy {
     Everyone = 'Everyone',
     Interactions = 'Interactions',
 }
+
+export enum FollowStatus {
+    Requested = 'requested',
+    Accepted = 'accepted',
+    Blocked = 'blocked',
+}
