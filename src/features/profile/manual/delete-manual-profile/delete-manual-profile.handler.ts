@@ -15,7 +15,7 @@ export class DeleteManualProfileCommand {
   }
 }
 
-const deleteUserValidations = Joi.object({
+const deleteManualProfileValidations = Joi.object({
   id: Joi.string().required(),
 });
 
@@ -31,7 +31,7 @@ export class DeleteManualProfileCommandHandler implements ICommandHandler<Delete
   public async execute(command: DeleteManualProfileCommand): Promise<void> {
     const { id } = command;
 
-    await deleteUserValidations.validateAsync(id);
+    await deleteManualProfileValidations.validateAsync(id);
 
     const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
     if (!user || user.type !== UserType.User) {

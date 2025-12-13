@@ -6,50 +6,98 @@ import {
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
-  OnGatewayConnection
+  OnGatewayConnection,
+  OnGatewayDisconnect
 } from "@nestjs/websockets";
-import configs from "../../../configs";
 import { Server, Socket } from 'socket.io';
-import { Globals } from "../../../core/globals";
 import logger from "../../../core/utils/winston.util";
+import { BaseGateway } from "./base.gateway";
+
+export interface ImportContentPayload {
+  platform?: string;
+  [key: string]: any;
+}
 
 @Injectable()
-@WebSocketGateway({ namespace: '/imports' })
-export class ImportGateway implements OnGatewayConnection{
-  constructor(private readonly jwtService: JwtService) { }
-
+@WebSocketGateway({
+  namespace: '/imports',
+  cors: {
+    origin: '*',
+    credentials: true
+  }
+})
+export class ImportGateway extends BaseGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  @SubscribeMessage('join')
-  handleJoin(@MessageBody() userId: string, @ConnectedSocket() client: Socket) {
-    client.join(userId);
+  protected gatewayName = 'ImportGateway';
+  private connectedUsers = new Map<string, Set<string>>();
+
+  constructor(jwtService: JwtService) {
+    super(jwtService);
   }
 
   async handleConnection(client: Socket) {
-    const userId = await this.getUserIdFromToken(client);
+    const authResult = await this.authenticateClient(client);
+
+    if (!authResult) {
+      logger.warn(`[${this.gatewayName}] Failed to authenticate connection from ${client.handshake.address}`);
+      this.emitError(client, 'AUTHENTICATION_FAILED', 'Invalid or missing authentication token');
+      client.disconnect();
+      return;
+    }
+
+    const { userId, user } = authResult;
+
+    this.setupClientData(client, userId, user);
+    client.join(userId);
+
+    // Track connected users
+    if (!this.connectedUsers.has(userId)) {
+      this.connectedUsers.set(userId, new Set());
+    }
+    this.connectedUsers.get(userId)!.add(client.id);
+
+    client.emit('connected', { connectedUserId: userId });
+    logger.info(`[${this.gatewayName}] User ${userId} connected (socket: ${client.id})`);
+  }
+
+  async handleDisconnect(client: Socket) {
+    const userId = client.data.userId;
     if (userId) {
-      client.join(userId);
+      const userSockets = this.connectedUsers.get(userId);
+      if (userSockets) {
+        userSockets.delete(client.id);
+        if (userSockets.size === 0) {
+          this.connectedUsers.delete(userId);
+        }
+      }
+      logger.info(`[${this.gatewayName}] User ${userId} disconnected (socket: ${client.id})`);
     }
   }
 
-  private async getUserIdFromToken(client: Socket): Promise<string | null> {
-    const accessToken = client.handshake.auth.token;
-    try {
-      const user = await this.jwtService.verifyAsync(accessToken, {
-        secret: configs.jwt.secret,
-        issuer: configs.jwt.issuer,
-        audience: configs.jwt.audience
-      });
-
-      return user[Globals.ClaimTypes.UserId];
-    } catch (err) {
-      logger.warn('Invalid JWT token', err.message);
-      return null;
+  @SubscribeMessage('join')
+  handleJoin(@MessageBody() userId: string, @ConnectedSocket() client: Socket) {
+    if (!this.validateUserId(client, userId)) {
+      this.emitError(client, 'UNAUTHORIZED', 'Cannot join other user rooms');
+      logger.warn(`[${this.gatewayName}] User ${client.data.userId} attempted to join room ${userId}`);
+      return;
     }
+
+    client.join(userId);
+    logger.debug(`[${this.gatewayName}] User ${userId} joined room`);
   }
 
-  emitNewImportContent(userId: string, platform: string, payload: any) {
-    this.server.to(userId).emit('new-content', { platform, ...payload });
+  emitNewImportContent(userId: string, platform: string, payload: ImportContentPayload) {
+    const data = { platform, ...payload };
+    this.safeEmit(userId, 'new-content', data);
+  }
+
+  isUserConnected(userId: string): boolean {
+    return this.connectedUsers.has(userId) && this.connectedUsers.get(userId)!.size > 0;
+  }
+
+  getConnectedUserCount(): number {
+    return this.connectedUsers.size;
   }
 }

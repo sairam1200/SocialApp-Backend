@@ -24,6 +24,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@asyncapi/react-component": "^2.6.5",
     "@bull-board/api": "^6.9.6",
     "@bull-board/express": "^6.9.6",
     "@nestjs/bull": "^11.0.2",
@@ -67,7 +68,8 @@
     "typeorm": "^0.3.23",
     "useragent": "^2.3.0",
     "winston": "^3.17.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "winston-daily-rotate-file": "^5.0.0",
+    "yaml": "^2.8.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

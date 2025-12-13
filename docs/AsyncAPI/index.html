@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaddr WebSocket API Documentation</title>
+    <link rel="stylesheet" href="/docs-websocket/asyncapi-component.css">
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background-color: #f5f7fa;
+      }
+
+      .nav-bar {
+        background: linear-gradient(135deg, #1c2132 0%, #2d3447 100%);
+        padding: 16px 24px;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .nav-bar a {
+        text-decoration: none;
+      }
+
+      .nav-bar button {
+        padding: 10px 20px;
+        background-color: #6366f1;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
+      }
+
+      .nav-bar button:hover {
+        background-color: #4f46e5;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(99, 102, 241, 0.4);
+      }
+
+      .nav-bar button.secondary {
+        background-color: #374151;
+        box-shadow: 0 2px 4px rgba(55, 65, 81, 0.3);
+      }
+
+      .nav-bar button.secondary:hover {
+        background-color: #4b5563;
+        box-shadow: 0 4px 8px rgba(55, 65, 81, 0.4);
+      }
+
+      #asyncapi {
+        height: calc(100vh - 60px);
+        width: 100%;
+        background-color: #ffffff;
+      }
+
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: calc(100vh - 60px);
+        color: #6b7280;
+        font-size: 16px;
+      }
+
+      /* Enhanced AsyncAPI Component Styling - Using universal selectors */
+      #asyncapi * {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      }
+
+      /* Sidebar improvements */
+      #asyncapi [class*="sidebar"],
+      #asyncapi [class*="Sidebar"] {
+        background-color: #f9fafb !important;
+        border-right: 1px solid #e5e7eb !important;
+      }
+
+      #asyncapi [class*="sidebar-item"],
+      #asyncapi [class*="SidebarItem"] {
+        border-radius: 6px !important;
+        margin: 4px 8px !important;
+        transition: all 0.2s ease !important;
+      }
+
+      #asyncapi [class*="sidebar-item"]:hover,
+      #asyncapi [class*="SidebarItem"]:hover {
+        background-color: #f3f4f6 !important;
+      }
+
+      /* Message styling - make them more prominent and visible */
+      #asyncapi [class*="message"],
+      #asyncapi [class*="Message"],
+      #asyncapi [data-testid*="message"],
+      #asyncapi article[class*="message"] {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+        border: 2px solid #cbd5e1 !important;
+        border-left: 4px solid #6366f1 !important;
+        border-radius: 12px !important;
+        padding: 24px !important;
+        margin: 20px 0 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+        transition: all 0.3s ease !important;
+      }
+
+      #asyncapi [class*="message"]:hover,
+      #asyncapi [class*="Message"]:hover,
+      #asyncapi [data-testid*="message"]:hover {
+        border-color: #6366f1 !important;
+        box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2) !important;
+        transform: translateY(-2px) !important;
+      }
+
+      /* Message headers and titles - make them stand out */
+      #asyncapi [class*="message"] h1,
+      #asyncapi [class*="message"] h2,
+      #asyncapi [class*="message"] h3,
+      #asyncapi [class*="message"] h4,
+      #asyncapi [class*="Message"] h1,
+      #asyncapi [class*="Message"] h2,
+      #asyncapi [class*="Message"] h3,
+      #asyncapi [class*="Message"] h4,
+      #asyncapi [class*="message-title"],
+      #asyncapi [class*="MessageTitle"] {
+        font-size: 20px !important;
+        font-weight: 700 !important;
+        color: #111827 !important;
+        margin-bottom: 16px !important;
+        padding-bottom: 12px !important;
+        border-bottom: 2px solid #e5e7eb !important;
+      }
+
+      /* Message descriptions */
+      #asyncapi [class*="message"] p,
+      #asyncapi [class*="Message"] p,
+      #asyncapi [class*="message-description"],
+      #asyncapi [class*="MessageDescription"] {
+        color: #4b5563 !important;
+        font-size: 14px !important;
+        line-height: 1.7 !important;
+        margin: 12px 0 !important;
+      }
+
+      /* Message payload/example styling - dark theme for code */
+      #asyncapi [class*="message"] pre,
+      #asyncapi [class*="Message"] pre,
+      #asyncapi [class*="payload"],
+      #asyncapi [class*="Payload"],
+      #asyncapi [class*="example"],
+      #asyncapi [class*="Example"] {
+        background-color: #1f2937 !important;
+        color: #f9fafb !important;
+        border-radius: 8px !important;
+        padding: 16px !important;
+        margin: 12px 0 !important;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace !important;
+        font-size: 13px !important;
+        line-height: 1.6 !important;
+        overflow-x: auto !important;
+        border: 1px solid #374151 !important;
+      }
+
+      /* Operation/Channel badges - colorful and prominent */
+      #asyncapi [class*="badge"],
+      #asyncapi [class*="Badge"],
+      #asyncapi [class*="tag"],
+      #asyncapi [class*="Tag"],
+      #asyncapi span[class*="operation"] {
+        display: inline-flex !important;
+        align-items: center !important;
+        padding: 6px 14px !important;
+        border-radius: 20px !important;
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        margin: 4px !important;
+      }
+
+      /* Publish/Subscribe badges */
+      #asyncapi [class*="publish"],
+      #asyncapi [class*="Publish"] {
+        background-color: #dbeafe !important;
+        color: #1e40af !important;
+      }
+
+      #asyncapi [class*="subscribe"],
+      #asyncapi [class*="Subscribe"] {
+        background-color: #dcfce7 !important;
+        color: #166534 !important;
+      }
+
+      #asyncapi [class*="send"],
+      #asyncapi [class*="Send"] {
+        background-color: #fef3c7 !important;
+        color: #92400e !important;
+      }
+
+      #asyncapi [class*="receive"],
+      #asyncapi [class*="Receive"] {
+        background-color: #e0e7ff !important;
+        color: #3730a3 !important;
+      }
+
+      /* Schema/Model styling */
+      #asyncapi [class*="schema"],
+      #asyncapi [class*="Schema"],
+      #asyncapi [class*="model"],
+      #asyncapi [class*="Model"] {
+        background-color: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 8px !important;
+        padding: 16px !important;
+        margin: 12px 0 !important;
+      }
+
+      /* Property/Field styling */
+      #asyncapi [class*="property"],
+      #asyncapi [class*="Property"],
+      #asyncapi [class*="field"],
+      #asyncapi [class*="Field"],
+      #asyncapi tr[class*="property"],
+      #asyncapi tr[class*="field"] {
+        padding: 10px 12px !important;
+        margin: 6px 0 !important;
+        border-radius: 6px !important;
+        background-color: #f9fafb !important;
+        border-left: 3px solid #6366f1 !important;
+        transition: all 0.2s ease !important;
+      }
+
+      #asyncapi [class*="property"]:hover,
+      #asyncapi [class*="Property"]:hover,
+      #asyncapi [class*="field"]:hover,
+      #asyncapi [class*="Field"]:hover {
+        background-color: #f3f4f6 !important;
+        border-left-color: #4f46e5 !important;
+      }
+
+      /* Code blocks */
+      #asyncapi code:not(pre code) {
+        background-color: #f3f4f6 !important;
+        color: #dc2626 !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+        font-size: 13px !important;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace !important;
+      }
+
+      #asyncapi pre code {
+        background-color: transparent !important;
+        color: #f9fafb !important;
+        padding: 0 !important;
+      }
+
+      /* Server/Connection info */
+      #asyncapi [class*="server"],
+      #asyncapi [class*="Server"],
+      #asyncapi [class*="connection"],
+      #asyncapi [class*="Connection"] {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+        border: 2px solid #0ea5e9 !important;
+        border-radius: 10px !important;
+        padding: 16px !important;
+        margin: 12px 0 !important;
+      }
+
+      /* Channel/Operation cards */
+      #asyncapi [class*="channel"],
+      #asyncapi [class*="Channel"],
+      #asyncapi [class*="operation"],
+      #asyncapi [class*="Operation"] {
+        background-color: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 10px !important;
+        padding: 20px !important;
+        margin: 16px 0 !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        transition: all 0.3s ease !important;
+      }
+
+      #asyncapi [class*="channel"]:hover,
+      #asyncapi [class*="Channel"]:hover,
+      #asyncapi [class*="operation"]:hover,
+      #asyncapi [class*="Operation"]:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        border-color: #6366f1 !important;
+      }
+
+      /* Scrollbar styling */
+      #asyncapi ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      #asyncapi ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+
+      #asyncapi ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+
+      #asyncapi ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+
+      /* Info section */
+      #asyncapi [class*="info"],
+      #asyncapi [class*="Info"] {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+        border: 1px solid #f59e0b !important;
+        border-radius: 8px !important;
+        padding: 16px !important;
+        margin: 16px 0 !important;
+      }
+
+      /* Required field indicators */
+      #asyncapi [class*="required"],
+      #asyncapi [class*="Required"],
+      #asyncapi .required {
+        color: #dc2626 !important;
+        font-weight: 600 !important;
+      }
+
+      /* Example values */
+      #asyncapi [class*="example-value"],
+      #asyncapi [class*="ExampleValue"] {
+        background-color: #f0fdf4 !important;
+        border: 1px solid #86efac !important;
+        border-radius: 6px !important;
+        padding: 12px !important;
+        margin: 8px 0 !important;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace !important;
+        color: #166534 !important;
+      }
+
+      /* Tables */
+      #asyncapi table {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        width: 100% !important;
+        margin: 16px 0 !important;
+      }
+
+      #asyncapi table th {
+        background-color: #f9fafb !important;
+        color: #111827 !important;
+        font-weight: 600 !important;
+        padding: 12px !important;
+        text-align: left !important;
+        border-bottom: 2px solid #e5e7eb !important;
+      }
+
+      #asyncapi table td {
+        padding: 12px !important;
+        border-bottom: 1px solid #e5e7eb !important;
+      }
+
+      #asyncapi table tr:hover {
+        background-color: #f9fafb !important;
+      }
+
+      /* Responsive design */
+      @media (max-width: 768px) {
+        .nav-bar {
+          padding: 12px 16px;
+        }
+
+        .nav-bar button {
+          padding: 8px 16px;
+          font-size: 13px;
+        }
+
+        #asyncapi :deep(.message) {
+          padding: 16px;
+          margin: 12px 0;
+        }
+
+        #asyncapi :deep(.message-title) {
+          font-size: 16px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="nav-bar">
+      <a href="/docs-swagger">
+        <button class="secondary">Swagger API Reference</button>
+      </a>
+      <a href="/docs-scalar">
+        <button class="secondary">Scalar API Reference</button>
+      </a>
+    </div>
+    <div id="asyncapi">
+      <div class="loading">Loading AsyncAPI documentation...</div>
+    </div>
+    <script src="/docs-websocket/asyncapi-component.js"></script>
+    <script>
+      (function () {
+        let retryCount = 0;
+        const maxRetries = 50;
+
+        function renderAsyncAPI() {
+          try {
+            if (typeof AsyncApiStandalone === 'undefined') {
+              retryCount++;
+              if (retryCount < maxRetries) {
+                setTimeout(renderAsyncAPI, 100);
+                return;
+              } else {
+                throw new Error('AsyncAPI component failed to load');
+              }
+            }
+
+            // Fetch spec from JSON endpoint to avoid injection issues
+            fetch('/docs-websocket/spec.json')
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error('Failed to load AsyncAPI spec: ' + response.statusText);
+                }
+                return response.json();
+              })
+              .then(spec => {
+                const container = document.getElementById('asyncapi');
+                if (!container) {
+                  throw new Error('Container element not found');
+                }
+                container.innerHTML = '';
+
+                AsyncApiStandalone.render({
+                  schema: spec,
+                  config: {
+                    show: {
+                      sidebar: true,
+                      info: true,
+                      servers: true,
+                      operations: true,
+                      messages: true,
+                      schemas: true,
+                      errors: true,
+                    },
+                    sidebar: {
+                      showOperations: 'byDefault',
+                      showServers: 'byDefault',
+                    },
+                    expand: {
+                      operations: true,
+                      channels: false,
+                    },
+                  }
+                }, container);
+              })
+              .catch(error => {
+                console.error('Error loading AsyncAPI spec:', error);
+                const container = document.getElementById('asyncapi');
+                if (container) {
+                  container.innerHTML = '<div style="padding: 20px; color: red; font-family: monospace;">Error loading AsyncAPI documentation:<br><br>' + error.message + '<br><br>Check browser console for details.</div>';
+                }
+              });
+          } catch (error) {
+            console.error('Error rendering AsyncAPI:', error);
+            const container = document.getElementById('asyncapi');
+            if (container) {
+              container.innerHTML = '<div style="padding: 20px; color: red; font-family: monospace;">Error loading AsyncAPI documentation:<br><br>' + error.message + '<br><br>Check browser console for details.</div>';
+            }
+          }
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', renderAsyncAPI);
+        } else {
+          renderAsyncAPI();
+        }
+      })();
+    </script>
+  </body>
+
+</html>
