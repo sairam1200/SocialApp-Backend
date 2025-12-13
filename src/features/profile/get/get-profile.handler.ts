@@ -14,6 +14,8 @@ import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
 import { IManualProfileRepository } from "../../../domain/repositories/imanualProfile.repository";
+import { IUserFollowRepository } from "../../../domain/repositories/iuserFollow.repository";
+import { FollowStatus } from "../../../domain/enums";
 import { getProfileImageUrl } from "../../../core/utils/profileImagePrivacy.util";
 
 export class GetProfileQuery {
@@ -36,6 +38,7 @@ export class GetProfileQueryHandler implements ICommandHandler<GetProfileQuery, 
     @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY) private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IMANUALPROFILE_REPOSITORY) private readonly manualProfileRepository: IManualProfileRepository,
+    @Inject(_const.IUSERFOLLOW_REPOSITORY) private readonly userFollowRepository: IUserFollowRepository,
     @InjectRepository(PlaylistMember) private readonly playlistMemberRepository: Repository<PlaylistMember>,
   ) { }
 
@@ -75,7 +78,10 @@ export class GetProfileQueryHandler implements ICommandHandler<GetProfileQuery, 
       );
     }
 
-    return mapToProfileModel(user, linkedAccounts, manualProfiles, includeSensitiveFields, profileImageUrl);
+    const followersCount = await this.userFollowRepository.countFollowersAsync(user.id, FollowStatus.Accepted);
+    const followingCount = await this.userFollowRepository.countFollowingAsync(user.id, FollowStatus.Accepted);
+
+    return mapToProfileModel(user, linkedAccounts, manualProfiles, includeSensitiveFields, profileImageUrl, followersCount, followingCount);
   }
 }
 

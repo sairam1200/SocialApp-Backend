@@ -10,12 +10,16 @@ export function mapToProfileModel(
   linkedAccounts: LinkedAccount[],
   manualProfiles: ManualProfile[],
   includeSensitiveFields: boolean = false,
-  profileImageUrl: string | null = null
+  profileImageUrl: string | null = null,
+  followersCount: number = 0,
+  followingCount: number = 0
 ): ProfileModel {
   return {
     user: mapToUserModel(user, includeSensitiveFields, profileImageUrl),
     linkedAccounts: linkedAccounts.map(mapToLinkedAccountsModel),
     manualProfiles: manualProfiles.map(mapToManualProfileModel),
+    followersCount,
+    followingCount,
   } as ProfileModel;
 }
 

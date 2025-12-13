@@ -1,0 +1,742 @@
+asyncapi: "3.0.0"
+info:
+  title: Gaddr WebSocket API
+  version: "1.0.0"
+  description: |
+    Real-time WebSocket API for the Gaddr platform, providing bidirectional communication
+    for notifications and content import updates.
+
+    ## Overview
+
+    This API enables real-time communication between clients and the Gaddr backend through
+    WebSocket connections. It supports two primary namespaces:
+
+    - **Notifications**: Real-time notification delivery, management, and status updates
+    - **Imports**: Real-time updates for content imports from various social media platforms
+
+    ## Authentication
+
+    All WebSocket connections require JWT bearer token authentication. The access token
+    must be provided during the connection handshake using the `auth.token` parameter.
+
+    **Connection Example:**
+    ```javascript
+    const socket = io('http://localhost:3000/notifications', {
+      auth: {
+        token: 'your-jwt-access-token'
+      }
+    });
+    ```
+
+    **Security:**
+    - Tokens must be valid and not expired
+    - Invalid or missing tokens result in immediate connection termination
+    - Each connection is associated with a specific authenticated user
+
+servers:
+  production:
+    host: "gaddr.com"
+    protocol: "wss"
+    description: Production WebSocket server with TLS encryption
+  development:
+    host: "localhost:3000"
+    protocol: "ws"
+    description: Development WebSocket server (local testing only)
+
+defaultContentType: application/json
+
+channels:
+  notifications:
+    address: "/notifications"
+    title: Notifications Channel
+    description: |
+      Channel for real-time notification delivery and management operations.
+
+      **Capabilities:**
+      - Receive new notification events as they occur
+      - Mark individual notifications as read
+      - Mark all notifications as read
+      - Receive updates when notifications are modified
+      - Track read status changes
+    messages:
+      connected:
+        name: connected
+        title: Connection Confirmation Event
+        summary: Server emits this event immediately after successful authentication
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - connectedUserId
+          properties:
+            connectedUserId:
+              type: string
+              description: The unique identifier of the authenticated user
+              example: "550e8400-e29b-41d4-a716-446655440000"
+          examples:
+            - payload:
+                connectedUserId: "550e8400-e29b-41d4-a716-446655440000"
+
+      new-notification:
+        name: new-notification
+        title: New Notification Event
+        summary: Emitted when a new notification is created for the authenticated user
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - id
+            - title
+            - body
+            - type
+            - createdAt
+          properties:
+            id:
+              type: string
+              description: Unique notification identifier
+              example: "notif-123e4567-e89b-12d3-a456-426614174000"
+            title:
+              type: string
+              description: Notification title
+              example: "New Message Received"
+            body:
+              type: string
+              description: Notification body content
+              example: "You have received a new message from John Doe"
+            type:
+              type: string
+              description: Notification type/category
+              example: "message"
+            isLive:
+              type: boolean
+              description: Whether the notification is currently active
+              default: true
+            readAt:
+              type: string
+              format: date-time
+              nullable: true
+              description: Timestamp when the notification was marked as read
+              example: "2024-01-15T10:30:00Z"
+            createdAt:
+              type: string
+              format: date-time
+              description: Timestamp when the notification was created
+              example: "2024-01-15T10:25:00Z"
+            metaData:
+              type: object
+              nullable: true
+              description: Additional metadata associated with the notification
+              additionalProperties: true
+
+      notification-updated:
+        name: notification-updated
+        title: Notification Updated Event
+        summary: Emitted when an existing notification is modified
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - id
+            - updatedAt
+          properties:
+            id:
+              type: string
+              description: Unique notification identifier
+              example: "notif-123e4567-e89b-12d3-a456-426614174000"
+            title:
+              type: string
+              description: Updated notification title
+              example: "Updated Message"
+            body:
+              type: string
+              description: Updated notification body content
+              example: "Message content has been updated"
+            type:
+              type: string
+              description: Notification type/category
+              example: "message"
+            isLive:
+              type: boolean
+              description: Whether the notification is currently active
+            readAt:
+              type: string
+              format: date-time
+              nullable: true
+              description: Timestamp when the notification was marked as read
+            updatedAt:
+              type: string
+              format: date-time
+              description: Timestamp when the notification was last updated
+              example: "2024-01-15T10:35:00Z"
+
+      notification-read:
+        name: notification-read
+        title: Notification Read Event
+        summary: Emitted when one or more notifications are marked as read
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - readAt
+          properties:
+            readAt:
+              type: string
+              format: date-time
+              description: Timestamp when notifications were marked as read
+              example: "2024-01-15T10:30:00Z"
+            notificationIds:
+              type: array
+              items:
+                type: string
+              description: Array of notification IDs that were marked as read (optional, may be empty for bulk operations)
+              example: ["notif-123", "notif-456"]
+
+      error:
+        name: error
+        title: Error Event
+        summary: Emitted when an error occurs during operation execution
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - code
+            - message
+            - timestamp
+          properties:
+            code:
+              type: string
+              enum:
+                - AUTHENTICATION_FAILED
+                - UNAUTHORIZED
+                - INVALID_PAYLOAD
+                - VALIDATION_ERROR
+                - INTERNAL_ERROR
+                - NOT_FOUND
+              description: Error code identifying the type of error
+            message:
+              type: string
+              description: Human-readable error message
+            timestamp:
+              type: string
+              format: date-time
+              description: Timestamp when the error occurred
+          examples:
+            - payload:
+                code: "AUTHENTICATION_FAILED"
+                message: "Invalid or missing authentication token"
+                timestamp: "2024-01-15T10:30:00Z"
+            - payload:
+                code: "INVALID_PAYLOAD"
+                message: "Missing required field: notificationId"
+                timestamp: "2024-01-15T10:30:00Z"
+
+      mark-as-read:success:
+        name: mark-as-read:success
+        title: Mark as Read Success Event
+        summary: Emitted when a notification is successfully marked as read
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - notificationId
+          properties:
+            notificationId:
+              type: string
+              description: The ID of the notification that was marked as read
+              example: "notif-123e4567-e89b-12d3-a456-426614174000"
+          examples:
+            - payload:
+                notificationId: "notif-123e4567-e89b-12d3-a456-426614174000"
+
+      mark-all-as-read:success:
+        name: mark-all-as-read:success
+        title: Mark All as Read Success Event
+        summary: Emitted when all notifications for the user are successfully marked as read
+        contentType: application/json
+        payload:
+          type: object
+          properties:
+            count:
+              type: integer
+              description: Number of notifications that were marked as read
+              example: 5
+          examples:
+            - payload:
+                count: 5
+
+      join:
+        name: join
+        title: Join Room Command
+        summary: Command message to join a specific user's notification room
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - userId
+          properties:
+            userId:
+              type: string
+              description: The user ID whose notification room to join (must match authenticated user)
+              example: "550e8400-e29b-41d4-a716-446655440000"
+          examples:
+            - payload:
+                userId: "550e8400-e29b-41d4-a716-446655440000"
+
+      mark-as-read:
+        name: mark-as-read
+        title: Mark as Read Command
+        summary: Command message to mark a specific notification as read
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - notificationId
+          properties:
+            notificationId:
+              type: string
+              description: The unique identifier of the notification to mark as read
+              example: "notif-123e4567-e89b-12d3-a456-426614174000"
+          examples:
+            - payload:
+                notificationId: "notif-123e4567-e89b-12d3-a456-426614174000"
+
+      mark-all-as-read:
+        name: mark-all-as-read
+        title: Mark All as Read Command
+        summary: Command message to mark all notifications for the authenticated user as read
+        contentType: application/json
+        payload:
+          type: object
+          description: Empty payload - no parameters required
+          additionalProperties: false
+          examples:
+            - payload: {}
+
+  imports:
+    address: "/imports"
+    title: Imports Channel
+    description: |
+      Channel for real-time content import updates from various social media platforms.
+
+      **Supported Platforms:**
+      - Facebook
+      - YouTube
+      - Instagram
+      - Twitter/X
+      - Spotify
+      - Pinterest
+      - Reddit
+      - LinkedIn
+      - TikTok
+
+      **Use Cases:**
+      - Monitor import progress in real-time
+      - Receive notifications when new content is imported
+      - Track import status across multiple platforms
+    messages:
+      connected:
+        name: connected
+        title: Connection Confirmation Event
+        summary: Server emits this event immediately after successful authentication
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - connectedUserId
+          properties:
+            connectedUserId:
+              type: string
+              description: The unique identifier of the authenticated user
+              example: "550e8400-e29b-41d4-a716-446655440000"
+          examples:
+            - payload:
+                connectedUserId: "550e8400-e29b-41d4-a716-446655440000"
+
+      new-content:
+        name: new-content
+        title: New Import Content Event
+        summary: Emitted when new content is successfully imported from a platform
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - platform
+            - content
+          properties:
+            platform:
+              type: string
+              enum:
+                - facebook
+                - youtube
+                - instagram
+                - twitter
+                - spotify
+                - pinterest
+                - reddit
+                - linkedin
+                - tiktok
+              description: The platform from which content was imported
+              example: "youtube"
+            content:
+              type: object
+              description: Platform-specific content data structure
+              additionalProperties: true
+              properties:
+                id:
+                  type: string
+                  description: Platform-specific content identifier
+                title:
+                  type: string
+                  description: Content title
+                url:
+                  type: string
+                  format: uri
+                  description: URL to the content on the platform
+          examples:
+            - payload:
+                platform: "youtube"
+                content:
+                  id: "dQw4w9WgXcQ"
+                  title: "Sample Video Title"
+                  url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                  thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg"
+
+      error:
+        name: error
+        title: Error Event
+        summary: Emitted when an error occurs
+        contentType: application/json
+        payload:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - AUTHENTICATION_FAILED
+                - UNAUTHORIZED
+                - INVALID_PAYLOAD
+                - INTERNAL_ERROR
+            message:
+              type: string
+            timestamp:
+              type: string
+              format: date-time
+          example:
+            code: "AUTHENTICATION_FAILED"
+            message: "Invalid or missing authentication token"
+            timestamp: "2024-01-15T10:30:00Z"
+
+      join:
+        name: join
+        title: Join Room Command
+        summary: Command message to join a specific user's import room
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - userId
+          properties:
+            userId:
+              type: string
+              description: The user ID whose import room to join (must match authenticated user)
+              example: "550e8400-e29b-41d4-a716-446655440000"
+          examples:
+            - payload:
+                userId: "550e8400-e29b-41d4-a716-446655440000"
+
+operations:
+  connectNotifications:
+    action: receive
+    title: Connect to Notifications (RECEIVE)
+    description: |
+      **RECEIVE** - Establish a WebSocket connection to receive notifications.
+
+      **Authentication:**
+      - JWT access token must be provided in the connection handshake
+      - Token is validated upon connection
+      - Invalid or expired tokens result in immediate disconnection
+
+      **Connection Flow:**
+      1. Client initiates connection with JWT token
+      2. Server validates token and authenticates user
+      3. Server emits `connected` event with user ID
+      4. Client can now send commands and receive events
+
+      **Example:**
+      ```javascript
+      const socket = io('http://localhost:3000/notifications', {
+        auth: {
+          token: 'your-jwt-access-token'
+        }
+      });
+
+      socket.on('connected', (data) => {
+        console.log('Connected as:', data.connectedUserId);
+      });
+
+      socket.on('error', (error) => {
+        console.error('Connection error:', error);
+      });
+      ```
+    channel:
+      $ref: "#/channels/notifications"
+    messages:
+      - $ref: "#/channels/notifications/messages/connected"
+
+  joinNotifications:
+    action: send
+    title: Send - Join Notification Room
+    description: |
+      **SEND** - Join a specific user's notification room to receive targeted notifications.
+
+      **Security:**
+      - Server validates that the provided `userId` matches the authenticated user
+      - Attempts to join another user's room will result in an error
+      - Only one room can be joined per connection
+
+      **Usage:**
+      After connecting, send the `join` command with your user ID to start receiving
+      notifications for that user.
+
+      **Example:**
+      ```javascript
+      socket.emit('join', { userId: 'your-user-id' });
+      ```
+    channel:
+      $ref: "#/channels/notifications"
+    messages:
+      - $ref: "#/channels/notifications/messages/join"
+
+  markAsRead:
+    action: send
+    title: Send - Mark Notification as Read
+    description: |
+      **SEND** - Mark a specific notification as read for the authenticated user.
+
+      **Behavior:**
+      - Updates the notification's `readAt` timestamp
+      - Emits `mark-as-read:success` event upon successful completion
+      - Emits `error` event if notification is not found or access is denied
+
+      **Example:**
+      ```javascript
+      socket.emit('mark-as-read', { 
+        notificationId: 'notif-123e4567-e89b-12d3-a456-426614174000' 
+      });
+
+      socket.on('mark-as-read:success', (data) => {
+        console.log('Notification marked as read:', data.notificationId);
+      });
+      ```
+    channel:
+      $ref: "#/channels/notifications"
+    messages:
+      - $ref: "#/channels/notifications/messages/mark-as-read"
+
+  markAllAsRead:
+    action: send
+    title: Send - Mark All Notifications as Read
+    description: |
+      **SEND** - Mark all unread notifications as read for the authenticated user.
+
+      **Behavior:**
+      - Updates `readAt` timestamp for all unread notifications
+      - Emits `mark-all-as-read:success` event with count of marked notifications
+      - Emits `error` event if operation fails
+
+      **Example:**
+      ```javascript
+      socket.emit('mark-all-as-read', {});
+
+      socket.on('mark-all-as-read:success', (data) => {
+        console.log('Marked', data.count, 'notifications as read');
+      });
+      ```
+    channel:
+      $ref: "#/channels/notifications"
+    messages:
+      - $ref: "#/channels/notifications/messages/mark-all-as-read"
+
+  listenNewNotification:
+    action: receive
+    title: Receive - New Notification Event
+    description: |
+      **RECEIVE** - Listen for real-time notifications when new notifications are created for the user.
+
+      **Event:** `new-notification`
+
+      **When Emitted:**
+      - Immediately after a new notification is created for the authenticated user
+      - Only if the user has joined their notification room
+
+      **Example:**
+      ```javascript
+      socket.on('new-notification', (notification) => {
+        console.log('New notification:', notification.title);
+        console.log('Body:', notification.body);
+      });
+      ```
+    channel:
+      $ref: "#/channels/notifications"
+    messages:
+      - $ref: "#/channels/notifications/messages/new-notification"
+
+  listenNotificationUpdated:
+    action: receive
+    title: Receive - Notification Updated Event
+    description: |
+      **RECEIVE** - Listen for real-time updates when existing notifications are modified.
+
+      **Event:** `notification-updated`
+
+      **When Emitted:**
+      - When a notification's content (title, body, etc.) is updated
+      - When a notification's status changes
+
+      **Example:**
+      ```javascript
+      socket.on('notification-updated', (notification) => {
+        console.log('Notification updated:', notification.id);
+        console.log('New title:', notification.title);
+      });
+      ```
+    channel:
+      $ref: "#/channels/notifications"
+    messages:
+      - $ref: "#/channels/notifications/messages/notification-updated"
+
+  listenNotificationRead:
+    action: receive
+    title: Receive - Notification Read Event
+    description: |
+      **RECEIVE** - Listen for events when notifications are marked as read (either individually or in bulk).
+
+      **Event:** `notification-read`
+
+      **When Emitted:**
+      - After a notification is marked as read via `mark-as-read` command
+      - After all notifications are marked as read via `mark-all-as-read` command
+
+      **Example:**
+      ```javascript
+      socket.on('notification-read', (data) => {
+        console.log('Notifications marked as read at:', data.readAt);
+        if (data.notificationIds) {
+          console.log('Notification IDs:', data.notificationIds);
+        }
+      });
+      ```
+    channel:
+      $ref: "#/channels/notifications"
+    messages:
+      - $ref: "#/channels/notifications/messages/notification-read"
+
+  connectImports:
+    action: receive
+    title: Connect to Imports (RECEIVE)
+    description: |
+      **RECEIVE** - Establish a WebSocket connection to receive import content updates.
+
+      **Authentication:**
+      - JWT access token must be provided in the connection handshake
+      - Token is validated upon connection
+      - Invalid or expired tokens result in immediate disconnection
+
+      **Connection Flow:**
+      1. Client initiates connection with JWT token
+      2. Server validates token and authenticates user
+      3. Server emits `connected` event with user ID
+      4. Client can now send commands and receive import events
+
+      **Example:**
+      ```javascript
+      const socket = io('http://localhost:3000/imports', {
+        auth: {
+          token: 'your-jwt-access-token'
+        }
+      });
+
+      socket.on('connected', (data) => {
+        console.log('Connected as:', data.connectedUserId);
+      });
+
+      socket.on('new-content', (data) => {
+        console.log('New content from:', data.platform, data.content);
+      });
+
+      socket.on('error', (error) => {
+        console.error('Connection error:', error);
+      });
+      ```
+    channel:
+      $ref: "#/channels/imports"
+    messages:
+      - $ref: "#/channels/imports/messages/connected"
+
+  joinImports:
+    action: send
+    title: Send - Join Import Room
+    description: |
+      **SEND** - Join a specific user's import room to receive import content updates.
+
+      **Security:**
+      - Server validates that the provided `userId` matches the authenticated user
+      - Attempts to join another user's room will result in an error
+      - Only one room can be joined per connection
+
+      **Example:**
+      ```javascript
+      socket.emit('join', { userId: 'your-user-id' });
+      ```
+    channel:
+      $ref: "#/channels/imports"
+    messages:
+      - $ref: "#/channels/imports/messages/join"
+
+  listenNewContent:
+    action: receive
+    title: Receive - New Import Content Event
+    description: |
+      **RECEIVE** - Listen for real-time notifications when new content is imported from any platform.
+
+      **Event:** `new-content`
+
+      **When Emitted:**
+      - When content is successfully imported from any supported platform
+      - Only if the user has joined their import room
+      - Includes platform identifier and platform-specific content data
+
+      **Example:**
+      ```javascript
+      socket.on('new-content', (data) => {
+        console.log('New content from', data.platform);
+        console.log('Content:', data.content);
+        
+        if (data.platform === 'youtube') {
+          console.log('Video:', data.content.title);
+          console.log('URL:', data.content.url);
+        }
+      });
+      ```
+    channel:
+      $ref: "#/channels/imports"
+    messages:
+      - $ref: "#/channels/imports/messages/new-content"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT Bearer Token authentication for WebSocket connections.
+
+        The access token must be provided in the connection handshake using
+        the `auth.token` parameter. The token is validated upon connection
+        establishment, and invalid tokens result in immediate disconnection.
+
+        **Token Requirements:**
+        - Must be a valid JWT token
+        - Must not be expired
+        - Must contain the required user claims

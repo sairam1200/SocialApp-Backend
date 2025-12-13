@@ -11,7 +11,7 @@ import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { UserLogin } from "../../../../domain/entities";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
-import { IUserLoginRepository } from "../../../../domain/repositories/irefreshtoken.repository";
+import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 
 export class InstagramImportRequestModel {

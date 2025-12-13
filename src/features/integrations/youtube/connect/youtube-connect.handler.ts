@@ -5,6 +5,7 @@ import configs from '../../../../configs';
 import _const from '../../../../core/utils/const';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { DataProtectionKey } from '../../../../domain/entities';
 import { UserNotFoundException } from '../../../../core/exceptions';
 import { serializeObject } from '../../../../core/utils/serialization.util';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
@@ -12,10 +13,7 @@ import { HttpContext } from '../../../../core/middlewares/httpContext.middleware
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { mapToYoutubeProfileModel } from '../../../../domain/mappers/youtube.mapper';
-import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
-import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
-import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
-import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
+import { IUserLoginRepository, ILinkedAccountRepository, IDataProtectionKeyRepository } from '../../../../domain/repositories';
 import { GoogleUserDataModel, YoutubeChannelDataModel, YoutubeProfileModel } from '../../../../domain/contracts/youtube.model';
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';

@@ -19,7 +19,7 @@ import ApplicationException from '../../../../core/exceptions/application.except
 import { uploadBase64ToCloudinaryAsync } from '../../../../core/utils/cloudinary.util';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
 import { UserBiometric } from '../../../../domain/entities/identity/userBiometric.entity';
-import { IUserLoginRepository } from '../../../../domain/repositories/irefreshtoken.repository';
+import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
 import { TokenResponseModel } from 'domain/contracts/tokenResponse.model';
@@ -141,7 +141,6 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         lastName: lastName,
         emailConfirmed: true,
         type: UserType.User,
-        userName: `${firstName.toLowerCase()}${lastName.toLowerCase()}`.replace(/\s/g, ''),
       });
 
       user = await this.userRepository.createAsync(entry, '');

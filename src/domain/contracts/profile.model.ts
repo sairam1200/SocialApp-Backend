@@ -13,8 +13,13 @@ export class ProfileModel {
   @ApiProperty({ type: [ManualProfileModel] })
   manualProfiles: ManualProfileModel[];
 
+  @ApiProperty({ default: 0 })
+  followersCount: number;
+
+  @ApiProperty({ default: 0 })
+  followingCount: number;
+
   constructor(partial?: Partial<ProfileModel>) {
     Object.assign(this, partial);
   }
 }
-

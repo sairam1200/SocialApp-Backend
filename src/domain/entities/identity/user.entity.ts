@@ -4,6 +4,7 @@ import { Playlist } from "../collection/playlist.entity";
 import { Entity, Column, OneToMany, OneToOne } from "typeorm";
 import { PlaylistMember } from "../collection/playlistMember.entity";
 import { UserBiometric } from "./userBiometric.entity";
+import { UserFollow } from "../userFollow.entity";
 
 @Entity({ name: 'users', schema: 'identity' })
 export class User extends BaseEntity {
@@ -31,6 +32,9 @@ export class User extends BaseEntity {
 
     @Column({ nullable: true })
     phoneNumber?: string;
+
+    @Column({ type: 'text', nullable: true })
+    bio?: string;
 
     @Column({ nullable: true })
     newEmail?: string;
@@ -101,6 +105,12 @@ export class User extends BaseEntity {
         entry => entry.user
     )
     playlistMemberships: PlaylistMember[];
+
+    @OneToMany(() => UserFollow, follow => follow.followed)
+    followers: UserFollow[];
+
+    @OneToMany(() => UserFollow, follow => follow.follower)
+    following: UserFollow[];
 
     constructor(request: Partial<User> = {}) {
         super();

@@ -22,6 +22,8 @@ import { ResetPasswordController } from "./reset-password/reset-password.endpoin
 import { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./external/facebook-auth/facebook-auth.handler";
 import { VerifyCodeController } from "./verify-code/verify-code.endpoint";
 import { VerifyCodeCommandHandler } from "./verify-code/verify-code.handler";
+import { ForgotPasswordController } from "./forgot-password/forgot-password.endpoint";
+import { ForgotPasswordCommandHandler } from "./forgot-password/forgot-password.handler";
 
 export { LoginController } from "./login/login.endpoint";
 export { LoginCommandHandler } from "./login/login.handler";
@@ -72,6 +74,7 @@ const controllers = [
   Disable2FAController,
   LogoutController,
   VerifyCodeController,
+  ForgotPasswordController,
 ];
 
 const handlers = [
@@ -88,7 +91,8 @@ const handlers = [
   FacebookConnectQueryHandler,
   FacebookConnectCallbackQueryHandler,
   LogoutCommandHandler,
-  VerifyCodeCommandHandler
+  VerifyCodeCommandHandler,
+  ForgotPasswordCommandHandler,
 ];
 
 const authentication = {

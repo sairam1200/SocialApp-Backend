@@ -6,7 +6,7 @@ import { VersioningType } from '@nestjs/common';
 import { AppModule } from './modules/app.module';
 import dataSource from './infrastructure/persistence/data.source';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { addScalarApiDocs, addSwaggerApiDocs } from './core/utils/apiDocs.util';
+import { addScalarApiDocs, addSwaggerApiDocs, addWebSocketDocs } from './core/utils/apiDocs.util';
 import { ErrorHandlersFilter } from './core/exceptions/exceptionHandler.filter';
 import { ApiDocRedirectMiddleware } from './core/middlewares/apiDocRedirect.middleware';
 
@@ -33,6 +33,7 @@ async function bootstrap() {
   if (configs.env !== 'production') {
     addSwaggerApiDocs(app);
     addScalarApiDocs(app);
+    addWebSocketDocs(app);
   }
 
   app.enableCors({

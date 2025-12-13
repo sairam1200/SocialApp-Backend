@@ -6,7 +6,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { cryptoUtils } from '../../core/utils/crypto.util';
 import { addDurationToNow } from '../../core/utils/time.util';
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
-import { IUserLoginRepository } from "../../domain/repositories/irefreshtoken.repository";
+import { IUserLoginRepository } from "../../domain/repositories/iuserLogin.repository";
 
 @Injectable()
 export class UserLoginRepository implements IUserLoginRepository {

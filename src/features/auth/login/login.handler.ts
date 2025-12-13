@@ -7,7 +7,7 @@ import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { ITokenService } from "../../../domain/services/itoken.service";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 import { TokenResponseModel } from "../../../domain/contracts/tokenResponse.model";
-import { IUserLoginRepository } from "../../../domain/repositories/irefreshtoken.repository";
+import { IUserLoginRepository } from "../../../domain/repositories/iuserLogin.repository";
 
 export class TokenRequestModel {
   @ApiProperty()
