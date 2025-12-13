@@ -3,9 +3,7 @@ import { UserModel } from "./user.model";
 import { LinkedAccountModel } from "./user.model";
 import { ManualProfileModel } from "./manualProfile.model";
 
-export class ProfileModel {
-  @ApiProperty({ type: UserModel })
-  user: UserModel;
+export class ProfileModel extends UserModel {
 
   @ApiProperty({ type: [LinkedAccountModel] })
   linkedAccounts: LinkedAccountModel[];
@@ -20,6 +18,7 @@ export class ProfileModel {
   followingCount: number;
 
   constructor(partial?: Partial<ProfileModel>) {
+    super();
     Object.assign(this, partial);
   }
 }
