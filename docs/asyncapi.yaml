@@ -38,6 +38,10 @@ servers:
     host: "gaddr.com"
     protocol: "wss"
     description: Production WebSocket server with TLS encryption
+  staging:
+    host: "gaddr-backend-api.onrender.com"
+    protocol: "wss"
+    description: Staging WebSocket server with TLS encryption
   development:
     host: "localhost:3000"
     protocol: "ws"
