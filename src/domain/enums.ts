@@ -11,6 +11,9 @@ export enum RoleType {
 
 export enum NotificationType {
     Import = 'Import',
+    Email = "Email",
+    Badge = "Badge",
+    SMS = "SMS"
 }
 
 export enum NotificationStatus {
