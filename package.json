@@ -27,6 +27,7 @@
     "@asyncapi/react-component": "^2.6.5",
     "@bull-board/api": "^6.9.6",
     "@bull-board/express": "^6.9.6",
+    "@getbrevo/brevo": "^3.0.1",
     "@nestjs/bull": "^11.0.2",
     "@nestjs/bullmq": "^11.0.2",
     "@nestjs/common": "^11.0.1",
