@@ -20,6 +20,7 @@ export class NotificationService implements INotificationService {
   ) { }
 
   public async notifyAsync(userId: string, type: NotificationType, title: string, body: string, isLive: boolean, metaData?: any): Promise<Notification> {
+    
     const notification = await this.notificationRepository.createAsync(new Notification({
       body: body,
       type: type,
