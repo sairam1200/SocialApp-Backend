@@ -169,6 +169,8 @@ const envVarsSchema = Joi.object()
       .description('SMTP secure'),
     SMTP_PASSWORD: Joi.string()
       .description('SMTP password'),
+    BREVO_API_KEY: Joi.string()
+      .description('Brevo (formerly Sendinblue) API key'),
     LOG_PATH: Joi.string()
       .default('logs')
       .description('Directory path for log files'),
@@ -311,6 +313,9 @@ export default {
     user: envVars.SMTP_USER,
     secure: envVars.SMTP_SECURE,
     password: envVars.SMTP_PASSWORD
+  },
+  brevo: {
+    apiKey: envVars.BREVO_API_KEY,
   },
   cloudinary: {
     cloudName: envVars.CLOUDINARY_CLOUD_NAME,
