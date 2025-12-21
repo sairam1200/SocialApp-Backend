@@ -92,10 +92,10 @@ export class SendVerificationEmailCommandHandler implements ICommandHandler<Send
 
       await this.emailService.sendTemplatedAsync({
         to: user.email,
-        subject: "Verify Your Gaddr Email Address",
+        subject: "Action Required: Verify Your Gaddr Email Address",
         templatePath: "templates/email/comfirm-email-v1.html",
         context: {
-          confirmationMessage: "Please confirm your email address to complete your account setup and start using all our features.",
+          confirmationMessage: "We’ve received a request to associate this email address with your gaddr account.",
           verificationCode: verificationCode,
           confirmEmailLink: confirmEmailLink,
           userEmail: user.email,

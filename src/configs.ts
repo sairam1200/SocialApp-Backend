@@ -166,6 +166,7 @@ const envVarsSchema = Joi.object()
     SMTP_USER: Joi.string()
       .description('SMTP username'),
     SMTP_SECURE: Joi.boolean()
+      .default(false)
       .description('SMTP secure'),
     SMTP_PASSWORD: Joi.string()
       .description('SMTP password'),

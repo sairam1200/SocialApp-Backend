@@ -25,5 +25,9 @@ export namespace Globals {
 
   export class Email {
     public static readonly DefaultFrom = '"Gaddr" <team@gaddr.com>';
+    public static readonly DefaultSender = {
+      name: "Gaddr",
+      email: "team@gaddr.com"
+    }
   }
 } 
