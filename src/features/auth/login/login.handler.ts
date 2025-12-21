@@ -65,6 +65,10 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
       return this.createErrorResponse("Invalid login attempt.");
     }
 
+    if (!user.emailConfirmed) {
+      return this.createErrorResponse("Invalid login attempt.");
+    }
+
     if (this.isAccountLockedOrInactive(user)) {
       return this.handleLockedOrInactiveAccount(user);
     }
