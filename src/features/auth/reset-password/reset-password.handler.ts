@@ -1,6 +1,7 @@
 import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import configs from "../../../configs";
+import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
 import ipUtil from "../../../core/utils/ip.util";
 import logger from "../../../core/utils/winston.util";
@@ -18,11 +19,22 @@ import { IUserLoginRepository } from "../../../domain/repositories/iuserLogin.re
 import { IDataProtectionKeyRepository } from "../../../domain/repositories/idataProtectionKey.repository";
 
 export class ResetPasswordRequestModel {
+  @ApiProperty()
   code: string;
+
+  @ApiProperty()
   email: string;
+
+  @ApiProperty()
   userAgent: string;
+
+  @ApiProperty()
   ipAddress: string;
+
+  @ApiProperty()
   deviceId: string;
+
+  @ApiProperty()
   newPassword: string;
 }
 

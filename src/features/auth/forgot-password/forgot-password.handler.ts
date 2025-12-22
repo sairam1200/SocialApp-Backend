@@ -1,6 +1,7 @@
 import * as Joi from "joi";
 import configs from "../../../configs";
 import { Inject } from "@nestjs/common";
+import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../core/utils/const";
 import ipUtil from "../../../core/utils/ip.util";
 import logger from "../../../core/utils/winston.util";
@@ -13,9 +14,16 @@ import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
 
 export class ForgotPasswordRequestModel {
+  @ApiProperty()
   email: string;
+
+  @ApiProperty()
   userAgent: string;
+
+  @ApiProperty()
   ipAddress: string;
+
+  @ApiProperty()
   deviceId: string;
 }
 

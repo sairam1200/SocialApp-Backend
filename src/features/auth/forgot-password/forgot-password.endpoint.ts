@@ -24,7 +24,6 @@ export class ForgotPasswordController {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   @ApiResponse({ status: 200, description: 'OK', type: ForgotPasswordResponseModel })
-  @ApiBody({ type: ForgotPasswordRequestModel, required: false })
   public async ForgotPassword(
     @Body() model: ForgotPasswordRequestModel,
     @Res() res: Response,
