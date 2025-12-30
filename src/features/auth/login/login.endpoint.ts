@@ -7,22 +7,22 @@ import { Body, Controller, HttpStatus, Post, Res } from "@nestjs/common";
 
 @ApiTags('Authentication')
 @Controller({
-    path: `/auth`,
-    version: '1',
+	path: `/auth`,
+	version: '1',
 })
 export class LoginController {
 
-    constructor(private readonly commandBus: CommandBus) {
-    }
+	constructor(private readonly commandBus: CommandBus) {
+	}
 
-    @Post('access-token')
-    @ApiResponse({ status: 200, description: 'OK', type: TokenResponseModel })
-    @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
-    @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
-    @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-    public async GetAccessToken(@Body() request: TokenRequestModel, @Res() res: Response): Promise<Response> {
+	@Post('access-token')
+	@ApiResponse({ status: 200, description: 'OK', type: TokenResponseModel })
+	@ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+	@ApiResponse({ status: 400, description: 'BAD_REQUEST' })
+	@ApiResponse({ status: 403, description: 'FORBIDDEN' })
+	public async GetAccessToken(@Body() request: TokenRequestModel, @Res() res: Response): Promise<Response> {
 
-        const result = await this.commandBus.execute(new LoginCommand({ model: request }));
-        return res.status(HttpStatus.OK).send(result);
-    }
+		const result = await this.commandBus.execute(new LoginCommand({ model: request }));
+		return res.status(HttpStatus.OK).send(result);
+	}
 }
