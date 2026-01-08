@@ -1,10 +1,10 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
+import { AddPlaylistContentContent } from "./add-content.handler";
 import { UserAccoutGuard } from "../../../core/passport/account.guard";
-import { PlaylistContentModel } from "../../../domain/contracts/playlist.model";
 import { Body, Controller, HttpStatus, Param, Put, Res, UseGuards } from "@nestjs/common";
-import { AddPlaylistContentContent, AddPlaylistContentModel } from "./add-content.handler";
+import { AddPlaylistContentModel, PlaylistContentModel } from "../../../domain/contracts/playlist.model";
 
 @ApiTags('Playlists')
 @UseGuards(UserAccoutGuard)
