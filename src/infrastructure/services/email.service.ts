@@ -48,4 +48,6 @@ export class EmailService implements IEmailService {
 
     await this.sendAsync({ from, to, subject, html, attachments })
   }
+
+  
 }

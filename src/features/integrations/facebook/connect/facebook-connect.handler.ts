@@ -62,7 +62,7 @@ export class FacebookConnectQueryHandler implements ICommandHandler<FacebookConn
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       "",
-      HttpContext.user[Globals.ClaimTypes.UserId],
+      HttpContext.getCurrentUserId,
       expiresIn
     );
   }
@@ -104,9 +104,9 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       linkedAccount.userName = userData.name;
       linkedAccount.profileImage = userData.picture?.data?.url;
       linkedAccount.followingCount = userData.friends?.summary?.total_count,
-      linkedAccount.metaData = {
-        name: userData.name,
-      };
+        linkedAccount.metaData = {
+          name: userData.name,
+        };
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({

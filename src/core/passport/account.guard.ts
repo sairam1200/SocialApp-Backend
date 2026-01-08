@@ -6,7 +6,6 @@ import { UserType } from "../../domain/enums";
 import redis from '../../core/utils/redis.util';
 import logger from "../../core/utils/winston.util";
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
-import { extractTokenFromHeader, getUserFromAccessTokenAsync } from "../../core/utils/jwt.util";
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 
 function createAccountGuard(type?: UserType, allowTwoFARequired: boolean = false, ignoreExpiration: boolean = false) {
@@ -33,19 +32,6 @@ function createAccountGuard(type?: UserType, allowTwoFARequired: boolean = false
           throw new UnauthorizedException('Unauthorized: You need to log in to access this resource.');
         }
       }
-
-      // const access_token = extractTokenFromHeader(request);
-      // if (!access_token) {
-      //   logger.error('[AccountGuard] No access token found');
-      //   throw new UnauthorizedException('Unauthorized: You need to log in to access this resource.');
-      // }
-
-      // logger.info('[AccountGuard] Access token found, validating...');
-      // const claimsPrinciple = await getUserFromAccessTokenAsync(access_token, response, this.jwtService, ignoreExpiration);
-      // if (!claimsPrinciple || claimsPrinciple === undefined) {
-      //   logger.error('[AccountGuard] Invalid or expired token');
-      //   throw new UnauthorizedException('Unauthorized: Invalid or expired token.');
-      // }
 
       logger.info(`[AccountGuard] User validated. User type: ${claimsPrinciple[Globals.ClaimTypes.UserType]}`);
 

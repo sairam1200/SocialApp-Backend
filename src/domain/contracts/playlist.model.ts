@@ -1,6 +1,32 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { PlaylistMemberRole } from "../enums";
 
+export class AddPlaylistContentModel {
+  @ApiProperty()
+  contentId: string;
+
+  @ApiProperty()
+  type: string;
+
+  @ApiProperty()
+  platform: string;
+
+  @ApiProperty()
+  title: string;
+
+  @ApiProperty()
+  contentUrl: string;
+
+  @ApiProperty()
+  thumbnailUrl: string;
+
+  @ApiProperty()
+  description?: string;
+
+  @ApiProperty()
+  metadata?: Record<string, any>;
+}
+
 export class PlaylistContentModel {
   @ApiProperty()
   id: string;

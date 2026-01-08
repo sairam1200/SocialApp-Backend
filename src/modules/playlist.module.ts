@@ -3,6 +3,7 @@ import { JwtService } from "@nestjs/jwt";
 import { CqrsModule } from "@nestjs/cqrs";
 import playlist from "../features/playlist";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import bookmark from "../features/playlist/bookmark";
 import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
 import { Playlist, PlaylistContent, PlaylistMember, Role, User, UserRole } from "../domain/entities";
@@ -22,6 +23,7 @@ import { Playlist, PlaylistContent, PlaylistMember, Role, User, UserRole } from 
   ],
   controllers: [
     ...playlist.addControllers(),
+    ...bookmark.addControllers()
   ],
   providers: [
     JwtService,

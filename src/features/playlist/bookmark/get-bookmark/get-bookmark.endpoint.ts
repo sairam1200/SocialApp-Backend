@@ -1,0 +1,41 @@
+import { Response } from "express";
+import { QueryBus } from "@nestjs/cqrs";
+import _const from "../../../../core/utils/const";
+import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { UserAccoutGuard } from "../../../../core/passport/account.guard";
+import { PlaylistModel } from "../../../../domain/contracts/playlist.model";
+import { Controller, Get, HttpStatus, Res, UseGuards } from "@nestjs/common";
+import { GetPlaylistByNameQuery } from "../../get-playlist/get-playlist-by-name.handler";
+
+@ApiBearerAuth()
+@ApiTags('Bookmark')
+@UseGuards(UserAccoutGuard)
+@Controller({
+  path: `/bookmark`,
+  version: '1',
+})
+export class GetBookmarkController {
+  constructor(
+    private readonly queryBus: QueryBus
+  ) { }
+
+  @Get()
+  @ApiResponse({ status: 200, description: 'OK', type: PlaylistModel })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
+  @ApiResponse({ status: 403, description: 'FORBIDDEN' })
+  public async GetByName(
+    @Res() res: Response
+  ): Promise<Response> {
+
+    const result = await this.queryBus.execute(new GetPlaylistByNameQuery({
+      model: {
+        playlistName: _const.COLLECTION.BOOKMARK.NAME,
+        userNameOrId: ""
+      }
+    }));
+
+    res.status(HttpStatus.OK).send(result);
+    return res;
+  }
+}
