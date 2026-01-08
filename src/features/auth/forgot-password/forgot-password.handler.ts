@@ -65,8 +65,7 @@ export class ForgotPasswordCommandHandler implements ICommandHandler<ForgotPassw
         return;
       }
 
-      const expirationTimeSeconds = Math.floor(configs.Token.expirationTime / 1000);
-      const expiresIn = Math.floor(Date.now() / 1000) + expirationTimeSeconds;
+      const expiresIn = Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
       const code = stringUtil.generateRandomNumberString(6);
       await this.dataProtectionKeyRepository.createAsync(
         _const.TOKEN.PURPOSE.RESET_PASSWORD,

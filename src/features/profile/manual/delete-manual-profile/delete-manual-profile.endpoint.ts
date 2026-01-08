@@ -25,9 +25,7 @@ export class DeleteManualProfileController {
     @Query('id') id: string,
     @Res() res: Response
   ): Promise<Response> {
-
     await this.commandBus.execute(new DeleteManualProfileCommand({ id }));
-
     res.status(HttpStatus.NO_CONTENT).send();
     return res;
   }

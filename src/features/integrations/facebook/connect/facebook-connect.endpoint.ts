@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
+import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { stringUtil } from "../../../../core/utils/string.util";
 import { getRedirectUrl } from "../../../../core/utils/redirectUrl.util";
@@ -30,7 +30,7 @@ class FacebookConnectCallbackResponseModel {
 })
 export class FacebookConnectController {
 
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly queryBus: QueryBus) { }
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
@@ -66,7 +66,7 @@ export class FacebookConnectController {
 
     const authorizeURL = `https://www.facebook.com/v23.0/dialog/oauth?${params.toString()}`;
 
-    await this.commandBus.execute(new FacebookConnectQuery({ model: { state } }));
+    await this.queryBus.execute(new FacebookConnectQuery({ model: { state } }));
     return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
   }
 
@@ -81,7 +81,7 @@ export class FacebookConnectController {
     @Res() res: Response
   ): Promise<Response | void> {
 
-    const result = await this.commandBus.execute(new FacebookConnectCallbackQuery({ model: { code, state } }));
+    const result = await this.queryBus.execute(new FacebookConnectCallbackQuery({ model: { code, state } }));
     return res.status(HttpStatus.OK).json(result);
   }
 }

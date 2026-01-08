@@ -105,4 +105,11 @@ export default {
       ACCOUNT_SESSION_TTL_SEC: 604800, // 7 days
     }
   },
+
+  COLLECTION: {
+    BOOKMARK: {
+      NAME: 'bookmark',
+      DESCRIPTION: ''
+    }
+  }
 }

@@ -11,18 +11,9 @@ export class CreateManualProfileModel {
   icon: string;
 }
 
-export class UpdateManualProfileModel {
+export class UpdateManualProfileModel extends CreateManualProfileModel {
   @ApiProperty()
   id: string;
-
-  @ApiProperty()
-  url: string;
-
-  @ApiProperty()
-  platform: string;
-
-  @ApiProperty()
-  icon: string;
 }
 
 export class ManualProfileModel extends UpdateManualProfileModel {

@@ -2,21 +2,10 @@ import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import _const from "../../../core/utils/const";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { PlaylistContentModel } from "../../../domain/contracts/playlist.model";
-import { PlaylistContent } from "../../../domain/entities/collection/playlistContent.entity";
 import { mapToPlaylistContentModel } from "../../../domain/mappers/playlist.mpper";
 import { IPlaylistRepository } from "../../../domain/repositories/iplaylist.repository";
-
-export class AddPlaylistContentModel {
-  contentId: string;
-  type: string;
-  platform: string;
-  title: string;
-  contentUrl: string;
-  thumbnailUrl: string;
-  description?: string;
-  metadata?: Record<string, any>;
-}
+import { PlaylistContent } from "../../../domain/entities/collection/playlistContent.entity";
+import { AddPlaylistContentModel, PlaylistContentModel } from "../../../domain/contracts/playlist.model";
 
 export class AddPlaylistContentContent {
   model: AddPlaylistContentModel;
