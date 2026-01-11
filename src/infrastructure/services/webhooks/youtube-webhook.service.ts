@@ -1,14 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import axios from "axios";
-import configs from "../../configs";
-import logger from "../../core/utils/winston.util";
-import _const from "../../core/utils/const";
+import logger from "../../../core/utils/winston.util";
+import _const from "../../../core/utils/const";
 
 @Injectable()
 export class YoutubeWebhookService {
   private readonly PUBSUBHUBBUB_URL = 'https://pubsubhubbub.appspot.com/subscribe';
 
-  async subscribeAsync(channelId: string, callbackUrl: string): Promise<void> {
+  public async subscribeAsync(channelId: string, callbackUrl: string): Promise<void> {
     const verifyToken = process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN || 'default_verify_token';
     const topic = `https://www.youtube.com/xml/feeds/videos.xml?channel_id=${channelId}`;
 
@@ -37,7 +36,7 @@ export class YoutubeWebhookService {
     }
   }
 
-  async unsubscribeAsync(channelId: string, callbackUrl: string): Promise<void> {
+  public async unsubscribeAsync(channelId: string, callbackUrl: string): Promise<void> {
     const verifyToken = process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN || 'default_verify_token';
     const topic = `https://www.youtube.com/xml/feeds/videos.xml?channel_id=${channelId}`;
 
