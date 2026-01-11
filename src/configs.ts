@@ -118,6 +118,10 @@ const envVarsSchema = Joi.object()
       .description('YouTube OAuth callback URL'),
     YOUTUBE_API_KEY: Joi.string()
       .description('YouTube API key'),
+    YOUTUBE_WEBHOOK_URL: Joi.string()
+      .description('YouTube webhook callback URL'),
+    APP_URL: Joi.string()
+      .description('Application base URL'),
     SPOTIFY_CLIENT_ID: Joi.string()
       .description('Spotify OAuth client ID'),
     SPOTIFY_CLIENT_SECRET: Joi.string()
@@ -256,6 +260,10 @@ export default {
     clientId: envVars.YOUTUBE_CLIENT_ID,
     clientSecret: envVars.YOUTUBE_CLIENT_SECRET,
     callbackUrl: envVars.YOUTUBE_CALLBACK_URL,
+    webhookUrl: envVars.YOUTUBE_WEBHOOK_URL,
+  },
+  app: {
+    url: envVars.APP_URL,
   },
   google: {
     callbackUrl: envVars.GOOGLE_CALLBACK_URL,

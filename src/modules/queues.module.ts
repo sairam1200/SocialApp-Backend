@@ -1,4 +1,3 @@
-import { Queue } from "bullmq";
 import _const from "../core/utils/const";
 import { JwtService } from "@nestjs/jwt";
 import redis from "core/utils/redis.util";
@@ -6,48 +5,15 @@ import { BullModule } from '@nestjs/bullmq';
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { createBullBoard } from '@bull-board/api';
 import { ExpressAdapter } from '@bull-board/express';
-import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
-import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { UserContent } from "../domain/entities/userContent.entity";
+import { LinkedAccount } from "../domain/entities/linkedAccount.entity"; 
 import { Notification } from "../domain/entities/notification/notification.entity";
-import { LinkedAccount } from "../domain/entities/linkedAccount.entity";
-import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
 import { BullBoardAuthMiddleware } from "../core/middlewares/bullBoardAuth.middleware";
 import { DynamicModule, MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
-import { InjectSpotifyImportQueue, SpotifyImportProcessor } from "../infrastructure/background/processors/spotify-import.processor";
-import { InjectPinterestImportQueue, PinterestImportProcessor } from "../infrastructure/background/processors/pinterest-import.processor";
-import { InjectInstagramImportQueue, InstagramImportProcessor } from "../infrastructure/background/processors/instagram-import.processor";
-import { RedditImportProcessor, InjectRedditImportQueue } from "../infrastructure/background/processors/reddit-import.processor";
-import { InjectTwitterImportQueue, TwitterImportProcessor } from "../infrastructure/background/processors/twitter-import.processor";
-import { InjectLinkedInImportQueue, LinkedInImportProcessor } from "../infrastructure/background/processors/linkedin-import.processor";
 @Module({})
 export class QueuesModule implements NestModule {
   static register(): DynamicModule {
-    const queues = BullModule.registerQueue(
-      {
-        name: _const.BULL_QUEUES.PINTEREST_IMPORT,
-      },
-      {
-        name: _const.BULL_QUEUES.SPOTIFY_IMPORT,
-      },
-      {
-        name: _const.BULL_QUEUES.INSTAGRAM_IMPORT,
-      },
-      {
-        name: _const.BULL_QUEUES.TWITTER_IMPORT,
-      },
-      {
-        name: _const.BULL_QUEUES.REDDIT_IMPORT,
-      },
-      {
-        name: _const.BULL_QUEUES.TIKTOK_IMPORT,
-      },
-      {
-        name: _const.BULL_QUEUES.LINKEDIN_IMPORT,
-      }
-    );
-
     return {
       module: QueuesModule,
       imports: [
@@ -64,48 +30,21 @@ export class QueuesModule implements NestModule {
             },
           },
         }),
-        queues
       ],
       providers: [
         JwtService,
-        ...queues.providers,
-
-        PinterestImportProcessor,
-        InstagramImportProcessor,
-        TwitterImportProcessor,
-        SpotifyImportProcessor,
-        RedditImportProcessor,
-        ImportGateway,
-
-        dependency.UserContentRepository,
-        dependency.LinkedAccountRepository,
-      ],
-      exports: [
-        InstagramImportProcessor,
-        PinterestImportProcessor,
-        RedditImportProcessor,
-        ...queues.exports,
       ],
     };
   }
 
-  constructor(
-    @InjectPinterestImportQueue() private readonly pinterestImportQueue: Queue,
-    @InjectInstagramImportQueue() private readonly instagramImportQueue: Queue,
-    @InjectSpotifyImportQueue() private readonly spotifyImportQueue: Queue,
-    @InjectRedditImportQueue() private readonly redditImportQueue: Queue,
-    @InjectTwitterImportQueue() private readonly twitterImportQueue: Queue,
-  ) { }
+  constructor() { }
 
   configure(consumer: MiddlewareConsumer) {
     const serverAdapter = new ExpressAdapter();
     serverAdapter.setBasePath('/background/queues');
 
     createBullBoard({
-      queues: [
-        new BullMQAdapter(this.instagramImportQueue),
-        new BullMQAdapter(this.redditImportQueue),
-      ],
+      queues: [],
       serverAdapter,
     });
 

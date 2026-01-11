@@ -1,17 +1,17 @@
 import axios from "axios";
-import { Queue } from "bullmq";
 import { Inject } from "@nestjs/common";
-import { InjectQueue } from "@nestjs/bull";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
 import { NotFoundException } from "@nestjs/common";
 import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
+import { LinkedInImportEvent } from "../../../../domain/events";
 
 const PLATFORM = 'linkedin';
 const API_BASE = 'https://api.linkedin.com/v2';
@@ -37,8 +37,7 @@ export class LinkedInImportCommandHandler implements ICommandHandler<LinkedInImp
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    @InjectQueue(_const.BULL_QUEUES.LINKEDIN_IMPORT)
-    private readonly importQueue: Queue
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(command: LinkedInImportCommand): Promise<{ accessToken: string; expiresIn: number; }> {
@@ -72,16 +71,16 @@ export class LinkedInImportCommandHandler implements ICommandHandler<LinkedInImp
       throw new NotFoundException('No matching LinkedIn profile was found!');
     }
 
+    account.allowImport = true;
+    await this.linkedAccountRepository.updateAsync(account);
+
     try {
-      await this.importQueue.add(_const.BULL_QUEUES.LINKEDIN_IMPORT, { account, accessToken }, {
-        attempts: 3,
-        backoff: 5000
-      });
-      console.log('LinkedIn import job added to the queue');
+      this.eventEmitter.emit('linkedin.import', new LinkedInImportEvent({ account, accessToken }));
+      logger.info(`[LinkedInImport] Import event emitted for user ${userId}`);
     } catch (error) {
-      logger.error(`An error occurred while adding the LinkedIn import job to the queue: 
+      logger.error(`An error occurred while emitting the LinkedIn import event: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
-      throw new ApplicationException('Failed to add LinkedIn import job to the queue. Please try again later.');
+      throw new ApplicationException('Failed to initiate LinkedIn import. Please try again later.');
     }
 
     return {

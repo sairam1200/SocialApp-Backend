@@ -20,4 +20,6 @@ export interface IUserContentRepository {
   ): Promise<[UserContent[], string]>;
 
   getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]>;
+
+  deleteByUserIdAndPlatformAsync(userId: string, platform: string): Promise<void>;
 }

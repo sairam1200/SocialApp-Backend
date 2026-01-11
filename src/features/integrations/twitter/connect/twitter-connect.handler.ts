@@ -4,8 +4,12 @@ import { Inject } from "@nestjs/common";
 import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { UserNotFoundException } from "../../../../core/exceptions";
+import { PlatformConnectCleanupEvent } from "../../../../domain/events";
+import { serializeObject } from "../../../../core/utils/serialization.util";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
@@ -16,9 +20,6 @@ import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { TwitterProfileModel, TwitterUserDataModel } from "../../../../domain/contracts/twitter.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
-import { UserNotFoundException } from "core/exceptions";
-import { serialize } from "v8";
-import { serializeObject } from "core/utils/serialization.util";
 
 const BASE_URL = 'https://api.twitter.com/2';
 
@@ -83,6 +84,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(query: TwitterConnectCallbackQuery): Promise<{
@@ -94,37 +96,46 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     const { model } = query;
     await twitterConnectValidations.validateAsync(model);
     const dataProtectionKey = await this.validateStateAsync(model.state);
-   console.log('Data Protection Key:', dataProtectionKey);
+    console.log('Data Protection Key:', dataProtectionKey);
     const { access_token, refresh_token, expires_in } = await this.fetchToken(model.code, dataProtectionKey.value);
 
     const userData = await this.fetchUserData(access_token);
-    const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId) 
+    const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId)
     if (!user) {
       throw new UserNotFoundException(userData.data.id);
     }
 
     let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.TWITTER, user.id);
     console.log("Linked Account:", linkedAccount);
+    const newExternalId = userData.data.id;
     if (linkedAccount) {
+      const oldExternalId = linkedAccount.externalId;
+
+      if (oldExternalId !== newExternalId) {
+        logger.info(`[TwitterConnect] User ${user.id} changed Twitter account from ${oldExternalId} to ${newExternalId}`);
+        this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
+      }
+
+      linkedAccount.externalId = newExternalId;
       linkedAccount.userName = userData.data.username;
       linkedAccount.profileImage = userData.data.profile_image_url;
       linkedAccount.followersCount = userData.data.public_metrics.followers_count;
       linkedAccount.followingCount = userData.data.public_metrics.following_count;
-      linkedAccount.verified= userData.data.verified,
-      linkedAccount.externalUrl=`https://x.com/${userData.data.username}`,
-      linkedAccount.metaData = {
-        name: userData.data.name,
-        description: userData.data.description,
-        countryCodes: userData.data.withheld?.country_codes || [],
-        url: userData.data.url || null,
-        location: userData.data.location || null,
-        pinnedTweetId: userData.data.pinned_tweet_id || null,
-        tweetCount: userData.data.public_metrics.tweet_count,
-        listedCount: userData.data.public_metrics.listed_count,
-        createdAt: userData.data.created_at,
-        protected: userData.data.protected,
-        entities: userData.data.entities || null,
-      };
+      linkedAccount.verified = userData.data.verified,
+        linkedAccount.externalUrl = `https://x.com/${userData.data.username}`,
+        linkedAccount.metaData = {
+          name: userData.data.name,
+          description: userData.data.description,
+          countryCodes: userData.data.withheld?.country_codes || [],
+          url: userData.data.url || null,
+          location: userData.data.location || null,
+          pinnedTweetId: userData.data.pinned_tweet_id || null,
+          tweetCount: userData.data.public_metrics.tweet_count,
+          listedCount: userData.data.public_metrics.listed_count,
+          createdAt: userData.data.created_at,
+          protected: userData.data.protected,
+          entities: userData.data.entities || null,
+        };
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
@@ -142,7 +153,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
           description: userData.data.description,
           countryCodes: userData.data.withheld?.country_codes || [],
           url: userData.data.url || null,
-          location: userData.data.location  || null,
+          location: userData.data.location || null,
           pinnedTweetId: userData.data.pinned_tweet_id || null,
           tweetCount: userData.data.public_metrics.tweet_count,
           listedCount: userData.data.public_metrics.listed_count,
@@ -154,7 +165,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     }
 
     let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.TWITTER);
-    const tokenValue = serializeObject({access_token , refresh_token})
+    const tokenValue = serializeObject({ access_token, refresh_token })
     console.log("this is the token value: ", tokenValue);
     if (existingAccountLogin) {
 
@@ -185,12 +196,12 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
 
   private async fetchToken(code: string, codeVerifier: string)
     : Promise<{ access_token: string; expires_in: number; refresh_token: string; }> {
-      const basicAuth = Buffer.from(`${configs.twitter.clientId}:${configs.twitter.clientSecret}`).toString('base64');
+    const basicAuth = Buffer.from(`${configs.twitter.clientId}:${configs.twitter.clientSecret}`).toString('base64');
     try {
       console.log("codeVerifier:", codeVerifier);
       const response = await axios.post(
         `${BASE_URL}/oauth2/token`,
-        `grant_type=authorization_code`+
+        `grant_type=authorization_code` +
         `&redirect_uri=${encodeURIComponent(configs.twitter.redirectUri)}` +
         `&code_verifier=${codeVerifier}` +
         `&code=${encodeURIComponent(code)}`,

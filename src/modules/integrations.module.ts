@@ -9,8 +9,17 @@ import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
 import { SearchCacheService } from "infrastructure/services";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
-import { FacebookImportListener } from "../infrastructure/background/listeners/facebook-import.listener";
+import { YoutubeWebhookService } from "../infrastructure/services/youtube-webhook.service";
+import { RedditImportListener } from "../infrastructure/background/listeners/reddit-import.listener";
+import { TiktokImportListener } from "../infrastructure/background/listeners/tiktok-import.listener";
+import { TwitterImportListener } from "../infrastructure/background/listeners/twitter-import.listener";
 import { YoutubeImportListener } from "../infrastructure/background/listeners/youtube-import.listener";
+import { SpotifyImportListener } from "../infrastructure/background/listeners/spotify-import.listener";
+import { LinkedInImportListener } from "../infrastructure/background/listeners/linkedin-import.listener";
+import { FacebookImportListener } from "../infrastructure/background/listeners/facebook-import.listener";
+import { InstagramImportListener } from "../infrastructure/background/listeners/instagram-import.listener";
+import { PinterestImportListener } from "../infrastructure/background/listeners/pinterest-import.listener";
+import { PlatformRollbackListener } from "../infrastructure/background/listeners/platform-rollback.listener";
 import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserBiometric, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
 
 @Module({
@@ -39,8 +48,17 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     ImportGateway,
     JwtService,
     SearchCacheService,
+    YoutubeWebhookService,
     FacebookImportListener,
     YoutubeImportListener,
+    PinterestImportListener,
+    SpotifyImportListener,
+    RedditImportListener,
+    TwitterImportListener,
+    InstagramImportListener,
+    LinkedInImportListener,
+    TiktokImportListener,
+    PlatformRollbackListener,
     ...integrations.addHandlers(),
 
     dependency.RoleRepository,

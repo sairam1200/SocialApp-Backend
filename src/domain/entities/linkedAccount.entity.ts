@@ -43,6 +43,9 @@ export class LinkedAccount extends BaseEntity {
   @Column({ default: true })
   isVisible: boolean;
 
+  @Column({ default: false })
+  syncEnabled: boolean;
+
   constructor(request: Partial<LinkedAccount> = {}) {
     super();
     Object.assign(this, request);

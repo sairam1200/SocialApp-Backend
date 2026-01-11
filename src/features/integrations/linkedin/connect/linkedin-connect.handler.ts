@@ -4,9 +4,11 @@ import { Inject } from "@nestjs/common";
 import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import logger from "../../../../core/utils/winston.util";
 import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
 import { DataProtectionKey } from "../../../../domain/entities";
+import { PlatformConnectCleanupEvent } from "../../../../domain/events";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
@@ -80,6 +82,7 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(query: LinkedInConnectCallbackQuery): Promise<{ accessToken: string; expiresIn: number; profile: LinkedInProfileModel; }> {
@@ -104,11 +107,21 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
     }
 
     let linkedAccount = existingAccount;
+    const newExternalId = userData.id;
     if (!linkedAccount) {
       linkedAccount = new LinkedAccount();
       linkedAccount.userId = user.id;
       linkedAccount.platform = PLATFORM;
-      linkedAccount.externalId = userData.id;
+      linkedAccount.externalId = newExternalId;
+    } else {
+      const oldExternalId = linkedAccount.externalId;
+
+      if (oldExternalId !== newExternalId) {
+        logger.info(`[LinkedInConnect] User ${user.id} changed LinkedIn account from ${oldExternalId} to ${newExternalId}`);
+        this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
+      }
+
+      linkedAccount.externalId = newExternalId;
     }
 
     linkedAccount.userName = userData.vanityName || `${userData.localizedFirstName}.${userData.localizedLastName}`.toLowerCase();

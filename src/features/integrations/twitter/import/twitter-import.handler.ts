@@ -1,18 +1,18 @@
 import axios from "axios";
-import { Queue } from "bullmq";
 import configs from "../../../../configs";
-import { InjectQueue } from "@nestjs/bull";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
 import { UserLogin } from "../../../../domain/entities";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { Inject, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { deserializeObject, serializeObject } from "core/utils/serialization.util";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { TwitterImportEvent } from "../../../../domain/events";
 
 export class TwitterImportRequestModel {
   @ApiProperty()
@@ -36,8 +36,7 @@ export class TwitterImportCommandHandler implements ICommandHandler<TwitterImpor
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    @InjectQueue(_const.BULL_QUEUES.TWITTER_IMPORT)
-    private readonly importQueue: Queue
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(command: TwitterImportCommand)
@@ -112,22 +111,20 @@ export class TwitterImportCommandHandler implements ICommandHandler<TwitterImpor
     }
 
     const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.TWITTER, userId);
-    console.log("this is the linkedaccount: ", account);
     if (!account) {
       throw new NotFoundException("No matching Twitter profile was found!");
     }
 
-    try {
+    account.allowImport = true;
+    await this.linkedAccountRepository.updateAsync(account);
 
-      await this.importQueue.add(_const.BULL_QUEUES.TWITTER_IMPORT, { account, accessToken }, {
-        attempts: 3,
-        backoff: 5000
-      });
-      console.log("added the import job to the queue");
+    try {
+      this.eventEmitter.emit('twitter.import', new TwitterImportEvent({ account, accessToken }));
+      logger.info(`[TwitterImport] Import event emitted for user ${userId}`);
     } catch (error) {
-      //logger.error(`An error occurred while adding the Twitter import job to the queue: 
-      // ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
-      throw new ApplicationException('Failed to add Twitter import job to the queue. Please try again later.');
+      logger.error(`An error occurred while emitting the Twitter import event: 
+        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
+      throw new ApplicationException('Failed to initiate Twitter import. Please try again later.');
     }
 
 

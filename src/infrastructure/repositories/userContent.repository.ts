@@ -118,4 +118,8 @@ export class UserContentRepository implements IUserContentRepository {
     console.log('Query Result:', result);
     return result
   }
+
+  public async deleteByUserIdAndPlatformAsync(userId: string, platform: string): Promise<void> {
+    await this.userContentContext.delete({ userId, platform });
+  }
 }

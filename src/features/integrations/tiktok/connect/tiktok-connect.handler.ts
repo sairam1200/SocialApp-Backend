@@ -3,10 +3,11 @@ import * as Joi from 'joi';
 import { Inject } from "@nestjs/common";
 import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
-import { Globals } from '../../../../core/globals';
-import logger from '../../../../core/utils/winston.util';
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { UserLogin } from "../../../../domain/entities";
+import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { PlatformConnectCleanupEvent } from '../../../../domain/events';
 import { serializeObject } from '../../../../core/utils/serialization.util';
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
@@ -83,6 +84,7 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(query: TiktokConnectCallbackQuery):
@@ -108,7 +110,15 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
     }
 
     let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.TIKTOK, user.id);
+    const newExternalId = userData.open_id;
     if (linkedAccount) {
+      const oldExternalId = linkedAccount.externalId;
+
+      if (oldExternalId !== newExternalId) {
+        logger.info(`[TikTokConnect] User ${user.id} changed TikTok account from ${oldExternalId} to ${newExternalId}`);
+        this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
+      }
+
       linkedAccount = await this.updateLinkedAccount(linkedAccount, userData);
     } else {
       linkedAccount = await this.createLinkedAccount(user.id, userData);
@@ -139,7 +149,7 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
         code_verifier: codeVerifier,
         redirect_uri: configs.tiktok.redirectUri,
       };
-      console.log(configs.tiktok.clientId,configs.tiktok.clientSecret );
+      console.log(configs.tiktok.clientId, configs.tiktok.clientSecret);
       const response = await axios.post(`${TIKTOK_BASE}/oauth/token/`, tokenRequest, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -177,7 +187,7 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
         },
       });
 
-      return response.data.data.user 
+      return response.data.data.user
     } catch (error) {
       logger.error('Error fetching user data from Tiktok', error);
       throw new ApplicationException('Unexpected error during authentication with Tiktok');
@@ -217,7 +227,7 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
   }
 
   private async createLinkedAccount(userId: string, userData: TiktokUserDataModel): Promise<LinkedAccount> {
-   console.log("this is the user data", userData);
+    console.log("this is the user data", userData);
     const userName = userData.profile_deep_link?.split('@')[1] ?? '';
     const newEntry = new LinkedAccount({
       userId,

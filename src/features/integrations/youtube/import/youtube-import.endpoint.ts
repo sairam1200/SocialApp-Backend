@@ -4,6 +4,7 @@ import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 import { YoutubeImportCommand, YoutubeImportRequestModel } from "./youtube-import.handler";
+import { CancelYoutubeImportCommand, CancelYoutubeImportRequestModel } from "./cancel-youtube-import.handler";
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
@@ -34,5 +35,19 @@ export class YoutubeImportController {
     }
 
     return res.status(HttpStatus.OK).json({ message: "Youtube import has begun.", ...result });
+  }
+
+  @Post('import/cancel')
+  @ApiResponse({ status: 200, description: 'OK' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
+  @ApiResponse({ status: 403, description: 'FORBIDDEN' })
+  @ApiBody({ type: CancelYoutubeImportRequestModel })
+  public async Cancel(
+    @Body() model: CancelYoutubeImportRequestModel,
+    @Res() res: Response
+  ): Promise<Response | void> {
+    await this.commandBus.execute(new CancelYoutubeImportCommand({ model }));
+    return res.status(HttpStatus.OK).json({ message: "Youtube import cancellation and rollback requested." });
   }
 }

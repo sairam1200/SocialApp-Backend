@@ -3,9 +3,11 @@ import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
-import { Globals } from "../../../../core/globals";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { UserNotFoundException } from "../../../../core/exceptions";
+import { PlatformConnectCleanupEvent } from "../../../../domain/events";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
@@ -16,7 +18,6 @@ import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { SpotifyProfileModel, SpotifyUserDataModel } from "../../../../domain/contracts/spotify.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
-import { UserNotFoundException } from "core/exceptions";
 
 const BASE_URL = 'https://api.spotify.com/v1';
 
@@ -81,13 +82,14 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(query: SpotifyConnectCallbackQuery)
     : Promise<{ accessToken: string; expiresIn: number; profile: SpotifyProfileModel }> {
     const { model } = query;
     await spotifyConnectCallbackValidations.validateAsync(model);
-    const dataProtectionKey=await this.validateStateAsync(model.state);
+    const dataProtectionKey = await this.validateStateAsync(model.state);
 
     const { access_token, refresh_token, expires_in } = await this.fetchToken(model.code);
 
@@ -104,24 +106,33 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
       _const.PLATFORMS.SPOTIFY,
       user.id
     );
-    console.log("this is the account : ",linkedAccount);
+    console.log("this is the account : ", linkedAccount);
 
+    const newExternalId = userData.data.id;
     if (linkedAccount) {
+      const oldExternalId = linkedAccount.externalId;
+
+      if (oldExternalId !== newExternalId) {
+        logger.info(`[SpotifyConnect] User ${user.id} changed Spotify account from ${oldExternalId} to ${newExternalId}`);
+        this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
+      }
+
+      linkedAccount.externalId = newExternalId;
       linkedAccount.userName = userData.data.display_name;
       linkedAccount.profileImage = userData.data.images[0]?.url;
       linkedAccount.followersCount = userData.data.followers.total;
       linkedAccount.followingCount = userData.userfollowing;
       linkedAccount.externalUrl = userData.data.external_urls.spotify,
-      linkedAccount.email = userData.data.email,
-      linkedAccount.metaData = {
-        name: userData.data.display_name,
-        country: userData.data.country,
-        product: userData.data.product,
-        accountType: userData.data.type,
-        uri: userData.data.uri,
-        explicitContentLocked: userData.data.explicit_content.filter_enabled,
-        explicitContentEnabled: userData.data.explicit_content.filter_locked,
-      };
+        linkedAccount.email = userData.data.email,
+        linkedAccount.metaData = {
+          name: userData.data.display_name,
+          country: userData.data.country,
+          product: userData.data.product,
+          accountType: userData.data.type,
+          uri: userData.data.uri,
+          explicitContentLocked: userData.data.explicit_content.filter_enabled,
+          explicitContentEnabled: userData.data.explicit_content.filter_locked,
+        };
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
@@ -181,16 +192,16 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
     try {
       const response = await axios.post(
         `https://accounts.spotify.com/api/token`,
-          `redirect_uri=${encodeURIComponent(configs.spotify.redirectUri)}` +
-          `&grant_type=authorization_code`+
-          `&code=${encodeURIComponent(code)}`,
-          {
-    
+        `redirect_uri=${encodeURIComponent(configs.spotify.redirectUri)}` +
+        `&grant_type=authorization_code` +
+        `&code=${encodeURIComponent(code)}`,
+        {
+
           headers: {
             'content-type': 'application/x-www-form-urlencoded',
             'Authorization': 'Basic ' + basicAuth
           },
-      });
+        });
 
       return response.data;
     } catch (error) {

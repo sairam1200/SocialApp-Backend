@@ -1,7 +1,5 @@
 import axios from "axios";
-import { Queue } from "bullmq";
 import configs from "../../../../configs";
-import { InjectQueue } from "@nestjs/bullmq";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
@@ -9,10 +7,12 @@ import { UserLogin } from "../../../../domain/entities";
 import logger from "../../../../core/utils/winston.util";
 import { Inject, NotFoundException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { RedditImportEvent } from "../../../../domain/events";
 
 export class RedditImportRequestModel {
   @ApiProperty()
@@ -35,8 +35,7 @@ export class RedditImportCommandHandler implements ICommandHandler<RedditImportC
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    @InjectQueue(_const.BULL_QUEUES.REDDIT_IMPORT)
-    private readonly importQueue: Queue
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(command: RedditImportCommand): Promise<{ accessToken: string, expiresIn: number }> {
@@ -89,16 +88,23 @@ export class RedditImportCommandHandler implements ICommandHandler<RedditImportC
     );
 
     if (!account) {
-      //logger.error(`[RedditImport] No Reddit account linked for user ${userId}`);
       throw new NotFoundException('No matching Reddit profile was found!');
     }
 
-    //logger.info(`[RedditImport] Queuing Reddit import job for account: ${account.id}`);
-    this.importQueue.add('reddit-import', { account, accessToken }, {
-      attempts: 3,
-      backoff: 3000
-    });
-    console.log('Reddit import job added');
+    if (!account.syncEnabled) {
+      account.syncEnabled = true;
+      await this.linkedAccountRepository.updateAsync(account);
+      logger.info(`[RedditImport] Sync enabled for user ${userId}`);
+    }
+
+    try {
+      this.eventEmitter.emit('reddit.import', new RedditImportEvent({ account, accessToken }));
+      logger.info(`[RedditImport] Import event emitted for user ${userId}`);
+    } catch (error) {
+      logger.error(`An error occurred while emitting the Reddit import event: 
+        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
+      throw new ApplicationException('Failed to initiate Reddit import. Please try again later.');
+    }
     return {
       accessToken,
       expiresIn
