@@ -59,7 +59,7 @@ export class VerifyEmailCommandHandler implements ICommandHandler<VerifyEmailCom
 
     const isEmailChange = user.newEmail && user.newEmail.toLowerCase() === model.email.toLowerCase();
 
-    const dataProtectionKey = await this.validateVerificationCode(user.id, model.code, isEmailChange ? model.email : undefined);
+    const dataProtectionKey = await this.validateVerificationCodeAsync(user.id, model.code, isEmailChange ? model.email : undefined);
 
     if (isEmailChange) {
       await this.userRepository.setEmailAsync(user, user.newEmail);
@@ -85,7 +85,7 @@ export class VerifyEmailCommandHandler implements ICommandHandler<VerifyEmailCom
     };
   }
 
-  private async validateVerificationCode(userId: string, code: string, email?: string): Promise<DataProtectionKey> {
+  private async validateVerificationCodeAsync(userId: string, code: string, email?: string): Promise<DataProtectionKey> {
     const verificationKeys = await this.dataProtectionKeyRepository.getByUserIdAsync(userId);
     const currentTime = Math.floor(Date.now() / 1000);
 

@@ -8,5 +8,6 @@ export interface IDataProtectionKeyRepository {
   getByUserIdAndKeyAsync(userId: string, key: string): Promise<DataProtectionKey | null>;
 
   createAsync(key: string, value: string, userId: string, expiresIn?: number): Promise<DataProtectionKey>;
+  updateAsync(dataProtectionKey: DataProtectionKey): Promise<void>;
   deleteAsync(dataProtectionKey: DataProtectionKey): Promise<void>;
 }

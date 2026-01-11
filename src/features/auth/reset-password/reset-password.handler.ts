@@ -79,7 +79,7 @@ export class ResetPasswordCommandHandler implements ICommandHandler<ResetPasswor
       throw new UserNotFoundException();
     }
 
-    await this.validateCode(user.id, model.code);
+    await this.validateVerificationCodeAsync(user.id, model.code);
 
     // Security: Check device and IP, log suspicious activity
     await this.checkDeviceAndIpSecurity(user.id, model.deviceId, model.userAgent, model.ipAddress);
@@ -137,11 +137,11 @@ export class ResetPasswordCommandHandler implements ICommandHandler<ResetPasswor
     }
   }
 
-  private async validateCode(userId: string, code: string): Promise<DataProtectionKey> {
-    const resetCodes = await this.dataProtectionKeyRepository.getByUserIdAsync(userId);
+  private async validateVerificationCodeAsync(userId: string, code: string): Promise<DataProtectionKey> {
+    const verificationKeys = await this.dataProtectionKeyRepository.getByUserIdAsync(userId);
     const currentTime = Math.floor(Date.now() / 1000);
 
-    const dataProtectionKey = resetCodes.find(
+    const dataProtectionKey = verificationKeys.find(
       key =>
         key.key === _const.TOKEN.PURPOSE.RESET_PASSWORD &&
         key.value === code &&
