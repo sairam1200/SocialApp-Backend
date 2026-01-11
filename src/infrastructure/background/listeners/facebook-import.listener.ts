@@ -224,13 +224,14 @@ export class FacebookImportListener {
               await this.notificationService.updateAsync(
                 notification.id,
                 true,
-                {
-                  metaData: {
-                    status: NotificationStatus.InProgress,
-                    reports: reportArray,
+                  {
+                    metaData: {
+                      status: NotificationStatus.InProgress,
+                      reports: reportArray,
+                      platform: _const.PLATFORMS.FACEBOOK,
+                    },
                   },
-                },
-              );
+                );
             }
           }
 

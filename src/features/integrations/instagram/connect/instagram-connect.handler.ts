@@ -4,8 +4,10 @@ import { Inject } from "@nestjs/common";
 import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { PlatformConnectCleanupEvent } from "../../../../domain/events";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
@@ -83,6 +85,7 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(query: InstagramConnectCallbackQuery):
@@ -102,7 +105,16 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     }
 
     let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
+    const newExternalId = userData.id;
     if (linkedAccount) {
+      const oldExternalId = linkedAccount.externalId;
+
+      if (oldExternalId !== newExternalId) {
+        logger.info(`[InstagramConnect] User ${user.id} changed Instagram account from ${oldExternalId} to ${newExternalId}`);
+        this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
+      }
+
+      linkedAccount.externalId = newExternalId;
       linkedAccount.userName = userData.username;
       linkedAccount.profileImage = userData.profile_picture_url;
       linkedAccount.followersCount = userData.followers_count;

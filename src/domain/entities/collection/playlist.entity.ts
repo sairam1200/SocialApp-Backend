@@ -41,6 +41,9 @@ export class Playlist extends BaseEntity {
   )
   contents: PlaylistContent[];
 
+  @Column({ default: 0 })
+  displayOrder: number;
+
   @BeforeInsert()
   private generateReferenceId() {
     // slugify the name, limit to 20 chars, make it URL-safe

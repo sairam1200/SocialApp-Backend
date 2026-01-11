@@ -5,15 +5,16 @@ import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
 import { UserLogin } from "../../../../domain/entities";
 import logger from "../../../../core/utils/winston.util";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { EventEmitter2 } from "@nestjs/event-emitter";
+import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { YoutubeImportEvent } from "../../../../domain/events";
 import { Inject, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
-import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
-import { YoutubeImportEvent } from "../../../../domain/events";
+import { YoutubeWebhookService } from "../../../../infrastructure/services/youtube-webhook.service";
+import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 
 export class YoutubeImportRequestModel {
   @ApiProperty()
@@ -38,6 +39,7 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly youtubeWebhookService: YoutubeWebhookService,
   ) { }
 
   public async execute(command: YoutubeImportCommand)
@@ -89,6 +91,20 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     console.log(account);
     if (!account) {
       throw new NotFoundException("No matching Youtube profile was found!");
+    }
+
+    const channelId = account.metaData?.channel?.id;
+    if (channelId && !account.syncEnabled && configs.youtube.webhookUrl) {
+      try {
+        await this.youtubeWebhookService.subscribeAsync(channelId, configs.youtube.webhookUrl);
+        logger.info(`[YoutubeImport] Webhook subscription successful for channel ${channelId}`);
+
+        account.syncEnabled = true;
+        await this.linkedAccountRepository.updateAsync(account);
+        logger.info(`[YoutubeImport] Sync enabled for user ${userId}`);
+      } catch (error) {
+        logger.error(`[YoutubeImport] Error subscribing to webhook:`, error);
+      }
     }
 
     try {

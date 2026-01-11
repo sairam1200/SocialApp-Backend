@@ -3,9 +3,12 @@ import * as Joi from "joi";
 import { Inject } from "@nestjs/common";
 import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
-import { Globals } from "../../../../core/globals";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { DataProtectionKey } from "../../../../domain/entities";
+import { UserNotFoundException } from "../../../../core/exceptions";
+import { PlatformConnectCleanupEvent } from "../../../../domain/events";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
@@ -15,8 +18,6 @@ import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { PinterestProfileModel, PinterestUserDataModel } from "../../../../domain/contracts/pinterest.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
-import { DataProtectionKey } from "../../../../domain/entities";
-import { UserNotFoundException } from "core/exceptions";
 
 const BASE_URL = 'https://api.pinterest.com/v5';
 
@@ -84,34 +85,45 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(query: PinterestConnectCallbackQuery):
     Promise<{ accessToken: string; expiresIn: number; profile: PinterestProfileModel; }> {
     const { model } = query;
     await pinterestConnectCallbackValidations.validateAsync(model);
-    const dataProtectionKey= await this.validateStateAsync(model.state);
+    const dataProtectionKey = await this.validateStateAsync(model.state);
 
     const { access_token, refresh_token, expires_in, refresh_token_expires_in } = await this.fetchToken(model.code);
 
     const userData = await this.fetchUserData(access_token);
-    
+
     const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
     if (!user || user.id !== dataProtectionKey.userId) {
       throw new UserNotFoundException(userData.id);
     }
-   
+
 
     console.log("user user: ", user);
     console.log("user userdata: ", userData);
     let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.PINTEREST, user.id);
     console.log("linkedAccount: ", linkedAccount);
+
+    const newExternalId = userData.id;
     if (linkedAccount) {
+      const oldExternalId = linkedAccount.externalId;
+
+      if (oldExternalId !== newExternalId) {
+        logger.info(`[PinterestConnect] User ${user.id} changed Pinterest account from ${oldExternalId} to ${newExternalId}`);
+        this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
+      }
+
+      linkedAccount.externalId = newExternalId;
       linkedAccount.userName = userData.username;
       linkedAccount.profileImage = userData.profile_image;
       linkedAccount.followersCount = userData.follower_count;
       linkedAccount.followingCount = userData.following_count;
-      linkedAccount.externalUrl =`https://www.pinterest.com/${userData.username}/`;
+      linkedAccount.externalUrl = `https://www.pinterest.com/${userData.username}/`;
       linkedAccount.metaData = {
         monthly_views: userData.monthly_views,
         board_count: userData.board_count,
@@ -168,14 +180,14 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
 
   private async fetchToken(code: string)
     : Promise<{ access_token: string; token_type: string; expires_in: number; refresh_token: string; refresh_token_expires_in: number }> {
-     
-    const basicAuth = Buffer.from(`${configs.pinterest.clientId}:${configs.pinterest.clientSecret}`).toString('base64'); 
+
+    const basicAuth = Buffer.from(`${configs.pinterest.clientId}:${configs.pinterest.clientSecret}`).toString('base64');
     try {
       const response = await axios.post(
-        `${BASE_URL}/oauth/token`, 
+        `${BASE_URL}/oauth/token`,
         `grant_type=authorization_code` +
         `&code=${encodeURIComponent(code)}` +
-        `&redirect_uri=${encodeURIComponent(configs.pinterest.redirectUri)}` ,
+        `&redirect_uri=${encodeURIComponent(configs.pinterest.redirectUri)}`,
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',

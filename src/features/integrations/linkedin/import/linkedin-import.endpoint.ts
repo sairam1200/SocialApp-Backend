@@ -4,6 +4,7 @@ import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 import { LinkedInImportCommand, LinkedInImportRequestModel } from "./linkedin-import.handler";
+import { CancelLinkedInImportCommand, CancelLinkedInImportRequestModel } from "./cancel-linkedin-import.handler";
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
@@ -34,5 +35,19 @@ export class LinkedInImportController {
     }
 
     return res.status(HttpStatus.OK).json({ message: "LinkedIn import has begun.", ...result });
+  }
+
+  @Post('import/cancel')
+  @ApiResponse({ status: 200, description: 'OK' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
+  @ApiResponse({ status: 403, description: 'FORBIDDEN' })
+  @ApiBody({ type: CancelLinkedInImportRequestModel })
+  public async Cancel(
+    @Body() model: CancelLinkedInImportRequestModel,
+    @Res() res: Response
+  ): Promise<Response | void> {
+    await this.commandBus.execute(new CancelLinkedInImportCommand({ model }));
+    return res.status(HttpStatus.OK).json({ message: "LinkedIn import cancellation and rollback requested." });
   }
 }

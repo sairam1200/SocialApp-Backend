@@ -4,6 +4,7 @@ import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 import { InstagramImportCommand, InstagramImportRequestModel } from "./instagram-import.handler";
+import { CancelInstagramImportCommand, CancelInstagramImportRequestModel } from "./cancel-instagram-import.handler";
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
@@ -34,5 +35,19 @@ export class InstagramImportController {
     }
 
     return res.status(HttpStatus.OK).json({ message: "Instagram import has begun.", ...result });
+  }
+
+  @Post('import/cancel')
+  @ApiResponse({ status: 200, description: 'OK' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
+  @ApiResponse({ status: 403, description: 'FORBIDDEN' })
+  @ApiBody({ type: CancelInstagramImportRequestModel })
+  public async Cancel(
+    @Body() model: CancelInstagramImportRequestModel,
+    @Res() res: Response
+  ): Promise<Response | void> {
+    await this.commandBus.execute(new CancelInstagramImportCommand({ model }));
+    return res.status(HttpStatus.OK).json({ message: "Instagram import cancellation and rollback requested." });
   }
 }

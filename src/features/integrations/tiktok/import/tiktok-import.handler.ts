@@ -1,17 +1,18 @@
 import axios from 'axios';
-import { Queue } from 'bullmq';
 import configs from '../../../../configs';
-import { InjectQueue } from '@nestjs/bull';
 import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import { UserLogin } from '../../../../domain/entities';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Inject, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import ApplicationException from '../../../../core/exceptions/application.exception';
 import { deserializeObject, serializeObject } from '../../../../core/utils/serialization.util';
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
+import { TiktokImportEvent } from '../../../../domain/events';
 
 const TIKTOK_BASE = 'https://open.tiktokapis.com/v2';
 
@@ -37,8 +38,7 @@ export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportC
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    @InjectQueue(_const.BULL_QUEUES.TIKTOK_IMPORT)
-    private readonly importQueue: Queue
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(command: TiktokImportCommand)
@@ -112,13 +112,20 @@ export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportC
 
     const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.TIKTOK, userId);
     if (!account) {
-      throw new NotFoundException("No matching Twitter profile was found!");
+      throw new NotFoundException("No matching TikTok profile was found!");
     }
 
-    this.importQueue.add(_const.BULL_QUEUES.TIKTOK_IMPORT, { account, accessToken }, {
-      attempts: 3,
-      backoff: 5000
-    });
+    account.allowImport = true;
+    await this.linkedAccountRepository.updateAsync(account);
+
+    try {
+      this.eventEmitter.emit('tiktok.import', new TiktokImportEvent({ account, accessToken }));
+      logger.info(`[TiktokImport] Import event emitted for user ${userId}`);
+    } catch (error) {
+      logger.error(`An error occurred while emitting the TikTok import event: 
+        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
+      throw new ApplicationException('Failed to initiate TikTok import. Please try again later.');
+    }
 
     return {
       accessToken,

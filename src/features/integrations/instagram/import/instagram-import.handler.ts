@@ -1,18 +1,18 @@
 import axios from "axios";
-import { Queue } from "bullmq";
 import configs from "../../../../configs";
-import { InjectQueue } from "@nestjs/bull";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
 import { Inject, NotFoundException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { UserLogin } from "../../../../domain/entities";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { InstagramImportEvent } from "../../../../domain/events";
 
 export class InstagramImportRequestModel {
   @ApiProperty()
@@ -36,8 +36,7 @@ export class InstagramImportCommandHandler implements ICommandHandler<InstagramI
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    @InjectQueue(_const.BULL_QUEUES.INSTAGRAM_IMPORT)
-    private readonly importQueue: Queue
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(command: InstagramImportCommand): Promise<{ accessToken: string, expiresIn: number }> {
@@ -82,10 +81,17 @@ export class InstagramImportCommandHandler implements ICommandHandler<InstagramI
       throw new NotFoundException('No matching Instagram profile was found!');
     }
 
-    this.importQueue.add(_const.BULL_QUEUES.INSTAGRAM_IMPORT, { account, accessToken }, {
-      attempts: 3,
-      backoff: 5000
-    });
+    account.allowImport = true;
+    await this.linkedAccountRepository.updateAsync(account);
+
+    try {
+      this.eventEmitter.emit('instagram.import', new InstagramImportEvent({ account, accessToken }));
+      logger.info(`[InstagramImport] Import event emitted for user ${userId}`);
+    } catch (error) {
+      logger.error(`An error occurred while emitting the Instagram import event: 
+        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
+      throw new ApplicationException('Failed to initiate Instagram import. Please try again later.');
+    }
 
     return {
       accessToken,

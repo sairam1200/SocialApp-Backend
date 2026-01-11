@@ -4,6 +4,7 @@ import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 import { TwitterImportCommand, TwitterImportRequestModel } from "./twitter-import.handler";
+import { CancelTwitterImportCommand, CancelTwitterImportRequestModel } from "./cancel-twitter-import.handler";
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
@@ -34,5 +35,19 @@ export class TwitterImportController {
     }
 
     return res.status(HttpStatus.OK).json({ message: "Twitter import has begun.", ...result });
+  }
+
+  @Post('import/cancel')
+  @ApiResponse({ status: 200, description: 'OK' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
+  @ApiResponse({ status: 403, description: 'FORBIDDEN' })
+  @ApiBody({ type: CancelTwitterImportRequestModel })
+  public async Cancel(
+    @Body() model: CancelTwitterImportRequestModel,
+    @Res() res: Response
+  ): Promise<Response | void> {
+    await this.commandBus.execute(new CancelTwitterImportCommand({ model }));
+    return res.status(HttpStatus.OK).json({ message: "Twitter import cancellation and rollback requested." });
   }
 }

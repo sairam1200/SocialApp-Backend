@@ -3,10 +3,12 @@ import * as Joi from 'joi';
 import { Inject } from '@nestjs/common';
 import configs from '../../../../configs';
 import _const from '../../../../core/utils/const';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { DataProtectionKey } from '../../../../domain/entities';
 import { UserNotFoundException } from '../../../../core/exceptions';
+import { PlatformConnectCleanupEvent } from '../../../../domain/events';
 import { serializeObject } from '../../../../core/utils/serialization.util';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
@@ -81,6 +83,7 @@ export class YoutubeConnectCallbackQueryHandler
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(query: YoutubeConnectCallbackQuery): Promise<{
@@ -111,8 +114,19 @@ export class YoutubeConnectCallbackQueryHandler
         _const.PLATFORMS.YOUTUBE,
         user.id,
       );
+
+    const newExternalId = userData.profile.id;
+
     if (linkedAccount) {
+      const oldExternalId = linkedAccount.externalId;
+
+      if (oldExternalId !== newExternalId) {
+        logger.info(`[YoutubeConnect] User ${user.id} changed YouTube account from ${oldExternalId} to ${newExternalId}`);
+        this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
+      }
+
       console.log(linkedAccount);
+      linkedAccount.externalId = newExternalId;
       linkedAccount.userName = '';
       linkedAccount.profileImage = userData.profile.picture;
       linkedAccount.externalUrl = `https://www.youtube.com/channel/${userData.channel.items[0].id}`;

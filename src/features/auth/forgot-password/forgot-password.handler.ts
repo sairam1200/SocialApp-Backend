@@ -67,6 +67,16 @@ export class ForgotPasswordCommandHandler implements ICommandHandler<ForgotPassw
 
       const expiresIn = Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
       const code = stringUtil.generateRandomNumberString(6);
+
+      const existingKeys = await this.dataProtectionKeyRepository.getByUserIdAsync(user.id);
+      const existingResetKeys = existingKeys.filter(
+        key => key.key === _const.TOKEN.PURPOSE.RESET_PASSWORD
+      );
+
+      for (const existingKey of existingResetKeys) {
+        await this.dataProtectionKeyRepository.deleteAsync(existingKey);
+      }
+
       await this.dataProtectionKeyRepository.createAsync(
         _const.TOKEN.PURPOSE.RESET_PASSWORD,
         code,

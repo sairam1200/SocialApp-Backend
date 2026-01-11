@@ -18,7 +18,19 @@ interface CursorMap {
   [key: string]: string | null;
 }
 
+interface ProgressReport {
+  totalItem: number;
+  itemProcessed: number;
+  progressPercent: number;
+  status: NotificationStatus;
+}
+
+interface ProgressReports {
+  [type: string]: ProgressReport;
+}
+
 export class YoutubeImportListener {
+  private readonly NOTIFICATION_UPDATE_INTERVAL = 10; // Update notification every N items
 
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
@@ -35,21 +47,33 @@ export class YoutubeImportListener {
   @OnEvent('youtube.import', { async: true })
   async handleYoutubeImport(event: YoutubeImportEvent): Promise<void> {
     const { account, accessToken } = event.data;
-    const lastCursors: CursorMap = {};
+
+    const currentAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+      _const.PLATFORMS.YOUTUBE,
+      account.userId,
+    );
+
+    if (!currentAccount) {
+      logger.error(`[YoutubeImport] Account not found for user ${account.userId}`);
+      return;
+    }
+
+    if (currentAccount.metaData?.importCancelled) {
+      logger.info(`[YoutubeImport] Import cancelled for user ${account.userId}`);
+      if (currentAccount.metaData) {
+        delete currentAccount.metaData.importCancelled;
+      }
+      await this.linkedAccountRepository.updateAsync(currentAccount);
+      return;
+    }
 
     logger.info(`[YoutubeImport] Starting import for user ${account.userId}`);
-    logger.debug(`[YoutubeImport] Using access token: ${accessToken}`);
+    logger.debug(`[YoutubeImport] Using access token: ${accessToken.substring(0, 20)}...`);
 
-    const progressReports: {
-      [type: string]: {
-        totalItem: number;
-        itemProcessed: number;
-        progressPercent: number;
-        status: NotificationStatus;
-      };
-    } = {};
+    const progressReports: ProgressReports = {};
+    const lastCursors: CursorMap = this.loadCursors(currentAccount);
 
-    const fields: Record<string, { endpoint: string; type: string; params?: any }> = {
+    const fields: Record<string, { endpoint: string; type: string; params?: any; uploadsPlaylistExtractor?: (item: any) => string | null }> = {
       subscriptions: {
         endpoint: 'subscriptions',
         type: 'Subscriptions',
@@ -68,19 +92,20 @@ export class YoutubeImportListener {
       channels: {
         endpoint: 'channels',
         type: 'ChannelInfo',
-        params: { mine: true, part: 'snippet,contentDetails,statistics' }
+        params: { mine: true, part: 'snippet,contentDetails,statistics' },
+        uploadsPlaylistExtractor: (item: any) => item.contentDetails?.relatedPlaylists?.uploads || null
       }
     };
 
     let uploadsPlaylistId: string | null = null;
     let notification: NotificationModel;
     let encounteredError = false;
+    let itemsProcessedSinceLastNotification = 0;
 
-    for (const [key, { endpoint, type, params }] of Object.entries(fields)) {
+    for (const [key, { endpoint, type, params, uploadsPlaylistExtractor }] of Object.entries(fields)) {
+      logger.debug(`[YoutubeImport] Fetching ${type} from /${endpoint}`);
 
-      logger.debug(`📥 Fetching ${type} from /${endpoint}`);
-
-      let nextPageToken: string | null = null;
+      let nextPageToken: string | null = lastCursors[type] || null;
 
       progressReports[type] = {
         totalItem: 0,
@@ -91,8 +116,11 @@ export class YoutubeImportListener {
 
       try {
         do {
+          if (nextPageToken) {
+            logger.debug(`[YoutubeImport] Resuming ${type} from token: ${nextPageToken.substring(0, 20)}...`);
+          }
 
-          logger.debug(`🔄 Requesting page with token: ${nextPageToken}`);
+          logger.debug(`[YoutubeImport] Requesting page for ${type}`);
           const response = await axios.get(
             `https://www.googleapis.com/youtube/v3/${endpoint}`,
             {
@@ -108,10 +136,11 @@ export class YoutubeImportListener {
           const pageInfo = response.data.pageInfo ?? {};
           nextPageToken = response.data.nextPageToken ?? null;
 
-          logger.debug(`✅ Retrieved ${items.length} items of ${type}`);
+          logger.debug(`[YoutubeImport] Retrieved ${items.length} items of ${type}`);
 
           if (!nextPageToken) {
             progressReports[type].status = NotificationStatus.Completed;
+            delete lastCursors[type];
           }
 
           if (pageInfo.totalResults) {
@@ -119,241 +148,206 @@ export class YoutubeImportListener {
           }
 
           for (const item of items) {
+            logger.debug(`[YoutubeImport] Mapping ${type} item: ${item.snippet?.title || item.id}`);
 
-            logger.debug(`🧩 Mapping ${type} item: ${item.snippet?.title}`);
-
-            let content = new UserContent({
-              userId: account.userId,
-              platform: _const.PLATFORMS.YOUTUBE,
-            });
-
-            // Parsing data by type
-            if (type === 'Subscriptions') {
-              content.type = 'subscription';
-              content.title = item.snippet.title;
-              content.externalId = item.snippet.resourceId.channelId;
-              content.metaData = {
-                description: item.snippet.description,
-                publishedAt: item.snippet.publishedAt,
-                thumbnails: item.snippet.thumbnails,
-              };
-            } else if (type === 'Playlists') {
-              content.type = 'playlist';
-              content.title = item.snippet.title;
-              content.externalId = item.id;
-              content.metaData = {
-                playlistId: item.id,
-                description: item.snippet.description,
-                itemCount: item.contentDetails?.itemCount,
-                publishedAt: item.snippet.publishedAt,
-                thumbnails: item.snippet.thumbnails,
-              };
-              logger.debug(`▶️ Fetching videos from playlist ${item.id}`);
-              // Fetch videos for this playlist
-              const videos = await this.fetchPlaylistVideos(accessToken, item.id);
-              logger.debug(`📹 Found ${videos.length} videos in playlist`);
-              for (const video of videos) {
-                let videoContent = new UserContent({
-                  userId: account.userId,
-                  platform: _const.PLATFORMS.YOUTUBE,
-                  type: 'playlist_video',
-                  title: video.snippet.title,
-                  externalId: video.id,
-                  metaData: {
-                    videoId: video.contentDetails.videoId,
-                    publishedAt: video.snippet.publishedAt,
-                    description: video.snippet.description,
-                    thumbnails: video.snippet.thumbnails,
-                    playlistId: item.id,
-                  },
-                });
-                try {
-                  videoContent = await this.userContentRepository.createAsync(videoContent);
-                  logger.debug("this is the video content: ");
-                  this.gateway.emitNewImportContent(
-                    account.userId,
-                    _const.PLATFORMS.YOUTUBE,
-                    videoContent,
-                  );
-                } catch (err) {
-                  logger.error(`Error saving video content for playlist ${item.id}:`, err.message);
-                }
+            if (uploadsPlaylistExtractor) {
+              const playlistId = uploadsPlaylistExtractor(item);
+              if (playlistId) {
+                uploadsPlaylistId = playlistId;
+                logger.debug(`[YoutubeImport] Found uploads playlist ID: ${uploadsPlaylistId}`);
               }
-            } else if (type === 'Activities') {
-              content.type = 'activity';
-              content.title = item.snippet.title;
-              content.externalId = item.id;
-              content.metaData = {
-                publishedAt: item.snippet.publishedAt,
-                channelId: item.snippet.channelId,
-                description: item.snippet.description,
-                thumbnails: item.snippet.thumbnails,
-                type: item.snippet.type,
-              };
-            } else if (type === 'ChannelInfo') {
-              content.type = 'channel';
-              content.title = item.snippet.title;
-              content.externalId = item.id;
-              content.metaData = {
-                description: item.snippet.description,
-                publishedAt: item.snippet.publishedAt,
-                thumbnails: item.snippet.thumbnails,
-                statistics: item.statistics,
-              };
-              uploadsPlaylistId = item.contentDetails?.relatedPlaylists?.uploads || null;
-              logger.debug(`📥 the new Uploads playlist ID: ${uploadsPlaylistId}`);
-            }
-            try {
-              content = await this.userContentRepository.createAsync(content);
-              this.gateway.emitNewImportContent(
-                account.userId,
-                _const.PLATFORMS.YOUTUBE,
-                content,
-              );
-            } catch (err) {
-              logger.error(`Error saving content for ${type}:`, err.message);
             }
 
-            // Update progress
+            const content = this.mapContentByType(type, item, account.userId);
+            if (content) {
+              try {
+                const savedContent = await this.userContentRepository.createAsync(content);
+                this.gateway.emitNewImportContent(
+                  account.userId,
+                  _const.PLATFORMS.YOUTUBE,
+                  savedContent,
+                );
+
+                if (type === 'Playlists' && item.id) {
+                  await this.importPlaylistVideos(accessToken, item.id, account.userId);
+                }
+              } catch (err) {
+                logger.error(`[YoutubeImport] Error saving ${type} content:`, err.message);
+              }
+            }
+
             progressReports[type].itemProcessed++;
             progressReports[type].progressPercent = progressReports[type].totalItem
               ? Math.round(
-                (progressReports[type].itemProcessed /
-                  progressReports[type].totalItem) *
-                100,
+                (progressReports[type].itemProcessed / progressReports[type].totalItem) * 100,
               )
               : 0;
 
-            const reportArray = Object.entries(progressReports).map(([type, report]) => ({
-              type,
-              ...report,
-            }));
+            itemsProcessedSinceLastNotification++;
 
-            if (!notification) {
-              logger.debug(`[YoutubeImport] Creating initial notification`);
-              logger.debug(`NotificationType.Import: ${NotificationType.Import}`);
-              const notificationResult = await this.notificationService.notifyAsync(
+            if (itemsProcessedSinceLastNotification >= this.NOTIFICATION_UPDATE_INTERVAL) {
+              notification = await this.updateNotification(
+                notification,
                 account.userId,
-                NotificationType.Import,
-                "📥 Importing your Youtube data...",
-                "",
-                true,
-                {
-                  status: NotificationStatus.InProgress,
-                  reports: reportArray
-                }
+                progressReports,
               );
-
-              notification = mapToNotificationModel(notificationResult);
-            } else {
-              logger.debug(`[YoutubeImport] Updating notification with progress`);
-              await this.notificationService.updateAsync(notification.id, true, {
-                metaData: {
-                  status: NotificationStatus.InProgress,
-                  reports: reportArray,
-                },
-              });
+              itemsProcessedSinceLastNotification = 0;
             }
           }
+
+          if (nextPageToken) {
+            lastCursors[type] = nextPageToken;
+            await this.saveCursors(currentAccount, lastCursors);
+          }
+
+          const checkAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+            _const.PLATFORMS.YOUTUBE,
+            account.userId,
+          );
+          if (checkAccount?.metaData?.importCancelled) {
+            logger.info(`[YoutubeImport] Import cancelled during processing ${type}`);
+            progressReports[type].status = NotificationStatus.Cancelled;
+            break;
+          }
         } while (nextPageToken);
+
+        progressReports[type].status = NotificationStatus.Completed;
+        delete lastCursors[type];
+        await this.saveCursors(currentAccount, lastCursors);
       } catch (err) {
         encounteredError = true;
         progressReports[type].status = NotificationStatus.Cancelled;
-        logger.error(`Error occured while importing Youtube user ${type}:`, err.message);
+        logger.error(`[YoutubeImport] Error occurred while importing ${type}:`, err.message);
         if (nextPageToken) {
           lastCursors[type] = nextPageToken;
+          await this.saveCursors(currentAccount, lastCursors);
         }
       }
     }
 
-    // # TODO #: Figure out how to merge this into the main flow
     if (uploadsPlaylistId) {
-
       const type = "UploadedVideos";
-      logger.debug(`🎞️ Processing uploaded videos from playlist ${uploadsPlaylistId}`);
+      logger.debug(`[YoutubeImport] Processing uploaded videos from playlist ${uploadsPlaylistId}`);
+
+      let nextPageToken: string | null = lastCursors[type] || null;
+
+      progressReports[type] = {
+        totalItem: 0,
+        itemProcessed: 0,
+        progressPercent: 0,
+        status: NotificationStatus.InProgress,
+      };
 
       try {
-        const items = await this.fetchPlaylistVideos(accessToken, uploadsPlaylistId);
-        progressReports[type] = {
-          totalItem: 0,
-          itemProcessed: 0,
-          progressPercent: 0,
-          status: NotificationStatus.InProgress,
-        };
+        do {
+          const videos = await this.fetchPlaylistVideosPage(accessToken, uploadsPlaylistId, nextPageToken);
+          nextPageToken = videos.nextPageToken;
 
-        for (const item of items) {
-          logger.debug("this is teh item")
-          let content = new UserContent({
-            userId: account.userId,
-            platform: _const.PLATFORMS.YOUTUBE,
-            type: 'uploaded_video',
-            title: item.snippet.title,
-            externalId: item.id,
-            metaData: {
-              videoId: item.contentDetails.videoId,
-              publishedAt: item.snippet.publishedAt,
-              description: item.snippet.description,
-              thumbnails: item.snippet.thumbnails,
-            },
-          });
-          try {
-            content = await this.userContentRepository.createAsync(content);
-            this.gateway.emitNewImportContent(
-              account.userId,
-              _const.PLATFORMS.YOUTUBE,
-              content,
-            );
-          } catch (err) {
-            logger.error(`Error saving uploaded video content:`, err.message);
+          if (videos.items.length === 0 && !nextPageToken) {
+            progressReports[type].status = NotificationStatus.Completed;
+            delete lastCursors[type];
+            break;
           }
 
+          for (const item of videos.items) {
+            logger.debug(`[YoutubeImport] Processing uploaded video: ${item.snippet?.title || item.id}`);
 
-          // Update progress
-          progressReports[type].itemProcessed++;
-          progressReports[type].progressPercent = progressReports[type].totalItem
-            ? Math.round(
-              (progressReports[type].itemProcessed /
-                progressReports[type].totalItem) *
-              100,
-            )
-            : 0;
-
-          const reportArray = Object.entries(progressReports).map(([type, report]) => ({
-            type,
-            ...report,
-          }));
-
-          if (!notification) {
-            logger.debug(`[YoutubeImport] Creating initial notification`);
-            logger.debug(`NotificationType.Import: ${NotificationType.Import}`);
-            const notificationResult = await this.notificationService.notifyAsync(
-              account.userId,
-              NotificationType.Import,
-              "📥 Importing your Youtube data...",
-              "",
-              true,
-              {
-                status: NotificationStatus.InProgress,
-                reports: reportArray
-              }
-            );
-
-            notification = mapToNotificationModel(notificationResult);
-          } else {
-            logger.debug(`[YoutubeImport] Updating notification with progress`);
-            await this.notificationService.updateAsync(notification.id, true, {
+            const content = new UserContent({
+              userId: account.userId,
+              platform: _const.PLATFORMS.YOUTUBE,
+              type: 'uploaded_video',
+              title: item.snippet.title,
+              externalId: item.id,
               metaData: {
-                status: NotificationStatus.InProgress,
-                reports: reportArray,
+                videoId: item.contentDetails.videoId,
+                publishedAt: item.snippet.publishedAt,
+                description: item.snippet.description,
+                thumbnails: item.snippet.thumbnails,
               },
             });
+
+            try {
+              const savedContent = await this.userContentRepository.createAsync(content);
+              this.gateway.emitNewImportContent(
+                account.userId,
+                _const.PLATFORMS.YOUTUBE,
+                savedContent,
+              );
+            } catch (err) {
+              logger.error(`[YoutubeImport] Error saving uploaded video content:`, err.message);
+            }
+
+            progressReports[type].itemProcessed++;
+            itemsProcessedSinceLastNotification++;
+
+            if (itemsProcessedSinceLastNotification >= this.NOTIFICATION_UPDATE_INTERVAL) {
+              notification = await this.updateNotification(
+                notification,
+                account.userId,
+                progressReports,
+              );
+              itemsProcessedSinceLastNotification = 0;
+            }
           }
-        }
+
+          if (nextPageToken) {
+            lastCursors[type] = nextPageToken;
+            await this.saveCursors(currentAccount, lastCursors);
+          }
+
+          const checkAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+            _const.PLATFORMS.YOUTUBE,
+            account.userId,
+          );
+          if (checkAccount?.metaData?.importCancelled) {
+            logger.info(`[YoutubeImport] Import cancelled during processing ${type}`);
+            progressReports[type].status = NotificationStatus.Cancelled;
+            break;
+          }
+        } while (nextPageToken);
+
+        progressReports[type].status = NotificationStatus.Completed;
+        delete lastCursors[type];
+        await this.saveCursors(currentAccount, lastCursors);
       } catch (err) {
         encounteredError = true;
         progressReports[type].status = NotificationStatus.Cancelled;
-        logger.error(`Error occured while importing Youtube user ${type}:`, err.message);
+        logger.error(`[YoutubeImport] Error occurred while importing ${type}:`, err.message);
+        if (nextPageToken) {
+          lastCursors[type] = nextPageToken;
+          await this.saveCursors(currentAccount, lastCursors);
+        }
       }
+    }
+
+    const finalAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+      _const.PLATFORMS.YOUTUBE,
+      account.userId,
+    );
+
+    if (finalAccount?.metaData?.importCancelled) {
+      logger.info(`[YoutubeImport] Import was cancelled, cleaning up`);
+      if (finalAccount.metaData) {
+        delete finalAccount.metaData.importCancelled;
+      }
+      await this.linkedAccountRepository.updateAsync(finalAccount);
+
+      if (notification) {
+        const finalReportArray = Object.entries(progressReports).map(([type, report]) => ({
+          type,
+          ...report,
+        }));
+        await this.notificationService.updateAsync(
+          notification.id,
+          false,
+          {
+            status: NotificationStatus.Cancelled,
+            reports: finalReportArray,
+          },
+          "❌ Youtube import was cancelled",
+        );
+      }
+      return;
     }
 
     const finalReportArray = Object.entries(progressReports).map(([type, report]) => ({
@@ -362,10 +356,10 @@ export class YoutubeImportListener {
     }));
 
     if (notification) {
-
       if (encounteredError) {
         logger.warn(`[YoutubeImport] Completed with issues for user ${account.userId}`);
-        await this.notificationService.updateAsync(notification.id,
+        await this.notificationService.updateAsync(
+          notification.id,
           false,
           {
             status: NotificationStatus.Completed,
@@ -375,23 +369,26 @@ export class YoutubeImportListener {
         );
       } else {
         logger.info(`[YoutubeImport] Successfully completed import for user ${account.userId}`);
-        await this.notificationService.updateAsync(notification.id,
+        await this.notificationService.updateAsync(
+          notification.id,
           false,
           {
             status: NotificationStatus.Completed,
             reports: finalReportArray,
+            platform: _const.PLATFORMS.YOUTUBE,
           },
           "✅ Youtube import completed!",
         );
       }
 
-      account.allowImport = true;
-      await this.linkedAccountRepository.updateAsync(account);
+      if (finalAccount) {
+        finalAccount.allowImport = true;
+        await this.clearCursors(finalAccount);
+        await this.linkedAccountRepository.updateAsync(finalAccount);
+      }
 
-      logger.info(`✔️ YouTube import finished for user ${account.userId}`);
-
+      logger.info(`[YoutubeImport] Import finished for user ${account.userId}`);
     } else {
-      // # TODO #: Handle failed
       await this.notificationService.notifyAsync(
         account.userId,
         NotificationType.Import,
@@ -403,41 +400,208 @@ export class YoutubeImportListener {
           reports: finalReportArray,
         },
       );
-      logger.warn(`⚠️ No notification initialized during YouTube import for user ${account.userId}`);
+      logger.warn(`[YoutubeImport] No notification initialized for user ${account.userId}`);
     }
   }
 
-  private async fetchPlaylistVideos(accessToken: string, playlistId: string) {
-    let videos: any[] = [];
-    let nextPageToken: string | null = null;
+  private mapContentByType(type: string, item: any, userId: string): UserContent | null {
+    const baseContent = new UserContent({
+      userId,
+      platform: _const.PLATFORMS.YOUTUBE,
+    });
 
-    logger.debug(`📡 Fetching videos for playlist ID: ${playlistId}`);
+    switch (type) {
+      case 'Subscriptions':
+        baseContent.type = 'subscription';
+        baseContent.title = item.snippet.title;
+        baseContent.externalId = item.snippet.resourceId.channelId;
+        baseContent.metaData = {
+          description: item.snippet.description,
+          publishedAt: item.snippet.publishedAt,
+          thumbnails: item.snippet.thumbnails,
+        };
+        return baseContent;
 
-    do {
-      try {
+      case 'Playlists':
+        baseContent.type = 'playlist';
+        baseContent.title = item.snippet.title;
+        baseContent.externalId = item.id;
+        baseContent.metaData = {
+          playlistId: item.id,
+          description: item.snippet.description,
+          itemCount: item.contentDetails?.itemCount,
+          publishedAt: item.snippet.publishedAt,
+          thumbnails: item.snippet.thumbnails,
+        };
+        return baseContent;
 
-        const response = await axios.get('https://www.googleapis.com/youtube/v3/playlistItems', {
-          params: {
-            part: 'snippet,contentDetails',
+      case 'Activities':
+        baseContent.type = 'activity';
+        baseContent.title = item.snippet.title;
+        baseContent.externalId = item.id;
+        baseContent.metaData = {
+          publishedAt: item.snippet.publishedAt,
+          channelId: item.snippet.channelId,
+          description: item.snippet.description,
+          thumbnails: item.snippet.thumbnails,
+          type: item.snippet.type,
+        };
+        return baseContent;
+
+      case 'ChannelInfo':
+        baseContent.type = 'channel';
+        baseContent.title = item.snippet.title;
+        baseContent.externalId = item.id;
+        baseContent.metaData = {
+          description: item.snippet.description,
+          publishedAt: item.snippet.publishedAt,
+          thumbnails: item.snippet.thumbnails,
+          statistics: item.statistics,
+        };
+        return baseContent;
+
+      default:
+        return null;
+    }
+  }
+
+  private async importPlaylistVideos(
+    accessToken: string,
+    playlistId: string,
+    userId: string,
+  ): Promise<void> {
+    try {
+      logger.debug(`[YoutubeImport] Fetching videos from playlist ${playlistId}`);
+      const videos = await this.fetchPlaylistVideos(accessToken, playlistId);
+      logger.debug(`[YoutubeImport] Found ${videos.length} videos in playlist ${playlistId}`);
+
+      for (const video of videos) {
+        const videoContent = new UserContent({
+          userId,
+          platform: _const.PLATFORMS.YOUTUBE,
+          type: 'playlist_video',
+          title: video.snippet.title,
+          externalId: video.id,
+          metaData: {
+            videoId: video.contentDetails.videoId,
+            publishedAt: video.snippet.publishedAt,
+            description: video.snippet.description,
+            thumbnails: video.snippet.thumbnails,
             playlistId,
-            maxResults: 50,
-            pageToken: nextPageToken ?? undefined,
-          },
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
           },
         });
 
-        videos = videos.concat(response.data.items);
-        nextPageToken = response.data.nextPageToken ?? null;
-      } catch (err) {
-        logger.error(`Error fetching videos for playlist ${playlistId}:`, err);
-        throw new ApplicationException(`Failed to fetch videos for playlist ${playlistId}`);
+        try {
+          const savedContent = await this.userContentRepository.createAsync(videoContent);
+          this.gateway.emitNewImportContent(userId, _const.PLATFORMS.YOUTUBE, savedContent);
+        } catch (err) {
+          logger.error(`[YoutubeImport] Error saving playlist video:`, err.message);
+        }
       }
+    } catch (err) {
+      logger.error(`[YoutubeImport] Error fetching playlist videos for ${playlistId}:`, err.message);
+    }
+  }
 
+  private async updateNotification(
+    notification: NotificationModel | undefined,
+    userId: string,
+    progressReports: ProgressReports,
+  ): Promise<NotificationModel> {
+    const reportArray = Object.entries(progressReports).map(([type, report]) => ({
+      type,
+      ...report,
+    }));
+
+    if (!notification) {
+      logger.debug(`[YoutubeImport] Creating initial notification`);
+      const notificationResult = await this.notificationService.notifyAsync(
+        userId,
+        NotificationType.Import,
+        "Importing your Youtube data...",
+        "",
+        true,
+        {
+          status: NotificationStatus.InProgress,
+          reports: reportArray,
+          platform: _const.PLATFORMS.YOUTUBE,
+        },
+      );
+      return mapToNotificationModel(notificationResult);
+    } else {
+      logger.debug(`[YoutubeImport] Updating notification with progress`);
+      await this.notificationService.updateAsync(notification.id, true, {
+        metaData: {
+          status: NotificationStatus.InProgress,
+          reports: reportArray,
+          platform: _const.PLATFORMS.YOUTUBE,
+        },
+      });
+      return notification;
+    }
+  }
+
+  private loadCursors(account: any): CursorMap {
+    return account.metaData?.importCursors || {};
+  }
+
+  private async saveCursors(account: any, cursors: CursorMap): Promise<void> {
+    if (!account.metaData) {
+      account.metaData = {};
+    }
+    account.metaData.importCursors = cursors;
+    await this.linkedAccountRepository.updateAsync(account);
+  }
+
+  private async clearCursors(account: any): Promise<void> {
+    if (account.metaData?.importCursors) {
+      delete account.metaData.importCursors;
+      await this.linkedAccountRepository.updateAsync(account);
+    }
+  }
+
+  private async fetchPlaylistVideos(accessToken: string, playlistId: string): Promise<any[]> {
+    let videos: any[] = [];
+    let nextPageToken: string | null = null;
+
+    logger.debug(`[YoutubeImport] Fetching all videos for playlist ID: ${playlistId}`);
+
+    do {
+      const pageResult = await this.fetchPlaylistVideosPage(accessToken, playlistId, nextPageToken);
+      videos = videos.concat(pageResult.items);
+      nextPageToken = pageResult.nextPageToken;
     } while (nextPageToken);
-    logger.debug(`📥 Retrieved ${videos.length} total videos for playlist ${playlistId}`);
+
+    logger.debug(`[YoutubeImport] Retrieved ${videos.length} total videos for playlist ${playlistId}`);
     return videos;
+  }
+
+  private async fetchPlaylistVideosPage(
+    accessToken: string,
+    playlistId: string,
+    pageToken: string | null = null,
+  ): Promise<{ items: any[]; nextPageToken: string | null }> {
+    try {
+      const response = await axios.get('https://www.googleapis.com/youtube/v3/playlistItems', {
+        params: {
+          part: 'snippet,contentDetails',
+          playlistId,
+          maxResults: 50,
+          pageToken: pageToken ?? undefined,
+        },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      return {
+        items: response.data.items || [],
+        nextPageToken: response.data.nextPageToken || null,
+      };
+    } catch (err) {
+      logger.error(`[YoutubeImport] Error fetching videos for playlist ${playlistId}:`, err);
+      throw new ApplicationException(`Failed to fetch videos for playlist ${playlistId}`);
+    }
   }
 }
 

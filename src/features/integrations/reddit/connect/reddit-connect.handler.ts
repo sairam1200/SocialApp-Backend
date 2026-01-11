@@ -4,8 +4,11 @@ import { Inject } from "@nestjs/common";
 import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { UserNotFoundException } from "../../../../core/exceptions";
+import { PlatformConnectCleanupEvent } from "../../../../domain/events";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
@@ -14,7 +17,6 @@ import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
-import { UserNotFoundException } from "core/exceptions";
 
 export class RedditConnectQuery {
   model: { state: string };
@@ -66,6 +68,7 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(query: RedditConnectCallbackQuery)
@@ -96,7 +99,16 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
       user.id
     );
 
+    const newExternalId = userData.id;
     if (linkedAccount) {
+      const oldExternalId = linkedAccount.externalId;
+
+      if (oldExternalId !== newExternalId) {
+        logger.info(`[RedditConnect] User ${user.id} changed Reddit account from ${oldExternalId} to ${newExternalId}`);
+        this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
+      }
+
+      linkedAccount.externalId = newExternalId;
       linkedAccount.userName = userData.name;
       linkedAccount.profileImage = userData.snoovatar_img || userData.icon_img || '';
       linkedAccount.metaData = {

@@ -3,9 +3,10 @@ import * as Joi from 'joi';
 import { Inject } from "@nestjs/common";
 import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
-import { Globals } from '../../../../core/globals';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { PlatformConnectCleanupEvent } from '../../../../domain/events';
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
@@ -80,6 +81,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(query: FacebookConnectCallbackQuery):
@@ -100,7 +102,16 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     }
 
     let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(_const.PLATFORMS.FACEBOOK, user.email);
+    const newExternalId = userData.id;
     if (linkedAccount) {
+      const oldExternalId = linkedAccount.externalId;
+
+      if (oldExternalId !== newExternalId) {
+        logger.info(`[FacebookConnect] User ${user.id} changed Facebook account from ${oldExternalId} to ${newExternalId}`);
+        this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
+      }
+
+      linkedAccount.externalId = newExternalId;
       linkedAccount.userName = userData.name;
       linkedAccount.profileImage = userData.picture?.data?.url;
       linkedAccount.followingCount = userData.friends?.summary?.total_count,

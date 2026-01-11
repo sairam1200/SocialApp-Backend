@@ -1,17 +1,17 @@
 import axios from "axios";
-import { Queue } from "bullmq";
 import configs from "../../../../configs";
-import { InjectQueue } from "@nestjs/bull";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
 import { UserLogin } from "../../../../domain/entities";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { Inject, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { SpotifyImportEvent } from "../../../../domain/events";
 
 
 export class SpotifyImportRequestModel {
@@ -35,8 +35,7 @@ export class SpotifyImportCommandHandler implements ICommandHandler<SpotifyImpor
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    @InjectQueue(_const.BULL_QUEUES.SPOTIFY_IMPORT)
-    private readonly importQueue: Queue
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(command: SpotifyImportCommand)
@@ -69,18 +68,19 @@ export class SpotifyImportCommandHandler implements ICommandHandler<SpotifyImpor
       throw new NotFoundException(`Linked account not found for user ${userId}`);
     }
 
-    try{
-      console.log(`Adding Spotify import job to the queue for user ${userId} with access token ${accessToken}`);
-      await this.importQueue.add( "SPOTIFY_IMPORT", {account,accessToken},{
-          attempts: 3, backoff : 5000
-        });
+    if (!account.syncEnabled) {
+      account.syncEnabled = true;
+      await this.linkedAccountRepository.updateAsync(account);
+      logger.info(`[SpotifyImport] Sync enabled for user ${userId}`);
+    }
 
-      console.log(`Spotify import job added to the queue for user ${userId}`);
-    }catch(error){
-      console.log(error)
-      logger.error(`An error occurred while adding the Youtube import job to the queue: 
+    try {
+      this.eventEmitter.emit('spotify.import', new SpotifyImportEvent({ account, accessToken }));
+      logger.info(`[SpotifyImport] Import event emitted for user ${userId}`);
+    } catch (error) {
+      logger.error(`An error occurred while emitting the Spotify import event: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
-      throw new ApplicationException('Failed to initiate Youtube import. Please try again later.');
+      throw new ApplicationException('Failed to initiate Spotify import. Please try again later.');
     }
 
     return {

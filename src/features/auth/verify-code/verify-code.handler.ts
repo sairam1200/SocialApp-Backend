@@ -55,6 +55,7 @@ export class VerifyCodeCommandHandler implements ICommandHandler<VerifyCodeComma
 
     const { model } = command;
     await verifyCodeValidations.validateAsync(model);
+    const currentTime = Math.floor(Date.now() / 1000);
 
     const purpose = model.purpose.trim().toLowerCase();
     if (!AllowedPurposes.has(purpose)) {
@@ -66,18 +67,17 @@ export class VerifyCodeCommandHandler implements ICommandHandler<VerifyCodeComma
       return { isValid: false, expiresIn: null };
     }
 
-    const dataProtectionKey = await this.dataProtectionKeyRepository.getByUserIdAndKeyAsync(user.id, purpose);
-    if (!dataProtectionKey) {
-      return { isValid: false, expiresIn: null };
-    }
+    const verificationKeys = await this.dataProtectionKeyRepository.getByUserIdAsync(user.id);
+    const dataProtectionKey = verificationKeys.find(
+      key =>
+        key.key === purpose &&
+        key.value === model.code &&
+        key.expiresIn &&
+        key.expiresIn >= currentTime
+    );
 
-    const currentTime = Math.floor(Date.now() / 1000);
-    if (dataProtectionKey.expiresIn && dataProtectionKey.expiresIn < currentTime) {
-      return { isValid: false, expiresIn: 0 };
-    }
-
-    if (dataProtectionKey.value !== model.code) {
-      return { isValid: false, expiresIn: dataProtectionKey.expiresIn ? Math.max(dataProtectionKey.expiresIn - currentTime, 0) : null };
+    if (dataProtectionKey) {
+      return { isValid: false, expiresIn: null }
     }
 
     const remainingLifetime = dataProtectionKey.expiresIn

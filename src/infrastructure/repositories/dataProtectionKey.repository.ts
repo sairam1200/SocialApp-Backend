@@ -1,5 +1,4 @@
 import { Repository } from "typeorm";
-import { Globals } from "../../core/globals";
 import { InjectRepository } from "@nestjs/typeorm";
 import { HttpContext } from "../../core/middlewares/httpContext.middleware";
 import { DataProtectionKey } from "../../domain/entities/dataProtectionKey.entity";
@@ -46,7 +45,16 @@ export class DataProtectionKeyRepository implements IDataProtectionKeyRepository
     return await this.dataProtectionKeyContext.save(newKey);
   }
 
+  public async updateAsync(dataProtectionKey: DataProtectionKey): Promise<void> {
+    if (HttpContext.user) {
+      dataProtectionKey.setCurrentUser(HttpContext.getCurrentUserId);
+    }
+
+    await this.dataProtectionKeyContext.save(dataProtectionKey);
+  }
+
   public async deleteAsync(dataProtectionKey: DataProtectionKey): Promise<void> {
     await this.dataProtectionKeyContext.delete(dataProtectionKey.id);
   }
+
 }
