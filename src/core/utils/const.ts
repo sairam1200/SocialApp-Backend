@@ -21,6 +21,7 @@ export default {
   IEMAIL_SERVICE: 'IEmailService',
   ISEARCH_SERVICE: 'ISearchService',
   ITOKEN_SERVICE: 'ITokenService',
+  IYOUTUBEWEBHOOK_SERVICE: 'IYoutubeWebhookService',
   INOTIFICATION_SERVICE: 'INotificationService',
 
   BULL_QUEUES: {

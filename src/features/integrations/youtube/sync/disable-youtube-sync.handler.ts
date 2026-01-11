@@ -1,12 +1,12 @@
 import { Inject } from "@nestjs/common";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
+import { NotFoundException } from "@nestjs/common";
 import logger from "../../../../core/utils/winston.util";
+import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { NotFoundException } from "@nestjs/common";
-import { YoutubeWebhookService } from "../../../../infrastructure/services/youtube-webhook.service";
+import { IYoutubeWebhookService } from "../../../../domain/services/webhooks/iyoutube-webhook.service";
 
 export class DisableYoutubeSyncCommand {
   constructor(request: Partial<DisableYoutubeSyncCommand> = {}) {
@@ -19,7 +19,8 @@ export class DisableYoutubeSyncCommandHandler implements ICommandHandler<Disable
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
-    private readonly youtubeWebhookService: YoutubeWebhookService,
+    @Inject(_const.IYOUTUBEWEBHOOK_SERVICE)
+    private readonly youtubeWebhookService: IYoutubeWebhookService,
   ) { }
 
   public async execute(command: DisableYoutubeSyncCommand): Promise<{ syncEnabled: boolean }> {

@@ -4,4 +4,4 @@ export { TokenService } from "./token.service";
 export { SearchService } from "./search.service";
 export { SearchCacheService } from "./searchCache.service";
 export { NotificationService } from "./notification.service";
-export { YoutubeWebhookService } from "./youtube-webhook.service";
+export { YoutubeWebhookService } from "./webhooks/youtube-webhook.service";

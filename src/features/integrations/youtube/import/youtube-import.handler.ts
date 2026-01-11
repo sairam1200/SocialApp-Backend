@@ -13,8 +13,8 @@ import { HttpContext } from "../../../../core/middlewares/httpContext.middleware
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
-import { YoutubeWebhookService } from "../../../../infrastructure/services/youtube-webhook.service";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { IYoutubeWebhookService } from "../../../../domain/services/webhooks/iyoutube-webhook.service";
 
 export class YoutubeImportRequestModel {
   @ApiProperty()
@@ -39,7 +39,8 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
     private readonly eventEmitter: EventEmitter2,
-    private readonly youtubeWebhookService: YoutubeWebhookService,
+    @Inject(_const.IYOUTUBEWEBHOOK_SERVICE)
+    private readonly youtubeWebhookService: IYoutubeWebhookService,
   ) { }
 
   public async execute(command: YoutubeImportCommand)

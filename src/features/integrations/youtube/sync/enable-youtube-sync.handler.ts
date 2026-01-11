@@ -1,16 +1,16 @@
 import { Inject } from "@nestjs/common";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import configs from "../../../../configs";
 import _const from "../../../../core/utils/const";
 import logger from "../../../../core/utils/winston.util";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
-import { NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { YoutubeWebhookService } from "../../../../infrastructure/services/youtube-webhook.service";
+import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { YoutubeImportEvent } from "../../../../domain/events";
+import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { deserializeObject } from "../../../../core/utils/serialization.util";
+import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
+import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
+import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import { IYoutubeWebhookService } from "../../../../domain/services/webhooks/iyoutube-webhook.service";
 
 export class EnableYoutubeSyncCommand {
   constructor(request: Partial<EnableYoutubeSyncCommand> = {}) {
@@ -25,8 +25,9 @@ export class EnableYoutubeSyncCommandHandler implements ICommandHandler<EnableYo
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly youtubeWebhookService: YoutubeWebhookService,
     private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IYOUTUBEWEBHOOK_SERVICE)
+    private readonly youtubeWebhookService: IYoutubeWebhookService,
   ) { }
 
   public async execute(command: EnableYoutubeSyncCommand): Promise<{ syncEnabled: boolean }> {
