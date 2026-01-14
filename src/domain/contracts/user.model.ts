@@ -28,6 +28,9 @@ export class UserModel {
     @ApiProperty()
     photo: string;
 
+    @ApiProperty({ enum: ['Public', 'Private'], default: 'Public' })
+    profilePrivacy: string;
+
     constructor(partial?: Partial<UserModel>) {
         Object.assign(this, partial);
     }

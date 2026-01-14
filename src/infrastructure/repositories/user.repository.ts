@@ -6,7 +6,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Like, Repository, SelectQueryBuilder } from "typeorm";
 import { cryptoUtils } from '../../core/utils/crypto.util';
 import { User, UserClaim, UserRole, UserBiometric } from '../../domain/entities';
-import { ProfileImagePrivacy } from '../../domain/enums';
+import { ProfileImagePrivacy, ProfilePrivacy } from '../../domain/enums';
 import { generateTimestampUUID } from '../../core/utils/time.util';
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { BadRequestException, forwardRef, Inject, Injectable } from "@nestjs/common";
@@ -462,12 +462,17 @@ export class UserRepository implements IUserRepository {
     }
   }
 
-  public async updateUserBiometricPrivacyAsync(userId: string, privacy: ProfileImagePrivacy): Promise<boolean> {
+  public async updateUserBiometricPrivacyAsync(userId: string, privacy?: ProfileImagePrivacy, profilePrivacy?: ProfilePrivacy): Promise<boolean> {
     const biometrics = await this.getUserBiometricAsync(userId);
     if (!biometrics) {
       return false;
     }
-    biometrics.privacy = privacy;
+    if (privacy !== undefined) {
+      biometrics.privacy = privacy;
+    }
+    if (profilePrivacy !== undefined) {
+      biometrics.profilePrivacy = profilePrivacy;
+    }
     const currentUserId = HttpContext.getCurrentUserId;
     if (currentUserId) {
       biometrics.setCurrentUser(currentUserId);

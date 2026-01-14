@@ -17,6 +17,7 @@ export function mapToUserModel(
     firstName: user.firstName,
     phoneNumber: includeSensitiveFields ? user.phoneNumber : null,
     isEmailVerified: includeSensitiveFields ? user.emailConfirmed : null,
+    profilePrivacy: user.biometrics?.profilePrivacy || 'Public',
   } as UserModel;
 }
 
