@@ -31,7 +31,7 @@ export class DeleteManualProfileCommandHandler implements ICommandHandler<Delete
   public async execute(command: DeleteManualProfileCommand): Promise<void> {
     const { id } = command;
 
-    await deleteManualProfileValidations.validateAsync(id);
+    await deleteManualProfileValidations.validateAsync(command);
 
     const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
     if (!user || user.type !== UserType.User) {
