@@ -7,6 +7,7 @@ import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 import { YoutubeConnectCallbackQuery, YoutubeConnectQuery } from "./youtube-connect.handler";
 import { YoutubeProfileModel } from "../../../../domain/contracts/youtube.model";
+import { getRedirectUrl } from "core/utils/redirectUrl.util";
 
 class ConnectResponseModel {
   @ApiProperty()
@@ -49,7 +50,7 @@ export class YoutubeConnectController {
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: configs.youtube.clientId,
-      redirect_uri: configs.youtube.callbackUrl,
+      redirect_uri: getRedirectUrl(configs.youtube.callbackUrl),
       scope: scopes,
       state: state,
       access_type: 'offline',
