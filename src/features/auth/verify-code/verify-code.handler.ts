@@ -76,7 +76,7 @@ export class VerifyCodeCommandHandler implements ICommandHandler<VerifyCodeComma
         key.expiresIn >= currentTime
     );
 
-    if (dataProtectionKey) {
+    if (!dataProtectionKey) {
       return { isValid: false, expiresIn: null }
     }
 
