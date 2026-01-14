@@ -47,7 +47,6 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     ImportGateway,
     JwtService,
     SearchCacheService,
-    YoutubeWebhookService,
     FacebookImportListener,
     YoutubeImportListener,
     PinterestImportListener,
@@ -71,6 +70,7 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     dependency.ContentStreamRepository,
     dependency.SearchService,
     dependency.SearchHistoryRepository,
+    dependency.YoubeWebHookService,
   ],
   exports: [],
 })
