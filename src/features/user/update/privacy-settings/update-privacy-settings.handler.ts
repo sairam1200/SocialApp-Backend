@@ -41,7 +41,6 @@ export class UpdatePrivacySettingsCommandHandler implements ICommandHandler<Upda
       throw new UserNotFoundException();
     }
 
-    // Update profile privacy on user biometrics
     await this.userRepository.updateUserBiometricPrivacyAsync(user.id, undefined, model.profilePrivacy);
   }
 }
