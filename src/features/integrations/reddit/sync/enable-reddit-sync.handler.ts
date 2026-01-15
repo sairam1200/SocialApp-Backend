@@ -1,13 +1,12 @@
 import { Inject } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import _const from "../../../../core/utils/const";
 import logger from "../../../../core/utils/winston.util";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { NotFoundException } from "@nestjs/common";
-import { RedditImportEvent } from "../../../../domain/events";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 
 export class EnableRedditSyncCommand {
   constructor(request: Partial<EnableRedditSyncCommand> = {}) {
@@ -22,7 +21,8 @@ export class EnableRedditSyncCommandHandler implements ICommandHandler<EnableRed
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(command: EnableRedditSyncCommand): Promise<{ syncEnabled: boolean }> {
@@ -44,7 +44,8 @@ export class EnableRedditSyncCommandHandler implements ICommandHandler<EnableRed
 
     const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.REDDIT);
     if (userLogin) {
-      this.eventEmitter.emit('reddit.import', new RedditImportEvent({ account, accessToken: userLogin.tokenValue }));
+      await this.queueService.enqueueRedditImport(account, userLogin.tokenValue);
+      logger.info(`[RedditSync] Import job enqueued for user ${userId}`);
     } else {
       logger.warn(`[RedditSync] UserLogin not found for user ${userId}. Cannot trigger import after sync enable.`);
     }

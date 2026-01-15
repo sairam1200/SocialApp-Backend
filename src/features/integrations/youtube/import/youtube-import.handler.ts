@@ -5,10 +5,9 @@ import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
 import { UserLogin } from "../../../../domain/entities";
 import logger from "../../../../core/utils/winston.util";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { YoutubeImportEvent } from "../../../../domain/events";
 import { Inject, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
@@ -38,7 +37,8 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
     @Inject(_const.IYOUTUBEWEBHOOK_SERVICE)
     private readonly youtubeWebhookService: IYoutubeWebhookService,
   ) { }
@@ -109,9 +109,10 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     }
 
     try {
-      this.eventEmitter.emit('youtube.import', new YoutubeImportEvent({ account, accessToken }));
+      await this.queueService.enqueueYoutubeImport(account, accessToken);
+      logger.info(`[YoutubeImport] Import job enqueued for user ${userId}`);
     } catch (error) {
-      logger.error(`An error occurred while emitting the Youtube import event: 
+      logger.error(`An error occurred while enqueueing the Youtube import job: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
       throw new ApplicationException('Failed to initiate Youtube import. Please try again later.');
     }

@@ -20,8 +20,10 @@ export class FacebookSearchRequestModel {
   searchTerm: string;
   @ApiProperty({ required: false })
   filter?: Record<string, any>;
-  @ApiProperty()
+  @ApiProperty({ required: false })
   facebookAccessToken?: string;
+  @ApiProperty({ required: false, default: false })
+  forceRefresh?: boolean;
 }
 
 export class FacebookSearchQuery {
@@ -112,8 +114,9 @@ export class FacebookSearchQueryHandler
       normalizedQuery,
       originalQuery: searchTerm,
       limit: 25,
-      filters: filter,
+      filters: filter || {},
       accessToken,
+      forceRefresh: command.model.forceRefresh || false,
     });
     return data;
   }

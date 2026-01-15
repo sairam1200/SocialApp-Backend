@@ -1,4 +1,4 @@
-import { Repository } from "typeorm";
+import { Repository, In, MoreThan } from "typeorm";
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { UserContent } from "../../domain/entities";
@@ -47,7 +47,7 @@ export class UserContentRepository implements IUserContentRepository {
     const take = 10;
     const where: any = { userId, platform };
     if (cursor) {
-      where.id = { $gt: cursor };
+      where.id = MoreThan(cursor);
     }
     const [result, count] = await this.userContentContext.findAndCount({
       where,
@@ -121,5 +121,19 @@ export class UserContentRepository implements IUserContentRepository {
 
   public async deleteByUserIdAndPlatformAsync(userId: string, platform: string): Promise<void> {
     await this.userContentContext.delete({ userId, platform });
+  }
+
+  public async deleteByExternalIdsAsync(userId: string, platform: string, externalIds: string[]): Promise<void> {
+    if (externalIds.length === 0) {
+      return;
+    }
+    await this.userContentContext
+      .createQueryBuilder()
+      .delete()
+      .from(UserContent)
+      .where('userId = :userId', { userId })
+      .andWhere('platform = :platform', { platform })
+      .andWhere('externalId IN (:...externalIds)', { externalIds })
+      .execute();
   }
 }

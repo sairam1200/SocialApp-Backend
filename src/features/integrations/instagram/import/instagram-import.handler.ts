@@ -6,13 +6,12 @@ import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
 import { Inject, NotFoundException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import { UserLogin } from "../../../../domain/entities";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { InstagramImportEvent } from "../../../../domain/events";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 
 export class InstagramImportRequestModel {
   @ApiProperty()
@@ -36,7 +35,8 @@ export class InstagramImportCommandHandler implements ICommandHandler<InstagramI
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(command: InstagramImportCommand): Promise<{ accessToken: string, expiresIn: number }> {
@@ -85,10 +85,10 @@ export class InstagramImportCommandHandler implements ICommandHandler<InstagramI
     await this.linkedAccountRepository.updateAsync(account);
 
     try {
-      this.eventEmitter.emit('instagram.import', new InstagramImportEvent({ account, accessToken }));
-      logger.info(`[InstagramImport] Import event emitted for user ${userId}`);
+      await this.queueService.enqueueInstagramImport(account, accessToken);
+      logger.info(`[InstagramImport] Import job enqueued for user ${userId}`);
     } catch (error) {
-      logger.error(`An error occurred while emitting the Instagram import event: 
+      logger.error(`An error occurred while enqueuing the Instagram import job: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
       throw new ApplicationException('Failed to initiate Instagram import. Please try again later.');
     }

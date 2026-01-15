@@ -5,14 +5,13 @@ import _const from '../../../../core/utils/const';
 import { UserLogin } from '../../../../domain/entities';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Inject, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { deserializeObject, serializeObject } from '../../../../core/utils/serialization.util';
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
-import { TiktokImportEvent } from '../../../../domain/events';
+import { IQueueService } from '../../../../domain/services/iqueue.service';
 
 const TIKTOK_BASE = 'https://open.tiktokapis.com/v2';
 
@@ -38,7 +37,8 @@ export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportC
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(command: TiktokImportCommand)
@@ -119,10 +119,10 @@ export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportC
     await this.linkedAccountRepository.updateAsync(account);
 
     try {
-      this.eventEmitter.emit('tiktok.import', new TiktokImportEvent({ account, accessToken }));
-      logger.info(`[TiktokImport] Import event emitted for user ${userId}`);
+      await this.queueService.enqueueTiktokImport(account, accessToken);
+      logger.info(`[TiktokImport] Import job enqueued for user ${userId}`);
     } catch (error) {
-      logger.error(`An error occurred while emitting the TikTok import event: 
+      logger.error(`An error occurred while enqueuing the TikTok import job: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
       throw new ApplicationException('Failed to initiate TikTok import. Please try again later.');
     }

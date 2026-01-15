@@ -27,23 +27,56 @@ export interface FacebookUserDataModel {
   link?: string;
 }
 
-export interface FacebookOnlineModel {
+export class FacebookOnlineModel {
+  @ApiProperty()
   id: string;
+
+  @ApiProperty()
   title: string;
+
+  @ApiProperty()
   type: string;
+
+  @ApiProperty()
   platform: string;
+
+  @ApiProperty()
   externalId: string;
+
+  @ApiProperty({ required: false })
   description?: string;
+
+  @ApiProperty({ required: false })
   picture?: string;
+
+  @ApiProperty({ required: false })
   link?: string;
+
+  @ApiProperty({ required: false })
   message?: string;
+
+  @ApiProperty({ required: false })
   story?: string;
+
+  @ApiProperty({ required: false, type: Object })
   from?: Record<string, any>;
+
+  @ApiProperty({ required: false, type: Object })
   reactions?: Record<string, any>;
+
+  @ApiProperty({ required: false, default: 0 })
   commentCount?: number;
+
+  @ApiProperty({ required: false, default: 0 })
   sharesCount?: number;
+
+  @ApiProperty({ required: false })
   permalinkUrl?: string;
+
+  @ApiProperty({ required: false })
   createdAt?: string;
+
+  @ApiProperty({ required: false })
   updatedAt?: string;
 }
 
@@ -100,6 +133,9 @@ export class FacebookSearchParamsModel {
 
   @ApiProperty()
   pageToken?: string;
+
+  @ApiProperty({ required: false, default: false })
+  forceRefresh?: boolean;
 }
 
 export interface FacebookSearchItemModel {

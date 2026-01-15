@@ -1,6 +1,5 @@
 import { Inject } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
 import logger from "../../../../core/utils/winston.util";
@@ -11,6 +10,8 @@ import { INotificationRepository } from "../../../../domain/repositories/inotifi
 import { NotFoundException } from "@nestjs/common";
 import { NotificationStatus, NotificationType } from "../../../../domain/enums";
 import { ApplicationException } from "../../../../core/exceptions";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { PlatformRollbackEvent } from "../../../../domain/events/platform-rollback.event";
 
 export class CancelYoutubeImportRequestModel {
@@ -35,6 +36,8 @@ export class CancelYoutubeImportCommandHandler implements ICommandHandler<Cancel
     private readonly notificationService: INotificationService,
     @Inject(_const.INOTIFICATION_REPOSITORY)
     private readonly notificationRepository: INotificationRepository,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
     private readonly eventEmitter: EventEmitter2,
   ) { }
 
@@ -56,11 +59,13 @@ export class CancelYoutubeImportCommandHandler implements ICommandHandler<Cancel
 
     logger.info(`[YoutubeImport] Cancellation requested for user ${userId}`);
 
-    if (!account.metaData) {
-      account.metaData = {};
+    try {
+      await this.queueService.cancelYoutubeImport(userId);
+      logger.info(`[YoutubeImport] Job cancellation requested for user ${userId}`);
+    } catch (error) {
+      logger.error(`[YoutubeImport] Error cancelling job: 
+        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
     }
-    account.metaData.importCancelled = true;
-    await this.linkedAccountRepository.updateAsync(account);
 
     const notifications = await this.notificationRepository.getAllAsync(userId);
     const importNotification = notifications.find(
@@ -75,15 +80,12 @@ export class CancelYoutubeImportCommandHandler implements ICommandHandler<Cancel
       }, "YouTube import cancellation requested.");
     }
 
-    logger.info(`[YoutubeImport] Cancellation flag set for user ${userId}. Triggering immediate rollback.`);
-
     try {
       this.eventEmitter.emit('platform.rollback', new PlatformRollbackEvent({ account }));
       logger.info(`[YoutubeImport] Rollback event emitted for user ${userId}`);
     } catch (error) {
       logger.error(`[YoutubeImport] Error emitting rollback event: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
-      throw error;
     }
   }
 }

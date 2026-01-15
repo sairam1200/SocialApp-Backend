@@ -11,12 +11,11 @@ import {
 } from '@nestjs/common';
 import { UserLogin } from '../../../../domain/entities';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
-import { FacebookImportEvent } from '../../../../domain/events';
+import { IQueueService } from '../../../../domain/services/iqueue.service';
 
 export class FacebookImportRequestModel {
   @ApiProperty()
@@ -39,7 +38,8 @@ export class FacebookImportCommandHandler
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(
@@ -106,10 +106,11 @@ export class FacebookImportCommandHandler
     }
 
     try {
-      this.eventEmitter.emit('facebook.import', new FacebookImportEvent({ account, accessToken }));
+      await this.queueService.enqueueFacebookImport(account, accessToken);
+      logger.info(`[FacebookImport] Import job enqueued for user ${userId}`);
     } catch (error) {
       logger.error(
-        `An error occurred while emitting the Facebook import event: 
+        `An error occurred while enqueuing the Facebook import job: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`,
         { error },
       );

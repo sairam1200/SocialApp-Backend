@@ -10,6 +10,7 @@ import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { PlatformConnectCleanupEvent } from "../../../../domain/events";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
+import { serializeObject } from "../../../../core/utils/serialization.util";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { mapToInstagramProfileModel } from "../../../../domain/mappers/instagram.mapper";
@@ -114,54 +115,16 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
         this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
       }
 
-      linkedAccount.externalId = newExternalId;
-      linkedAccount.userName = userData.username;
-      linkedAccount.profileImage = userData.profile_picture_url;
-      linkedAccount.followersCount = userData.followers_count;
-      linkedAccount.followingCount = userData.follows_count;
-      linkedAccount.metaData = {
-        name: userData.name,
-        biography: userData.biography,
-        websiteUrl: userData.website,
-        mediaCount: userData.media_count,
-        accountType: userData.type,
-      };
-      await this.linkedAccountRepository.updateAsync(linkedAccount);
+      linkedAccount = await this.updateLinkedAccount(linkedAccount, userData);
     } else {
-      linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
-        platform: PLATFORM,
-        userId: user.id,
-        externalId: userData.id,
-        userName: userData.username,
-        profileImage: userData.profile_picture_url,
-        followersCount: userData.followers_count,
-        followingCount: userData.follows_count,
-        metaData: {
-          name: userData.name,
-          biography: userData.biography,
-          websiteUrl: userData.website,
-          mediaCount: userData.media_count,
-          accountType: userData.type,
-        }
-      }));
+      linkedAccount = await this.createLinkedAccount(user.id, userData);
     }
 
     const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, PLATFORM);
     if (existingAccountLogin) {
-      existingAccountLogin.tokenValue = access_token;
-      existingAccountLogin.addedDateUtc = new Date();
-      existingAccountLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
-      await this.userLoginRepository.updateAsync(existingAccountLogin);
+      await this.updateUserLogin(existingAccountLogin, access_token, expires_in);
     } else {
-      await this.userLoginRepository.createAysnc(
-        PLATFORM,
-        user.id,
-        "", // deviceId
-        "", // userAgent
-        "", // ipAddress
-        access_token,
-        new Date(Date.now() + expires_in * 1000)
-      );
+      await this.createUserLogin(user.id, access_token, expires_in);
     }
 
     return {
@@ -238,5 +201,71 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     }
 
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
+  }
+
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: InstagramUserDataModel): Promise<LinkedAccount> {
+    linkedAccount.externalId = userData.id;
+    linkedAccount.userName = userData.username;
+    linkedAccount.profileImage = userData.profile_picture_url;
+    linkedAccount.followersCount = userData.followers_count;
+    linkedAccount.followingCount = userData.follows_count;
+    linkedAccount.metaData = {
+      name: userData.name,
+      biography: userData.biography,
+      websiteUrl: userData.website,
+      mediaCount: userData.media_count,
+      accountType: userData.type,
+    };
+    await this.linkedAccountRepository.updateAsync(linkedAccount);
+    return linkedAccount;
+  }
+
+  private async createLinkedAccount(userId: string, userData: InstagramUserDataModel): Promise<LinkedAccount> {
+    const newEntry = new LinkedAccount({
+      platform: PLATFORM,
+      userId,
+      externalId: userData.id,
+      userName: userData.username,
+      profileImage: userData.profile_picture_url,
+      followersCount: userData.followers_count,
+      followingCount: userData.follows_count,
+      metaData: {
+        name: userData.name,
+        biography: userData.biography,
+        websiteUrl: userData.website,
+        mediaCount: userData.media_count,
+        accountType: userData.type,
+      }
+    });
+    return await this.linkedAccountRepository.createAsync(newEntry);
+  }
+
+  private async updateUserLogin(userLogin: any, accessToken: string, expiresIn: number): Promise<void> {
+    // Standardize: Store as serialized object for consistency (even if platform doesn't use refresh_token)
+    const tokenValue = serializeObject({
+      access_token: accessToken,
+      expires_in: expiresIn,
+    });
+    userLogin.tokenValue = tokenValue;
+    userLogin.addedDateUtc = new Date();
+    userLogin.expiryDateUtc = new Date(Date.now() + expiresIn * 1000);
+    await this.userLoginRepository.updateAsync(userLogin);
+  }
+
+  private async createUserLogin(userId: string, accessToken: string, expiresIn: number): Promise<void> {
+    // Standardize: Store as serialized object for consistency
+    const tokenValue = serializeObject({
+      access_token: accessToken,
+      expires_in: expiresIn,
+    });
+    await this.userLoginRepository.createAysnc(
+      PLATFORM,
+      userId,
+      "", // deviceId
+      "", // userAgent
+      "", // ipAddress
+      tokenValue,
+      new Date(Date.now() + expiresIn * 1000)
+    );
   }
 }

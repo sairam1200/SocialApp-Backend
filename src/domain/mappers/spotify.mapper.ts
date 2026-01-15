@@ -1,6 +1,26 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { UserContent } from "../entities/userContent.entity";
 import { LinkedAccount } from "../entities/linkedAccount.entity";
 import { SpotifyAlbumModel, SpotifyPlaylistModel, SpotifyProfileModel, SpotifyShowModel, SpotifyTrackModel } from "../contracts/spotify.model";
+
+export class SpotifyContentModel {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty({ enum: ['playlist', 'track', 'album', 'show'] })
+  type: 'playlist' | 'track' | 'album' | 'show';
+
+  @ApiProperty()
+  platform: string;
+
+  @ApiProperty()
+  externalId: string;
+
+  [key: string]: any;
+}
 
 export function mapToSpotifyProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): SpotifyProfileModel {
   return {
@@ -83,6 +103,54 @@ export function mapToSpotifyAlbumModel(data: UserContent): SpotifyAlbumModel {
     imageUrl: data.metaData.imageUrl,
     url: data.metaData.url,
   } as SpotifyAlbumModel;
+}
+
+export function mapToSpotifyContentModel(data: UserContent): SpotifyContentModel {
+  const type = data.type as 'playlist' | 'track' | 'album' | 'show';
+
+  let mappedContent: SpotifyContentModel;
+
+  switch (type) {
+    case 'playlist':
+      mappedContent = {
+        ...mapToSpotifyPlaylistModel(data),
+        platform: data.platform,
+        externalId: data.externalId,
+      } as SpotifyContentModel;
+      break;
+    case 'track':
+      mappedContent = {
+        ...mapToSpotifyTrackModel(data),
+        platform: data.platform,
+        externalId: data.externalId,
+      } as SpotifyContentModel;
+      break;
+    case 'album':
+      mappedContent = {
+        ...mapToSpotifyAlbumModel(data),
+        platform: data.platform,
+        externalId: data.externalId,
+      } as SpotifyContentModel;
+      break;
+    case 'show':
+      mappedContent = {
+        ...mapToSpotifyShowModel(data),
+        platform: data.platform,
+        externalId: data.externalId,
+      } as SpotifyContentModel;
+      break;
+    default:
+      mappedContent = {
+        id: data.id,
+        name: data.title,
+        type: 'playlist' as const,
+        platform: data.platform,
+        externalId: data.externalId,
+      };
+      break;
+  }
+
+  return mappedContent;
 }
 
 export function mapToSpotifyShowModel(data: UserContent): SpotifyShowModel {

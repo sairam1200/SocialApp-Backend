@@ -6,12 +6,11 @@ import { NotFoundException } from "@nestjs/common";
 import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
-import { LinkedInImportEvent } from "../../../../domain/events";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 
 const PLATFORM = 'linkedin';
 const API_BASE = 'https://api.linkedin.com/v2';
@@ -37,7 +36,8 @@ export class LinkedInImportCommandHandler implements ICommandHandler<LinkedInImp
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(command: LinkedInImportCommand): Promise<{ accessToken: string; expiresIn: number; }> {
@@ -75,10 +75,10 @@ export class LinkedInImportCommandHandler implements ICommandHandler<LinkedInImp
     await this.linkedAccountRepository.updateAsync(account);
 
     try {
-      this.eventEmitter.emit('linkedin.import', new LinkedInImportEvent({ account, accessToken }));
-      logger.info(`[LinkedInImport] Import event emitted for user ${userId}`);
+      await this.queueService.enqueueLinkedInImport(account, accessToken);
+      logger.info(`[LinkedInImport] Import job enqueued for user ${userId}`);
     } catch (error) {
-      logger.error(`An error occurred while emitting the LinkedIn import event: 
+      logger.error(`An error occurred while enqueuing the LinkedIn import job: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
       throw new ApplicationException('Failed to initiate LinkedIn import. Please try again later.');
     }

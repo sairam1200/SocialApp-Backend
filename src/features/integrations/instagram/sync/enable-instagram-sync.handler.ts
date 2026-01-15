@@ -1,13 +1,12 @@
 import { Inject } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import _const from "../../../../core/utils/const";
 import logger from "../../../../core/utils/winston.util";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { InstagramImportEvent } from "../../../../domain/events";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 
 export class EnableInstagramSyncCommand {
   constructor(request: Partial<EnableInstagramSyncCommand> = {}) {
@@ -22,7 +21,8 @@ export class EnableInstagramSyncCommandHandler implements ICommandHandler<Enable
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(command: EnableInstagramSyncCommand): Promise<{ syncEnabled: boolean }> {
@@ -50,8 +50,8 @@ export class EnableInstagramSyncCommandHandler implements ICommandHandler<Enable
         throw new UnauthorizedException("No Instagram login found. Please reconnect your Instagram account.");
       }
 
-      this.eventEmitter.emit('instagram.import', new InstagramImportEvent({ account, accessToken: userLogin.tokenValue }));
-      logger.info(`[InstagramSync] Import event triggered for user ${userId}`);
+      await this.queueService.enqueueInstagramImport(account, userLogin.tokenValue);
+      logger.info(`[InstagramSync] Import job enqueued for user ${userId}`);
 
       account.allowImport = true;
     } catch (error) {

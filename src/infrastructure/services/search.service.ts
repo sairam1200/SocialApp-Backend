@@ -32,11 +32,32 @@ import {
   FacebookUserContentFilters,
 } from 'domain/enums';
 import { IGeneralRepository } from 'domain/repositories/igeneral.repository';
+import { PlatformSearchParamsModel } from 'domain/contracts/platform-search.model';
 import {
   FacebookAPIResponseModel,
-  FacebookSearchParamsModel,
   FacebookSearchResponseModel,
 } from 'domain/contracts/facebook.model';
+import {
+  RedditSearchResponseModel,
+} from 'domain/contracts/reddit.model';
+import {
+  SpotifySearchResponseModel,
+} from 'domain/contracts/spotify.model';
+import {
+  PinterestSearchResponseModel,
+} from 'domain/contracts/pinterest.model';
+import {
+  TiktokSearchResponseModel,
+} from 'domain/contracts/tiktok.model';
+import {
+  InstagramSearchResponseModel,
+} from 'domain/contracts/instagram.model';
+import {
+  TwitterSearchResponseModel,
+} from 'domain/contracts/twitter.model';
+import {
+  LinkedInSearchResponseModel,
+} from 'domain/contracts/linkedin.model';
 import {
   mapContentStreamToFacebookOnlineModel,
   mapFacebookOnlineResponseToContentStream,
@@ -61,180 +82,77 @@ export class SearchService implements ISearchService {
   ) { }
 
   public async searchFacebookAsync(
-    params: FacebookSearchParamsModel,
+    params: PlatformSearchParamsModel,
   ): Promise<FacebookSearchResponseModel> {
-    const response = new FacebookSearchResponseModel();
-    response.query = params.originalQuery;
-
-    console.log("Facebook params:", params);
-
     const {
-      filters,
+      filters = {},
       limit,
       normalizedQuery,
       originalQuery,
       accessToken,
-      pageToken,
+      paginationToken,
       page,
+      forceRefresh = false,
     } = params;
+    const pageToken = paginationToken;
 
-    if (!filters?.platform || filters.platform !== _const.PLATFORMS.FACEBOOK) {
-      filters.platform = _const.PLATFORMS.FACEBOOK;
-    }
+    filters.platform = _const.PLATFORMS.FACEBOOK;
 
-    const skipContentStreamSearch =
-      filters.type &&
-      !['Profile', 'Content', 'Community'].includes(filters.type);
-    const skipUserContentSearch =
-      filters.type && !['feed', 'likes', 'video'].includes(filters.type);
-    const skipLinkedAccountSearch =
-      filters.type && !['page', 'group', 'event'].includes(filters.type);
-    const skipOnlineSearch = page > 1 && !pageToken;
-
-    const skips: SectionSkipMap = {
-      contentStream: skipContentStreamSearch,
-      userContent: skipUserContentSearch,
-      linkedAccount: skipLinkedAccountSearch,
-      manualProfile: false,
+    const cacheParams = {
+      platform: _const.PLATFORMS.FACEBOOK,
+      normalizedQuery,
+      filters,
+      page,
+      limit,
     };
 
-    // Fetch data from Facebook Graph API
-    const fbOnlineResults = await this.fetchFacebookOnlineAsync(
-      skipOnlineSearch,
-      normalizedQuery,
-      limit,
-      filters,
-      accessToken,
-    );
-
-    // Map Facebook results into ContentStream entities
-    const mappedFbOnlineResults = await Promise.all(
-      fbOnlineResults.data.map((item) =>
-        mapFacebookOnlineResponseToContentStream(item),
-      ),
-    );
-
-    // Check which ones are new
-    const fbOnlineExternalIds = mappedFbOnlineResults.map(
-      (content) => content.externalId,
-    );
-
-    const listIds = await this.generalRepository.checkExistingItemsAsync(
-      fbOnlineExternalIds,
-      _const.PLATFORMS.FACEBOOK,
-    );
-
-    const newContents = mappedFbOnlineResults.filter((content) =>
-      listIds.includes(content.externalId),
-    );
-
-    // Insert new contents if any
-    if (newContents.length > 0) {
-      const result = await this.generalRepository.createAsync(newContents);
+    if (!forceRefresh) {
+      const cached = await this.cacheService.getCachedResults<FacebookSearchResponseModel>(cacheParams);
+      if (cached) return cached;
     }
 
-    // Allocate section limits
+    const skips = this.getFacebookSearchSkips(filters);
     const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
+    const dbResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
 
-    // Fetch local results from DB (contentStreams, userContents, linkedAccounts)
-    const [contentStreamResults, userContentResults, linkedAccountResults] =
-      await Promise.all([
-        this.searchContentStreamAsync(skipContentStreamSearch, {
-          page,
-          filter: filters,
-          searchQuery: normalizedQuery,
-          pageSize: sectionLimits.contentStream,
-        } as QueryOptions),
-        this.searchUserContentAsync(skipUserContentSearch, {
-          page,
-          filter: filters,
-          searchQuery: normalizedQuery,
-          pageSize: sectionLimits.userContent,
-        } as QueryOptions),
-        this.searchLinkedAccountAsync(skipLinkedAccountSearch, {
-          page,
-          filter: filters,
-          searchQuery: normalizedQuery,
-          pageSize: sectionLimits.linkedAccount,
-        } as QueryOptions),
-      ]);
+    const shouldFetch = this.shouldFetchFromAPI(
+      dbResults,
+      forceRefresh,
+      page,
+      pageToken,
+      limit,
+    );
 
-    // Process content stream results
-    if (contentStreamResults[0].length !== 0) {
+    if (shouldFetch && accessToken) {
+      const lockAcquired = await this.cacheService.acquireLock(cacheParams);
 
-      contentStreamResults[0].forEach((content: ContentStream) => {
-        const mappedContent = mapContentStreamToFacebookOnlineModel(content);
-        switch (mappedContent.type) {
-          case FacebookOnlineFilters.Posts:
-            response.results.posts.data.push(mappedContent);
-            break;
-          case FacebookOnlineFilters.Pages:
-            response.results.pages.data.push(mappedContent);
-            break;
-          case FacebookOnlineFilters.Groups:
-            response.results.groups.data.push(mappedContent);
-            break;
-          case FacebookOnlineFilters.Events:
-            response.results.events.data.push(mappedContent);
-            break;
-          case FacebookOnlineFilters.People:
-            response.results.people.data.push(mappedContent);
-            break;
+      if (!lockAcquired) {
+        const waitingResult = await this.cacheService.waitForCachedResults<FacebookSearchResponseModel>(cacheParams);
+        if (waitingResult) return waitingResult;
+      }
+
+      try {
+        await this.fetchAndStoreFacebookResults(originalQuery, limit, filters, accessToken, pageToken);
+        if (lockAcquired) {
+          const updatedResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+          dbResults.contentStream = updatedResults.contentStream;
+          dbResults.userContent = updatedResults.userContent;
+          dbResults.linkedAccount = updatedResults.linkedAccount;
         }
-      });
-    }
-
-    // Process user content results
-    if (userContentResults[0].length > 0) {
-      userContentResults[0].forEach((content: UserContent) => {
-        switch (content.type) {
-          case FacebookUserContentFilters.Feed:
-            response.results.feeds.data.push(content);
-            break;
-          case FacebookUserContentFilters.Posts:
-            response.results.posts.data.push(content);
-            break;
-          case FacebookUserContentFilters.Likes:
-            response.results.likes.data.push(content);
-            break;
-          case FacebookUserContentFilters.Groups:
-            response.results.groups.data.push(content);
-            break;
-          case FacebookUserContentFilters.Events:
-            response.results.events.data.push(content);
-            break;
-          case FacebookUserContentFilters.Videos:
-            response.results.videos.data.push(content);
-            break;
-          default:
-            break;
+      } catch (error) {
+        logger.error(`Error fetching Facebook results:`, error);
+      } finally {
+        if (lockAcquired) {
+          await this.cacheService.releaseLock(cacheParams);
         }
-      });
+      }
     }
 
-    // Process linked account results
-    if (linkedAccountResults[0].length !== 0) {
+    const response = this.buildFacebookResponse(originalQuery, dbResults);
 
-      linkedAccountResults[0].forEach((account: LinkedAccount) => {
-        const mappedLinkedAccount = mapToFacebookProfileModel(account);
-        response.results.accounts.push(mappedLinkedAccount);
-      });
+    if (shouldFetch && accessToken) {
+      await this.cacheService.setCachedResults(cacheParams, response);
     }
-
-    //  Merge new online data into response
-    // if (fbOnlineResults?.data?.length > 0) {
-    //   fbOnlineResults.data.forEach((item) => {
-    //     const exists = response.results.posts.data.find(
-    //       (p) => p.id === item.id,
-    //     );
-    //     if (!exists) {
-    //       response.results.posts.data.push(item);
-    //     }
-    //   });
-    // }
-
-    // Assign paging info from Facebook API
-    // response.results.posts.paging = fbOnlineResults.paging;
 
     return response;
   }
@@ -275,24 +193,565 @@ export class SearchService implements ISearchService {
     }
   }
 
-  public async searchInstagramAsync(access_token: string): Promise<any> {
-    return;
+  // Facebook Search Helper Methods
+  private getFacebookSearchSkips(filters: Record<string, any>): SectionSkipMap {
+    return {
+      contentStream: filters.type && !['Profile', 'Content', 'Community'].includes(filters.type),
+      userContent: filters.type && !['feed', 'likes', 'video'].includes(filters.type),
+      linkedAccount: filters.type && !['page', 'group', 'event'].includes(filters.type),
+      manualProfile: false,
+    };
   }
 
-  public async searchPinterestAsync(access_token: string): Promise<any> {
-    return;
+  private buildFacebookResponse(
+    originalQuery: string,
+    dbResults: { contentStream: ContentStream[]; userContent: UserContent[]; linkedAccount: LinkedAccount[] },
+  ): FacebookSearchResponseModel {
+    const response = new FacebookSearchResponseModel();
+    response.query = originalQuery;
+
+    dbResults.contentStream.forEach(content => {
+      const mappedContent = mapContentStreamToFacebookOnlineModel(content);
+      switch (mappedContent.type) {
+        case FacebookOnlineFilters.Posts:
+          response.results.posts.data.push(mappedContent);
+          break;
+        case FacebookOnlineFilters.Pages:
+          response.results.pages.data.push(mappedContent);
+          break;
+        case FacebookOnlineFilters.Groups:
+          response.results.groups.data.push(mappedContent);
+          break;
+        case FacebookOnlineFilters.Events:
+          response.results.events.data.push(mappedContent);
+          break;
+        case FacebookOnlineFilters.People:
+          response.results.people.data.push(mappedContent);
+          break;
+      }
+    });
+
+    dbResults.userContent.forEach(content => {
+      switch (content.type) {
+        case FacebookUserContentFilters.Feed:
+          response.results.feeds.data.push(content);
+          break;
+        case FacebookUserContentFilters.Posts:
+          response.results.posts.data.push(content);
+          break;
+        case FacebookUserContentFilters.Likes:
+          response.results.likes.data.push(content);
+          break;
+        case FacebookUserContentFilters.Groups:
+          response.results.groups.data.push(content);
+          break;
+        case FacebookUserContentFilters.Events:
+          response.results.events.data.push(content);
+          break;
+        case FacebookUserContentFilters.Videos:
+          response.results.videos.data.push(content);
+          break;
+      }
+    });
+
+    dbResults.linkedAccount.forEach(account => {
+      const mappedLinkedAccount = mapToFacebookProfileModel(account);
+      response.results.accounts.push(mappedLinkedAccount);
+    });
+
+    return response;
   }
 
-  public async searchTwitterAsync(access_token: string): Promise<any> {
-    return;
+  private async fetchAndStoreFacebookResults(
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    pageToken?: string,
+  ): Promise<void> {
+    const fbResults = await this.fetchFacebookOnlineAsync(false, query, limit, filters, accessToken, pageToken);
+
+    if (!fbResults?.data?.length) return;
+
+    const mappedResults = await Promise.all(
+      fbResults.data.map((item) => mapFacebookOnlineResponseToContentStream(item)),
+    );
+
+    if (!mappedResults.length) return;
+
+    const externalIds = mappedResults.map(c => c.externalId);
+    const newIds = await this.generalRepository.checkExistingItemsAsync(externalIds, _const.PLATFORMS.FACEBOOK);
+    const toAdd = mappedResults.filter(c => newIds.includes(c.externalId));
+    const existingIds = externalIds.filter(id => !newIds.includes(id));
+
+    if (toAdd.length > 0) {
+      await this.generalRepository.createAsync(toAdd);
+    }
+
+    if (existingIds.length > 0) {
+      await this.updateContentRefreshTimestamp(existingIds, _const.PLATFORMS.FACEBOOK);
+    }
   }
 
-  public async searchSpotifyAsync(access_token: string): Promise<any> {
-    return;
+  public async searchInstagramAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<InstagramSearchResponseModel> {
+    const {
+      filters,
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      paginationToken,
+      page,
+      forceRefresh = false,
+    } = params;
+    const after = paginationToken;
+
+    filters.platform = _const.PLATFORMS.INSTAGRAM;
+
+    const cacheParams = {
+      platform: _const.PLATFORMS.INSTAGRAM,
+      normalizedQuery,
+      filters,
+      page,
+      limit,
+    };
+
+    if (!forceRefresh) {
+      const cached = await this.cacheService.getCachedResults<InstagramSearchResponseModel>(cacheParams);
+      if (cached) return cached;
+    }
+
+    const skips = this.getInstagramSearchSkips(filters);
+    const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
+    const dbResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+
+    const shouldFetch = this.shouldFetchFromAPI(
+      dbResults,
+      forceRefresh,
+      page,
+      after,
+      limit,
+    );
+
+    if (shouldFetch && accessToken) {
+      const lockAcquired = await this.cacheService.acquireLock(cacheParams);
+
+      if (!lockAcquired) {
+        const waitingResult = await this.cacheService.waitForCachedResults<InstagramSearchResponseModel>(cacheParams);
+        if (waitingResult) return waitingResult;
+      }
+
+      try {
+        await this.fetchAndStoreInstagramResults(originalQuery, limit, filters, accessToken, after);
+        if (lockAcquired) {
+          const updatedResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+          dbResults.contentStream = updatedResults.contentStream;
+          dbResults.userContent = updatedResults.userContent;
+          dbResults.linkedAccount = updatedResults.linkedAccount;
+        }
+      } catch (error) {
+        logger.error(`Error fetching Instagram results:`, error);
+      } finally {
+        if (lockAcquired) {
+          await this.cacheService.releaseLock(cacheParams);
+        }
+      }
+    }
+
+    const response = this.buildInstagramResponse(originalQuery, dbResults);
+
+    if (shouldFetch && accessToken) {
+      await this.cacheService.setCachedResults(cacheParams, response);
+    }
+
+    return response;
+  }
+
+  public async searchPinterestAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<PinterestSearchResponseModel> {
+    const {
+      filters,
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      paginationToken,
+      page,
+      forceRefresh = false,
+    } = params;
+    const bookmark = paginationToken;
+
+    filters.platform = _const.PLATFORMS.PINTEREST;
+
+    const cacheParams = {
+      platform: _const.PLATFORMS.PINTEREST,
+      normalizedQuery,
+      filters,
+      page,
+      limit,
+    };
+
+    if (!forceRefresh) {
+      const cached = await this.cacheService.getCachedResults<PinterestSearchResponseModel>(cacheParams);
+      if (cached) return cached;
+    }
+
+    const skips = this.getPinterestSearchSkips(filters);
+    const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
+    const dbResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+
+    const shouldFetch = this.shouldFetchFromAPI(
+      dbResults,
+      forceRefresh,
+      page,
+      bookmark,
+      limit,
+    );
+
+    if (shouldFetch && accessToken) {
+      const lockAcquired = await this.cacheService.acquireLock(cacheParams);
+
+      if (!lockAcquired) {
+        const waitingResult = await this.cacheService.waitForCachedResults<PinterestSearchResponseModel>(cacheParams);
+        if (waitingResult) return waitingResult;
+      }
+
+      try {
+        await this.fetchAndStorePinterestResults(originalQuery, limit, filters, accessToken, bookmark);
+        if (lockAcquired) {
+          const updatedResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+          dbResults.contentStream = updatedResults.contentStream;
+          dbResults.userContent = updatedResults.userContent;
+          dbResults.linkedAccount = updatedResults.linkedAccount;
+        }
+      } catch (error) {
+        logger.error(`Error fetching Pinterest results:`, error);
+      } finally {
+        if (lockAcquired) {
+          await this.cacheService.releaseLock(cacheParams);
+        }
+      }
+    }
+
+    const response = this.buildPinterestResponse(originalQuery, dbResults);
+
+    if (shouldFetch && accessToken) {
+      await this.cacheService.setCachedResults(cacheParams, response);
+    }
+
+    return response;
+  }
+
+  public async searchTwitterAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<TwitterSearchResponseModel> {
+    const {
+      filters,
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      paginationToken,
+      page,
+      forceRefresh = false,
+    } = params;
+    const nextToken = paginationToken;
+    const maxResults = limit;
+
+    filters.platform = _const.PLATFORMS.TWITTER;
+
+    const cacheParams = {
+      platform: _const.PLATFORMS.TWITTER,
+      normalizedQuery,
+      filters,
+      page,
+      limit,
+    };
+
+    if (!forceRefresh) {
+      const cached = await this.cacheService.getCachedResults<TwitterSearchResponseModel>(cacheParams);
+      if (cached) return cached;
+    }
+
+    const skips = this.getTwitterSearchSkips(filters);
+    const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
+    const dbResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+
+    const shouldFetch = this.shouldFetchFromAPI(
+      dbResults,
+      forceRefresh,
+      page,
+      nextToken,
+      limit,
+    );
+
+    if (shouldFetch && accessToken) {
+      const lockAcquired = await this.cacheService.acquireLock(cacheParams);
+
+      if (!lockAcquired) {
+        const waitingResult = await this.cacheService.waitForCachedResults<TwitterSearchResponseModel>(cacheParams);
+        if (waitingResult) return waitingResult;
+      }
+
+      try {
+        await this.fetchAndStoreTwitterResults(originalQuery, limit, filters, accessToken, nextToken, maxResults);
+        if (lockAcquired) {
+          const updatedResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+          dbResults.contentStream = updatedResults.contentStream;
+          dbResults.userContent = updatedResults.userContent;
+          dbResults.linkedAccount = updatedResults.linkedAccount;
+        }
+      } catch (error) {
+        logger.error(`Error fetching Twitter results:`, error);
+      } finally {
+        if (lockAcquired) {
+          await this.cacheService.releaseLock(cacheParams);
+        }
+      }
+    }
+
+    const response = this.buildTwitterResponse(originalQuery, dbResults);
+
+    if (shouldFetch && accessToken) {
+      await this.cacheService.setCachedResults(cacheParams, response);
+    }
+
+    return response;
+  }
+
+  public async searchSpotifyAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<SpotifySearchResponseModel> {
+    const {
+      filters,
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      paginationToken,
+      page,
+      forceRefresh = false,
+    } = params;
+    const offset = paginationToken ? parseInt(paginationToken) : undefined;
+
+    filters.platform = _const.PLATFORMS.SPOTIFY;
+
+    const cacheParams = {
+      platform: _const.PLATFORMS.SPOTIFY,
+      normalizedQuery,
+      filters,
+      page,
+      limit,
+    };
+
+    if (!forceRefresh) {
+      const cached = await this.cacheService.getCachedResults<SpotifySearchResponseModel>(cacheParams);
+      if (cached) return cached;
+    }
+
+    const skips = this.getSpotifySearchSkips(filters);
+    const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
+    const dbResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+
+    const shouldFetch = this.shouldFetchFromAPI(
+      dbResults,
+      forceRefresh,
+      page,
+      undefined,
+      limit,
+    );
+
+    if (shouldFetch && accessToken) {
+      const lockAcquired = await this.cacheService.acquireLock(cacheParams);
+
+      if (!lockAcquired) {
+        const waitingResult = await this.cacheService.waitForCachedResults<SpotifySearchResponseModel>(cacheParams);
+        if (waitingResult) return waitingResult;
+      }
+
+      try {
+        await this.fetchAndStoreSpotifyResults(originalQuery, limit, filters, accessToken, offset);
+        if (lockAcquired) {
+          const updatedResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+          dbResults.contentStream = updatedResults.contentStream;
+          dbResults.userContent = updatedResults.userContent;
+          dbResults.linkedAccount = updatedResults.linkedAccount;
+        }
+      } catch (error) {
+        logger.error(`Error fetching Spotify results:`, error);
+      } finally {
+        if (lockAcquired) {
+          await this.cacheService.releaseLock(cacheParams);
+        }
+      }
+    }
+
+    const response = this.buildSpotifyResponse(originalQuery, dbResults);
+
+    if (shouldFetch && accessToken) {
+      await this.cacheService.setCachedResults(cacheParams, response);
+    }
+
+    return response;
+  }
+
+  public async searchRedditAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<RedditSearchResponseModel> {
+    const {
+      filters,
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      paginationToken,
+      page,
+      forceRefresh = false,
+    } = params;
+    const after = paginationToken;
+
+    filters.platform = _const.PLATFORMS.REDDIT;
+
+    const cacheParams = {
+      platform: _const.PLATFORMS.REDDIT,
+      normalizedQuery,
+      filters,
+      page,
+      limit,
+    };
+
+    if (!forceRefresh) {
+      const cached = await this.cacheService.getCachedResults<RedditSearchResponseModel>(cacheParams);
+      if (cached) return cached;
+    }
+
+    const skips = this.getRedditSearchSkips(filters);
+    const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
+    const dbResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+
+    const shouldFetch = this.shouldFetchFromAPI(
+      dbResults,
+      forceRefresh,
+      page,
+      after,
+      limit,
+    );
+
+    if (shouldFetch && accessToken) {
+      const lockAcquired = await this.cacheService.acquireLock(cacheParams);
+
+      if (!lockAcquired) {
+        const waitingResult = await this.cacheService.waitForCachedResults<RedditSearchResponseModel>(cacheParams);
+        if (waitingResult) return waitingResult;
+      }
+
+      try {
+        await this.fetchAndStoreRedditResults(originalQuery, limit, filters, accessToken, after);
+        if (lockAcquired) {
+          const updatedResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+          dbResults.contentStream = updatedResults.contentStream;
+          dbResults.userContent = updatedResults.userContent;
+          dbResults.linkedAccount = updatedResults.linkedAccount;
+        }
+      } catch (error) {
+        logger.error(`Error fetching Reddit results:`, error);
+      } finally {
+        if (lockAcquired) {
+          await this.cacheService.releaseLock(cacheParams);
+        }
+      }
+    }
+
+    const response = this.buildRedditResponse(originalQuery, dbResults);
+
+    if (shouldFetch && accessToken) {
+      await this.cacheService.setCachedResults(cacheParams, response);
+    }
+
+    return response;
+  }
+
+  public async searchTiktokAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<TiktokSearchResponseModel> {
+    const {
+      filters,
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      paginationToken,
+      page,
+      forceRefresh = false,
+    } = params;
+    const cursor = paginationToken;
+
+    filters.platform = _const.PLATFORMS.TIKTOK;
+
+    const cacheParams = {
+      platform: _const.PLATFORMS.TIKTOK,
+      normalizedQuery,
+      filters,
+      page,
+      limit,
+    };
+
+    if (!forceRefresh) {
+      const cached = await this.cacheService.getCachedResults<TiktokSearchResponseModel>(cacheParams);
+      if (cached) return cached;
+    }
+
+    const skips = this.getTiktokSearchSkips(filters);
+    const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
+    const dbResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+
+    const shouldFetch = this.shouldFetchFromAPI(
+      dbResults,
+      forceRefresh,
+      page,
+      cursor,
+      limit,
+    );
+
+    if (shouldFetch && accessToken) {
+      const lockAcquired = await this.cacheService.acquireLock(cacheParams);
+
+      if (!lockAcquired) {
+        const waitingResult = await this.cacheService.waitForCachedResults<TiktokSearchResponseModel>(cacheParams);
+        if (waitingResult) return waitingResult;
+      }
+
+      try {
+        await this.fetchAndStoreTiktokResults(originalQuery, limit, filters, accessToken, cursor);
+        if (lockAcquired) {
+          const updatedResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+          dbResults.contentStream = updatedResults.contentStream;
+          dbResults.userContent = updatedResults.userContent;
+          dbResults.linkedAccount = updatedResults.linkedAccount;
+        }
+      } catch (error) {
+        logger.error(`Error fetching TikTok results:`, error);
+      } finally {
+        if (lockAcquired) {
+          await this.cacheService.releaseLock(cacheParams);
+        }
+      }
+    }
+
+    const response = this.buildTiktokResponse(originalQuery, dbResults);
+
+    if (shouldFetch && accessToken) {
+      await this.cacheService.setCachedResults(cacheParams, response);
+    }
+
+    return response;
   }
 
   public async searchYoutubeAsync(
-    params: YouTubeSearchParamsModel,
+    params: PlatformSearchParamsModel,
   ): Promise<SearchResponseModel> {
     const {
       filters,
@@ -300,10 +759,11 @@ export class SearchService implements ISearchService {
       normalizedQuery,
       originalQuery,
       accessToken,
-      pageToken,
+      paginationToken,
       page,
       forceRefresh = false,
     } = params;
+    const pageToken = paginationToken;
 
     filters.platform = _const.PLATFORMS.YOUTUBE;
 
@@ -676,6 +1136,1159 @@ export class SearchService implements ISearchService {
         throw new ApplicationException('YouTube API request timeout. Please try again.');
       }
       logger.error(`Error fetching YouTube videos for "${query}":`, error?.response?.data || error?.message);
+      throw error;
+    }
+  }
+
+  // Reddit Search Methods
+  private getRedditSearchSkips(filters: Record<string, any>): SectionSkipMap {
+    return {
+      contentStream: false,
+      userContent: false,
+      linkedAccount: filters.type && !['user', 'subreddit'].includes(filters.type),
+      manualProfile: false,
+    };
+  }
+
+  private buildRedditResponse(
+    originalQuery: string,
+    dbResults: { contentStream: ContentStream[]; userContent: UserContent[]; linkedAccount: LinkedAccount[] },
+  ): RedditSearchResponseModel {
+    const response = new RedditSearchResponseModel();
+    response.query = originalQuery;
+
+    dbResults.contentStream.forEach(content => {
+      const item = {
+        id: content.id,
+        externalId: content.externalId,
+        title: content.title,
+        type: content.subType,
+        ...content.metaData,
+      };
+
+      if (content.subType === 'post') {
+        response.results.posts.push(item);
+      } else if (content.subType === 'subreddit') {
+        response.results.subreddits.push(item);
+      }
+    });
+
+    dbResults.linkedAccount.forEach(account => {
+      response.results.users.push({
+        id: account.id,
+        externalId: account.externalId,
+        userName: account.userName,
+        profileImage: account.profileImage,
+        ...account.metaData,
+      });
+    });
+
+    return response;
+  }
+
+  private async fetchAndStoreRedditResults(
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    after?: string,
+  ): Promise<void> {
+    const redditResults = await this.fetchRedditOnlineAsync(false, query, limit, filters, accessToken, after);
+
+    if (!redditResults?.data?.children?.length) return;
+
+    const mappedResults = redditResults.data.children.map((item: any) => {
+      const data = item.data;
+      const kind = data.kind || '';
+      let type = 'Content';
+      let subType = '';
+      let externalId = '';
+
+      if (kind === 't3') {
+        type = 'Content';
+        subType = 'post';
+        externalId = data.id || '';
+      } else if (kind === 't5') {
+        type = 'Profile';
+        subType = 'subreddit';
+        externalId = data.display_name || '';
+      } else if (kind === 't2') {
+        type = 'Profile';
+        subType = 'user';
+        externalId = data.name || '';
+      }
+
+      return new ContentStream({
+        type: type as any,
+        subType,
+        title: data.title || data.display_name || data.name || '',
+        platform: _const.PLATFORMS.REDDIT,
+        externalId,
+        metaData: {
+          description: data.selftext || data.public_description || '',
+          subreddit: data.subreddit || data.display_name,
+          author: data.author,
+          score: data.score,
+          upvoteRatio: data.upvote_ratio,
+          numComments: data.num_comments,
+          url: data.url,
+          permalink: data.permalink,
+          createdUtc: data.created_utc,
+          thumbnail: data.thumbnail,
+        },
+        lastRefreshed: new Date(),
+      });
+    }).filter(c => c.externalId);
+
+    if (!mappedResults.length) return;
+
+    const externalIds = mappedResults.map(c => c.externalId);
+    const newIds = await this.generalRepository.checkExistingItemsAsync(externalIds, _const.PLATFORMS.REDDIT);
+    const toAdd = mappedResults.filter(c => newIds.includes(c.externalId));
+    const existingIds = externalIds.filter(id => !newIds.includes(id));
+
+    if (toAdd.length > 0) {
+      await this.generalRepository.createAsync(toAdd);
+    }
+
+    if (existingIds.length > 0) {
+      await this.updateContentRefreshTimestamp(existingIds, _const.PLATFORMS.REDDIT);
+    }
+  }
+
+  private async fetchRedditOnlineAsync(
+    skipSearch: boolean,
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    after?: string,
+  ): Promise<any> {
+    if (skipSearch || !accessToken) return { data: { children: [] } };
+
+    try {
+      const searchType = filters.type || 'link';
+      const params: Record<string, string | number> = {
+        q: query,
+        limit: Math.min(Math.max(limit, 1), 100),
+        sort: filters.sort || 'relevance',
+        ...filters,
+      };
+
+      Object.keys(params).forEach(key => {
+        if (params[key] == null) delete params[key];
+      });
+
+      if (after) params.after = after;
+
+      const url = `https://oauth.reddit.com/search.json`;
+      const response = await axios.get(url, {
+        params,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'User-Agent': 'Gaddr/1.0',
+        },
+        timeout: 10000,
+      });
+
+      return response.data || { data: { children: [] } };
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401) throw new ApplicationException('Reddit API authentication failed. Please refresh your token.');
+      if (status === 403) throw new ApplicationException('Reddit API access forbidden.');
+      if (status === 429) throw new ApplicationException('Reddit API rate limit exceeded. Please try again later.');
+      if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
+        throw new ApplicationException('Reddit API request timeout. Please try again.');
+      }
+      logger.error(`Error fetching Reddit results for "${query}":`, error?.response?.data || error?.message);
+      throw error;
+    }
+  }
+
+  // Spotify Search Methods
+  private getSpotifySearchSkips(filters: Record<string, any>): SectionSkipMap {
+    return {
+      contentStream: false,
+      userContent: false,
+      linkedAccount: true,
+      manualProfile: false,
+    };
+  }
+
+  private buildSpotifyResponse(
+    originalQuery: string,
+    dbResults: { contentStream: ContentStream[]; userContent: UserContent[]; linkedAccount: LinkedAccount[] },
+  ): SpotifySearchResponseModel {
+    const response = new SpotifySearchResponseModel();
+    response.query = originalQuery;
+
+    dbResults.contentStream.forEach(content => {
+      const item = {
+        id: content.id,
+        externalId: content.externalId,
+        title: content.title,
+        type: content.subType,
+        ...content.metaData,
+      };
+
+      switch (content.subType) {
+        case 'track':
+          response.results.tracks.push(item);
+          break;
+        case 'album':
+          response.results.albums.push(item);
+          break;
+        case 'playlist':
+          response.results.playlists.push(item);
+          break;
+        case 'artist':
+          response.results.artists.push(item);
+          break;
+        case 'show':
+          response.results.shows.push(item);
+          break;
+      }
+    });
+
+    return response;
+  }
+
+  private async fetchAndStoreSpotifyResults(
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    offset?: number,
+  ): Promise<void> {
+    const spotifyResults = await this.fetchSpotifyOnlineAsync(false, query, limit, filters, accessToken, offset);
+
+    if (!spotifyResults?.tracks?.items?.length && !spotifyResults?.albums?.items?.length && !spotifyResults?.playlists?.items?.length) return;
+
+    const mappedResults: ContentStream[] = [];
+
+    ['tracks', 'albums', 'playlists', 'artists', 'shows'].forEach(type => {
+      const items = spotifyResults[type]?.items || [];
+      items.forEach((item: any) => {
+        const externalId = item.id || '';
+        if (!externalId) return;
+
+        mappedResults.push(new ContentStream({
+          type: 'Content' as any,
+          subType: type.slice(0, -1),
+          title: item.name || '',
+          platform: _const.PLATFORMS.SPOTIFY,
+          externalId,
+          metaData: {
+            description: item.description,
+            artists: item.artists,
+            images: item.images,
+            releaseDate: item.release_date,
+            popularity: item.popularity,
+            ...item,
+          },
+          lastRefreshed: new Date(),
+        }));
+      });
+    });
+
+    if (!mappedResults.length) return;
+
+    const externalIds = mappedResults.map(c => c.externalId);
+    const newIds = await this.generalRepository.checkExistingItemsAsync(externalIds, _const.PLATFORMS.SPOTIFY);
+    const toAdd = mappedResults.filter(c => newIds.includes(c.externalId));
+    const existingIds = externalIds.filter(id => !newIds.includes(id));
+
+    if (toAdd.length > 0) {
+      await this.generalRepository.createAsync(toAdd);
+    }
+
+    if (existingIds.length > 0) {
+      await this.updateContentRefreshTimestamp(existingIds, _const.PLATFORMS.SPOTIFY);
+    }
+  }
+
+  private async fetchSpotifyOnlineAsync(
+    skipSearch: boolean,
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    offset?: number,
+  ): Promise<any> {
+    if (skipSearch || !accessToken) return { tracks: { items: [] }, albums: { items: [] }, playlists: { items: [] } };
+
+    try {
+      const params: Record<string, string | number> = {
+        q: query,
+        type: 'track,album,playlist,artist,show',
+        limit: Math.min(Math.max(limit, 1), 50),
+        ...filters,
+      };
+
+      Object.keys(params).forEach(key => {
+        if (params[key] == null) delete params[key];
+      });
+
+      if (offset !== undefined) params.offset = offset;
+
+      const response = await axios.get('https://api.spotify.com/v1/search', {
+        params,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      });
+
+      return response.data || { tracks: { items: [] }, albums: { items: [] }, playlists: { items: [] } };
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401) throw new ApplicationException('Spotify API authentication failed. Please refresh your token.');
+      if (status === 403) throw new ApplicationException('Spotify API access forbidden.');
+      if (status === 429) throw new ApplicationException('Spotify API rate limit exceeded. Please try again later.');
+      if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
+        throw new ApplicationException('Spotify API request timeout. Please try again.');
+      }
+      logger.error(`Error fetching Spotify results for "${query}":`, error?.response?.data || error?.message);
+      throw error;
+    }
+  }
+
+  // Pinterest Search Methods
+  private getPinterestSearchSkips(filters: Record<string, any>): SectionSkipMap {
+    return {
+      contentStream: false,
+      userContent: false,
+      linkedAccount: filters.type && !['user'].includes(filters.type),
+      manualProfile: false,
+    };
+  }
+
+  private buildPinterestResponse(
+    originalQuery: string,
+    dbResults: { contentStream: ContentStream[]; userContent: UserContent[]; linkedAccount: LinkedAccount[] },
+  ): PinterestSearchResponseModel {
+    const response = new PinterestSearchResponseModel();
+    response.query = originalQuery;
+
+    dbResults.contentStream.forEach(content => {
+      const item = {
+        id: content.id,
+        externalId: content.externalId,
+        title: content.title,
+        type: content.subType,
+        ...content.metaData,
+      };
+
+      if (content.subType === 'pin') {
+        response.results.pins.push(item);
+      } else if (content.subType === 'board') {
+        response.results.boards.push(item);
+      }
+    });
+
+    dbResults.linkedAccount.forEach(account => {
+      response.results.users.push({
+        id: account.id,
+        externalId: account.externalId,
+        userName: account.userName,
+        profileImage: account.profileImage,
+        ...account.metaData,
+      });
+    });
+
+    return response;
+  }
+
+  private async fetchAndStorePinterestResults(
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    bookmark?: string,
+  ): Promise<void> {
+    const pinterestResults = await this.fetchPinterestOnlineAsync(false, query, limit, filters, accessToken, bookmark);
+
+    if (!pinterestResults?.items?.length) return;
+
+    const mappedResults = pinterestResults.items.map((item: any) => {
+      const type = item.type || '';
+      let subType = '';
+      let externalId = '';
+
+      if (type === 'pin') {
+        subType = 'pin';
+        externalId = item.id || '';
+      } else if (type === 'board') {
+        subType = 'board';
+        externalId = item.id || '';
+      }
+
+      return new ContentStream({
+        type: 'Content' as any,
+        subType,
+        title: item.title || item.name || '',
+        platform: _const.PLATFORMS.PINTEREST,
+        externalId,
+        metaData: {
+          description: item.description,
+          imageUrl: item.media?.images?.['564x']?.url || item.image_cover_url,
+          boardId: item.board_id,
+          boardName: item.board_name,
+          link: item.link,
+          createdAt: item.created_at,
+          pinCount: item.pin_count,
+        },
+        lastRefreshed: new Date(),
+      });
+    }).filter(c => c.externalId);
+
+    if (!mappedResults.length) return;
+
+    const externalIds = mappedResults.map(c => c.externalId);
+    const newIds = await this.generalRepository.checkExistingItemsAsync(externalIds, _const.PLATFORMS.PINTEREST);
+    const toAdd = mappedResults.filter(c => newIds.includes(c.externalId));
+    const existingIds = externalIds.filter(id => !newIds.includes(id));
+
+    if (toAdd.length > 0) {
+      await this.generalRepository.createAsync(toAdd);
+    }
+
+    if (existingIds.length > 0) {
+      await this.updateContentRefreshTimestamp(existingIds, _const.PLATFORMS.PINTEREST);
+    }
+  }
+
+  private async fetchPinterestOnlineAsync(
+    skipSearch: boolean,
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    bookmark?: string,
+  ): Promise<any> {
+    if (skipSearch || !accessToken) return { items: [] };
+
+    try {
+      const params: Record<string, string | number> = {
+        query,
+        limit: Math.min(Math.max(limit, 1), 250),
+        ...filters,
+      };
+
+      Object.keys(params).forEach(key => {
+        if (params[key] == null) delete params[key];
+      });
+
+      if (bookmark) params.bookmark = bookmark;
+
+      const response = await axios.get('https://api.pinterest.com/v5/search/pins', {
+        params,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      });
+
+      return response.data || { items: [] };
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401) throw new ApplicationException('Pinterest API authentication failed. Please refresh your token.');
+      if (status === 403) throw new ApplicationException('Pinterest API access forbidden.');
+      if (status === 429) throw new ApplicationException('Pinterest API rate limit exceeded. Please try again later.');
+      if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
+        throw new ApplicationException('Pinterest API request timeout. Please try again.');
+      }
+      logger.error(`Error fetching Pinterest results for "${query}":`, error?.response?.data || error?.message);
+      throw error;
+    }
+  }
+
+  // TikTok Search Methods
+  private getTiktokSearchSkips(filters: Record<string, any>): SectionSkipMap {
+    return {
+      contentStream: false,
+      userContent: false,
+      linkedAccount: filters.type && !['user'].includes(filters.type),
+      manualProfile: false,
+    };
+  }
+
+  private buildTiktokResponse(
+    originalQuery: string,
+    dbResults: { contentStream: ContentStream[]; userContent: UserContent[]; linkedAccount: LinkedAccount[] },
+  ): TiktokSearchResponseModel {
+    const response = new TiktokSearchResponseModel();
+    response.query = originalQuery;
+
+    dbResults.contentStream.forEach(content => {
+      if (content.subType === 'video') {
+        response.results.videos.push({
+          id: content.id,
+          externalId: content.externalId,
+          title: content.title,
+          type: content.subType,
+          ...content.metaData,
+        });
+      }
+    });
+
+    dbResults.linkedAccount.forEach(account => {
+      response.results.users.push({
+        id: account.id,
+        externalId: account.externalId,
+        userName: account.userName,
+        profileImage: account.profileImage,
+        ...account.metaData,
+      });
+    });
+
+    response.hasMore = dbResults.contentStream.length >= 25;
+
+    return response;
+  }
+
+  private async fetchAndStoreTiktokResults(
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    cursor?: string,
+  ): Promise<void> {
+    const tiktokResults = await this.fetchTiktokOnlineAsync(false, query, limit, filters, accessToken, cursor);
+
+    if (!tiktokResults?.data?.videos?.length) return;
+
+    const mappedResults = tiktokResults.data.videos.map((item: any) => {
+      const externalId = item.video_id || item.id || '';
+      if (!externalId) return null;
+
+      return new ContentStream({
+        type: 'Content' as any,
+        subType: 'video',
+        title: item.title || item.video_description || '',
+        platform: _const.PLATFORMS.TIKTOK,
+        externalId,
+        metaData: {
+          description: item.video_description,
+          coverImageUrl: item.cover_image_url,
+          shareUrl: item.share_url,
+          duration: item.duration,
+          createTime: item.create_time,
+          stats: {
+            likeCount: item.like_count,
+            commentCount: item.comment_count,
+            shareCount: item.share_count,
+            viewCount: item.view_count,
+          },
+        },
+        lastRefreshed: new Date(),
+      });
+    }).filter(c => c !== null) as ContentStream[];
+
+    if (!mappedResults.length) return;
+
+    const externalIds = mappedResults.map(c => c.externalId);
+    const newIds = await this.generalRepository.checkExistingItemsAsync(externalIds, _const.PLATFORMS.TIKTOK);
+    const toAdd = mappedResults.filter(c => newIds.includes(c.externalId));
+    const existingIds = externalIds.filter(id => !newIds.includes(id));
+
+    if (toAdd.length > 0) {
+      await this.generalRepository.createAsync(toAdd);
+    }
+
+    if (existingIds.length > 0) {
+      await this.updateContentRefreshTimestamp(existingIds, _const.PLATFORMS.TIKTOK);
+    }
+  }
+
+  private async fetchTiktokOnlineAsync(
+    skipSearch: boolean,
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    cursor?: string,
+  ): Promise<any> {
+    if (skipSearch || !accessToken) return { data: { videos: [] } };
+
+    try {
+      const params: Record<string, string | number> = {
+        query,
+        max_count: Math.min(Math.max(limit, 1), 20),
+        ...filters,
+      };
+
+      Object.keys(params).forEach(key => {
+        if (params[key] == null) delete params[key];
+      });
+
+      if (cursor) params.cursor = cursor;
+
+      const response = await axios.get('https://open.tiktokapis.com/v2/research/video/query/', {
+        params,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      });
+
+      return response.data || { data: { videos: [] } };
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401) throw new ApplicationException('TikTok API authentication failed. Please refresh your token.');
+      if (status === 403) throw new ApplicationException('TikTok API access forbidden.');
+      if (status === 429) throw new ApplicationException('TikTok API rate limit exceeded. Please try again later.');
+      if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
+        throw new ApplicationException('TikTok API request timeout. Please try again.');
+      }
+      logger.error(`Error fetching TikTok results for "${query}":`, error?.response?.data || error?.message);
+      throw error;
+    }
+  }
+
+  // LinkedIn Search Methods
+  public async searchLinkedInAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<LinkedInSearchResponseModel> {
+    const {
+      filters = {},
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      paginationToken,
+      page,
+      forceRefresh = false,
+    } = params;
+    const start = paginationToken ? parseInt(paginationToken) : undefined;
+
+    filters.platform = _const.PLATFORMS.LINKEDIN;
+
+    const cacheParams = {
+      platform: _const.PLATFORMS.LINKEDIN,
+      normalizedQuery,
+      filters,
+      page,
+      limit,
+    };
+
+    if (!forceRefresh) {
+      const cached = await this.cacheService.getCachedResults<LinkedInSearchResponseModel>(cacheParams);
+      if (cached) return cached;
+    }
+
+    const skips = this.getLinkedInSearchSkips(filters);
+    const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
+    const dbResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+
+    const shouldFetch = this.shouldFetchFromAPI(
+      dbResults,
+      forceRefresh,
+      page,
+      undefined,
+      limit,
+    );
+
+    if (shouldFetch && accessToken) {
+      const lockAcquired = await this.cacheService.acquireLock(cacheParams);
+
+      if (!lockAcquired) {
+        const waitingResult = await this.cacheService.waitForCachedResults<LinkedInSearchResponseModel>(cacheParams);
+        if (waitingResult) return waitingResult;
+      }
+
+      try {
+        await this.fetchAndStoreLinkedInResults(originalQuery, limit, filters, accessToken, start);
+        if (lockAcquired) {
+          const updatedResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+          dbResults.contentStream = updatedResults.contentStream;
+          dbResults.userContent = updatedResults.userContent;
+          dbResults.linkedAccount = updatedResults.linkedAccount;
+        }
+      } catch (error) {
+        logger.error(`Error fetching LinkedIn results:`, error);
+      } finally {
+        if (lockAcquired) {
+          await this.cacheService.releaseLock(cacheParams);
+        }
+      }
+    }
+
+    const response = this.buildLinkedInResponse(originalQuery, dbResults);
+
+    if (shouldFetch && accessToken) {
+      await this.cacheService.setCachedResults(cacheParams, response);
+    }
+
+    return response;
+  }
+
+  private getLinkedInSearchSkips(filters: Record<string, any>): SectionSkipMap {
+    return {
+      contentStream: false,
+      userContent: false,
+      linkedAccount: filters.type && !['person', 'company'].includes(filters.type),
+      manualProfile: false,
+    };
+  }
+
+  private buildLinkedInResponse(
+    originalQuery: string,
+    dbResults: { contentStream: ContentStream[]; userContent: UserContent[]; linkedAccount: LinkedAccount[] },
+  ): LinkedInSearchResponseModel {
+    const response = new LinkedInSearchResponseModel();
+    response.query = originalQuery;
+
+    dbResults.contentStream.forEach(content => {
+      if (content.subType === 'post' || content.subType === 'article') {
+        response.results.posts.push({
+          id: content.id,
+          externalId: content.externalId,
+          title: content.title,
+          type: content.subType,
+          ...content.metaData,
+        });
+      }
+    });
+
+    dbResults.linkedAccount.forEach(account => {
+      const accountType = account.metaData?.type || account.metaData?.accountType || '';
+      if (accountType === 'person') {
+        response.results.people.push({
+          id: account.id,
+          externalId: account.externalId,
+          userName: account.userName,
+          profileImage: account.profileImage,
+          ...account.metaData,
+        });
+      } else if (accountType === 'company') {
+        response.results.companies.push({
+          id: account.id,
+          externalId: account.externalId,
+          userName: account.userName,
+          profileImage: account.profileImage,
+          ...account.metaData,
+        });
+      }
+    });
+
+    response.count = response.results.posts.length + response.results.people.length + response.results.companies.length;
+
+    return response;
+  }
+
+  private async fetchAndStoreLinkedInResults(
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    start?: number,
+  ): Promise<void> {
+    const linkedInResults = await this.fetchLinkedInOnlineAsync(false, query, limit, filters, accessToken, start);
+
+    if (!linkedInResults?.elements?.length) return;
+
+    const mappedResults = linkedInResults.elements.map((item: any) => {
+      const type = item.entityUrn?.split(':')[2] || '';
+      let subType = '';
+      let externalId = '';
+
+      if (type === 'post' || type === 'activity') {
+        subType = 'post';
+        externalId = item.id || item.entityUrn?.split(':')[3] || '';
+      } else if (type === 'person') {
+        subType = 'person';
+        externalId = item.id || '';
+      } else if (type === 'company') {
+        subType = 'company';
+        externalId = item.id || '';
+      }
+
+      return new ContentStream({
+        type: 'Content' as any,
+        subType,
+        title: item.title || item.text?.text || item.headline || '',
+        platform: _const.PLATFORMS.LINKEDIN,
+        externalId,
+        metaData: {
+          description: item.summary || item.description,
+          text: item.text?.text,
+          commentary: item.commentary?.text,
+          author: item.author,
+          created: item.created,
+          lastModified: item.lastModified,
+          activity: item.activity,
+        },
+        lastRefreshed: new Date(),
+      });
+    }).filter(c => c.externalId) as ContentStream[];
+
+    if (!mappedResults.length) return;
+
+    const externalIds = mappedResults.map(c => c.externalId);
+    const newIds = await this.generalRepository.checkExistingItemsAsync(externalIds, _const.PLATFORMS.LINKEDIN);
+    const toAdd = mappedResults.filter(c => newIds.includes(c.externalId));
+    const existingIds = externalIds.filter(id => !newIds.includes(id));
+
+    if (toAdd.length > 0) {
+      await this.generalRepository.createAsync(toAdd);
+    }
+
+    if (existingIds.length > 0) {
+      await this.updateContentRefreshTimestamp(existingIds, _const.PLATFORMS.LINKEDIN);
+    }
+  }
+
+  private async fetchLinkedInOnlineAsync(
+    skipSearch: boolean,
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    start?: number,
+  ): Promise<any> {
+    if (skipSearch || !accessToken) return { elements: [] };
+
+    try {
+      const params: Record<string, string | number> = {
+        q: query,
+        count: Math.min(Math.max(limit, 1), 100),
+        ...filters,
+      };
+
+      Object.keys(params).forEach(key => {
+        if (params[key] == null) delete params[key];
+      });
+
+      if (start !== undefined) params.start = start;
+
+      const response = await axios.get('https://api.linkedin.com/v2/search', {
+        params,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      });
+
+      return response.data || { elements: [] };
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401) throw new ApplicationException('LinkedIn API authentication failed. Please refresh your token.');
+      if (status === 403) throw new ApplicationException('LinkedIn API access forbidden.');
+      if (status === 429) throw new ApplicationException('LinkedIn API rate limit exceeded. Please try again later.');
+      if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
+        throw new ApplicationException('LinkedIn API request timeout. Please try again.');
+      }
+      logger.error(`Error fetching LinkedIn results for "${query}":`, error?.response?.data || error?.message);
+      throw error;
+    }
+  }
+
+  // Instagram Search Helper Methods
+  private getInstagramSearchSkips(filters: Record<string, any>): SectionSkipMap {
+    return {
+      contentStream: false,
+      userContent: false,
+      linkedAccount: filters.type && !['user', 'hashtag'].includes(filters.type),
+      manualProfile: false,
+    };
+  }
+
+  private buildInstagramResponse(
+    originalQuery: string,
+    dbResults: { contentStream: ContentStream[]; userContent: UserContent[]; linkedAccount: LinkedAccount[] },
+  ): InstagramSearchResponseModel {
+    const response = new InstagramSearchResponseModel();
+    response.query = originalQuery;
+
+    dbResults.contentStream.forEach(content => {
+      if (content.subType === 'media' || content.subType === 'post') {
+        response.results.media.push({
+          id: content.id,
+          externalId: content.externalId,
+          title: content.title,
+          type: content.subType,
+          ...content.metaData,
+        });
+      } else if (content.subType === 'hashtag') {
+        response.results.hashtags.push({
+          id: content.id,
+          externalId: content.externalId,
+          title: content.title,
+          type: content.subType,
+          ...content.metaData,
+        });
+      }
+    });
+
+    dbResults.linkedAccount.forEach(account => {
+      response.results.users.push({
+        id: account.id,
+        externalId: account.externalId,
+        userName: account.userName,
+        profileImage: account.profileImage,
+        ...account.metaData,
+      });
+    });
+
+    return response;
+  }
+
+  private async fetchAndStoreInstagramResults(
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    after?: string,
+  ): Promise<void> {
+    const instagramResults = await this.fetchInstagramOnlineAsync(false, query, limit, filters, accessToken, after);
+
+    if (!instagramResults?.data?.length) return;
+
+    const mappedResults = instagramResults.data.map((item: any) => {
+      const type = item.type || '';
+      let subType = '';
+      let externalId = '';
+
+      if (type === 'media' || type === 'post') {
+        subType = 'media';
+        externalId = item.id || '';
+      } else if (type === 'hashtag') {
+        subType = 'hashtag';
+        externalId = item.id || item.name || '';
+      } else if (type === 'user') {
+        subType = 'user';
+        externalId = item.id || item.username || '';
+      }
+
+      return new ContentStream({
+        type: 'Content' as any,
+        subType,
+        title: item.caption || item.name || item.username || '',
+        platform: _const.PLATFORMS.INSTAGRAM,
+        externalId,
+        metaData: {
+          caption: item.caption,
+          mediaType: item.media_type,
+          mediaUrl: item.media_url,
+          permalink: item.permalink,
+          thumbnailUrl: item.thumbnail_url,
+          timestamp: item.timestamp,
+          username: item.username,
+          likeCount: item.like_count,
+          commentsCount: item.comments_count,
+        },
+        lastRefreshed: new Date(),
+      });
+    }).filter(c => c.externalId) as ContentStream[];
+
+    if (!mappedResults.length) return;
+
+    const externalIds = mappedResults.map(c => c.externalId);
+    const newIds = await this.generalRepository.checkExistingItemsAsync(externalIds, _const.PLATFORMS.INSTAGRAM);
+    const toAdd = mappedResults.filter(c => newIds.includes(c.externalId));
+    const existingIds = externalIds.filter(id => !newIds.includes(id));
+
+    if (toAdd.length > 0) {
+      await this.generalRepository.createAsync(toAdd);
+    }
+
+    if (existingIds.length > 0) {
+      await this.updateContentRefreshTimestamp(existingIds, _const.PLATFORMS.INSTAGRAM);
+    }
+  }
+
+  private async fetchInstagramOnlineAsync(
+    skipSearch: boolean,
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    after?: string,
+  ): Promise<any> {
+    if (skipSearch || !accessToken) return { data: [] };
+
+    try {
+      const params: Record<string, string | number> = {
+        q: query,
+        type: filters.type || 'hashtag,user',
+        limit: Math.min(Math.max(limit, 1), 100),
+        ...filters,
+      };
+
+      Object.keys(params).forEach(key => {
+        if (params[key] == null) delete params[key];
+      });
+
+      if (after) params.after = after;
+
+      const response = await axios.get(`https://graph.instagram.com/v23.0/ig_hashtag_search`, {
+        params: { user_id: query, access_token: accessToken },
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      });
+
+      return { data: response.data?.data || [] };
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401) throw new ApplicationException('Instagram API authentication failed. Please refresh your token.');
+      if (status === 403) throw new ApplicationException('Instagram API access forbidden.');
+      if (status === 429) throw new ApplicationException('Instagram API rate limit exceeded. Please try again later.');
+      if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
+        throw new ApplicationException('Instagram API request timeout. Please try again.');
+      }
+      logger.error(`Error fetching Instagram results for "${query}":`, error?.response?.data || error?.message);
+      throw error;
+    }
+  }
+
+  // Twitter Search Helper Methods
+  private getTwitterSearchSkips(filters: Record<string, any>): SectionSkipMap {
+    return {
+      contentStream: false,
+      userContent: false,
+      linkedAccount: filters.type && !['user'].includes(filters.type),
+      manualProfile: false,
+    };
+  }
+
+  private buildTwitterResponse(
+    originalQuery: string,
+    dbResults: { contentStream: ContentStream[]; userContent: UserContent[]; linkedAccount: LinkedAccount[] },
+  ): TwitterSearchResponseModel {
+    const response = new TwitterSearchResponseModel();
+    response.query = originalQuery;
+
+    dbResults.contentStream.forEach(content => {
+      if (content.subType === 'tweet') {
+        response.results.tweets.push({
+          id: content.id,
+          externalId: content.externalId,
+          title: content.title,
+          type: content.subType,
+          ...content.metaData,
+        });
+      }
+    });
+
+    dbResults.linkedAccount.forEach(account => {
+      response.results.users.push({
+        id: account.id,
+        externalId: account.externalId,
+        userName: account.userName,
+        profileImage: account.profileImage,
+        ...account.metaData,
+      });
+    });
+
+    response.resultCount = response.results.tweets.length + response.results.users.length;
+
+    return response;
+  }
+
+  private async fetchAndStoreTwitterResults(
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    nextToken?: string,
+    maxResults?: number,
+  ): Promise<void> {
+    const twitterResults = await this.fetchTwitterOnlineAsync(false, query, limit, filters, accessToken, nextToken, maxResults);
+
+    if (!twitterResults?.data?.length && !twitterResults?.includes?.users?.length) return;
+
+    const mappedResults: ContentStream[] = [];
+
+    if (twitterResults.data) {
+      twitterResults.data.forEach((item: any) => {
+        const externalId = item.id || '';
+        if (!externalId) return;
+
+        mappedResults.push(new ContentStream({
+          type: 'Content' as any,
+          subType: 'tweet',
+          title: item.text || '',
+          platform: _const.PLATFORMS.TWITTER,
+          externalId,
+          metaData: {
+            text: item.text,
+            authorId: item.author_id,
+            createdAt: item.created_at,
+            editHistoryTweetIds: item.edit_history_tweet_ids,
+            publicMetrics: item.public_metrics,
+            ...item,
+          },
+          lastRefreshed: new Date(),
+        }));
+      });
+    }
+
+    if (!mappedResults.length) return;
+
+    const externalIds = mappedResults.map(c => c.externalId);
+    const newIds = await this.generalRepository.checkExistingItemsAsync(externalIds, _const.PLATFORMS.TWITTER);
+    const toAdd = mappedResults.filter(c => newIds.includes(c.externalId));
+    const existingIds = externalIds.filter(id => !newIds.includes(id));
+
+    if (toAdd.length > 0) {
+      await this.generalRepository.createAsync(toAdd);
+    }
+
+    if (existingIds.length > 0) {
+      await this.updateContentRefreshTimestamp(existingIds, _const.PLATFORMS.TWITTER);
+    }
+  }
+
+  private async fetchTwitterOnlineAsync(
+    skipSearch: boolean,
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    nextToken?: string,
+    maxResults?: number,
+  ): Promise<any> {
+    if (skipSearch || !accessToken) return { data: [] };
+
+    try {
+      const params: Record<string, string | number> = {
+        query,
+        max_results: maxResults || Math.min(Math.max(limit, 1), 100),
+        ...filters,
+      };
+
+      Object.keys(params).forEach(key => {
+        if (params[key] == null) delete params[key];
+      });
+
+      if (nextToken) params.next_token = nextToken;
+
+      const response = await axios.get('https://api.twitter.com/2/tweets/search/recent', {
+        params,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      });
+
+      return response.data || { data: [] };
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401) throw new ApplicationException('Twitter API authentication failed. Please refresh your token.');
+      if (status === 403) throw new ApplicationException('Twitter API access forbidden.');
+      if (status === 429) throw new ApplicationException('Twitter API rate limit exceeded. Please try again later.');
+      if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
+        throw new ApplicationException('Twitter API request timeout. Please try again.');
+      }
+      logger.error(`Error fetching Twitter results for "${query}":`, error?.response?.data || error?.message);
       throw error;
     }
   }

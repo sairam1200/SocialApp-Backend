@@ -87,7 +87,7 @@ export class TikTokContentModel {
   @ApiProperty()
   title: string;
 
-  @ApiProperty({ type: 'object', additionalProperties: true })
+  @ApiProperty({ type: Object, additionalProperties: true })
   stats: {
     likes: number;
     comments: number;
@@ -98,10 +98,61 @@ export class TikTokContentModel {
   @ApiProperty()
   duration: number;
 
-  @ApiProperty({ type: 'object', additionalProperties: true })
+  @ApiProperty({ type: Object, additionalProperties: true })
   dimensions: {
     height: number;
     width: number;
   };
 }
 
+export class TiktokSearchParamsModel {
+  @ApiProperty()
+  page: number;
+
+  @ApiProperty()
+  originalQuery: string;
+
+  @ApiProperty()
+  normalizedQuery: string;
+
+  @ApiProperty()
+  limit: number;
+
+  @ApiProperty()
+  accessToken?: string;
+
+  @ApiProperty()
+  filters?: Record<string, any>;
+
+  @ApiProperty({ required: false })
+  cursor?: string;
+
+  @ApiProperty({ required: false, default: false })
+  forceRefresh?: boolean;
+}
+
+export class TiktokSearchResponseModel {
+  @ApiProperty()
+  query: string;
+
+  @ApiProperty({ type: [Object] })
+  results: {
+    videos: any[];
+    users: any[];
+  };
+
+  @ApiProperty({ required: false })
+  cursor?: string;
+
+  @ApiProperty()
+  hasMore: boolean;
+
+  constructor() {
+    this.query = '';
+    this.results = {
+      videos: [],
+      users: [],
+    };
+    this.hasMore = false;
+  }
+}

@@ -1,5 +1,7 @@
 import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { RedditProfileModel } from "../contracts/reddit.model";
+import { UserContent } from "../entities/userContent.entity";
+import { RedditContentModel, RedditProfileModel } from "../contracts/reddit.model";
+import _const from "../../core/utils/const";
 
 /**
  * Maps a LinkedAccount entity to a RedditProfileModel.
@@ -29,4 +31,24 @@ export function mapToRedditProfileModel(data: LinkedAccount, includeSensitiveFie
     displayName: data.metaData.displayName,
     createdAt: data.metaData.createdAt,
   } as RedditProfileModel;
+}
+
+export function mapToRedditContentModel(data: UserContent): RedditContentModel {
+  return {
+    id: data.id,
+    title: data.title,
+    type: data.type,
+    platform: data.platform,
+    externalId: data.externalId,
+    subreddit: data.metaData?.subreddit,
+    author: data.metaData?.author,
+    score: data.metaData?.score,
+    upvoteRatio: data.metaData?.upvoteRatio,
+    numComments: data.metaData?.numComments,
+    url: data.metaData?.url,
+    permalink: data.metaData?.permalink,
+    createdUtc: data.metaData?.createdUtc,
+    selftext: data.metaData?.selftext,
+    thumbnail: data.metaData?.thumbnail,
+  } as RedditContentModel;
 }

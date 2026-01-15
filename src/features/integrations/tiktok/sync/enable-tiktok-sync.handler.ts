@@ -1,14 +1,13 @@
 import { Inject } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import _const from "../../../../core/utils/const";
 import logger from "../../../../core/utils/winston.util";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { TiktokImportEvent } from "../../../../domain/events";
 import { deserializeObject } from "../../../../core/utils/serialization.util";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 
 export class EnableTiktokSyncCommand {
   constructor(request: Partial<EnableTiktokSyncCommand> = {}) {
@@ -23,7 +22,8 @@ export class EnableTiktokSyncCommandHandler implements ICommandHandler<EnableTik
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(command: EnableTiktokSyncCommand): Promise<{ syncEnabled: boolean }> {
@@ -52,8 +52,8 @@ export class EnableTiktokSyncCommandHandler implements ICommandHandler<EnableTik
       }
 
       const tokenValue = deserializeObject<{ access_token: string }>(userLogin.tokenValue);
-      this.eventEmitter.emit('tiktok.import', new TiktokImportEvent({ account, accessToken: tokenValue.access_token }));
-      logger.info(`[TiktokSync] Import event triggered for user ${userId}`);
+      await this.queueService.enqueueTiktokImport(account, tokenValue.access_token);
+      logger.info(`[TiktokSync] Import job enqueued for user ${userId}`);
 
       account.allowImport = true;
     } catch (error) {

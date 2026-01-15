@@ -22,4 +22,5 @@ export interface IUserContentRepository {
   getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]>;
 
   deleteByUserIdAndPlatformAsync(userId: string, platform: string): Promise<void>;
+  deleteByExternalIdsAsync(userId: string, platform: string, externalIds: string[]): Promise<void>;
 }

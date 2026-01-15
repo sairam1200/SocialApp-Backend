@@ -29,6 +29,6 @@ export class NotificationModel {
   @ApiProperty({ enum: NotificationType })
   type: NotificationType;
 
-  @ApiPropertyOptional({ type: 'object', additionalProperties: true })
+  @ApiPropertyOptional({ type: Object, additionalProperties: true })
   metaData?: Record<string, any>;
 }

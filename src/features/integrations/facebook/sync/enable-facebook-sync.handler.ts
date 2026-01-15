@@ -1,13 +1,12 @@
 import { Inject } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import _const from "../../../../core/utils/const";
 import logger from "../../../../core/utils/winston.util";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { FacebookImportEvent } from "../../../../domain/events";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 
 export class EnableFacebookSyncCommand {
   constructor(request: Partial<EnableFacebookSyncCommand> = {}) {
@@ -22,7 +21,8 @@ export class EnableFacebookSyncCommandHandler implements ICommandHandler<EnableF
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(command: EnableFacebookSyncCommand): Promise<{ syncEnabled: boolean }> {
@@ -51,8 +51,8 @@ export class EnableFacebookSyncCommandHandler implements ICommandHandler<EnableF
       }
 
       const accessToken = userLogin.tokenValue;
-      this.eventEmitter.emit('facebook.import', new FacebookImportEvent({ account, accessToken }));
-      logger.info(`[FacebookSync] Import event triggered for user ${userId}`);
+      await this.queueService.enqueueFacebookImport(account, accessToken);
+      logger.info(`[FacebookSync] Import job enqueued for user ${userId}`);
 
       account.allowImport = true;
     } catch (error) {

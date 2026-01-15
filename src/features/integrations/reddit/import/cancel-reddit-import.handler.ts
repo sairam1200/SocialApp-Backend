@@ -1,6 +1,5 @@
 import { Inject } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
 import logger from "../../../../core/utils/winston.util";
@@ -11,7 +10,7 @@ import { INotificationRepository } from "../../../../domain/repositories/inotifi
 import { NotFoundException } from "@nestjs/common";
 import { NotificationStatus, NotificationType } from "../../../../domain/enums";
 import { ApplicationException } from "../../../../core/exceptions";
-import { PlatformRollbackEvent } from "../../../../domain/events/platform-rollback.event";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 
 export class CancelRedditImportRequestModel {
   @ApiProperty()
@@ -35,7 +34,8 @@ export class CancelRedditImportCommandHandler implements ICommandHandler<CancelR
     private readonly notificationService: INotificationService,
     @Inject(_const.INOTIFICATION_REPOSITORY)
     private readonly notificationRepository: INotificationRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(command: CancelRedditImportCommand): Promise<void> {
@@ -56,11 +56,7 @@ export class CancelRedditImportCommandHandler implements ICommandHandler<CancelR
 
     logger.info(`[RedditImport] Cancellation requested for user ${userId}`);
 
-    if (!account.metaData) {
-      account.metaData = {};
-    }
-    account.metaData.importCancelled = true;
-    await this.linkedAccountRepository.updateAsync(account);
+    await this.queueService.cancelRedditImport(userId);
 
     const notifications = await this.notificationRepository.getAllAsync(userId);
     const importNotification = notifications.find(
@@ -75,16 +71,7 @@ export class CancelRedditImportCommandHandler implements ICommandHandler<CancelR
       }, "Reddit import cancellation requested.");
     }
 
-    logger.info(`[RedditImport] Cancellation flag set for user ${userId}. Triggering immediate rollback.`);
-
-    try {
-      this.eventEmitter.emit('platform.rollback', new PlatformRollbackEvent({ account }));
-      logger.info(`[RedditImport] Rollback event emitted for user ${userId}`);
-    } catch (error) {
-      logger.error(`[RedditImport] Error emitting rollback event: 
-        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
-      throw error;
-    }
+    logger.info(`[RedditImport] Cancellation completed for user ${userId}`);
   }
 }
 

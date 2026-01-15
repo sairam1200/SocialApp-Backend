@@ -18,6 +18,7 @@ import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { LinkedInProfileModel, LinkedInUserDataModel } from "../../../../domain/contracts/linkedin.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
+import { serializeObject } from "core/utils/serialization.util";
 
 const PLATFORM = 'linkedin';
 const API_BASE = 'https://api.linkedin.com/v2';
@@ -108,12 +109,7 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
 
     let linkedAccount = existingAccount;
     const newExternalId = userData.id;
-    if (!linkedAccount) {
-      linkedAccount = new LinkedAccount();
-      linkedAccount.userId = user.id;
-      linkedAccount.platform = PLATFORM;
-      linkedAccount.externalId = newExternalId;
-    } else {
+    if (linkedAccount) {
       const oldExternalId = linkedAccount.externalId;
 
       if (oldExternalId !== newExternalId) {
@@ -121,43 +117,22 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
         this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
       }
 
-      linkedAccount.externalId = newExternalId;
-    }
-
-    linkedAccount.userName = userData.vanityName || `${userData.localizedFirstName}.${userData.localizedLastName}`.toLowerCase();
-    linkedAccount.email = userEmail;
-    linkedAccount.profileImage = userData.profilePicture.displayImage;
-    linkedAccount.allowImport = true;
-    linkedAccount.metaData = {
-      firstName: userData.localizedFirstName,
-      lastName: userData.localizedLastName,
-      headline: userData.headline || '',
-      industry: userData.industry || '',
-      location: userData.location ? `${userData.location.region || ''}, ${userData.location.country || ''}`.trim().replace(/^,\s*/, '') : '',
-    };
-
-    if (!existingAccount) {
-      linkedAccount = await this.linkedAccountRepository.createAsync(linkedAccount);
+      linkedAccount = await this.updateLinkedAccount(linkedAccount, userData, userEmail);
     } else {
-      await this.linkedAccountRepository.updateAsync(linkedAccount);
+      linkedAccount = await this.createLinkedAccount(user.id, userData, userEmail);
     }
 
     const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.LINKEDIN);
+    // Standardize: Use serializeObject with consistent keys (access_token instead of accessToken)
+    const tokenValue = serializeObject({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_in: expiresIn
+    });
     if (existingAccountLogin) {
-      existingAccountLogin.tokenValue = JSON.stringify({ accessToken, refreshToken, expiresIn });
-      existingAccountLogin.addedDateUtc = new Date();
-      existingAccountLogin.expiryDateUtc = new Date(Date.now() + expiresIn * 1000);
-      await this.userLoginRepository.updateAsync(existingAccountLogin);
+      await this.updateUserLogin(existingAccountLogin, tokenValue, expiresIn);
     } else {
-      await this.userLoginRepository.createAysnc(
-        _const.PLATFORMS.LINKEDIN,
-        user.id,
-        "",
-        "",
-        "",
-        JSON.stringify({ accessToken, refreshToken, expiresIn }),
-        new Date(Date.now() + expiresIn * 1000)
-      );
+      await this.createUserLogin(user.id, tokenValue, expiresIn);
     }
 
     return {
@@ -258,5 +233,60 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
 
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
     return dataProtectionKey;
+  }
+
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: LinkedInUserDataModel, userEmail: string): Promise<LinkedAccount> {
+    linkedAccount.externalId = userData.id;
+    linkedAccount.userName = userData.vanityName || `${userData.localizedFirstName}.${userData.localizedLastName}`.toLowerCase();
+    linkedAccount.email = userEmail;
+    linkedAccount.profileImage = userData.profilePicture.displayImage;
+    linkedAccount.allowImport = true;
+    linkedAccount.metaData = {
+      firstName: userData.localizedFirstName,
+      lastName: userData.localizedLastName,
+      headline: userData.headline || '',
+      industry: userData.industry || '',
+      location: userData.location ? `${userData.location.region || ''}, ${userData.location.country || ''}`.trim().replace(/^,\s*/, '') : '',
+    };
+    await this.linkedAccountRepository.updateAsync(linkedAccount);
+    return linkedAccount;
+  }
+
+  private async createLinkedAccount(userId: string, userData: LinkedInUserDataModel, userEmail: string): Promise<LinkedAccount> {
+    const newEntry = new LinkedAccount();
+    newEntry.userId = userId;
+    newEntry.platform = PLATFORM;
+    newEntry.externalId = userData.id;
+    newEntry.userName = userData.vanityName || `${userData.localizedFirstName}.${userData.localizedLastName}`.toLowerCase();
+    newEntry.email = userEmail;
+    newEntry.profileImage = userData.profilePicture.displayImage;
+    newEntry.allowImport = true;
+    newEntry.metaData = {
+      firstName: userData.localizedFirstName,
+      lastName: userData.localizedLastName,
+      headline: userData.headline || '',
+      industry: userData.industry || '',
+      location: userData.location ? `${userData.location.region || ''}, ${userData.location.country || ''}`.trim().replace(/^,\s*/, '') : '',
+    };
+    return await this.linkedAccountRepository.createAsync(newEntry);
+  }
+
+  private async updateUserLogin(userLogin: any, tokenValue: string, expiresIn: number): Promise<void> {
+    userLogin.tokenValue = tokenValue;
+    userLogin.addedDateUtc = new Date();
+    userLogin.expiryDateUtc = new Date(Date.now() + expiresIn * 1000);
+    await this.userLoginRepository.updateAsync(userLogin);
+  }
+
+  private async createUserLogin(userId: string, tokenValue: string, expiresIn: number): Promise<void> {
+    await this.userLoginRepository.createAysnc(
+      _const.PLATFORMS.LINKEDIN,
+      userId,
+      "", // deviceId
+      "", // userAgent
+      "", // ipAddress
+      tokenValue,
+      new Date(Date.now() + expiresIn * 1000)
+    );
   }
 }

@@ -91,7 +91,15 @@ export class PinterestSearchQueryHandler implements IQueryHandler<PinterestSearc
     }
 
     const normalizedQuery = await this.normalizeQueryAsync(searchTerm);
-    const data = await this.searchService.searchPinterestAsync(accessToken);
+    const data = await this.searchService.searchPinterestAsync({
+      page: 1,
+      normalizedQuery,
+      originalQuery: searchTerm,
+      limit: 25,
+      filters: filter || {},
+      accessToken,
+      forceRefresh: command.model.forceRefresh || false,
+    });
     return data;
   }
 

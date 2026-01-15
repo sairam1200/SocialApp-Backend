@@ -12,6 +12,7 @@ import { NotFoundException } from "@nestjs/common";
 import { NotificationStatus, NotificationType } from "../../../../domain/enums";
 import { ApplicationException } from "../../../../core/exceptions";
 import { PlatformRollbackEvent } from "../../../../domain/events/platform-rollback.event";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 
 export class CancelSpotifyImportRequestModel {
   @ApiProperty()
@@ -35,6 +36,8 @@ export class CancelSpotifyImportCommandHandler implements ICommandHandler<Cancel
     private readonly notificationService: INotificationService,
     @Inject(_const.INOTIFICATION_REPOSITORY)
     private readonly notificationRepository: INotificationRepository,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
     private readonly eventEmitter: EventEmitter2,
   ) { }
 
@@ -56,11 +59,13 @@ export class CancelSpotifyImportCommandHandler implements ICommandHandler<Cancel
 
     logger.info(`[SpotifyImport] Cancellation requested for user ${userId}`);
 
-    if (!account.metaData) {
-      account.metaData = {};
+    try {
+      await this.queueService.cancelSpotifyImport(userId);
+      logger.info(`[SpotifyImport] Job cancellation requested for user ${userId}`);
+    } catch (error) {
+      logger.error(`[SpotifyImport] Error cancelling job: 
+        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
     }
-    account.metaData.importCancelled = true;
-    await this.linkedAccountRepository.updateAsync(account);
 
     const notifications = await this.notificationRepository.getAllAsync(userId);
     const importNotification = notifications.find(
@@ -75,15 +80,12 @@ export class CancelSpotifyImportCommandHandler implements ICommandHandler<Cancel
       }, "Spotify import cancellation requested.");
     }
 
-    logger.info(`[SpotifyImport] Cancellation flag set for user ${userId}. Triggering immediate rollback.`);
-
     try {
       this.eventEmitter.emit('platform.rollback', new PlatformRollbackEvent({ account }));
       logger.info(`[SpotifyImport] Rollback event emitted for user ${userId}`);
     } catch (error) {
       logger.error(`[SpotifyImport] Error emitting rollback event: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
-      throw error;
     }
   }
 }
