@@ -1,3 +1,5 @@
+import { ApiProperty } from '@nestjs/swagger';
+
 export interface SpotifyUserDataModel {
   country?: string;
   display_name?: string;
@@ -127,5 +129,56 @@ export interface SpotifyShowModel {
       text: string;
       type: string;
     }>;
+  }
+}
+
+export class SpotifySearchParamsModel {
+  @ApiProperty()
+  page: number;
+
+  @ApiProperty()
+  originalQuery: string;
+
+  @ApiProperty()
+  normalizedQuery: string;
+
+  @ApiProperty()
+  limit: number;
+
+  @ApiProperty()
+  accessToken?: string;
+
+  @ApiProperty()
+  filters?: Record<string, any>;
+
+  @ApiProperty({ required: false })
+  offset?: number;
+
+  @ApiProperty({ required: false, default: false })
+  forceRefresh?: boolean;
+}
+
+export class SpotifySearchResponseModel {
+  @ApiProperty()
+  query: string;
+
+  @ApiProperty({ type: [Object] })
+  results: {
+    tracks: any[];
+    albums: any[];
+    playlists: any[];
+    artists: any[];
+    shows: any[];
+  };
+
+  constructor() {
+    this.query = '';
+    this.results = {
+      tracks: [],
+      albums: [],
+      playlists: [],
+      artists: [],
+      shows: [],
+    };
   }
 }

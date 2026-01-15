@@ -1,14 +1,13 @@
 import { Inject } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import _const from "../../../../core/utils/const";
 import logger from "../../../../core/utils/winston.util";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { TwitterImportEvent } from "../../../../domain/events";
 import { deserializeObject } from "../../../../core/utils/serialization.util";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 
 export class EnableTwitterSyncCommand {
   constructor(request: Partial<EnableTwitterSyncCommand> = {}) {
@@ -23,7 +22,8 @@ export class EnableTwitterSyncCommandHandler implements ICommandHandler<EnableTw
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(command: EnableTwitterSyncCommand): Promise<{ syncEnabled: boolean }> {
@@ -52,8 +52,8 @@ export class EnableTwitterSyncCommandHandler implements ICommandHandler<EnableTw
       }
 
       const tokenValue = deserializeObject<{ access_token: string }>(userLogin.tokenValue);
-      this.eventEmitter.emit('twitter.import', new TwitterImportEvent({ account, accessToken: tokenValue.access_token }));
-      logger.info(`[TwitterSync] Import event triggered for user ${userId}`);
+      await this.queueService.enqueueTwitterImport(account, tokenValue.access_token);
+      logger.info(`[TwitterSync] Import job enqueued for user ${userId}`);
 
       account.allowImport = true;
     } catch (error) {

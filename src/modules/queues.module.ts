@@ -7,10 +7,21 @@ import { createBullBoard } from '@bull-board/api';
 import { ExpressAdapter } from '@bull-board/express';
 import { NotificationModule } from "./notification.module";
 import { UserContent } from "../domain/entities/userContent.entity";
-import { LinkedAccount } from "../domain/entities/linkedAccount.entity"; 
+import { LinkedAccount } from "../domain/entities/linkedAccount.entity";
 import { Notification } from "../domain/entities/notification/notification.entity";
 import { BullBoardAuthMiddleware } from "../core/middlewares/bullBoardAuth.middleware";
 import { DynamicModule, MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
+import BullMQConfig from "../core/config/bullmq.config";
+import { YoutubeImportProcessor } from "../infrastructure/background/processors/youtube-import.processor";
+import { SpotifyImportProcessor } from "../infrastructure/background/processors/spotify-import.processor";
+import { PinterestImportProcessor } from "../infrastructure/background/processors/pinterest-import.processor";
+import { RedditImportProcessor } from "../infrastructure/background/processors/reddit-import.processor";
+import { TwitterImportProcessor } from "../infrastructure/background/processors/twitter-import.processor";
+import { TiktokImportProcessor } from "../infrastructure/background/processors/tiktok-import.processor";
+import { InstagramImportProcessor } from "../infrastructure/background/processors/instagram-import.processor";
+import { FacebookImportProcessor } from "../infrastructure/background/processors/facebook-import.processor";
+import { LinkedInImportProcessor } from "../infrastructure/background/processors/linkedin-import.processor";
+import { dependency } from "../infrastructure/dependency";
 @Module({})
 export class QueuesModule implements NestModule {
   static register(): DynamicModule {
@@ -20,19 +31,61 @@ export class QueuesModule implements NestModule {
         NotificationModule,
         TypeOrmModule.forFeature([Notification, UserContent, LinkedAccount]),
         BullModule.forRoot({
-          connection: redis.instance,
+          ...BullMQConfig.getConnectionConfig(),
           prefix: 'gaddr-backend',
-          defaultJobOptions: {
-            attempts: 3,
-            backoff: {
-              type: 'exponential',
-              delay: 3000,
-            },
-          },
+          defaultJobOptions: BullMQConfig.getDefaultJobOptions(),
         }),
+        BullModule.registerQueue(
+          {
+            name: _const.BULL_QUEUES.FACEBOOK_IMPORT,
+            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.FACEBOOK_IMPORT),
+          },
+          {
+            name: _const.BULL_QUEUES.INSTAGRAM_IMPORT,
+            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.INSTAGRAM_IMPORT),
+          },
+          {
+            name: _const.BULL_QUEUES.YOUTUBE_IMPORT,
+            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_IMPORT),
+          },
+          {
+            name: _const.BULL_QUEUES.SPOTIFY_IMPORT,
+            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.SPOTIFY_IMPORT),
+          },
+          {
+            name: _const.BULL_QUEUES.PINTEREST_IMPORT,
+            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.PINTEREST_IMPORT),
+          },
+          {
+            name: _const.BULL_QUEUES.REDDIT_IMPORT,
+            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.REDDIT_IMPORT),
+          },
+          {
+            name: _const.BULL_QUEUES.TWITTER_IMPORT,
+            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.TWITTER_IMPORT),
+          },
+          {
+            name: _const.BULL_QUEUES.TIKTOK_IMPORT,
+            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.TIKTOK_IMPORT),
+          },
+          {
+            name: _const.BULL_QUEUES.LINKEDIN_IMPORT,
+            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.LINKEDIN_IMPORT),
+          },
+        ),
       ],
       providers: [
         JwtService,
+        dependency.QueueService,
+        YoutubeImportProcessor,
+        SpotifyImportProcessor,
+        PinterestImportProcessor,
+        RedditImportProcessor,
+        TwitterImportProcessor,
+        TiktokImportProcessor,
+        InstagramImportProcessor,
+        FacebookImportProcessor,
+        LinkedInImportProcessor,
       ],
     };
   }

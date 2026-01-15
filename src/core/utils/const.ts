@@ -23,9 +23,18 @@ export default {
   ITOKEN_SERVICE: 'ITokenService',
   IYOUTUBEWEBHOOK_SERVICE: 'IYoutubeWebhookService',
   INOTIFICATION_SERVICE: 'INotificationService',
+  IQUEUE_SERVICE: 'IQueueService',
 
   BULL_QUEUES: {
-
+    FACEBOOK_IMPORT: 'facebook-import',
+    INSTAGRAM_IMPORT: 'instagram-import',
+    TWITTER_IMPORT: 'twitter-import',
+    TIKTOK_IMPORT: 'tiktok-import',
+    LINKEDIN_IMPORT: 'linkedin-import',
+    YOUTUBE_IMPORT: 'youtube-import',
+    SPOTIFY_IMPORT: 'spotify-import',
+    PINTEREST_IMPORT: 'pinterest-import',
+    REDDIT_IMPORT: 'reddit-import',
   },
 
   EMAILTEMPLATES: {

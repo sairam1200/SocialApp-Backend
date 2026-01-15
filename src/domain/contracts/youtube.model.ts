@@ -158,3 +158,47 @@ export class SearchResponseModel {
     };
   }
 }
+
+export class YouTubeContentModel {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  title: string;
+
+  @ApiProperty()
+  type: string;
+
+  @ApiProperty()
+  platform: string;
+
+  @ApiProperty()
+  externalId: string;
+
+  @ApiProperty({ required: false })
+  description?: string;
+
+  @ApiProperty({ required: false })
+  thumbnailUrl?: string;
+
+  @ApiProperty({ required: false })
+  publishedAt?: string;
+
+  @ApiProperty({ required: false })
+  videoId?: string;
+
+  @ApiProperty({ required: false })
+  channelId?: string;
+
+  @ApiProperty({ required: false, default: 0 })
+  viewCount?: number;
+
+  @ApiProperty({ required: false, default: 0 })
+  likeCount?: number;
+
+  @ApiProperty({ required: false, default: 0 })
+  commentCount?: number;
+
+  @ApiProperty({ required: false })
+  duration?: string;
+}

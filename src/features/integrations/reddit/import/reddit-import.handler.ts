@@ -7,12 +7,11 @@ import { UserLogin } from "../../../../domain/entities";
 import logger from "../../../../core/utils/winston.util";
 import { Inject, NotFoundException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { RedditImportEvent } from "../../../../domain/events";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 
 export class RedditImportRequestModel {
   @ApiProperty()
@@ -35,7 +34,8 @@ export class RedditImportCommandHandler implements ICommandHandler<RedditImportC
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(command: RedditImportCommand): Promise<{ accessToken: string, expiresIn: number }> {
@@ -98,10 +98,10 @@ export class RedditImportCommandHandler implements ICommandHandler<RedditImportC
     }
 
     try {
-      this.eventEmitter.emit('reddit.import', new RedditImportEvent({ account, accessToken }));
-      logger.info(`[RedditImport] Import event emitted for user ${userId}`);
+      await this.queueService.enqueueRedditImport(account, accessToken);
+      logger.info(`[RedditImport] Import job enqueued for user ${userId}`);
     } catch (error) {
-      logger.error(`An error occurred while emitting the Reddit import event: 
+      logger.error(`An error occurred while enqueueing the Reddit import job: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
       throw new ApplicationException('Failed to initiate Reddit import. Please try again later.');
     }

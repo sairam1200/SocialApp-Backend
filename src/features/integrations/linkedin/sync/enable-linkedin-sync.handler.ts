@@ -1,13 +1,12 @@
 import { Inject } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import _const from "../../../../core/utils/const";
 import logger from "../../../../core/utils/winston.util";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { LinkedInImportEvent } from "../../../../domain/events";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 
 export class EnableLinkedInSyncCommand {
   constructor(request: Partial<EnableLinkedInSyncCommand> = {}) {
@@ -22,7 +21,8 @@ export class EnableLinkedInSyncCommandHandler implements ICommandHandler<EnableL
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(command: EnableLinkedInSyncCommand): Promise<{ syncEnabled: boolean }> {
@@ -50,8 +50,8 @@ export class EnableLinkedInSyncCommandHandler implements ICommandHandler<EnableL
         throw new UnauthorizedException("No LinkedIn login found. Please reconnect your LinkedIn account.");
       }
 
-      this.eventEmitter.emit('linkedin.import', new LinkedInImportEvent({ account, accessToken: userLogin.tokenValue }));
-      logger.info(`[LinkedInSync] Import event triggered for user ${userId}`);
+      await this.queueService.enqueueLinkedInImport(account, userLogin.tokenValue);
+      logger.info(`[LinkedInSync] Import job enqueued for user ${userId}`);
 
       account.allowImport = true;
     } catch (error) {

@@ -1,5 +1,7 @@
 import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { YoutubeProfileModel } from "../contracts/youtube.model";
+import { UserContent } from "../entities/userContent.entity";
+import { YoutubeProfileModel, YouTubeContentModel } from "../contracts/youtube.model";
+import _const from "../../core/utils/const";
 
 export function mapToYoutubeProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): YoutubeProfileModel {
   return {
@@ -17,4 +19,23 @@ export function mapToYoutubeProfileModel(data: LinkedAccount, includeSensitiveFi
     locale: data.metaData.locale,
     channel: data.metaData.channel,
   } as YoutubeProfileModel;
+}
+
+export function mapToYouTubeContentModel(data: UserContent): YouTubeContentModel {
+  return {
+    id: data.id,
+    title: data.title,
+    type: data.type,
+    platform: data.platform,
+    externalId: data.externalId,
+    description: data.metaData?.description,
+    thumbnailUrl: data.metaData?.thumbnailUrl || data.metaData?.thumbnails?.default?.url,
+    publishedAt: data.metaData?.publishedAt,
+    videoId: data.metaData?.videoId,
+    channelId: data.metaData?.channelId,
+    viewCount: data.metaData?.viewCount,
+    likeCount: data.metaData?.likeCount,
+    commentCount: data.metaData?.commentCount,
+    duration: data.metaData?.duration,
+  } as YouTubeContentModel;
 }

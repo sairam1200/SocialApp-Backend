@@ -7,13 +7,12 @@ import { Globals } from "../../../../core/globals";
 import { UserLogin } from "../../../../domain/entities";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { Inject, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { PinterestImportEvent } from "../../../../domain/events";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 
 export class PinterestImportRequestModel {
   @ApiProperty()
@@ -37,7 +36,8 @@ export class PinterestImportCommandHandler implements ICommandHandler<PinterestI
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(command: PinterestImportCommand)
@@ -90,10 +90,10 @@ export class PinterestImportCommandHandler implements ICommandHandler<PinterestI
     }
 
     try {
-      this.eventEmitter.emit('pinterest.import', new PinterestImportEvent({ account, accessToken }));
-      logger.info(`[PinterestImport] Import event emitted for user ${userId}`);
+      await this.queueService.enqueuePinterestImport(account, accessToken);
+      logger.info(`[PinterestImport] Import job enqueued for user ${userId}`);
     } catch (error) {
-      logger.error(`An error occurred while emitting the Pinterest import event: 
+      logger.error(`An error occurred while enqueueing the Pinterest import job: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
       throw new ApplicationException('Failed to initiate Pinterest import. Please try again later.');
     }

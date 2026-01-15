@@ -76,3 +76,25 @@ export function mapContentStreamToFacebookOnlineModel(content: ContentStream) : 
     ...rest.metaData
   } as FacebookOnlineModel
 }
+
+export function mapUserContentToFacebookOnlineModel(content: any): FacebookOnlineModel {
+  return {
+    id: content.id,
+    title: content.title,
+    type: content.type,
+    platform: content.platform,
+    externalId: content.externalId,
+    description: content.metaData?.description,
+    picture: content.metaData?.picture,
+    link: content.metaData?.link,
+    message: content.metaData?.message,
+    story: content.metaData?.story,
+    from: content.metaData?.from,
+    reactions: content.metaData?.reactions,
+    commentCount: content.metaData?.commentCount,
+    sharesCount: content.metaData?.sharesCount,
+    permalinkUrl: content.metaData?.permalinkUrl,
+    createdAt: content.metaData?.createdAt,
+    updatedAt: content.metaData?.updatedAt,
+  } as FacebookOnlineModel;
+}

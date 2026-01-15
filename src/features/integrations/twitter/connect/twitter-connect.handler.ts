@@ -116,75 +116,18 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
         this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
       }
 
-      linkedAccount.externalId = newExternalId;
-      linkedAccount.userName = userData.data.username;
-      linkedAccount.profileImage = userData.data.profile_image_url;
-      linkedAccount.followersCount = userData.data.public_metrics.followers_count;
-      linkedAccount.followingCount = userData.data.public_metrics.following_count;
-      linkedAccount.verified = userData.data.verified,
-        linkedAccount.externalUrl = `https://x.com/${userData.data.username}`,
-        linkedAccount.metaData = {
-          name: userData.data.name,
-          description: userData.data.description,
-          countryCodes: userData.data.withheld?.country_codes || [],
-          url: userData.data.url || null,
-          location: userData.data.location || null,
-          pinnedTweetId: userData.data.pinned_tweet_id || null,
-          tweetCount: userData.data.public_metrics.tweet_count,
-          listedCount: userData.data.public_metrics.listed_count,
-          createdAt: userData.data.created_at,
-          protected: userData.data.protected,
-          entities: userData.data.entities || null,
-        };
-      await this.linkedAccountRepository.updateAsync(linkedAccount);
+      linkedAccount = await this.updateLinkedAccount(linkedAccount, userData);
     } else {
-      linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
-        platform: _const.PLATFORMS.TWITTER,
-        userId: user.id,
-        externalId: userData.data.id,
-        userName: userData.data.username,
-        profileImage: userData.data.profile_image_url,
-        followersCount: userData.data.public_metrics.followers_count,
-        followingCount: userData.data.public_metrics.following_count,
-        verified: userData.data.verified,
-        externalUrl: `https://x.com/${userData.data.username}`,
-        metaData: {
-          name: userData.data.name,
-          description: userData.data.description,
-          countryCodes: userData.data.withheld?.country_codes || [],
-          url: userData.data.url || null,
-          location: userData.data.location || null,
-          pinnedTweetId: userData.data.pinned_tweet_id || null,
-          tweetCount: userData.data.public_metrics.tweet_count,
-          listedCount: userData.data.public_metrics.listed_count,
-          createdAt: userData.data.created_at,
-          protected: userData.data.protected,
-          entities: userData.data.entities || null,
-        }
-      }));
+      linkedAccount = await this.createLinkedAccount(user.id, userData);
     }
 
-    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.TWITTER);
-    const tokenValue = serializeObject({ access_token, refresh_token })
+    const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.TWITTER);
+    const tokenValue = serializeObject({ access_token, refresh_token });
     console.log("this is the token value: ", tokenValue);
     if (existingAccountLogin) {
-
-      existingAccountLogin.tokenValue = tokenValue;
-      existingAccountLogin.addedDateUtc = new Date();
-      existingAccountLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000);
-      console.log("before update: ", existingAccountLogin);
-      await this.userLoginRepository.updateAsync(existingAccountLogin);
-      console.log("after update: ", existingAccountLogin);
+      await this.updateUserLogin(existingAccountLogin, tokenValue);
     } else {
-      existingAccountLogin = await this.userLoginRepository.createAysnc(
-        _const.PLATFORMS.TWITTER,
-        user.id,
-        "",
-        "",
-        "",
-        tokenValue,
-        new Date(Date.now() + 100 * 24 * 60 * 60 * 1000)
-      );
+      await this.createUserLogin(user.id, tokenValue);
     }
 
     return {
@@ -264,5 +207,77 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
 
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
     return dataProtectionKey;
+  }
+
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: TwitterUserDataModel): Promise<LinkedAccount> {
+    linkedAccount.externalId = userData.data.id;
+    linkedAccount.userName = userData.data.username;
+    linkedAccount.profileImage = userData.data.profile_image_url;
+    linkedAccount.followersCount = userData.data.public_metrics.followers_count;
+    linkedAccount.followingCount = userData.data.public_metrics.following_count;
+    linkedAccount.verified = userData.data.verified;
+    linkedAccount.externalUrl = `https://x.com/${userData.data.username}`;
+    linkedAccount.metaData = {
+      name: userData.data.name,
+      description: userData.data.description,
+      countryCodes: userData.data.withheld?.country_codes || [],
+      url: userData.data.url || null,
+      location: userData.data.location || null,
+      pinnedTweetId: userData.data.pinned_tweet_id || null,
+      tweetCount: userData.data.public_metrics.tweet_count,
+      listedCount: userData.data.public_metrics.listed_count,
+      createdAt: userData.data.created_at,
+      protected: userData.data.protected,
+      entities: userData.data.entities || null,
+    };
+    await this.linkedAccountRepository.updateAsync(linkedAccount);
+    return linkedAccount;
+  }
+
+  private async createLinkedAccount(userId: string, userData: TwitterUserDataModel): Promise<LinkedAccount> {
+    const newEntry = new LinkedAccount({
+      platform: _const.PLATFORMS.TWITTER,
+      userId,
+      externalId: userData.data.id,
+      userName: userData.data.username,
+      profileImage: userData.data.profile_image_url,
+      followersCount: userData.data.public_metrics.followers_count,
+      followingCount: userData.data.public_metrics.following_count,
+      verified: userData.data.verified,
+      externalUrl: `https://x.com/${userData.data.username}`,
+      metaData: {
+        name: userData.data.name,
+        description: userData.data.description,
+        countryCodes: userData.data.withheld?.country_codes || [],
+        url: userData.data.url || null,
+        location: userData.data.location || null,
+        pinnedTweetId: userData.data.pinned_tweet_id || null,
+        tweetCount: userData.data.public_metrics.tweet_count,
+        listedCount: userData.data.public_metrics.listed_count,
+        createdAt: userData.data.created_at,
+        protected: userData.data.protected,
+        entities: userData.data.entities || null,
+      }
+    });
+    return await this.linkedAccountRepository.createAsync(newEntry);
+  }
+
+  private async updateUserLogin(userLogin: any, tokenValue: string): Promise<void> {
+    userLogin.tokenValue = tokenValue;
+    userLogin.addedDateUtc = new Date();
+    userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000);
+    await this.userLoginRepository.updateAsync(userLogin);
+  }
+
+  private async createUserLogin(userId: string, tokenValue: string): Promise<void> {
+    await this.userLoginRepository.createAysnc(
+      _const.PLATFORMS.TWITTER,
+      userId,
+      "", // deviceId
+      "", // userAgent
+      "", // ipAddress
+      tokenValue,
+      new Date(Date.now() + 100 * 24 * 60 * 60 * 1000)
+    );
   }
 }

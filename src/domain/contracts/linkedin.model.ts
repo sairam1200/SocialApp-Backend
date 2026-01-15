@@ -71,3 +71,92 @@ export class LinkedInProfileModel {
   @ApiProperty({ default: 0 })
   followingCount: number;
 }
+
+export class LinkedInContentModel {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  title: string;
+
+  @ApiProperty()
+  type: string;
+
+  @ApiProperty()
+  platform: string;
+
+  @ApiProperty()
+  externalId: string;
+
+  @ApiProperty({ required: false })
+  text?: string;
+
+  @ApiProperty({ required: false })
+  commentary?: string;
+
+  @ApiProperty({ required: false, type: Object })
+  author?: any;
+
+  @ApiProperty({ required: false })
+  created?: string;
+
+  @ApiProperty({ required: false })
+  lastModified?: string;
+
+  @ApiProperty({ required: false, type: Object })
+  activity?: any;
+}
+
+export class LinkedInSearchParamsModel {
+  @ApiProperty()
+  page: number;
+
+  @ApiProperty()
+  originalQuery: string;
+
+  @ApiProperty()
+  normalizedQuery: string;
+
+  @ApiProperty()
+  limit: number;
+
+  @ApiProperty()
+  accessToken?: string;
+
+  @ApiProperty()
+  filters?: Record<string, any>;
+
+  @ApiProperty({ required: false })
+  start?: number;
+
+  @ApiProperty({ required: false, default: false })
+  forceRefresh?: boolean;
+}
+
+export class LinkedInSearchResponseModel {
+  @ApiProperty()
+  query: string;
+
+  @ApiProperty({ type: [Object] })
+  results: {
+    posts: any[];
+    people: any[];
+    companies: any[];
+  };
+
+  @ApiProperty({ required: false })
+  start?: number;
+
+  @ApiProperty()
+  count: number;
+
+  constructor() {
+    this.query = '';
+    this.results = {
+      posts: [],
+      people: [],
+      companies: [],
+    };
+    this.count = 0;
+  }
+}

@@ -1,14 +1,13 @@
 import { Inject } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import _const from "../../../../core/utils/const";
 import logger from "../../../../core/utils/winston.util";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { NotFoundException } from "@nestjs/common";
-import { PinterestImportEvent } from "../../../../domain/events";
 import { deserializeObject } from "../../../../core/utils/serialization.util";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 
 export class EnablePinterestSyncCommand {
   constructor(request: Partial<EnablePinterestSyncCommand> = {}) {
@@ -23,7 +22,8 @@ export class EnablePinterestSyncCommandHandler implements ICommandHandler<Enable
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(command: EnablePinterestSyncCommand): Promise<{ syncEnabled: boolean }> {
@@ -46,7 +46,8 @@ export class EnablePinterestSyncCommandHandler implements ICommandHandler<Enable
     const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.PINTEREST);
     if (userLogin) {
       const tokenValue = deserializeObject<{ access_token: string }>(userLogin.tokenValue);
-      this.eventEmitter.emit('pinterest.import', new PinterestImportEvent({ account, accessToken: tokenValue.access_token }));
+      await this.queueService.enqueuePinterestImport(account, tokenValue.access_token);
+      logger.info(`[PinterestSync] Import job enqueued for user ${userId}`);
     } else {
       logger.warn(`[PinterestSync] UserLogin not found for user ${userId}. Cannot trigger import after sync enable.`);
     }

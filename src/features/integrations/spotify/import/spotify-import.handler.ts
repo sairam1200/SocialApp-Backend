@@ -5,13 +5,12 @@ import _const from "../../../../core/utils/const";
 import { UserLogin } from "../../../../domain/entities";
 import logger from "../../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { Inject, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import ApplicationException from "../../../../core/exceptions/application.exception";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { SpotifyImportEvent } from "../../../../domain/events";
+import { IQueueService } from "../../../../domain/services/iqueue.service";
 
 
 export class SpotifyImportRequestModel {
@@ -35,7 +34,8 @@ export class SpotifyImportCommandHandler implements ICommandHandler<SpotifyImpor
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    private readonly eventEmitter: EventEmitter2,
+    @Inject(_const.IQUEUE_SERVICE)
+    private readonly queueService: IQueueService,
   ) { }
 
   public async execute(command: SpotifyImportCommand)
@@ -75,10 +75,10 @@ export class SpotifyImportCommandHandler implements ICommandHandler<SpotifyImpor
     }
 
     try {
-      this.eventEmitter.emit('spotify.import', new SpotifyImportEvent({ account, accessToken }));
-      logger.info(`[SpotifyImport] Import event emitted for user ${userId}`);
+      await this.queueService.enqueueSpotifyImport(account, accessToken);
+      logger.info(`[SpotifyImport] Import job enqueued for user ${userId}`);
     } catch (error) {
-      logger.error(`An error occurred while emitting the Spotify import event: 
+      logger.error(`An error occurred while enqueueing the Spotify import job: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
       throw new ApplicationException('Failed to initiate Spotify import. Please try again later.');
     }

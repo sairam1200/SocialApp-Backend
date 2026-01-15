@@ -53,3 +53,91 @@ export class PinterestProfileModel {
   @ApiProperty()
   about: string;
 }
+
+export class PinterestContentModel {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  title: string;
+
+  @ApiProperty()
+  type: string;
+
+  @ApiProperty()
+  platform: string;
+
+  @ApiProperty()
+  externalId: string;
+
+  @ApiProperty({ required: false })
+  description?: string;
+
+  @ApiProperty({ required: false })
+  imageUrl?: string;
+
+  @ApiProperty({ required: false })
+  boardId?: string;
+
+  @ApiProperty({ required: false })
+  boardName?: string;
+
+  @ApiProperty({ required: false })
+  link?: string;
+
+  @ApiProperty({ required: false })
+  createdAt?: string;
+
+  @ApiProperty({ required: false, default: 0 })
+  pinCount?: number;
+}
+
+export class PinterestSearchParamsModel {
+  @ApiProperty()
+  page: number;
+
+  @ApiProperty()
+  originalQuery: string;
+
+  @ApiProperty()
+  normalizedQuery: string;
+
+  @ApiProperty()
+  limit: number;
+
+  @ApiProperty()
+  accessToken?: string;
+
+  @ApiProperty()
+  filters?: Record<string, any>;
+
+  @ApiProperty({ required: false })
+  bookmark?: string;
+
+  @ApiProperty({ required: false, default: false })
+  forceRefresh?: boolean;
+}
+
+export class PinterestSearchResponseModel {
+  @ApiProperty()
+  query: string;
+
+  @ApiProperty({ type: [Object] })
+  results: {
+    pins: any[];
+    boards: any[];
+    users: any[];
+  };
+
+  @ApiProperty({ required: false })
+  bookmark?: string;
+
+  constructor() {
+    this.query = '';
+    this.results = {
+      pins: [],
+      boards: [],
+      users: [],
+    };
+  }
+}

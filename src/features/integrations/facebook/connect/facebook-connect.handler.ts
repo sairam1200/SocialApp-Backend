@@ -13,6 +13,7 @@ import { HttpContext } from '../../../../core/middlewares/httpContext.middleware
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { mapToFacebookProfileModel } from '../../../../domain/mappers/facebook.mapper';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
+import { serializeObject } from '../../../../core/utils/serialization.util';
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { FacebookProfileModel, FacebookUserDataModel } from '../../../../domain/contracts/facebook.model';
@@ -111,45 +112,16 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
       }
 
-      linkedAccount.externalId = newExternalId;
-      linkedAccount.userName = userData.name;
-      linkedAccount.profileImage = userData.picture?.data?.url;
-      linkedAccount.followingCount = userData.friends?.summary?.total_count,
-        linkedAccount.metaData = {
-          name: userData.name,
-        };
-      await this.linkedAccountRepository.updateAsync(linkedAccount);
+      linkedAccount = await this.updateLinkedAccount(linkedAccount, userData);
     } else {
-      linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
-        platform: _const.PLATFORMS.FACEBOOK,
-        email: userData.email,
-        userId: user.id,
-        externalId: userData.id,
-        userName: userData.name,
-        profileImage: userData.picture?.data?.url,
-        followingCount: userData.friends?.summary?.total_count,
-        metaData: {
-          name: userData.name,
-        }
-      }));
+      linkedAccount = await this.createLinkedAccount(user.id, user.email, userData);
     }
 
     const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.FACEBOOK);
     if (existingAccountLogin) {
-      existingAccountLogin.tokenValue = access_token;
-      existingAccountLogin.addedDateUtc = new Date();
-      existingAccountLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
-      await this.userLoginRepository.updateAsync(existingAccountLogin);
+      await this.updateUserLogin(existingAccountLogin, access_token, expires_in);
     } else {
-      await this.userLoginRepository.createAysnc(
-        _const.PLATFORMS.FACEBOOK,
-        user.id,
-        "",
-        "",
-        "",
-        access_token,
-        new Date(Date.now() + expires_in * 1000)
-      );
+      await this.createUserLogin(user.id, access_token, expires_in);
     }
 
     return {
@@ -228,5 +200,62 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
 
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
     return dataProtectionKey;
+  }
+
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: FacebookUserDataModel): Promise<LinkedAccount> {
+    linkedAccount.externalId = userData.id;
+    linkedAccount.userName = userData.name;
+    linkedAccount.profileImage = userData.picture?.data?.url;
+    linkedAccount.followingCount = userData.friends?.summary?.total_count;
+    linkedAccount.metaData = {
+      name: userData.name,
+    };
+    await this.linkedAccountRepository.updateAsync(linkedAccount);
+    return linkedAccount;
+  }
+
+  private async createLinkedAccount(userId: string, email: string, userData: FacebookUserDataModel): Promise<LinkedAccount> {
+    const newEntry = new LinkedAccount({
+      platform: _const.PLATFORMS.FACEBOOK,
+      email,
+      userId,
+      externalId: userData.id,
+      userName: userData.name,
+      profileImage: userData.picture?.data?.url,
+      followingCount: userData.friends?.summary?.total_count,
+      metaData: {
+        name: userData.name,
+      }
+    });
+    return await this.linkedAccountRepository.createAsync(newEntry);
+  }
+
+  private async updateUserLogin(userLogin: any, accessToken: string, expiresIn: number): Promise<void> {
+    // Standardize: Store as serialized object for consistency (even if platform doesn't use refresh_token)
+    const tokenValue = serializeObject({
+      access_token: accessToken,
+      expires_in: expiresIn,
+    });
+    userLogin.tokenValue = tokenValue;
+    userLogin.addedDateUtc = new Date();
+    userLogin.expiryDateUtc = new Date(Date.now() + expiresIn * 1000);
+    await this.userLoginRepository.updateAsync(userLogin);
+  }
+
+  private async createUserLogin(userId: string, accessToken: string, expiresIn: number): Promise<void> {
+    // Standardize: Store as serialized object for consistency
+    const tokenValue = serializeObject({
+      access_token: accessToken,
+      expires_in: expiresIn,
+    });
+    await this.userLoginRepository.createAysnc(
+      _const.PLATFORMS.FACEBOOK,
+      userId,
+      "", // deviceId
+      "", // userAgent
+      "", // ipAddress
+      tokenValue,
+      new Date(Date.now() + expiresIn * 1000)
+    );
   }
 }
