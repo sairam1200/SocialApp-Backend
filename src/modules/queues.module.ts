@@ -1,6 +1,5 @@
 import _const from "../core/utils/const";
 import { JwtService } from "@nestjs/jwt";
-import redis from "core/utils/redis.util";
 import { BullModule } from '@nestjs/bullmq';
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { createBullBoard } from '@bull-board/api';
@@ -8,7 +7,6 @@ import { ExpressAdapter } from '@bull-board/express';
 import { NotificationModule } from "./notification.module";
 import { UserContent } from "../domain/entities/userContent.entity";
 import { LinkedAccount } from "../domain/entities/linkedAccount.entity";
-import { Notification } from "../domain/entities/notification/notification.entity";
 import { BullBoardAuthMiddleware } from "../core/middlewares/bullBoardAuth.middleware";
 import { DynamicModule, MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import BullMQConfig from "../core/config/bullmq.config";
@@ -22,6 +20,8 @@ import { InstagramImportProcessor } from "../infrastructure/background/processor
 import { FacebookImportProcessor } from "../infrastructure/background/processors/facebook-import.processor";
 import { LinkedInImportProcessor } from "../infrastructure/background/processors/linkedin-import.processor";
 import { dependency } from "../infrastructure/dependency";
+import { ImportGateway } from "infrastructure/websocket/gateways/import.gateway";
+import { ContentStream, DataProtectionKey, Role, User, UserBiometric, UserClaim, UserLogin, UserRole } from "domain/entities";
 @Module({})
 export class QueuesModule implements NestModule {
   static register(): DynamicModule {
@@ -29,7 +29,18 @@ export class QueuesModule implements NestModule {
       module: QueuesModule,
       imports: [
         NotificationModule,
-        TypeOrmModule.forFeature([Notification, UserContent, LinkedAccount]),
+        TypeOrmModule.forFeature([
+          User,
+          UserRole,
+          UserLogin,
+          Role,
+          UserClaim,
+          UserBiometric,
+          UserContent,
+          LinkedAccount,
+          DataProtectionKey,
+          ContentStream,
+        ]),
         BullModule.forRoot({
           ...BullMQConfig.getConnectionConfig(),
           prefix: 'gaddr-backend',
@@ -76,7 +87,13 @@ export class QueuesModule implements NestModule {
       ],
       providers: [
         JwtService,
+        ImportGateway,
+
         dependency.QueueService,
+        dependency.UserLoginRepository,
+        dependency.UserContentRepository,
+        dependency.LinkedAccountRepository,
+
         YoutubeImportProcessor,
         SpotifyImportProcessor,
         PinterestImportProcessor,
@@ -87,6 +104,9 @@ export class QueuesModule implements NestModule {
         FacebookImportProcessor,
         LinkedInImportProcessor,
       ],
+      exports: [
+        dependency.QueueService,
+      ]
     };
   }
 

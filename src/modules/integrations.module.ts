@@ -37,7 +37,6 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     ...search.addControllers(),
   ],
   providers: [
-    ImportGateway,
     JwtService,
     SearchCacheService,
     PlatformRollbackListener,
