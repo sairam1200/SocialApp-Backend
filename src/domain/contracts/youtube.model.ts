@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 
-export class GoogleUserDataModel {
+export type GoogleUserDataType = {
   id: string;
   name: string;
   given_name: string;
@@ -11,7 +11,7 @@ export class GoogleUserDataModel {
   hd?: string;
 }
 
-export interface YoutubeChannelDataModel {
+export type YoutubeChannelDataType = {
   kind: string;
   etag: string;
   items: YoutubeChannelModel[];
@@ -120,7 +120,7 @@ export class YouTubeSearchParamsModel {
   forceRefresh?: boolean; // If true, always fetch from YouTube API regardless of cache
 }
 
-export interface YouTubeSearchResponseData {
+export type YouTubeSearchResponseDataType = {
   kind: string;
   etag: string;
   regionCode: string;
@@ -132,6 +132,7 @@ export interface YouTubeSearchResponseData {
   nextPageToken?: string;
   prevPageToken?: string;
 }
+
 export class YoutubeSearchResponseModel {
   query: string;
   results: YouTubeContentModel[];
@@ -151,9 +152,6 @@ export class YouTubeContentModel {
 
   @ApiProperty()
   type: string;
-
-  @ApiProperty()
-  platform: string;
 
   @ApiProperty()
   externalId: string;

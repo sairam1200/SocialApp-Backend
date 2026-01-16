@@ -16,7 +16,7 @@ import { mapToTiktokProfileModel } from '../../../../domain/mappers/tiktok.mappe
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
-import { TiktokProfileModel, TiktokUserDataModel } from '../../../../domain/contracts/tiktok.model';
+import { TiktokProfileModel, TiktokUserDataType } from '../../../../domain/contracts/tiktok.model';
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
 import { IContentStreamRepository } from '../../../../domain/repositories/icontentStream.repository';
@@ -166,7 +166,7 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
     }
   }
 
-  private async fetchUserData(accessToken: string, openId: number): Promise<TiktokUserDataModel> {
+  private async fetchUserData(accessToken: string, openId: number): Promise<TiktokUserDataType> {
     try {
       const response = await axios.get('https://open.tiktokapis.com/v2/user/info/', {
         headers: {
@@ -209,7 +209,7 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
     return dataProtectionKey;
   }
 
-  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: TiktokUserDataModel): Promise<LinkedAccount> {
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: TiktokUserDataType): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       _const.PLATFORMS.TIKTOK,
       userData.open_id,
@@ -233,7 +233,7 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
     return linkedAccount;
   }
 
-  private async createLinkedAccount(userId: string, userData: TiktokUserDataModel): Promise<LinkedAccount> {
+  private async createLinkedAccount(userId: string, userData: TiktokUserDataType): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       _const.PLATFORMS.TIKTOK,
       userData.open_id,

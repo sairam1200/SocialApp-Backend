@@ -3,7 +3,7 @@ import { CommandBus } from "@nestjs/cqrs";
 import { SpotifyContentsQuery } from "./get-contents.handler";
 import { ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { SpotifyContentModel } from "../../../../domain/mappers/spotify.mapper";
+import { SpotifyPlaylistModel, SpotifyTrackModel, SpotifyAlbumModel, SpotifyShowModel } from "../../../../domain/contracts/spotify.model";
 import { CursorResult } from "../../../../domain/contracts/pagination/cursorResult";
 import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 
@@ -20,7 +20,7 @@ export class SpotifyContentsController {
 
   @Get('contents')
   @UseGuards(UserAccoutGuard)
-  @ApiResponse({ status: 200, description: 'OK', type: CursorResult<SpotifyContentModel> })
+  @ApiResponse({ status: 200, description: 'OK', type: CursorResult<SpotifyPlaylistModel | SpotifyTrackModel | SpotifyAlbumModel | SpotifyShowModel> })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })

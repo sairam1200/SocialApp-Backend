@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export interface InstagramUserDataModel {
+export type InstagramUserDataType = {
   id: string;
   username: string;
   name?: string;
@@ -60,9 +60,6 @@ export class InstagramContentModel {
 
   @ApiProperty()
   type: string;
-
-  @ApiProperty()
-  platform: string;
 
   @ApiProperty()
   externalId: string;
@@ -125,11 +122,10 @@ export class InstagramSearchResponseModel {
   @ApiProperty()
   query: string;
 
-  @ApiProperty({ type: [Object] })
-  results: {
-    media: any[];
-    users: any[];
-    hashtags: any[];
+  @ApiProperty()
+  result: {
+    user: InstagramProfileModel[];
+    content: InstagramContentModel[];
   };
 
   @ApiProperty({ required: false })
@@ -137,10 +133,9 @@ export class InstagramSearchResponseModel {
 
   constructor() {
     this.query = '';
-    this.results = {
-      media: [],
-      users: [],
-      hashtags: [],
+    this.result = {
+      user: [],
+      content: [],
     };
   }
 }

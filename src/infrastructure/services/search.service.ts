@@ -2,8 +2,6 @@ import axios from 'axios';
 import _const from '../../core/utils/const';
 import logger from '../../core/utils/winston.util';
 import { Inject, Injectable } from '@nestjs/common';
-import { Queue } from 'bullmq';
-import { InjectQueue } from '@nestjs/bullmq';
 import {
   ContentStream,
   LinkedAccount,
@@ -16,8 +14,7 @@ import limitAllocatorUtil, {
 } from '../../core/utils/limitAllocator.util';
 import {
   YoutubeSearchResponseModel,
-  YouTubeSearchParamsModel,
-  YouTubeSearchResponseData,
+  YouTubeSearchResponseDataType,
   YouTubeContentModel,
 } from '../../domain/contracts/youtube.model';
 import {
@@ -25,10 +22,7 @@ import {
   IUserContentRepository,
 } from '../../domain/repositories';
 import { IContentStreamRepository } from '../../domain/repositories/icontentStream.repository';
-import { mapToLinkedInProfileModel } from 'domain/mappers/linkedin.mapper';
 import {
-  YouTubeUserContentFilters,
-  YouTubeOnlineFilters,
   FacebookOnlineFilters,
   FacebookUserContentFilters,
 } from 'domain/enums';
@@ -43,6 +37,11 @@ import {
 } from 'domain/contracts/reddit.model';
 import {
   SpotifySearchResponseModel,
+  SpotifyTrackModel,
+  SpotifyAlbumModel,
+  SpotifyPlaylistModel,
+  SpotifyArtistModel,
+  SpotifyShowModel,
 } from 'domain/contracts/spotify.model';
 import {
   PinterestSearchResponseModel,
@@ -62,10 +61,22 @@ import {
 import {
   mapContentStreamToFacebookOnlineModel,
   mapFacebookOnlineResponseToContentStream,
-  mapToFacebookOnlineModel,
   mapToFacebookProfileModel,
 } from 'domain/mappers/facebook.mapper';
 import { mapToYouTubeContentModel } from 'domain/mappers/youtube.mapper';
+import { mapToRedditContentModel, mapToRedditProfileModel } from 'domain/mappers/reddit.mapper';
+import { mapToSpotifyPlaylistModel, mapToSpotifyTrackModel, mapToSpotifyAlbumModel, mapToSpotifyShowModel } from 'domain/mappers/spotify.mapper';
+import { mapToPinterestContentModel, mapToPinterestProfileModel } from 'domain/mappers/pinterest.mapper';
+import { mapToInstagramContentModel, mapToInstagramProfileModel } from 'domain/mappers/instagram.mapper';
+import { mapToTikTokContentModel, mapToTiktokProfileModel } from 'domain/mappers/tiktok.mapper';
+import { mapToLinkedInContentModel, mapToLinkedInProfileModel } from 'domain/mappers/linkedin.mapper';
+import { mapToUserTweetModel, mapToLikedTweetModel, mapToTwitterProfileModel } from 'domain/mappers/twitter.mapper';
+import { RedditContentModel } from '../../domain/contracts/reddit.model';
+import { UserTweetModel } from '../../domain/contracts/twitter.model';
+import { PinterestContentModel } from '../../domain/contracts/pinterest.model';
+import { InstagramContentModel } from '../../domain/contracts/instagram.model';
+import { TikTokContentModel } from '../../domain/contracts/tiktok.model';
+import { LinkedInContentModel } from '../../domain/contracts/linkedin.model';
 import { SearchCacheService } from './searchCache.service';
 import { ApplicationException } from 'core/exceptions';
 import configs from '../../configs';
@@ -968,7 +979,6 @@ export class SearchService implements ISearchService {
       item.id = content.id;
       item.title = content.title;
       item.type = content.subType;
-      item.platform = content.platform;
       item.externalId = content.externalId;
       item.description = content.metaData?.description;
       item.thumbnailUrl = content.metaData?.thumbnailUrl || content.metaData?.thumbnails?.default?.url;
@@ -1063,7 +1073,7 @@ export class SearchService implements ISearchService {
     filters: Record<string, string | number>,
     accessToken: string | undefined,
     pageToken?: string,
-  ): Promise<YouTubeSearchResponseData> {
+  ): Promise<YouTubeSearchResponseDataType> {
     const emptyResult = {
       kind: '',
       etag: '',
@@ -1099,7 +1109,7 @@ export class SearchService implements ISearchService {
         params.key = configs.youtube.clientId;
       }
 
-      const response = await axios.get<YouTubeSearchResponseData>(
+      const response = await axios.get<YouTubeSearchResponseDataType>(
         'https://www.googleapis.com/youtube/v3/search',
         {
           params,
@@ -1110,15 +1120,16 @@ export class SearchService implements ISearchService {
 
       return response.data || emptyResult;
     } catch (error: any) {
-      const status = error?.response?.status;
-      if (status === 401) throw new ApplicationException('YouTube API authentication failed. Please refresh your token or check your API key.');
-      if (status === 403) throw new ApplicationException('YouTube API access forbidden. Please check your API quota.');
-      if (status === 429) throw new ApplicationException('YouTube API rate limit exceeded. Please try again later.');
-      if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
-        throw new ApplicationException('YouTube API request timeout. Please try again.');
-      }
+      // const status = error?.response?.status;
+      // if (status === 401) throw new ApplicationException('YouTube API authentication failed. Please refresh your token or check your API key.');
+      // if (status === 403) throw new ApplicationException('YouTube API access forbidden. Please check your API quota.');
+      // if (status === 429) throw new ApplicationException('YouTube API rate limit exceeded. Please try again later.');
+      // if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
+      //   throw new ApplicationException('YouTube API request timeout. Please try again.');
+      // }
       logger.error(`Error fetching YouTube videos for "${query}":`, error?.response?.data || error?.message);
-      throw error;
+      // throw error;
+      return emptyResult;
     }
   }
 
@@ -1140,29 +1151,33 @@ export class SearchService implements ISearchService {
     response.query = originalQuery;
 
     dbResults.contentStream.forEach(content => {
-      const item = {
-        id: content.id,
-        externalId: content.externalId,
-        title: content.title,
-        type: content.subType,
-        ...content.metaData,
-      };
+      const item = new RedditContentModel();
+      item.id = content.id;
+      item.title = content.title;
+      item.type = content.subType;
+      item.externalId = content.externalId;
+      item.subreddit = content.metaData?.subreddit;
+      item.author = content.metaData?.author;
+      item.score = content.metaData?.score;
+      item.upvoteRatio = content.metaData?.upvoteRatio;
+      item.numComments = content.metaData?.numComments;
+      item.url = content.metaData?.url;
+      item.permalink = content.metaData?.permalink;
+      item.createdUtc = content.metaData?.createdUtc;
+      item.selftext = content.metaData?.selftext;
+      item.thumbnail = content.metaData?.thumbnail;
 
-      if (content.subType === 'post') {
-        response.results.posts.push(item);
-      } else if (content.subType === 'subreddit') {
-        response.results.subreddits.push(item);
-      }
+      response.result.content.push(item);
+    });
+
+    dbResults.userContent.forEach(content => {
+      const item = mapToRedditContentModel(content);
+      response.result.content.push(item);
     });
 
     dbResults.linkedAccount.forEach(account => {
-      response.results.users.push({
-        id: account.id,
-        externalId: account.externalId,
-        userName: account.userName,
-        profileImage: account.profileImage,
-        ...account.metaData,
-      });
+      const profile = mapToRedditProfileModel(account, false);
+      response.result.user.push(profile);
     });
 
     return response;
@@ -1331,29 +1346,73 @@ export class SearchService implements ISearchService {
     response.query = originalQuery;
 
     dbResults.contentStream.forEach(content => {
-      const item = {
+      const type = content.subType as 'playlist' | 'track' | 'album' | 'show' | 'artist';
+      const baseItem = {
         id: content.id,
+        name: content.title,
         externalId: content.externalId,
-        title: content.title,
-        type: content.subType,
         ...content.metaData,
       };
 
-      switch (content.subType) {
+      switch (type) {
+        case 'track': {
+          const item = {
+            ...baseItem,
+            type: 'track',
+          } as unknown as SpotifyTrackModel;
+          response.result.tracks.push(item);
+          break;
+        }
+        case 'album': {
+          const item = {
+            ...baseItem,
+            type: 'album',
+          } as unknown as SpotifyAlbumModel;
+          response.result.albums.push(item);
+          break;
+        }
+        case 'playlist': {
+          const item = {
+            ...baseItem,
+            type: 'playlist',
+          } as unknown as SpotifyPlaylistModel;
+          response.result.playlists.push(item);
+          break;
+        }
+        case 'artist': {
+          const item = {
+            ...baseItem,
+            type: 'artist',
+          } as unknown as SpotifyArtistModel;
+          response.result.artists.push(item);
+          break;
+        }
+        case 'show': {
+          const item = {
+            ...baseItem,
+            type: 'show',
+            showId: content.externalId,
+          } as unknown as SpotifyShowModel;
+          response.result.shows.push(item);
+          break;
+        }
+      }
+    });
+
+    dbResults.userContent.forEach(content => {
+      const type = content.type as 'playlist' | 'track' | 'album' | 'show';
+      switch (type) {
         case 'track':
-          response.results.tracks.push(item);
+          response.result.tracks.push(mapToSpotifyTrackModel(content));
           break;
         case 'album':
-          response.results.albums.push(item);
+          response.result.albums.push(mapToSpotifyAlbumModel(content));
           break;
         case 'playlist':
-          response.results.playlists.push(item);
-          break;
-        case 'artist':
-          response.results.artists.push(item);
+          response.result.playlists.push(mapToSpotifyPlaylistModel(content));
           break;
         case 'show':
-          response.results.shows.push(item);
+          response.result.shows.push(mapToSpotifyShowModel(content));
           break;
       }
     });
@@ -1505,29 +1564,30 @@ export class SearchService implements ISearchService {
     response.query = originalQuery;
 
     dbResults.contentStream.forEach(content => {
-      const item = {
-        id: content.id,
-        externalId: content.externalId,
-        title: content.title,
-        type: content.subType,
-        ...content.metaData,
-      };
+      const item = new PinterestContentModel();
+      item.id = content.id;
+      item.title = content.title;
+      item.type = content.subType;
+      item.externalId = content.externalId;
+      item.description = content.metaData?.description;
+      item.imageUrl = content.metaData?.imageUrl;
+      item.boardId = content.metaData?.boardId;
+      item.boardName = content.metaData?.boardName;
+      item.link = content.metaData?.link;
+      item.createdAt = content.metaData?.createdAt;
+      item.pinCount = content.metaData?.pinCount;
 
-      if (content.subType === 'pin') {
-        response.results.pins.push(item);
-      } else if (content.subType === 'board') {
-        response.results.boards.push(item);
-      }
+      response.result.content.push(item);
+    });
+
+    dbResults.userContent.forEach(content => {
+      const item = mapToPinterestContentModel(content);
+      response.result.content.push(item);
     });
 
     dbResults.linkedAccount.forEach(account => {
-      response.results.users.push({
-        id: account.id,
-        externalId: account.externalId,
-        userName: account.userName,
-        profileImage: account.profileImage,
-        ...account.metaData,
-      });
+      const profile = mapToPinterestProfileModel(account, false);
+      response.result.user.push(profile);
     });
 
     return response;
@@ -1657,24 +1717,39 @@ export class SearchService implements ISearchService {
 
     dbResults.contentStream.forEach(content => {
       if (content.subType === 'video') {
-        response.results.videos.push({
-          id: content.id,
-          externalId: content.externalId,
-          title: content.title,
-          type: content.subType,
-          ...content.metaData,
-        });
+        const item = new TikTokContentModel();
+        item.id = content.id;
+        item.type = content.subType;
+        item.url = content.metaData?.shareUrl || content.metaData?.embedUrl || '';
+        item.createdAt = content.metaData?.createTime ? new Date(content.metaData.createTime * 1000) : new Date();
+        item.mediaUrl = content.metaData?.mediaUrl || '';
+        item.thumbnailUrl = content.metaData?.coverImageUrl || '';
+        item.caption = content.metaData?.videoDescription || '';
+        item.title = content.title;
+        item.stats = {
+          likes: content.metaData?.likeCount || 0,
+          comments: content.metaData?.commentCount || 0,
+          shares: content.metaData?.shareCount || 0,
+          views: content.metaData?.viewCount || 0,
+        };
+        item.duration = content.metaData?.videoDuration || 0;
+        item.dimensions = {
+          height: content.metaData?.height || 0,
+          width: content.metaData?.width || 0,
+        };
+
+        response.result.content.push(item);
       }
     });
 
+    dbResults.userContent.forEach(content => {
+      const item = mapToTikTokContentModel(content);
+      response.result.content.push(item);
+    });
+
     dbResults.linkedAccount.forEach(account => {
-      response.results.users.push({
-        id: account.id,
-        externalId: account.externalId,
-        userName: account.userName,
-        profileImage: account.profileImage,
-        ...account.metaData,
-      });
+      const profile = mapToTiktokProfileModel(account, false);
+      response.result.user.push(profile);
     });
 
     response.hasMore = dbResults.contentStream.length >= 25;
@@ -1877,38 +1952,38 @@ export class SearchService implements ISearchService {
 
     dbResults.contentStream.forEach(content => {
       if (content.subType === 'post' || content.subType === 'article') {
-        response.results.posts.push({
-          id: content.id,
-          externalId: content.externalId,
-          title: content.title,
-          type: content.subType,
-          ...content.metaData,
-        });
+        const item = new LinkedInContentModel();
+        item.id = content.id;
+        item.title = content.title;
+        item.type = content.subType;
+        item.externalId = content.externalId;
+        item.text = content.metaData?.text?.text || content.metaData?.commentary?.text || content.metaData?.commentary;
+        item.commentary = content.metaData?.commentary;
+        item.author = content.metaData?.author;
+        item.created = content.metaData?.created;
+        item.lastModified = content.metaData?.lastModified;
+        item.activity = content.metaData?.activity;
+
+        response.result.content.push(item);
       }
+    });
+
+    dbResults.userContent.forEach(content => {
+      const item = mapToLinkedInContentModel(content);
+      response.result.content.push(item);
     });
 
     dbResults.linkedAccount.forEach(account => {
       const accountType = account.metaData?.type || account.metaData?.accountType || '';
+      const profile = mapToLinkedInProfileModel(account, false);
       if (accountType === 'person') {
-        response.results.people.push({
-          id: account.id,
-          externalId: account.externalId,
-          userName: account.userName,
-          profileImage: account.profileImage,
-          ...account.metaData,
-        });
+        response.result.user.push(profile);
       } else if (accountType === 'company') {
-        response.results.companies.push({
-          id: account.id,
-          externalId: account.externalId,
-          userName: account.userName,
-          profileImage: account.profileImage,
-          ...account.metaData,
-        });
+        response.result.companies.push(profile);
       }
     });
 
-    response.count = response.results.posts.length + response.results.people.length + response.results.companies.length;
+    response.count = response.result.content.length + response.result.user.length + response.result.companies.length;
 
     return response;
   }
@@ -2039,33 +2114,32 @@ export class SearchService implements ISearchService {
     response.query = originalQuery;
 
     dbResults.contentStream.forEach(content => {
-      if (content.subType === 'media' || content.subType === 'post') {
-        response.results.media.push({
-          id: content.id,
-          externalId: content.externalId,
-          title: content.title,
-          type: content.subType,
-          ...content.metaData,
-        });
-      } else if (content.subType === 'hashtag') {
-        response.results.hashtags.push({
-          id: content.id,
-          externalId: content.externalId,
-          title: content.title,
-          type: content.subType,
-          ...content.metaData,
-        });
-      }
+      const item = new InstagramContentModel();
+      item.id = content.id;
+      item.title = content.title;
+      item.type = content.subType;
+      item.externalId = content.externalId;
+      item.caption = content.metaData?.caption;
+      item.mediaType = content.metaData?.mediaType;
+      item.mediaUrl = content.metaData?.mediaUrl;
+      item.permalink = content.metaData?.permalink;
+      item.thumbnailUrl = content.metaData?.thumbnailUrl;
+      item.timestamp = content.metaData?.timestamp;
+      item.username = content.metaData?.username;
+      item.likeCount = content.metaData?.likeCount;
+      item.commentsCount = content.metaData?.commentsCount;
+
+      response.result.content.push(item);
+    });
+
+    dbResults.userContent.forEach(content => {
+      const item = mapToInstagramContentModel(content);
+      response.result.content.push(item);
     });
 
     dbResults.linkedAccount.forEach(account => {
-      response.results.users.push({
-        id: account.id,
-        externalId: account.externalId,
-        userName: account.userName,
-        profileImage: account.profileImage,
-        ...account.metaData,
-      });
+      const profile = mapToInstagramProfileModel(account, false);
+      response.result.user.push(profile);
     });
 
     return response;
@@ -2200,27 +2274,31 @@ export class SearchService implements ISearchService {
 
     dbResults.contentStream.forEach(content => {
       if (content.subType === 'tweet') {
-        response.results.tweets.push({
+        const item: UserTweetModel = {
           id: content.id,
-          externalId: content.externalId,
-          title: content.title,
-          type: content.subType,
-          ...content.metaData,
-        });
+          type: 'tweet',
+          name: content.title,
+          tweetId: content.externalId,
+          tweet: content.metaData?.text || '',
+          editHistoryTweetIds: content.metaData?.editHistoryTweetIds || [],
+        };
+        response.result.content.push(item);
       }
     });
 
-    dbResults.linkedAccount.forEach(account => {
-      response.results.users.push({
-        id: account.id,
-        externalId: account.externalId,
-        userName: account.userName,
-        profileImage: account.profileImage,
-        ...account.metaData,
-      });
+    dbResults.userContent.forEach(content => {
+      const item = content.type === 'likedTweet'
+        ? mapToLikedTweetModel(content)
+        : mapToUserTweetModel(content);
+      response.result.content.push(item);
     });
 
-    response.resultCount = response.results.tweets.length + response.results.users.length;
+    dbResults.linkedAccount.forEach(account => {
+      const profile = mapToTwitterProfileModel(account, false);
+      response.result.user.push(profile);
+    });
+
+    response.resultCount = response.result.content.length + response.result.user.length;
 
     return response;
   }

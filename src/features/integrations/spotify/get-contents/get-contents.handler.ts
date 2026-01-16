@@ -3,9 +3,9 @@ import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { SpotifyContentModel } from "../../../../domain/mappers/spotify.mapper";
 import { IUserContentRepository } from "../../../../domain/repositories/iuserContent.repository";
 import { mapToSpotifyContentModel } from "../../../../domain/mappers/spotify.mapper";
+import { SpotifyPlaylistModel, SpotifyTrackModel, SpotifyAlbumModel, SpotifyShowModel } from "../../../../domain/contracts/spotify.model";
 import { UserContent } from "../../../../domain/entities/userContent.entity";
 import { CursorResult } from "../../../../domain/contracts/pagination/cursorResult";
 
@@ -30,7 +30,7 @@ export class SpotifyContentsQueryHandler implements ICommandHandler<SpotifyConte
     private readonly userContentRepository: IUserContentRepository,
   ) { }
 
-  public async execute(query: SpotifyContentsQuery): Promise<CursorResult<SpotifyContentModel>> {
+  public async execute(query: SpotifyContentsQuery): Promise<CursorResult<SpotifyPlaylistModel | SpotifyTrackModel | SpotifyAlbumModel | SpotifyShowModel>> {
     const { model } = query;
     const userId = model.userId || HttpContext.user?.[Globals.ClaimTypes.UserId];
 
@@ -45,7 +45,7 @@ export class SpotifyContentsQueryHandler implements ICommandHandler<SpotifyConte
       cursor,
     );
 
-    const mappedContents = contents.map((content: UserContent) => 
+    const mappedContents = contents.map((content: UserContent) =>
       mapToSpotifyContentModel(content)
     );
 

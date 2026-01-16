@@ -1,57 +1,6 @@
-export interface TwitterUserDataModel {
-  data: {
-    id: string;
-    name: string;
-    username: string;
-    created_at?: string;
-    description?: string;
-    profile_image_url?: string;
-    verified?: boolean;
-    protected?: boolean;
-    location?: string;
-    url?: string;
-    entities?: any;
-    pinned_tweet_id?: string;
-    public_metrics?: {
-      followers_count: number;
-      following_count: number;
-      tweet_count: number;
-      listed_count: number;
-    };
-    withheld?: {
-      country_codes?: string[];
-      scope?: string;
-    };
-  };
-}
-
-export interface TwitterProfileModel {
-  id: string;
-  name: string;
-  email: string;
-  userId: string;
-  userName: string;
-  twitterId: string;
-  description: string;
-  allowImport: boolean;
-  profileImage: string;
-  
-  countryCodes: string[];
-  followersCount: number;
-  followingCount: number;
-  pinnedTweetId: string;
-  listedCount: number;
-  tweetCount: string;
-  protected: boolean;
-  createdAt: string;
-  verified: boolean;
-  location: string;
-  entities: any;
-  url: string;
-}
 import { ApiProperty } from '@nestjs/swagger';
 
-export interface TwitterUserDataModel {
+export type TwitterUserDataType = {
   data: {
     id: string;
     name: string;
@@ -78,28 +27,68 @@ export interface TwitterUserDataModel {
   };
 }
 
-export interface TwitterProfileModel {
+export class TwitterProfileModel {
+  @ApiProperty()
   id: string;
+
+  @ApiProperty()
   name: string;
+
+  @ApiProperty()
   email: string;
+
+  @ApiProperty()
   userId: string;
+
+  @ApiProperty()
   userName: string;
+
+  @ApiProperty()
   twitterId: string;
+
+  @ApiProperty()
   description: string;
+
+  @ApiProperty()
   allowImport: boolean;
+
+  @ApiProperty()
   profileImage: string;
-  
+
+  @ApiProperty({ type: [String] })
   countryCodes: string[];
+
+  @ApiProperty()
   followersCount: number;
+
+  @ApiProperty()
   followingCount: number;
+
+  @ApiProperty()
   pinnedTweetId: string;
+
+  @ApiProperty()
   listedCount: number;
+
+  @ApiProperty()
   tweetCount: string;
+
+  @ApiProperty()
   protected: boolean;
+
+  @ApiProperty()
   createdAt: string;
+
+  @ApiProperty()
   verified: boolean;
+
+  @ApiProperty()
   location: string;
+
+  @ApiProperty({ type: Object })
   entities: any;
+
+  @ApiProperty()
   url: string;
 }
 
@@ -176,10 +165,10 @@ export class TwitterSearchResponseModel {
   @ApiProperty()
   query: string;
 
-  @ApiProperty({ type: [Object] })
-  results: {
-    tweets: any[];
-    users: any[];
+  @ApiProperty()
+  result: {
+    user: TwitterProfileModel[];
+    content: (UserTweetModel | UserLikedTweetModel)[];
   };
 
   @ApiProperty({ required: false })
@@ -190,9 +179,9 @@ export class TwitterSearchResponseModel {
 
   constructor() {
     this.query = '';
-    this.results = {
-      tweets: [],
-      users: [],
+    this.result = {
+      user: [],
+      content: [],
     };
     this.resultCount = 0;
   }

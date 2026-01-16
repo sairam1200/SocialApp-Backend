@@ -17,8 +17,8 @@ import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import {
-  GoogleUserDataModel,
-  YoutubeChannelDataModel,
+  GoogleUserDataType,
+  YoutubeChannelDataType,
 } from '../../../../domain/contracts/youtube.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
 import { UserBiometric } from '../../../../domain/entities/identity/userBiometric.entity';
@@ -301,18 +301,18 @@ export class GoogleConnectCallbackQueryHandler
   }
 
   private async fetchUserData(accessToken: string): Promise<{
-    profile: GoogleUserDataModel;
-    channel: YoutubeChannelDataModel;
+    profile: GoogleUserDataType;
+    channel: YoutubeChannelDataType;
   }> {
     try {
-      const response = await axios.get<GoogleUserDataModel>(
+      const response = await axios.get<GoogleUserDataType>(
         `${BASE_URL}/userinfo`,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         },
       );
 
-      const channelResponse = await axios.get<YoutubeChannelDataModel>(
+      const channelResponse = await axios.get<YoutubeChannelDataType>(
         'https://www.googleapis.com/youtube/v3/channels',
         {
           headers: {

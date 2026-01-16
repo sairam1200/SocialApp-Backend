@@ -26,7 +26,6 @@ export function mapToYouTubeContentModel(data: UserContent): YouTubeContentModel
     id: data.id,
     title: data.title,
     type: data.type,
-    platform: data.platform,
     externalId: data.externalId,
     description: data.metaData?.description,
     thumbnailUrl: data.metaData?.thumbnailUrl || data.metaData?.thumbnails?.default?.url,

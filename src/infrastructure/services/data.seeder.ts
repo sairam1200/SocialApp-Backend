@@ -3,11 +3,11 @@ import _const from '../../core/utils/const';
 import { Globals } from '../../core/globals';
 import logger from '../../core/utils/winston.util';
 import { Injectable, Inject } from '@nestjs/common';
-import { RoleType, UserType, ProfileImagePrivacy } from '../../domain/enums';
 import { stringUtil } from '../../core/utils/string.util';
-import { User, Role, RoleClaim, UserBiometric } from '../../domain/entities';
 import { Permissions } from '../../core/utils/permissions.util';
 import { generateInitialImage } from '../../core/utils/canvas.util';
+import { RoleType, UserType, ProfileImagePrivacy } from '../../domain/enums';
+import { User, Role, RoleClaim, UserBiometric } from '../../domain/entities';
 import { uploadBase64ToCloudinaryAsync } from '../../core/utils/cloudinary.util';
 import { IUserRepository, IRoleRepository, IRoleClaimRepository } from '../../domain/repositories';
 

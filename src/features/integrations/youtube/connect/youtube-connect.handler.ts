@@ -16,7 +16,7 @@ import { IUserRepository } from '../../../../domain/repositories/iuser.repositor
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { mapToYoutubeProfileModel } from '../../../../domain/mappers/youtube.mapper';
 import { IUserLoginRepository, ILinkedAccountRepository, IDataProtectionKeyRepository } from '../../../../domain/repositories';
-import { GoogleUserDataModel, YoutubeChannelDataModel, YoutubeProfileModel } from '../../../../domain/contracts/youtube.model';
+import { GoogleUserDataType, YoutubeChannelDataType, YoutubeProfileModel } from '../../../../domain/contracts/youtube.model';
 import { IContentStreamRepository } from '../../../../domain/repositories/icontentStream.repository';
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
@@ -245,18 +245,18 @@ export class YoutubeConnectCallbackQueryHandler
   }
 
   private async fetchUserData(accessToken: string): Promise<{
-    profile: GoogleUserDataModel;
-    channel: YoutubeChannelDataModel;
+    profile: GoogleUserDataType;
+    channel: YoutubeChannelDataType;
   }> {
     try {
-      const response = await axios.get<GoogleUserDataModel>(
+      const response = await axios.get<GoogleUserDataType>(
         `${BASE_URL}/userinfo`,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         },
       );
 
-      const channelResponse = await axios.get<YoutubeChannelDataModel>(
+      const channelResponse = await axios.get<YoutubeChannelDataType>(
         'https://www.googleapis.com/youtube/v3/channels',
         {
           headers: {

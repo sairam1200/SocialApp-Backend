@@ -16,7 +16,7 @@ import ApplicationException from "../../../../core/exceptions/application.except
 import { mapToLinkedInProfileModel } from "../../../../domain/mappers/linkedin.mapper";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { LinkedInProfileModel, LinkedInUserDataModel } from "../../../../domain/contracts/linkedin.model";
+import { LinkedInProfileModel, LinkedInUserDataType } from "../../../../domain/contracts/linkedin.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 import { serializeObject } from "core/utils/serialization.util";
 import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
@@ -172,7 +172,7 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
     }
   }
 
-  private async fetchUserDataAsync(accessToken: string): Promise<LinkedInUserDataModel> {
+  private async fetchUserDataAsync(accessToken: string): Promise<LinkedInUserDataType> {
     try {
       const response = await axios.get(`${API_BASE}/me?projection=(id,localizedFirstName,localizedLastName,profilePicture(displayImage~:playableStreams))`, {
         headers: {
@@ -238,7 +238,7 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
     return dataProtectionKey;
   }
 
-  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: LinkedInUserDataModel, userEmail: string): Promise<LinkedAccount> {
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: LinkedInUserDataType, userEmail: string): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       PLATFORM,
       userData.id,
@@ -259,7 +259,7 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
     return linkedAccount;
   }
 
-  private async createLinkedAccount(userId: string, userData: LinkedInUserDataModel, userEmail: string): Promise<LinkedAccount> {
+  private async createLinkedAccount(userId: string, userData: LinkedInUserDataType, userEmail: string): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       PLATFORM,
       userData.id,

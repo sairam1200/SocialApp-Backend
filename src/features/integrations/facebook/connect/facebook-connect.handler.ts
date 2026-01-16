@@ -16,7 +16,7 @@ import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey
 import { serializeObject } from '../../../../core/utils/serialization.util';
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { FacebookProfileModel, FacebookUserDataModel } from '../../../../domain/contracts/facebook.model';
+import { FacebookProfileModel, FacebookUserDataType } from '../../../../domain/contracts/facebook.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
 import { IContentStreamRepository } from '../../../../domain/repositories/icontentStream.repository';
 
@@ -173,9 +173,9 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<FacebookUserDataModel> {
+  private async fetchUserData(accessToken: string): Promise<FacebookUserDataType> {
     try {
-      const response = await axios.get<FacebookUserDataModel>(`${GRAPH_BASE}/me`, {
+      const response = await axios.get<FacebookUserDataType>(`${GRAPH_BASE}/me`, {
         params: {
           access_token: accessToken,
           fields: 'id,name,email,picture,friends',
@@ -205,7 +205,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     return dataProtectionKey;
   }
 
-  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: FacebookUserDataModel): Promise<LinkedAccount> {
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: FacebookUserDataType): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       _const.PLATFORMS.FACEBOOK,
       userData.id,
@@ -221,7 +221,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     return linkedAccount;
   }
 
-  private async createLinkedAccount(userId: string, email: string, userData: FacebookUserDataModel): Promise<LinkedAccount> {
+  private async createLinkedAccount(userId: string, email: string, userData: FacebookUserDataType): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       _const.PLATFORMS.FACEBOOK,
       userData.id,

@@ -93,6 +93,7 @@ export class QueuesModule implements NestModule {
         dependency.UserLoginRepository,
         dependency.UserContentRepository,
         dependency.LinkedAccountRepository,
+        dependency.ContentStreamRepository,
 
         YoutubeImportProcessor,
         SpotifyImportProcessor,

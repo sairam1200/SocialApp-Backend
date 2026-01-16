@@ -16,7 +16,7 @@ import ApplicationException from "../../../../core/exceptions/application.except
 import { mapToPinterestProfileModel } from "../../../../domain/mappers/pinterest.mapper";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { PinterestProfileModel, PinterestUserDataModel } from "../../../../domain/contracts/pinterest.model";
+import { PinterestProfileModel, PinterestUserDataType } from "../../../../domain/contracts/pinterest.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
 
@@ -213,9 +213,9 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<PinterestUserDataModel> {
+  private async fetchUserData(accessToken: string): Promise<PinterestUserDataType> {
     try {
-      const response = await axios.get<PinterestUserDataModel>(`${BASE_URL}/user_account`, {
+      const response = await axios.get<PinterestUserDataType>(`${BASE_URL}/user_account`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },

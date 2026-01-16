@@ -14,9 +14,6 @@ export class SpotifyContentModel {
   type: 'playlist' | 'track' | 'album' | 'show';
 
   @ApiProperty()
-  platform: string;
-
-  @ApiProperty()
   externalId: string;
 
   [key: string]: any;
@@ -48,7 +45,6 @@ export function mapToSpotifyPlaylistModel(data: UserContent): SpotifyPlaylistMod
   return {
     id: data.id,
     name: data.title,
-    type: 'playlist',
     owner: data.metaData.owner,
     public: data.metaData.public,
     imageUrl: data.metaData.imageUrl,
@@ -65,7 +61,6 @@ export function mapToSpotifyTrackModel(data: UserContent): SpotifyTrackModel {
   return {
     id: data.id,
     name: data.title,
-    type: 'track',
     releaseDate: data.metaData.releaseDate,
     popularity: data.metaData.popularity,
     durationMs: data.metaData.durationMs,
@@ -91,7 +86,6 @@ export function mapToSpotifyAlbumModel(data: UserContent): SpotifyAlbumModel {
   return {
     id: data.id,
     albumId: data.externalId,
-    type: 'album',
     name: data.title,
     artists: data.metaData.artists.map(artist => ({
       name: artist.name,
@@ -105,59 +99,27 @@ export function mapToSpotifyAlbumModel(data: UserContent): SpotifyAlbumModel {
   } as SpotifyAlbumModel;
 }
 
-export function mapToSpotifyContentModel(data: UserContent): SpotifyContentModel {
+export function mapToSpotifyContentModel(data: UserContent): SpotifyPlaylistModel | SpotifyTrackModel | SpotifyAlbumModel | SpotifyShowModel {
   const type = data.type as 'playlist' | 'track' | 'album' | 'show';
-
-  let mappedContent: SpotifyContentModel;
 
   switch (type) {
     case 'playlist':
-      mappedContent = {
-        ...mapToSpotifyPlaylistModel(data),
-        platform: data.platform,
-        externalId: data.externalId,
-      } as SpotifyContentModel;
-      break;
+      return mapToSpotifyPlaylistModel(data);
     case 'track':
-      mappedContent = {
-        ...mapToSpotifyTrackModel(data),
-        platform: data.platform,
-        externalId: data.externalId,
-      } as SpotifyContentModel;
-      break;
+      return mapToSpotifyTrackModel(data);
     case 'album':
-      mappedContent = {
-        ...mapToSpotifyAlbumModel(data),
-        platform: data.platform,
-        externalId: data.externalId,
-      } as SpotifyContentModel;
-      break;
+      return mapToSpotifyAlbumModel(data);
     case 'show':
-      mappedContent = {
-        ...mapToSpotifyShowModel(data),
-        platform: data.platform,
-        externalId: data.externalId,
-      } as SpotifyContentModel;
-      break;
+      return mapToSpotifyShowModel(data);
     default:
-      mappedContent = {
-        id: data.id,
-        name: data.title,
-        type: 'playlist' as const,
-        platform: data.platform,
-        externalId: data.externalId,
-      };
-      break;
+      return mapToSpotifyPlaylistModel(data);
   }
-
-  return mappedContent;
 }
 
 export function mapToSpotifyShowModel(data: UserContent): SpotifyShowModel {
   return {
     id: data.id,
     showId: data.externalId,
-    type: 'show',
     name: data.title,
     description: data.metaData.description,
     htmlDescription: data.metaData.htmlDescription,

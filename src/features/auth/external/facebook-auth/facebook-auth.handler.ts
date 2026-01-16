@@ -14,7 +14,7 @@ import { generateInitialImage } from '../../../../core/utils/canvas.util';
 import { ITokenService } from '../../../../domain/services/itoken.service';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
-import { FacebookUserDataModel } from '../../../../domain/contracts/facebook.model';
+import { FacebookUserDataType } from '../../../../domain/contracts/facebook.model';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { uploadBase64ToCloudinaryAsync } from '../../../../core/utils/cloudinary.util';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
@@ -279,9 +279,9 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<FacebookUserDataModel> {
+  private async fetchUserData(accessToken: string): Promise<FacebookUserDataType> {
     try {
-      const response = await axios.get<FacebookUserDataModel>(`${GRAPH_BASE}/me`, {
+      const response = await axios.get<FacebookUserDataType>(`${GRAPH_BASE}/me`, {
         params: {
           access_token: accessToken,
           fields: 'id,name,email,picture,link,birthday,gender,hometown,location,friends'

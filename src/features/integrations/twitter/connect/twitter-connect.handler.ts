@@ -18,7 +18,7 @@ import { mapToTwitterProfileModel } from "../../../../domain/mappers/twitter.map
 import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey.entity";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { TwitterProfileModel, TwitterUserDataModel } from "../../../../domain/contracts/twitter.model";
+import { TwitterProfileModel, TwitterUserDataType } from "../../../../domain/contracts/twitter.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
 
@@ -166,9 +166,9 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<TwitterUserDataModel> {
+  private async fetchUserData(accessToken: string): Promise<TwitterUserDataType> {
     try {
-      const response = await axios.get<TwitterUserDataModel>(`${BASE_URL}/users/me`, {
+      const response = await axios.get<TwitterUserDataType>(`${BASE_URL}/users/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
         params: {
           'user.fields': [
@@ -212,7 +212,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     return dataProtectionKey;
   }
 
-  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: TwitterUserDataModel): Promise<LinkedAccount> {
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: TwitterUserDataType): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       _const.PLATFORMS.TWITTER,
       userData.data.id,
@@ -241,7 +241,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     return linkedAccount;
   }
 
-  private async createLinkedAccount(userId: string, userData: TwitterUserDataModel): Promise<LinkedAccount> {
+  private async createLinkedAccount(userId: string, userData: TwitterUserDataType): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       _const.PLATFORMS.TWITTER,
       userData.data.id,

@@ -27,6 +27,5 @@ export class GlobalSearchController {
 
     const result = await this.queryBus.execute(new GlobalSearchQuery({ model }));
     return res.status(HttpStatus.OK).json(result);
-
   }
 }

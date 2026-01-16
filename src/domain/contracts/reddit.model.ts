@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export interface RedditUserDataModel {
+export type RedditUserDataType = {
   id: string;
   name: string;
   icon_img?: string;
@@ -55,9 +55,6 @@ export class RedditContentModel {
 
   @ApiProperty()
   type: string;
-
-  @ApiProperty()
-  platform: string;
 
   @ApiProperty()
   externalId: string;
@@ -123,11 +120,10 @@ export class RedditSearchResponseModel {
   @ApiProperty()
   query: string;
 
-  @ApiProperty({ type: [Object] })
-  results: {
-    posts: any[];
-    subreddits: any[];
-    users: any[];
+  @ApiProperty()
+  result: {
+    user: RedditProfileModel[];
+    content: RedditContentModel[];
   };
 
   @ApiProperty({ required: false })
@@ -138,10 +134,9 @@ export class RedditSearchResponseModel {
 
   constructor() {
     this.query = '';
-    this.results = {
-      posts: [],
-      subreddits: [],
-      users: [],
+    this.result = {
+      user: [],
+      content: [],
     };
   }
 }

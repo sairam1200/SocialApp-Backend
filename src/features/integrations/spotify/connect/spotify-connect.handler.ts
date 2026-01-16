@@ -16,7 +16,7 @@ import ApplicationException from "../../../../core/exceptions/application.except
 import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey.entity";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { SpotifyProfileModel, SpotifyUserDataModel } from "../../../../domain/contracts/spotify.model";
+import { SpotifyProfileModel, SpotifyUserDataType } from "../../../../domain/contracts/spotify.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
 
@@ -221,9 +221,9 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<{ data: SpotifyUserDataModel, userfollowing: number }> {
+  private async fetchUserData(accessToken: string): Promise<{ data: SpotifyUserDataType, userfollowing: number }> {
     try {
-      const response = await axios.get<SpotifyUserDataModel>(`${BASE_URL}/me`, {
+      const response = await axios.get<SpotifyUserDataType>(`${BASE_URL}/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 

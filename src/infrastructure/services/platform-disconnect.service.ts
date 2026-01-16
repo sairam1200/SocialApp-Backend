@@ -1,13 +1,13 @@
-import { Injectable, Inject } from '@nestjs/common';
 import _const from '../../core/utils/const';
-import { ContentStream, LinkedAccount, UserContent } from '../../domain/entities';
+import logger from '../../core/utils/winston.util';
+import { Injectable, Inject } from '@nestjs/common';
 import { StreamEntityType } from '../../domain/enums';
+import { ContentStream, LinkedAccount, UserContent } from '../../domain/entities';
+import { IUserLoginRepository } from '../../domain/repositories/iuserLogin.repository';
 import { IUserContentRepository } from '../../domain/repositories/iuserContent.repository';
 import { ILinkedAccountRepository } from '../../domain/repositories/ilinkedAccount.repository';
 import { IContentStreamRepository } from '../../domain/repositories/icontentStream.repository';
-import { IUserLoginRepository } from '../../domain/repositories/iuserLogin.repository';
 import { IPlatformDisconnectService } from '../../domain/services/iplatform-disconnect.service';
-import logger from '../../core/utils/winston.util';
 
 @Injectable()
 export class PlatformDisconnectService implements IPlatformDisconnectService {
@@ -22,7 +22,7 @@ export class PlatformDisconnectService implements IPlatformDisconnectService {
     private readonly userLoginRepository: IUserLoginRepository,
   ) { }
 
-  async disconnectPlatformAsync(userId: string, platform: string): Promise<void> {
+  public async disconnectPlatformAsync(userId: string, platform: string): Promise<void> {
     logger.info(`[PlatformDisconnect] Starting disconnect for user ${userId}, platform ${platform}`);
 
     const linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
@@ -148,4 +148,3 @@ export class PlatformDisconnectService implements IPlatformDisconnectService {
     await this.contentStreamRepository.createAsync([contentStream]);
   }
 }
-

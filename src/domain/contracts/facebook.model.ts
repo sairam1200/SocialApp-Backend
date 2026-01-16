@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export interface FacebookUserDataModel {
+export type FacebookUserDataType = {
   id: string;
   name: string;
   email: string;
@@ -36,9 +36,6 @@ export class FacebookOnlineModel {
 
   @ApiProperty()
   type: string;
-
-  @ApiProperty()
-  platform: string;
 
   @ApiProperty()
   externalId: string;
@@ -138,7 +135,7 @@ export class FacebookSearchParamsModel {
   forceRefresh?: boolean;
 }
 
-export interface FacebookSearchItemModel {
+export type FacebookSearchItemModel = {
   id: string;
   name?: string;
   message?: string;

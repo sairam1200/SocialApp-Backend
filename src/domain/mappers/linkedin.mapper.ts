@@ -26,7 +26,6 @@ export function mapToLinkedInContentModel(data: UserContent): LinkedInContentMod
     id: data.id,
     title: data.title,
     type: data.type,
-    platform: data.platform,
     externalId: data.externalId,
     text: data.metaData?.text?.text || data.metaData?.commentary?.text || data.metaData?.commentary,
     commentary: data.metaData?.commentary,
