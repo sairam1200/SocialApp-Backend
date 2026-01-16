@@ -1,4 +1,4 @@
-import { UserType } from "../../enums";
+import { UserType, ProfilePrivacy } from "../../enums";
 import { BaseEntity } from "../../baseEntity";
 import { Playlist } from "../collection/playlist.entity";
 import { Entity, Column, OneToMany, OneToOne } from "typeorm";
@@ -86,6 +86,13 @@ export class User extends BaseEntity {
 
     @Column({ nullable: true })
     securityStamp?: string;
+
+    @Column({
+        type: 'enum',
+        enum: ProfilePrivacy,
+        default: ProfilePrivacy.Public,
+    })
+    profilePrivacy: ProfilePrivacy;
 
     @Column({
         type: 'enum',
