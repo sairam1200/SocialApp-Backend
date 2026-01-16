@@ -1,7 +1,6 @@
 import { Response } from "express";
 import { QueryBus } from "@nestjs/cqrs";
 import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 import { YoutubeSearchQuery, YoutubeSearchRequestModel } from "./youtube-search.handler";
 
@@ -17,7 +16,6 @@ export class YoutubeSearchController {
 
 
   @Post('search')
-  @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 200, description: 'OK' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })

@@ -17,6 +17,7 @@ import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
+import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
 
 export class RedditConnectQuery {
   model: { state: string };
@@ -68,6 +69,8 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
     private readonly eventEmitter: EventEmitter2,
   ) { }
 
@@ -117,8 +120,16 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
         isGold: userData.is_gold,
         created: userData.created,
       };
+      await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+        _const.PLATFORMS.REDDIT,
+        newExternalId,
+      );
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
+      await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+        _const.PLATFORMS.REDDIT,
+        userData.id,
+      );
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
         platform: _const.PLATFORMS.REDDIT,
         userId: user.id,

@@ -18,6 +18,7 @@ import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { FacebookProfileModel, FacebookUserDataModel } from '../../../../domain/contracts/facebook.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
+import { IContentStreamRepository } from '../../../../domain/repositories/icontentStream.repository';
 
 const GRAPH_BASE = 'https://graph.facebook.com/v23.0';
 
@@ -82,6 +83,8 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
     private readonly eventEmitter: EventEmitter2,
   ) { }
 
@@ -203,6 +206,10 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
   }
 
   private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: FacebookUserDataModel): Promise<LinkedAccount> {
+    await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+      _const.PLATFORMS.FACEBOOK,
+      userData.id,
+    );
     linkedAccount.externalId = userData.id;
     linkedAccount.userName = userData.name;
     linkedAccount.profileImage = userData.picture?.data?.url;
@@ -215,6 +222,10 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
   }
 
   private async createLinkedAccount(userId: string, email: string, userData: FacebookUserDataModel): Promise<LinkedAccount> {
+    await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+      _const.PLATFORMS.FACEBOOK,
+      userData.id,
+    );
     const newEntry = new LinkedAccount({
       platform: _const.PLATFORMS.FACEBOOK,
       email,

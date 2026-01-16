@@ -116,6 +116,24 @@ import { InstagramSearchQueryHandler } from "./instagram/search/instagram-search
 import { TwitterSearchQueryHandler } from "./twitter/search/twitter-search.handler";
 import { LinkedInSearchQueryHandler } from "./linkedin/search/linkedin-search.handler";
 import { InstagramSearchController } from "./instagram/search/instagram-search.endpoint";
+import { FacebookDisconnectController } from "./facebook/disconnect/facebook-disconnect.endpoint";
+import { FacebookDisconnectCommandHandler } from "./facebook/disconnect/facebook-disconnect.handler";
+import { InstagramDisconnectController } from "./instagram/disconnect/instagram-disconnect.endpoint";
+import { InstagramDisconnectCommandHandler } from "./instagram/disconnect/instagram-disconnect.handler";
+import { TwitterDisconnectController } from "./twitter/disconnect/twitter-disconnect.endpoint";
+import { TwitterDisconnectCommandHandler } from "./twitter/disconnect/twitter-disconnect.handler";
+import { LinkedInDisconnectController } from "./linkedin/disconnect/linkedin-disconnect.endpoint";
+import { LinkedInDisconnectCommandHandler } from "./linkedin/disconnect/linkedin-disconnect.handler";
+import { TiktokDisconnectController } from "./tiktok/disconnect/tiktok-disconnect.endpoint";
+import { TiktokDisconnectCommandHandler } from "./tiktok/disconnect/tiktok-disconnect.handler";
+import { YoutubeDisconnectController } from "./youtube/disconnect/youtube-disconnect.endpoint";
+import { YoutubeDisconnectCommandHandler } from "./youtube/disconnect/youtube-disconnect.handler";
+import { SpotifyDisconnectController } from "./spotify/disconnect/spotify-disconnect.endpoint";
+import { SpotifyDisconnectCommandHandler } from "./spotify/disconnect/spotify-disconnect.handler";
+import { PinterestDisconnectController } from "./pinterest/disconnect/pinterest-disconnect.endpoint";
+import { PinterestDisconnectCommandHandler } from "./pinterest/disconnect/pinterest-disconnect.handler";
+import { RedditDisconnectController } from "./reddit/disconnect/reddit-disconnect.endpoint";
+import { RedditDisconnectCommandHandler } from "./reddit/disconnect/reddit-disconnect.handler";
 
 export { FacebookConnectController } from "./facebook/connect/facebook-connect.endpoint"
 export { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./facebook/connect/facebook-connect.handler";
@@ -130,10 +148,14 @@ export { FacebookContentsQueryHandler } from "./facebook/get-contents/get-conten
 
 export { FacebookSearchController } from "./facebook/search/facebook-search.endpoint";
 export { FacebookSearchQueryHandler } from "./facebook/search/facebook-search.handler";
+export { FacebookDisconnectController } from "./facebook/disconnect/facebook-disconnect.endpoint";
+export { FacebookDisconnectCommandHandler } from "./facebook/disconnect/facebook-disconnect.handler";
 export { InstagramSearchController } from "./instagram/search/instagram-search.endpoint";
 export { InstagramSearchQueryHandler } from "./instagram/search/instagram-search.handler";
 export { TwitterSearchController } from "./twitter/search/twitter-search.endpoint";
 export { TwitterSearchQueryHandler } from "./twitter/search/twitter-search.handler";
+export { TwitterDisconnectController } from "./twitter/disconnect/twitter-disconnect.endpoint";
+export { TwitterDisconnectCommandHandler } from "./twitter/disconnect/twitter-disconnect.handler";
 export { LinkedInSearchController } from "./linkedin/search/linkedin-search.endpoint";
 export { LinkedInSearchQueryHandler } from "./linkedin/search/linkedin-search.handler";
 
@@ -148,6 +170,8 @@ export { InstagramContentsQueryHandler } from "./instagram/get-contents/get-cont
 export { InstagramImportController } from "./instagram/import/instagram-import.endpoint";
 export { InstagramImportCommandHandler } from "./instagram/import/instagram-import.handler";
 export { CancelInstagramImportCommandHandler } from "./instagram/import/cancel-instagram-import.handler";
+export { InstagramDisconnectController } from "./instagram/disconnect/instagram-disconnect.endpoint";
+export { InstagramDisconnectCommandHandler } from "./instagram/disconnect/instagram-disconnect.handler";
 export { InstagramSyncController } from "./instagram/sync/instagram-sync.endpoint";
 export { EnableInstagramSyncCommandHandler } from "./instagram/sync/enable-instagram-sync.handler";
 export { DisableInstagramSyncCommandHandler } from "./instagram/sync/disable-instagram-sync.handler";
@@ -169,6 +193,8 @@ export { DisablePinterestSyncCommandHandler } from "./pinterest/sync/disable-pin
 
 export { PinterestSearchController } from "./pinterest/search/pinterest-search.endpoint";
 export { PinterestSearchQueryHandler } from "./pinterest/search/pinterest-search.handler";
+export { PinterestDisconnectController } from "./pinterest/disconnect/pinterest-disconnect.endpoint";
+export { PinterestDisconnectCommandHandler } from "./pinterest/disconnect/pinterest-disconnect.handler";
 
 export { RedditConnectController } from "./reddit/connect/reddit-connect.endpoint";
 export { RedditConnectCallbackQueryHandler, RedditConnectQueryHandler } from "./reddit/connect/reddit-connect.handler";
@@ -186,6 +212,8 @@ export { EnableRedditSyncCommandHandler } from "./reddit/sync/enable-reddit-sync
 export { DisableRedditSyncCommandHandler } from "./reddit/sync/disable-reddit-sync.handler";
 export { RedditSearchController } from "./reddit/search/reddit-search.endpoint";
 export { RedditSearchQueryHandler } from "./reddit/search/reddit-search.handler";
+export { RedditDisconnectController } from "./reddit/disconnect/reddit-disconnect.endpoint";
+export { RedditDisconnectCommandHandler } from "./reddit/disconnect/reddit-disconnect.handler";
 
 export { SpotifyConnectController } from "./spotify/connect/spotify-connect.endpoint";
 export { SpotifyConnectCallbackQueryHandler, SpotifyConnectQueryHandler } from "./spotify/connect/spotify-connect.handler";
@@ -203,6 +231,8 @@ export { EnableSpotifySyncCommandHandler } from "./spotify/sync/enable-spotify-s
 export { DisableSpotifySyncCommandHandler } from "./spotify/sync/disable-spotify-sync.handler";
 export { SpotifySearchController } from "./spotify/search/spotify-search.endpoint";
 export { SpotifySearchQueryHandler } from "./spotify/search/spotify-search.handler";
+export { SpotifyDisconnectController } from "./spotify/disconnect/spotify-disconnect.endpoint";
+export { SpotifyDisconnectCommandHandler } from "./spotify/disconnect/spotify-disconnect.handler";
 
 export { TwitterConnectController } from "./twitter/connect/twitter-connect.endpoint";
 export { TwitterConnectCallbackQueryHandler, TwiiterConnectQueryHandler } from "./twitter/connect/twitter-connect.handler";
@@ -234,6 +264,8 @@ export { YoutubeSyncController } from "./youtube/sync/youtube-sync.endpoint";
 export { EnableYoutubeSyncCommandHandler } from "./youtube/sync/enable-youtube-sync.handler";
 export { DisableYoutubeSyncCommandHandler } from "./youtube/sync/disable-youtube-sync.handler";
 export { YoutubeWebhookController } from "./youtube/webhook/youtube-webhook.endpoint";
+export { YoutubeDisconnectController } from "./youtube/disconnect/youtube-disconnect.endpoint";
+export { YoutubeDisconnectCommandHandler } from "./youtube/disconnect/youtube-disconnect.handler";
 
 export { TiktokConnectController as TikTokConnectController } from "./tiktok/connect/tiktok-connect.endpoint";
 export { TiktokConnectCallbackQueryHandler, TiktokConnectQueryHandler } from "./tiktok/connect/tiktok-connect.handler";
@@ -271,53 +303,62 @@ const controllers = [
   FacebookProfileController,
   FacebookContentsController,
   FacebookSearchController,
+  FacebookDisconnectController,
   InstagramConnectController,
   InstagramProfileController,
   InstagramContentsController,
   InstagramImportController,
   InstagramSearchController,
+  InstagramDisconnectController,
   PinterestConnectController,
   PinterestProfileController,
   PinterestContentsController,
   PinterestImportController,
   PinterestSearchController,
   PinterestSyncController,
+  PinterestDisconnectController,
   RedditConnectController,
   RedditProfileController,
   RedditContentsController,
   RedditImportController,
   RedditSearchController,
   RedditSyncController,
+  RedditDisconnectController,
   SpotifyConnectController,
   SpotifyProfileController,
   SpotifyContentsController,
   SpotifyImportController,
   SpotifySearchController,
   SpotifySyncController,
+  SpotifyDisconnectController,
   TwitterConnectController,
   TwitterProfileController,
   TwitterContentsController,
   TwitterImportController,
   TwitterSyncController,
+  TwitterSearchController,
+  TwitterDisconnectController,
   YoutubeConnectController,
   YoutubeProfileController,
   YoutubeContentsController,
   YoutubeImportController,
   YoutubeSyncController,
   YoutubeWebhookController,
+  YoutubeDisconnectController,
   TiktokConnectController,
   TikTokProfileController,
   TiktokContentsController,
   TikTokImportController,
   TiktokSearchController,
   TikTokSyncController,
+  TiktokDisconnectController,
   LinkedInConnectController,
   LinkedInProfileController,
   LinkedInContentsController,
   LinkedInImportController,
   LinkedInSearchController,
   LinkedInSyncController,
-  TwitterSearchController,
+  LinkedInDisconnectController,
 ];
 
 const handlers = [
@@ -326,18 +367,21 @@ const handlers = [
   FacebookProfileQueryHandler,
   FacebookContentsQueryHandler,
   FacebookSearchQueryHandler,
+  FacebookDisconnectCommandHandler,
   InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler,
   InstagramProfileQueryHandler,
   InstagramContentsQueryHandler,
   InstagramImportCommandHandler,
   CancelInstagramImportCommandHandler,
   InstagramSearchQueryHandler,
+  InstagramDisconnectCommandHandler,
   PinterestConnectCallbackQueryHandler, PinterestConnectQueryHandler,
   PinterestProfileQueryHandler,
   PinterestContentsQueryHandler,
   PinterestImportCommandHandler,
   CancelPinterestImportCommandHandler,
   PinterestSearchQueryHandler,
+  PinterestDisconnectCommandHandler,
   EnablePinterestSyncCommandHandler,
   DisablePinterestSyncCommandHandler,
   RedditConnectCallbackQueryHandler, RedditConnectQueryHandler,
@@ -346,6 +390,7 @@ const handlers = [
   RedditImportCommandHandler,
   CancelRedditImportCommandHandler,
   RedditSearchQueryHandler,
+  RedditDisconnectCommandHandler,
   EnableRedditSyncCommandHandler,
   DisableRedditSyncCommandHandler,
   SpotifyConnectCallbackQueryHandler, SpotifyConnectQueryHandler,
@@ -354,6 +399,7 @@ const handlers = [
   SpotifyImportCommandHandler,
   CancelSpotifyImportCommandHandler,
   SpotifySearchQueryHandler,
+  SpotifyDisconnectCommandHandler,
   EnableSpotifySyncCommandHandler,
   DisableSpotifySyncCommandHandler,
   TwitterConnectCallbackQueryHandler, TwiiterConnectQueryHandler,
@@ -362,6 +408,7 @@ const handlers = [
   TwitterImportCommandHandler,
   CancelTwitterImportCommandHandler,
   TwitterSearchQueryHandler,
+  TwitterDisconnectCommandHandler,
   EnableTwitterSyncCommandHandler,
   DisableTwitterSyncCommandHandler,
   YoutubeConnectCallbackQueryHandler, YoutubeConnectQueryHandler,
@@ -369,6 +416,7 @@ const handlers = [
   YoutubeContentsQueryHandler,
   YoutubeImportCommandHandler,
   CancelYoutubeImportCommandHandler,
+  YoutubeDisconnectCommandHandler,
   EnableYoutubeSyncCommandHandler,
   DisableYoutubeSyncCommandHandler,
   TiktokConnectCallbackQueryHandler,
@@ -378,6 +426,7 @@ const handlers = [
   TiktokImportCommandHandler,
   CancelTiktokImportCommandHandler,
   TiktokSearchQueryHandler,
+  TiktokDisconnectCommandHandler,
   EnableTiktokSyncCommandHandler,
   DisableTiktokSyncCommandHandler,
   LinkedInConnectCallbackQueryHandler,
@@ -386,6 +435,7 @@ const handlers = [
   LinkedInImportCommandHandler,
   CancelLinkedInImportCommandHandler,
   LinkedInSearchQueryHandler,
+  LinkedInDisconnectCommandHandler,
   EnableLinkedInSyncCommandHandler,
   DisableLinkedInSyncCommandHandler,
 ];

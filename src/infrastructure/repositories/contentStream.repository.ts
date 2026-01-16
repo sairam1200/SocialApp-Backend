@@ -1,4 +1,4 @@
-import { Repository } from "typeorm";
+import { Repository, In } from "typeorm";
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ContentStream } from "../../domain/entities";
@@ -7,7 +7,6 @@ import { IContentStreamRepository } from "../../domain/repositories/icontentStre
 
 @Injectable()
 export class ContentStreamRepository implements IContentStreamRepository {
-
 
   constructor(
     @InjectRepository(ContentStream)
@@ -83,5 +82,25 @@ export class ContentStreamRepository implements IContentStreamRepository {
     const result = await queryBuilder.getManyAndCount();
     console.log('Query Result:', result);
     return result
+  }
+
+  async deleteByPlatformAndExternalIdAsync(platform: string, externalId: string): Promise<void> {
+    await this.contentStreamContext.delete({
+      platform,
+      externalId,
+    });
+  }
+
+  async deleteByPlatformAndExternalIdsAsync(platform: string, externalIds: string[]): Promise<void> {
+    if (externalIds.length === 0) return;
+    await this.contentStreamContext.delete({
+      platform,
+      externalId: In(externalIds),
+    });
+  }
+
+  async createAsync(contentStreams: ContentStream[]): Promise<ContentStream[]> {
+    if (contentStreams.length === 0) return [];
+    return await this.contentStreamContext.save(contentStreams);
   }
 }

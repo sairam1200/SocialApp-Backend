@@ -14,6 +14,7 @@ import { IUserContentRepository } from "../../../domain/repositories/iuserConten
 import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
 import BullMQConfig from "../../../core/config/bullmq.config";
 import { mapToLinkedInContentModel } from "../../../domain/mappers/linkedin.mapper";
+import { IContentStreamRepository } from "../../../domain/repositories/icontentStream.repository";
 
 interface CursorMap {
   [key: string]: string | null;
@@ -46,6 +47,8 @@ export class LinkedInImportProcessor extends WorkerHost {
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.INOTIFICATION_SERVICE)
     private readonly notificationService: INotificationService,
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
     private readonly gateway: ImportGateway,
   ) {
     super();
@@ -175,6 +178,10 @@ export class LinkedInImportProcessor extends WorkerHost {
             }
 
             try {
+              await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+                _const.PLATFORMS.LINKEDIN,
+                content.externalId,
+              );
               const savedContent = await this.userContentRepository.createAsync(content);
               importedExternalIds.push(savedContent.externalId);
               const mappedContent = mapToLinkedInContentModel(savedContent);

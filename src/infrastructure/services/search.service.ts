@@ -66,6 +66,7 @@ import {
 } from 'domain/mappers/facebook.mapper';
 import { SearchCacheService } from './searchCache.service';
 import { ApplicationException } from 'core/exceptions';
+import configs from '../../configs';
 
 @Injectable()
 export class SearchService implements ISearchService {
@@ -564,7 +565,7 @@ export class SearchService implements ISearchService {
       limit,
     );
 
-    if (shouldFetch && accessToken) {
+    if (shouldFetch) {
       const lockAcquired = await this.cacheService.acquireLock(cacheParams);
 
       if (!lockAcquired) {
@@ -591,7 +592,7 @@ export class SearchService implements ISearchService {
 
     const response = this.buildSpotifyResponse(originalQuery, dbResults);
 
-    if (shouldFetch && accessToken) {
+    if (shouldFetch) {
       await this.cacheService.setCachedResults(cacheParams, response);
     }
 
@@ -640,7 +641,7 @@ export class SearchService implements ISearchService {
       limit,
     );
 
-    if (shouldFetch && accessToken) {
+    if (shouldFetch) {
       const lockAcquired = await this.cacheService.acquireLock(cacheParams);
 
       if (!lockAcquired) {
@@ -667,7 +668,7 @@ export class SearchService implements ISearchService {
 
     const response = this.buildRedditResponse(originalQuery, dbResults);
 
-    if (shouldFetch && accessToken) {
+    if (shouldFetch) {
       await this.cacheService.setCachedResults(cacheParams, response);
     }
 
@@ -792,7 +793,7 @@ export class SearchService implements ISearchService {
       limit,
     );
 
-    if (shouldFetch && accessToken) {
+    if (shouldFetch) {
       const lockAcquired = await this.cacheService.acquireLock(cacheParams);
 
       if (!lockAcquired) {
@@ -819,7 +820,7 @@ export class SearchService implements ISearchService {
 
     const response = this.buildYoutubeResponse(originalQuery, dbResults);
 
-    if (shouldFetch && accessToken) {
+    if (shouldFetch) {
       await this.cacheService.setCachedResults(cacheParams, response);
     }
 
@@ -893,7 +894,7 @@ export class SearchService implements ISearchService {
     query: string,
     limit: number,
     filters: Record<string, any>,
-    accessToken: string,
+    accessToken: string | undefined,
     pageToken?: string,
   ): Promise<void> {
     const ytResults = await this.fetchYouTubeOnlineAsync(false, query, limit, filters, accessToken, pageToken);
@@ -1086,7 +1087,7 @@ export class SearchService implements ISearchService {
     query: string,
     limit: number,
     filters: Record<string, string | number>,
-    accessToken: string,
+    accessToken: string | undefined,
     pageToken?: string,
   ): Promise<YouTubeSearchResponseModel> {
     const emptyResult = {
@@ -1097,7 +1098,7 @@ export class SearchService implements ISearchService {
       items: [],
     };
 
-    if (skipSearch || !accessToken) return emptyResult;
+    if (skipSearch) return emptyResult;
 
     try {
       const params: Record<string, string | number> = {
@@ -1114,14 +1115,21 @@ export class SearchService implements ISearchService {
 
       if (pageToken) params.pageToken = pageToken;
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`;
+      } else {
+        params.key = configs.youtube.clientId;
+      }
+
       const response = await axios.get<YouTubeSearchResponseModel>(
         'https://www.googleapis.com/youtube/v3/search',
         {
           params,
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
+          headers,
           timeout: 10000,
         },
       );
@@ -1129,7 +1137,7 @@ export class SearchService implements ISearchService {
       return response.data || emptyResult;
     } catch (error: any) {
       const status = error?.response?.status;
-      if (status === 401) throw new ApplicationException('YouTube API authentication failed. Please refresh your token.');
+      if (status === 401) throw new ApplicationException('YouTube API authentication failed. Please refresh your token or check your API key.');
       if (status === 403) throw new ApplicationException('YouTube API access forbidden. Please check your API quota.');
       if (status === 429) throw new ApplicationException('YouTube API rate limit exceeded. Please try again later.');
       if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
@@ -1190,7 +1198,7 @@ export class SearchService implements ISearchService {
     query: string,
     limit: number,
     filters: Record<string, any>,
-    accessToken: string,
+    accessToken: string | undefined,
     after?: string,
   ): Promise<void> {
     const redditResults = await this.fetchRedditOnlineAsync(false, query, limit, filters, accessToken, after);
@@ -1256,17 +1264,43 @@ export class SearchService implements ISearchService {
     }
   }
 
+  private async getRedditAppOnlyTokenAsync(): Promise<string> {
+    try {
+      const basicAuth = Buffer.from(`${configs.reddit.clientId}:${configs.reddit.clientSecret}`).toString('base64');
+      const response = await axios.post(
+        'https://www.reddit.com/api/v1/access_token',
+        'grant_type=client_credentials',
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${basicAuth}`,
+            'User-Agent': 'Gaddr/1.0',
+          },
+        },
+      );
+      return response.data.access_token;
+    } catch (error: any) {
+      logger.error('Error getting Reddit app-only token:', error?.response?.data || error?.message);
+      throw new ApplicationException('Failed to authenticate with Reddit API.');
+    }
+  }
+
   private async fetchRedditOnlineAsync(
     skipSearch: boolean,
     query: string,
     limit: number,
     filters: Record<string, any>,
-    accessToken: string,
+    accessToken: string | undefined,
     after?: string,
   ): Promise<any> {
-    if (skipSearch || !accessToken) return { data: { children: [] } };
+    if (skipSearch) return { data: { children: [] } };
 
     try {
+      let token = accessToken;
+      if (!token) {
+        token = await this.getRedditAppOnlyTokenAsync();
+      }
+
       const searchType = filters.type || 'link';
       const params: Record<string, string | number> = {
         q: query,
@@ -1285,7 +1319,7 @@ export class SearchService implements ISearchService {
       const response = await axios.get(url, {
         params,
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
           'User-Agent': 'Gaddr/1.0',
         },
         timeout: 10000,
@@ -1357,7 +1391,7 @@ export class SearchService implements ISearchService {
     query: string,
     limit: number,
     filters: Record<string, any>,
-    accessToken: string,
+    accessToken: string | undefined,
     offset?: number,
   ): Promise<void> {
     const spotifyResults = await this.fetchSpotifyOnlineAsync(false, query, limit, filters, accessToken, offset);
@@ -1407,17 +1441,42 @@ export class SearchService implements ISearchService {
     }
   }
 
+  private async getSpotifyClientCredentialsTokenAsync(): Promise<string> {
+    try {
+      const basicAuth = Buffer.from(`${configs.spotify.clientId}:${configs.spotify.clientSecret}`).toString('base64');
+      const response = await axios.post(
+        'https://accounts.spotify.com/api/token',
+        'grant_type=client_credentials',
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${basicAuth}`,
+          },
+        },
+      );
+      return response.data.access_token;
+    } catch (error: any) {
+      logger.error('Error getting Spotify client credentials token:', error?.response?.data || error?.message);
+      throw new ApplicationException('Failed to authenticate with Spotify API.');
+    }
+  }
+
   private async fetchSpotifyOnlineAsync(
     skipSearch: boolean,
     query: string,
     limit: number,
     filters: Record<string, any>,
-    accessToken: string,
+    accessToken: string | undefined,
     offset?: number,
   ): Promise<any> {
-    if (skipSearch || !accessToken) return { tracks: { items: [] }, albums: { items: [] }, playlists: { items: [] } };
+    if (skipSearch) return { tracks: { items: [] }, albums: { items: [] }, playlists: { items: [] } };
 
     try {
+      let token = accessToken;
+      if (!token) {
+        token = await this.getSpotifyClientCredentialsTokenAsync();
+      }
+
       const params: Record<string, string | number> = {
         q: query,
         type: 'track,album,playlist,artist,show',
@@ -1434,7 +1493,7 @@ export class SearchService implements ISearchService {
       const response = await axios.get('https://api.spotify.com/v1/search', {
         params,
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         timeout: 10000,

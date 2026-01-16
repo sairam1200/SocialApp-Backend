@@ -16,7 +16,6 @@ export class GlobalSearchController {
   ) { }
 
   @Post()
-  @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 200, description: 'OK', type: GlobalSearchResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })

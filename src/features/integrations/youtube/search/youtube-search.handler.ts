@@ -53,7 +53,7 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
 
     if (youtubeAccessToken) {
       const isTokenValid = await this.verifyAccessTokenAsync(youtubeAccessToken);
-      if (!isTokenValid) {
+      if (!isTokenValid && userId) {
         const now = new Date();
         const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.YOUTUBE);
 
@@ -68,28 +68,29 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
           accessToken = access_token;
           expiresIn = expires_in;
         }
-
       } else {
         accessToken = youtubeAccessToken;
       }
-    } else {
+    } else if (userId) {
       const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.YOUTUBE);
-      const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
-      const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
-      if (!isTokenValid) {
-        const {
-          access_token,
-          expires_in
+      if (userLogin) {
+        const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
+        const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
+        if (!isTokenValid) {
+          const {
+            access_token,
+            expires_in
 
-        } = await this.refreshTokenAsync(tokenValue.refresh_token);
-        userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
-        userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
-        await this.userLoginRepository.updateAsync(userLogin);
-        accessToken = access_token;
-        expiresIn = expires_in;
-      } else {
-        accessToken = tokenValue.access_token;
-        expiresIn = tokenValue.expires_in;
+          } = await this.refreshTokenAsync(tokenValue.refresh_token);
+          userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
+          userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
+          await this.userLoginRepository.updateAsync(userLogin);
+          accessToken = access_token;
+          expiresIn = expires_in;
+        } else {
+          accessToken = tokenValue.access_token;
+          expiresIn = tokenValue.expires_in;
+        }
       }
     }
 
@@ -176,11 +177,12 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
       );
     });
 
-    if (!hasExistingEntry && normalizedQuery) {
+    const userId = HttpContext.getCurrentUserId;
+    if (!hasExistingEntry && normalizedQuery && userId) {
       await this.searchHistoryRepository.createAsync(
         new SearchHistory({
           originalQuery: trimmedQuery,
-          userId: HttpContext.getCurrentUserId,
+          userId,
           normalizedQuery,
         }),
       );

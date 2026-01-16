@@ -18,6 +18,7 @@ import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { InstagramProfileModel, InstagramUserDataModel } from "../../../../domain/contracts/instagram.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
+import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
 
 const PLATFORM = 'instagram';
 const GRAPH_BASE = 'https://graph.instagram.com/v22.0';
@@ -86,6 +87,8 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
     private readonly eventEmitter: EventEmitter2,
   ) { }
 
@@ -204,6 +207,10 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
   }
 
   private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: InstagramUserDataModel): Promise<LinkedAccount> {
+    await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+      PLATFORM,
+      userData.id,
+    );
     linkedAccount.externalId = userData.id;
     linkedAccount.userName = userData.username;
     linkedAccount.profileImage = userData.profile_picture_url;
@@ -221,6 +228,10 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
   }
 
   private async createLinkedAccount(userId: string, userData: InstagramUserDataModel): Promise<LinkedAccount> {
+    await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+      PLATFORM,
+      userData.id,
+    );
     const newEntry = new LinkedAccount({
       platform: PLATFORM,
       userId,

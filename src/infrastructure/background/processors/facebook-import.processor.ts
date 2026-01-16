@@ -14,6 +14,7 @@ import { ImportGateway } from '../../../infrastructure/websocket/gateways/import
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
 import BullMQConfig from '../../../core/config/bullmq.config';
 import { mapUserContentToFacebookOnlineModel } from '../../../domain/mappers/facebook.mapper';
+import { IContentStreamRepository } from '../../../domain/repositories/icontentStream.repository';
 
 function extractParams(nextUrl: string): Record<string, string> {
   try {
@@ -43,6 +44,8 @@ export class FacebookImportProcessor extends WorkerHost {
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.INOTIFICATION_SERVICE)
     private readonly notificationService: INotificationService,
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
     private readonly gateway: ImportGateway,
   ) {
     super();
@@ -219,6 +222,10 @@ export class FacebookImportProcessor extends WorkerHost {
               };
             }
 
+            await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+              _const.PLATFORMS.FACEBOOK,
+              content.externalId,
+            );
             content = await this.userContentRepository.createAsync(content);
             importedExternalIds.push(content.externalId);
             const mappedContent = mapUserContentToFacebookOnlineModel(content);
