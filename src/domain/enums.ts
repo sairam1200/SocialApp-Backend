@@ -70,6 +70,11 @@ export enum ProfileImagePrivacy {
     Interactions = 'Interactions',
 }
 
+export enum ProfilePrivacy {
+    Public = "Public",
+    Private = "Private"
+}
+
 export enum FollowStatus {
     Requested = 'requested',
     Accepted = 'accepted',

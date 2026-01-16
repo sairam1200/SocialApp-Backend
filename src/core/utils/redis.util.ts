@@ -42,10 +42,12 @@ const createBullMQConnection = (options?: { maxRetriesPerRequest?: number | null
   });
 };
 
-// Create connection pool for BullMQ
-// Separate connections for different purposes (producer, consumer, subscriber)
-const bullMQConnection = createBullMQConnection();
-const bullMQSubscriberConnection = createBullMQConnection();
+// Shared BullMQ connection instance - single connection reused across all queues and workers
+// This prevents connection exhaustion by reusing one connection instead of creating new ones per queue/worker
+const sharedBullMQConnection = createBullMQConnection();
+
+// Keep subscriber connection separate if needed, but reuse for now
+const bullMQSubscriberConnection = sharedBullMQConnection;
 
 function getRedisKey<T extends string = any | '*'>(key: T, ...concatKeys: string[]): `${Prefix}:${T}${string | ''}` {
   return `${prefix}:${key}${concatKeys && concatKeys.length ? `:${concatKeys.join('_')}` : ''
@@ -68,17 +70,18 @@ async function connectToRedis() {
     }
   }
 
-  // Connect BullMQ connections
+  // Connect shared BullMQ connection
   try {
-    if (!bullMQConnection.status || bullMQConnection.status !== 'ready') {
-      await bullMQConnection.connect();
-      logger.info('BullMQ Redis connection connected');
+    if (!sharedBullMQConnection.status || sharedBullMQConnection.status !== 'ready') {
+      await sharedBullMQConnection.connect();
+      logger.info('Shared BullMQ Redis connection connected');
     }
   } catch (error) {
-    logger.error(`BullMQ Redis connection failed: ${JSON.stringify(error)}`);
+    logger.error(`Shared BullMQ Redis connection failed: ${JSON.stringify(error)}`);
     throw error;
   }
 
+  // Connect BullMQ subscriber connection (only if needed separately)
   try {
     if (!bullMQSubscriberConnection.status || bullMQSubscriberConnection.status !== 'ready') {
       await bullMQSubscriberConnection.connect();
@@ -112,26 +115,13 @@ async function removeFromRedisAsync(key: string) {
   await instance.del(key);
 }
 
-// BullMQ connection configuration
-const getBullMQConnection = () => ({
-  host: configs.redis.host,
-  port: configs.redis.port,
-  password: configs.redis.password,
-  username: configs.redis.username,
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false,
-  enableOfflineQueue: false,
-  lazyConnect: true,
-  keepAlive: 30000,
-  connectTimeout: 10000,
-  enableAutoPipelining: true,
-  retryStrategy: (times: number) => Math.min(times * 50, 2000),
-  reconnectOnError: (err: Error) => err.message.includes('READONLY'),
-});
+// BullMQ connection configuration - returns the shared connection instance
+// All queues and workers will reuse this single connection
+const getBullMQConnection = () => sharedBullMQConnection;
 
 const redis = {
   instance,
-  bullMQConnection,
+  bullMQConnection: sharedBullMQConnection,
   bullMQSubscriberConnection,
   getBullMQConnection,
   getRedisKey,
