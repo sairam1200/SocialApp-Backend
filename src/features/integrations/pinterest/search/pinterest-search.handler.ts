@@ -1,5 +1,4 @@
 import axios from "axios";
-import { Inject, UnauthorizedException } from "@nestjs/common";
 import configs from "../../../../configs";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
@@ -7,10 +6,11 @@ import fuseUtil from "../../../../core/utils/fuse.util";
 import logger from "../../../../core/utils/winston.util";
 import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
 import { SearchHistory } from "../../../../domain/entities";
+import { Inject, UnauthorizedException } from "@nestjs/common";
 import { ApplicationException } from "../../../../core/exceptions";
 import { ISearchService } from "../../../../domain/services/isearch.service";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
+import { PinterestSearchResponseModel } from "../../../../domain/contracts/pinterest.model";
 import { ISearchHistoryRepository, IUserLoginRepository } from "../../../../domain/repositories";
 
 export class PinterestSearchRequestModel {
@@ -44,7 +44,7 @@ export class PinterestSearchQueryHandler implements IQueryHandler<PinterestSearc
     private readonly userLoginRepository: IUserLoginRepository,
   ) { }
 
-  public async execute(command: PinterestSearchQuery): Promise<any> {
+  public async execute(command: PinterestSearchQuery): Promise<PinterestSearchResponseModel> {
     const { searchTerm, filter, pinterestAccessToken } = command.model;
 
     let expiresIn: number;

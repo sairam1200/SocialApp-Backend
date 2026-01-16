@@ -10,6 +10,7 @@ import { SearchHistory } from "../../../../domain/entities";
 import { ApplicationException } from "../../../../core/exceptions";
 import { ISearchService } from "../../../../domain/services/isearch.service";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
+import { InstagramSearchResponseModel } from "../../../../domain/contracts/instagram.model";
 import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
 import { ISearchHistoryRepository, IUserLoginRepository } from "../../../../domain/repositories";
 
@@ -33,7 +34,7 @@ export class InstagramSearchQuery {
 }
 
 @QueryHandler(InstagramSearchQuery)
-export class InstagramSearchQueryHandler implements IQueryHandler<InstagramSearchQuery> {
+export class InstagramSearchQueryHandler implements IQueryHandler<InstagramSearchQuery, InstagramSearchResponseModel> {
 
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
@@ -44,7 +45,7 @@ export class InstagramSearchQueryHandler implements IQueryHandler<InstagramSearc
     private readonly userLoginRepository: IUserLoginRepository,
   ) { }
 
-  public async execute(command: InstagramSearchQuery): Promise<any> {
+  public async execute(command: InstagramSearchQuery): Promise<InstagramSearchResponseModel> {
     const { searchTerm, filter, instagramAccessToken } = command.model;
 
     let expiresIn: number;

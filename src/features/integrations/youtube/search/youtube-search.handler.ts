@@ -10,6 +10,7 @@ import { SearchHistory } from "../../../../domain/entities";
 import { ApplicationException } from "../../../../core/exceptions";
 import { ISearchService } from "../../../../domain/services/isearch.service";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
+import { YoutubeSearchResponseModel } from "../../../../domain/contracts/youtube.model";
 import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
 import { ISearchHistoryRepository, IUserLoginRepository } from "../../../../domain/repositories";
 
@@ -44,10 +45,9 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
     private readonly userLoginRepository: IUserLoginRepository,
   ) { }
 
-  public async execute(command: YoutubeSearchQuery): Promise<any> {
+  public async execute(command: YoutubeSearchQuery): Promise<YoutubeSearchResponseModel> {
     const { searchTerm, filter, youtubeAccessToken } = command.model;
 
-    let expiresIn: number;
     let accessToken: string | undefined;
     const userId = HttpContext.getCurrentUserId;
 
@@ -66,7 +66,6 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
             await this.userLoginRepository.updateAsync(userLogin);
           }
           accessToken = access_token;
-          expiresIn = expires_in;
         }
       } else {
         accessToken = youtubeAccessToken;
@@ -86,10 +85,8 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
           userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
           await this.userLoginRepository.updateAsync(userLogin);
           accessToken = access_token;
-          expiresIn = expires_in;
         } else {
           accessToken = tokenValue.access_token;
-          expiresIn = tokenValue.expires_in;
         }
       }
     }

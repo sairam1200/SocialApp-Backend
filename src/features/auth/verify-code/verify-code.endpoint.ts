@@ -30,4 +30,3 @@ export class VerifyCodeController {
     return res.status(HttpStatus.OK).json(result);
   }
 }
-

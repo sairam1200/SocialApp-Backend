@@ -1,5 +1,4 @@
 import axios from "axios";
-import { Inject, UnauthorizedException } from "@nestjs/common";
 import configs from "../../../../configs";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
@@ -7,9 +6,11 @@ import fuseUtil from "../../../../core/utils/fuse.util";
 import logger from "../../../../core/utils/winston.util";
 import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
 import { SearchHistory } from "../../../../domain/entities";
+import { Inject, UnauthorizedException } from "@nestjs/common";
 import { ApplicationException } from "../../../../core/exceptions";
 import { ISearchService } from "../../../../domain/services/isearch.service";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
+import { TwitterSearchResponseModel } from "../../../../domain/contracts/twitter.model";
 import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
 import { ISearchHistoryRepository, IUserLoginRepository } from "../../../../domain/repositories";
 
@@ -44,10 +45,9 @@ export class TwitterSearchQueryHandler implements IQueryHandler<TwitterSearchQue
     private readonly userLoginRepository: IUserLoginRepository,
   ) { }
 
-  public async execute(command: TwitterSearchQuery): Promise<any> {
-    const { searchTerm, filter, twitterAccessToken } = command.model;
+  public async execute(command: TwitterSearchQuery): Promise<TwitterSearchResponseModel> {
+    const { searchTerm, filter, forceRefresh, twitterAccessToken } = command.model;
 
-    let expiresIn: number;
     let accessToken: string | undefined;
     const userId = HttpContext.getCurrentUserId;
 
@@ -66,7 +66,6 @@ export class TwitterSearchQueryHandler implements IQueryHandler<TwitterSearchQue
             await this.userLoginRepository.updateAsync(userLogin);
           }
           accessToken = access_token;
-          expiresIn = expires_in;
         }
       } else {
         accessToken = twitterAccessToken;
@@ -85,10 +84,8 @@ export class TwitterSearchQueryHandler implements IQueryHandler<TwitterSearchQue
         userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
         await this.userLoginRepository.updateAsync(userLogin);
         accessToken = access_token;
-        expiresIn = expires_in;
       } else {
         accessToken = tokenValue.access_token;
-        expiresIn = tokenValue.expires_in;
       }
     }
 
@@ -100,7 +97,7 @@ export class TwitterSearchQueryHandler implements IQueryHandler<TwitterSearchQue
       limit: 25,
       filters: filter || {},
       accessToken,
-      forceRefresh: command.model.forceRefresh || false,
+      forceRefresh: forceRefresh || false,
     });
     return data;
   }
@@ -187,4 +184,3 @@ export class TwitterSearchQueryHandler implements IQueryHandler<TwitterSearchQue
     return normalizedQuery;
   }
 }
-

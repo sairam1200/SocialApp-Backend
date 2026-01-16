@@ -15,9 +15,10 @@ import limitAllocatorUtil, {
   SectionSkipMap,
 } from '../../core/utils/limitAllocator.util';
 import {
-  SearchResponseModel,
+  YoutubeSearchResponseModel,
   YouTubeSearchParamsModel,
-  YouTubeSearchResponseModel,
+  YouTubeSearchResponseData,
+  YouTubeContentModel,
 } from '../../domain/contracts/youtube.model';
 import {
   ILinkedAccountRepository,
@@ -64,6 +65,7 @@ import {
   mapToFacebookOnlineModel,
   mapToFacebookProfileModel,
 } from 'domain/mappers/facebook.mapper';
+import { mapToYouTubeContentModel } from 'domain/mappers/youtube.mapper';
 import { SearchCacheService } from './searchCache.service';
 import { ApplicationException } from 'core/exceptions';
 import configs from '../../configs';
@@ -753,7 +755,7 @@ export class SearchService implements ISearchService {
 
   public async searchYoutubeAsync(
     params: PlatformSearchParamsModel,
-  ): Promise<SearchResponseModel> {
+  ): Promise<YoutubeSearchResponseModel> {
     const {
       filters,
       limit,
@@ -777,7 +779,7 @@ export class SearchService implements ISearchService {
     };
 
     if (!forceRefresh) {
-      const cached = await this.cacheService.getCachedResults<SearchResponseModel>(cacheParams);
+      const cached = await this.cacheService.getCachedResults<YoutubeSearchResponseModel>(cacheParams);
       if (cached) return cached;
     }
 
@@ -797,7 +799,7 @@ export class SearchService implements ISearchService {
       const lockAcquired = await this.cacheService.acquireLock(cacheParams);
 
       if (!lockAcquired) {
-        const waitingResult = await this.cacheService.waitForCachedResults<SearchResponseModel>(cacheParams);
+        const waitingResult = await this.cacheService.waitForCachedResults<YoutubeSearchResponseModel>(cacheParams);
         if (waitingResult) return waitingResult;
       }
 
@@ -957,61 +959,33 @@ export class SearchService implements ISearchService {
   private buildYoutubeResponse(
     originalQuery: string,
     dbResults: { contentStream: ContentStream[]; userContent: UserContent[]; linkedAccount: LinkedAccount[] },
-  ): SearchResponseModel {
-    const response = new SearchResponseModel();
+  ): YoutubeSearchResponseModel {
+    const response = new YoutubeSearchResponseModel();
     response.query = originalQuery;
 
     dbResults.contentStream.forEach(content => {
-      const item = {
-        id: content.id,
-        externalId: content.externalId,
-        title: content.title,
-        type: content.subType,
-        ...content.metaData,
-      };
+      const item = new YouTubeContentModel();
+      item.id = content.id;
+      item.title = content.title;
+      item.type = content.subType;
+      item.platform = content.platform;
+      item.externalId = content.externalId;
+      item.description = content.metaData?.description;
+      item.thumbnailUrl = content.metaData?.thumbnailUrl || content.metaData?.thumbnails?.default?.url;
+      item.publishedAt = content.metaData?.publishedAt;
+      item.videoId = content.metaData?.videoId;
+      item.channelId = content.metaData?.channelId;
+      item.viewCount = content.metaData?.viewCount;
+      item.likeCount = content.metaData?.likeCount;
+      item.commentCount = content.metaData?.commentCount;
+      item.duration = content.metaData?.duration;
 
-      if (content.subType === 'channel' || content.subType === YouTubeOnlineFilters.Channals) {
-        response.results.channels.push(item);
-      } else if (content.subType === 'video' || content.subType === YouTubeOnlineFilters.Videos) {
-        response.results.videos.push(item);
-      } else if (content.subType === 'playlist' || content.subType === YouTubeOnlineFilters.Playlists) {
-        response.results.playlist.push(item);
-      }
+      response.results.push(item);
     });
 
     dbResults.userContent.forEach(content => {
-      const item = {
-        id: content.id,
-        externalId: content.externalId,
-        title: content.title,
-        type: content.type,
-        ...content.metaData,
-      };
-
-      switch (content.type) {
-        case YouTubeUserContentFilters.Channals:
-          response.results.channels.push(item);
-          break;
-        case YouTubeUserContentFilters.Videos:
-          response.results.videos.push(item);
-          break;
-        case YouTubeUserContentFilters.Playlists:
-          response.results.playlist.push(item);
-          break;
-        case YouTubeUserContentFilters.Activities:
-          response.results.activities.push(item);
-          break;
-        case YouTubeUserContentFilters.PlaylistVideos:
-          response.results.playlistVideo.push(item);
-          break;
-        case YouTubeUserContentFilters.Subscriptions:
-          response.results.subscriptions.push(item);
-          break;
-      }
-    });
-
-    dbResults.linkedAccount.forEach(account => {
-      response.results.accounts.push(mapToLinkedInProfileModel(account));
+      const item = mapToYouTubeContentModel(content);
+      response.results.push(item);
     });
 
     return response;
@@ -1089,7 +1063,7 @@ export class SearchService implements ISearchService {
     filters: Record<string, string | number>,
     accessToken: string | undefined,
     pageToken?: string,
-  ): Promise<YouTubeSearchResponseModel> {
+  ): Promise<YouTubeSearchResponseData> {
     const emptyResult = {
       kind: '',
       etag: '',
@@ -1125,7 +1099,7 @@ export class SearchService implements ISearchService {
         params.key = configs.youtube.clientId;
       }
 
-      const response = await axios.get<YouTubeSearchResponseModel>(
+      const response = await axios.get<YouTubeSearchResponseData>(
         'https://www.googleapis.com/youtube/v3/search',
         {
           params,

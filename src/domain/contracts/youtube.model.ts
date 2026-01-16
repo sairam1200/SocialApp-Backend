@@ -120,7 +120,7 @@ export class YouTubeSearchParamsModel {
   forceRefresh?: boolean; // If true, always fetch from YouTube API regardless of cache
 }
 
-export interface YouTubeSearchResponseModel {
+export interface YouTubeSearchResponseData {
   kind: string;
   etag: string;
   regionCode: string;
@@ -132,30 +132,13 @@ export interface YouTubeSearchResponseModel {
   nextPageToken?: string;
   prevPageToken?: string;
 }
-
-export class SearchResponseModel {
+export class YoutubeSearchResponseModel {
   query: string;
-  results: {
-    channels: any[];
-    videos: any[];
-    playlist: any[];
-    playlistVideo: any[];
-    activities: any[];
-    subscriptions: any[];
-    accounts: any[];
-  };
+  results: YouTubeContentModel[];
 
   constructor() {
     this.query = '';
-    this.results = {
-      channels: [],
-      videos: [],
-      playlist: [],
-      playlistVideo: [],
-      activities: [],
-      subscriptions: [],
-      accounts: [],
-    };
+    this.results = [];
   }
 }
 

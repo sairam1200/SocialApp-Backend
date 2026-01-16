@@ -1,9 +1,9 @@
 import { Response } from 'express';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { TiktokDisconnectCommand } from './tiktok-disconnect.handler';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import { Controller, Delete, HttpStatus, Res, UseGuards } from '@nestjs/common';
-import { TiktokDisconnectCommand } from './tiktok-disconnect.handler';
 
 @ApiTags('TikTok')
 @Controller({
