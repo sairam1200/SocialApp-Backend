@@ -1,5 +1,4 @@
 import axios from "axios";
-import { Inject, UnauthorizedException } from "@nestjs/common";
 import configs from "../../../../configs";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
@@ -7,9 +6,11 @@ import fuseUtil from "../../../../core/utils/fuse.util";
 import logger from "../../../../core/utils/winston.util";
 import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
 import { SearchHistory } from "../../../../domain/entities";
+import { Inject, UnauthorizedException } from "@nestjs/common";
 import { ApplicationException } from "../../../../core/exceptions";
 import { ISearchService } from "../../../../domain/services/isearch.service";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
+import { LinkedInSearchResponseModel } from "../../../../domain/contracts/linkedin.model";
 import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
 import { ISearchHistoryRepository, IUserLoginRepository } from "../../../../domain/repositories";
 
@@ -44,7 +45,7 @@ export class LinkedInSearchQueryHandler implements IQueryHandler<LinkedInSearchQ
     private readonly userLoginRepository: IUserLoginRepository,
   ) { }
 
-  public async execute(command: LinkedInSearchQuery): Promise<any> {
+  public async execute(command: LinkedInSearchQuery): Promise<LinkedInSearchResponseModel> {
     const { searchTerm, filter, linkedInAccessToken } = command.model;
 
     let expiresIn: number;
@@ -189,4 +190,3 @@ export class LinkedInSearchQueryHandler implements IQueryHandler<LinkedInSearchQ
     return normalizedQuery;
   }
 }
-

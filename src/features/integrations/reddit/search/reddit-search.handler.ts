@@ -1,5 +1,4 @@
 import axios from "axios";
-import { Inject, UnauthorizedException } from "@nestjs/common";
 import configs from "../../../../configs";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
@@ -7,9 +6,11 @@ import fuseUtil from "../../../../core/utils/fuse.util";
 import logger from "../../../../core/utils/winston.util";
 import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
 import { SearchHistory } from "../../../../domain/entities";
+import { Inject, UnauthorizedException } from "@nestjs/common";
 import { ApplicationException } from "../../../../core/exceptions";
 import { ISearchService } from "../../../../domain/services/isearch.service";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
+import { RedditSearchResponseModel } from "../../../../domain/contracts/reddit.model";
 import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
 import { ISearchHistoryRepository, IUserLoginRepository } from "../../../../domain/repositories";
 
@@ -44,7 +45,7 @@ export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery
     private readonly userLoginRepository: IUserLoginRepository,
   ) { }
 
-  public async execute(command: RedditSearchQuery): Promise<any> {
+  public async execute(command: RedditSearchQuery): Promise<RedditSearchResponseModel> {
     const { searchTerm, filter, redditAccessToken } = command.model;
 
     let expiresIn: number;
@@ -53,7 +54,7 @@ export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery
 
     if (redditAccessToken) {
       const isTokenValid = await this.verifyAccessTokenAsync(redditAccessToken);
-      if (!isTokenValid) {
+      if (!isTokenValid && userId) {
         const now = new Date();
         const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.REDDIT);
 
@@ -71,24 +72,22 @@ export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery
       } else {
         accessToken = redditAccessToken;
       }
-    } else {
+    } else if (userId) {
       const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.REDDIT);
-      if (!userLogin) {
-        throw new UnauthorizedException('No Reddit account linked to your user profile. Please link your Reddit account to proceed.');
-      }
-
-      const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
-      const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
-      if (!isTokenValid) {
-        const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
-        userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
-        userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
-        await this.userLoginRepository.updateAsync(userLogin);
-        accessToken = access_token;
-        expiresIn = expires_in;
-      } else {
-        accessToken = tokenValue.access_token;
-        expiresIn = tokenValue.expires_in;
+      if (userLogin) {
+        const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
+        const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
+        if (!isTokenValid) {
+          const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
+          userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
+          userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
+          await this.userLoginRepository.updateAsync(userLogin);
+          accessToken = access_token;
+          expiresIn = expires_in;
+        } else {
+          accessToken = tokenValue.access_token;
+          expiresIn = tokenValue.expires_in;
+        }
       }
     }
 
@@ -176,11 +175,12 @@ export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery
       );
     });
 
-    if (!hasExistingEntry && normalizedQuery) {
+    const userId = HttpContext.getCurrentUserId;
+    if (!hasExistingEntry && normalizedQuery && userId) {
       await this.searchHistoryRepository.createAsync(
         new SearchHistory({
           originalQuery: trimmedQuery,
-          userId: HttpContext.getCurrentUserId,
+          userId,
           normalizedQuery,
         }),
       );

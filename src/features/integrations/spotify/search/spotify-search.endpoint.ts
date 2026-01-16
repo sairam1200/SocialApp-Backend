@@ -1,8 +1,8 @@
 import { Response } from "express";
 import { QueryBus } from "@nestjs/cqrs";
 import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, HttpStatus, Post, Res } from "@nestjs/common";
+import { SpotifySearchResponseModel } from "../../../../domain/contracts/spotify.model";
 import { SpotifySearchQuery, SpotifySearchRequestModel } from "./spotify-search.handler";
 
 @ApiTags('Integrations')
@@ -16,11 +16,9 @@ export class SpotifySearchController {
   ) { }
 
   @Post('search')
-  @UseGuards(UserAccoutGuard)
-  @ApiResponse({ status: 200, description: 'OK' })
-  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
-  @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
+  @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
+  @ApiResponse({ status: 200, description: 'OK', type: SpotifySearchResponseModel })
   @ApiBody({ type: SpotifySearchRequestModel })
   public async Search(
     @Body() model: SpotifySearchRequestModel,

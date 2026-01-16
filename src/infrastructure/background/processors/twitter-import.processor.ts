@@ -15,6 +15,7 @@ import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAc
 import { mapToLikedTweetModel, mapToUserTweetModel } from "../../../domain/mappers/twitter.mapper";
 import { stringUtil } from "../../../core/utils/string.util";
 import BullMQConfig from "../../../core/config/bullmq.config";
+import { IContentStreamRepository } from "../../../domain/repositories/icontentStream.repository";
 
 interface CursorMap {
   [key: string]: string | null;
@@ -47,6 +48,8 @@ export class TwitterImportProcessor extends WorkerHost {
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.INOTIFICATION_SERVICE)
     private readonly notificationService: INotificationService,
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
     private readonly gateway: ImportGateway,
   ) {
     super();
@@ -165,6 +168,10 @@ export class TwitterImportProcessor extends WorkerHost {
             };
 
             try {
+              await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+                _const.PLATFORMS.TWITTER,
+                content.externalId,
+              );
               const savedContent = await this.userContentRepository.createAsync(content);
               importedExternalIds.push(savedContent.externalId);
               if (type === 'Tweets') {

@@ -16,8 +16,9 @@ import ApplicationException from "../../../../core/exceptions/application.except
 import { mapToPinterestProfileModel } from "../../../../domain/mappers/pinterest.mapper";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { PinterestProfileModel, PinterestUserDataModel } from "../../../../domain/contracts/pinterest.model";
+import { PinterestProfileModel, PinterestUserDataType } from "../../../../domain/contracts/pinterest.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
+import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
 
 const BASE_URL = 'https://api.pinterest.com/v5';
 
@@ -85,6 +86,8 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
     private readonly eventEmitter: EventEmitter2,
   ) { }
 
@@ -131,9 +134,17 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
         pin_count: userData.pin_count,
         about: userData.about,
       };
+      await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+        _const.PLATFORMS.PINTEREST,
+        newExternalId,
+      );
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
       console.log("Creating new linked account for Pinterest");
+      await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+        _const.PLATFORMS.PINTEREST,
+        userData.id,
+      );
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
         platform: _const.PLATFORMS.PINTEREST,
         userId: user.id,
@@ -202,9 +213,9 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<PinterestUserDataModel> {
+  private async fetchUserData(accessToken: string): Promise<PinterestUserDataType> {
     try {
-      const response = await axios.get<PinterestUserDataModel>(`${BASE_URL}/user_account`, {
+      const response = await axios.get<PinterestUserDataType>(`${BASE_URL}/user_account`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },

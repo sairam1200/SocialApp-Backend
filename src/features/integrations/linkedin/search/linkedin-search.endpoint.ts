@@ -1,8 +1,8 @@
 import { Response } from "express";
 import { QueryBus } from "@nestjs/cqrs";
 import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, HttpStatus, Post, Res } from "@nestjs/common";
+import { LinkedInSearchResponseModel } from "../../../../domain/contracts/linkedin.model";
 import { LinkedInSearchQuery, LinkedInSearchRequestModel } from "./linkedin-search.handler";
 
 @ApiTags('Integrations')
@@ -16,11 +16,9 @@ export class LinkedInSearchController {
   ) { }
 
   @Post('search')
-  @UseGuards(UserAccoutGuard)
-  @ApiResponse({ status: 200, description: 'OK' })
-  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
-  @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
+  @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
+  @ApiResponse({ status: 200, description: 'OK', type: LinkedInSearchResponseModel })
   @ApiBody({ type: LinkedInSearchRequestModel })
   public async Search(
     @Body() model: LinkedInSearchRequestModel,
@@ -29,7 +27,5 @@ export class LinkedInSearchController {
 
     const result = await this.queryBus.execute(new LinkedInSearchQuery({ model }));
     return res.status(HttpStatus.OK).json(result);
-
   }
 }
-

@@ -27,4 +27,6 @@ export interface IUserLoginRepository {
     ): Promise<UserLogin[]>;
 
     updateAsync(userLogin: UserLogin): Promise<void>;
+
+    deleteAsync(userLogin: UserLogin): Promise<void>;
 }

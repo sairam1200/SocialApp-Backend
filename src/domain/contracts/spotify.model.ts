@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export interface SpotifyUserDataModel {
+export type SpotifyUserDataType = {
   country?: string;
   display_name?: string;
   email?: string;
@@ -47,89 +47,238 @@ export interface SpotifyProfileModel {
   uri: string;
 }
 
-
-export interface SpotifyPlaylistModel {
-  id: string;
+export class SpotifyPlaylistOwnerModel {
+  @ApiProperty()
   name: string;
-  type: 'playlist';
-  owner: {
-    name: string;
-    id: string;
-    type: string;
-    href: string;
-    externalUrl: string;
-  };
+
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  type: string;
+
+  @ApiProperty()
+  href: string;
+
+  @ApiProperty()
+  externalUrl: string;
+}
+
+export class SpotifyPlaylistModel {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty({ type: SpotifyPlaylistOwnerModel })
+  owner: SpotifyPlaylistOwnerModel;
+
+  @ApiProperty()
   public: boolean;
+
+  @ApiProperty()
   imageUrl: string;
+
+  @ApiProperty()
   createdAt: string;
+
+  @ApiProperty()
   updatedAt: string;
+
+  @ApiProperty()
   trackCount: number;
+
+  @ApiProperty()
   playListId: string;
+
+  @ApiProperty()
   description: string;
 }
 
-export interface SpotifyTrackModel {
-  id: string;
-  type: 'track';
+export class SpotifyTrackArtistModel {
+  @ApiProperty()
   name: string;
+
+  @ApiProperty()
+  type: string;
+
+  @ApiProperty()
+  href: string;
+}
+
+export class SpotifyTrackAlbumModel {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
+  href: string;
+
+  @ApiProperty()
+  imageUrl: string;
+}
+
+export class SpotifyTrackModel {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
   url: string;
+
+  @ApiProperty()
   releaseDate: Date;
+
+  @ApiProperty()
   durationMs: number;
-  artists: Array<{
-    name: string;
-    type: string;
-    href: string;
-  }>;
-  album: {
-    id: string;
-    name: string;
-    href: string;
-    imageUrl: string;
-  };
+
+  @ApiProperty({ type: [SpotifyTrackArtistModel] })
+  artists: SpotifyTrackArtistModel[];
+
+  @ApiProperty({ type: SpotifyTrackAlbumModel })
+  album: SpotifyTrackAlbumModel;
+
+  @ApiProperty()
   duration: number;
+
+  @ApiProperty()
   explicit: boolean;
+
+  @ApiProperty()
   popularity: number;
+
+  @ApiProperty()
   previewUrl: string;
 }
 
-export interface SpotifyAlbumModel {
-  id: string;
-  type: 'album';
+export class SpotifyAlbumArtistModel {
+  @ApiProperty()
   name: string;
+
+  @ApiProperty()
+  type: string;
+
+  @ApiProperty()
   href: string;
+}
+
+export class SpotifyAlbumModel {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
+  href: string;
+
+  @ApiProperty()
   imageUrl: string;
+
+  @ApiProperty()
   releaseDate: Date;
+
+  @ApiProperty()
   url: string;
+
+  @ApiProperty()
   totalTracks: number;
-  artists: Array<{
-    name: string;
-    type: string;
-    href: string;
-  }>;
+
+  @ApiProperty({ type: [SpotifyAlbumArtistModel] })
+  artists: SpotifyAlbumArtistModel[];
+
+  @ApiProperty()
   albumId: string;
 }
 
-export interface SpotifyShowModel {
+export class SpotifyShowCopyrightModel {
+  @ApiProperty()
+  text: string;
+
+  @ApiProperty()
+  type: string;
+}
+
+export class SpotifyShowDetailsModel {
+  @ApiProperty({ type: [String] })
+  availableMarkets: string[];
+
+  @ApiProperty({ type: [SpotifyShowCopyrightModel] })
+  copyRights: SpotifyShowCopyrightModel[];
+}
+
+export class SpotifyShowModel {
+  @ApiProperty()
   id: string;
+
+  @ApiProperty()
   showId: string;
-  type: 'show';
+
+  @ApiProperty()
   name: string;
+
+  @ApiProperty()
   description: string;
+
+  @ApiProperty()
   explicit: boolean;
+
+  @ApiProperty()
   htmlDescription: string;
+
+  @ApiProperty({ type: [String] })
   languages: string[];
+
+  @ApiProperty()
   publisher: string;
+
+  @ApiProperty()
   imageUrl: string;
+
+  @ApiProperty()
   addedOn: string;
+
+  @ApiProperty()
   totalEpisodes: string;
+
+  @ApiProperty()
   mediaType: string;
-  show: {
-    availableMarkets: string[];
-    copyRights: Array<{
-      text: string;
-      type: string;
-    }>;
-  }
+
+  @ApiProperty({ type: SpotifyShowDetailsModel })
+  show: SpotifyShowDetailsModel;
+}
+
+export class SpotifyArtistModel {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty({ required: false })
+  externalId?: string;
+
+  @ApiProperty({ required: false })
+  href?: string;
+
+  @ApiProperty({ required: false })
+  popularity?: number;
+
+  @ApiProperty({ required: false, type: [String] })
+  genres?: string[];
+
+  @ApiProperty({ required: false })
+  imageUrl?: string;
+
+  @ApiProperty({ required: false })
+  followersCount?: number;
+
+  [key: string]: any;
 }
 
 export class SpotifySearchParamsModel {
@@ -162,18 +311,18 @@ export class SpotifySearchResponseModel {
   @ApiProperty()
   query: string;
 
-  @ApiProperty({ type: [Object] })
-  results: {
-    tracks: any[];
-    albums: any[];
-    playlists: any[];
-    artists: any[];
-    shows: any[];
+  @ApiProperty()
+  result: {
+    tracks: SpotifyTrackModel[];
+    albums: SpotifyAlbumModel[];
+    playlists: SpotifyPlaylistModel[];
+    artists: SpotifyArtistModel[];
+    shows: SpotifyShowModel[];
   };
 
   constructor() {
     this.query = '';
-    this.results = {
+    this.result = {
       tracks: [],
       albums: [],
       playlists: [],

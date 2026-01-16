@@ -1,12 +1,12 @@
-import { Inject, UnauthorizedException } from "@nestjs/common";
-import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../core/utils/const";
+import { ApiProperty } from "@nestjs/swagger";
 import fuseUtil from "../../core/utils/fuse.util";
-import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
 import { SearchHistory } from "../../domain/entities";
+import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
+import { Inject, UnauthorizedException } from "@nestjs/common";
 import { ISearchService } from "../../domain/services/isearch.service";
-import { HttpContext } from "../../core/middlewares/httpContext.middleware";
 import { deserializeObject } from "../../core/utils/serialization.util";
+import { HttpContext } from "../../core/middlewares/httpContext.middleware";
 import { ISearchHistoryRepository, IUserLoginRepository, ILinkedAccountRepository } from "../../domain/repositories";
 
 export class GlobalSearchRequestModel {
@@ -251,7 +251,6 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
     }
   }
 
-
   private extractPaginationToken(platform: string, result: any): string | null {
     if (!result) return null;
 
@@ -429,4 +428,3 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
     return normalizedQuery;
   }
 }
-

@@ -55,6 +55,7 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     dependency.SearchService,
     dependency.SearchHistoryRepository,
     dependency.YoubeWebHookService,
+    dependency.PlatformDisconnectService,
   ],
   exports: [],
 })

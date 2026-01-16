@@ -26,7 +26,6 @@ export function mapToPinterestContentModel(data: UserContent): PinterestContentM
     id: data.id,
     title: data.title,
     type: data.type,
-    platform: data.platform,
     externalId: data.externalId,
     description: data.metaData?.description,
     imageUrl: data.metaData?.imageUrl,

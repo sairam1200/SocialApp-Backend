@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { Inject, UnauthorizedException } from '@nestjs/common';
 import configs from '../../../../configs';
 import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
@@ -7,13 +6,12 @@ import fuseUtil from '../../../../core/utils/fuse.util';
 import logger from '../../../../core/utils/winston.util';
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import { SearchHistory } from '../../../../domain/entities';
+import { Inject, UnauthorizedException } from '@nestjs/common';
 import { ApplicationException } from '../../../../core/exceptions';
 import { ISearchService } from '../../../../domain/services/isearch.service';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
-import {
-  ISearchHistoryRepository,
-  IUserLoginRepository,
-} from '../../../../domain/repositories';
+import { FacebookSearchResponseModel } from '../../../../domain/contracts/facebook.model';
+import { ISearchHistoryRepository, IUserLoginRepository } from '../../../../domain/repositories';
 
 export class FacebookSearchRequestModel {
   @ApiProperty()
@@ -36,7 +34,7 @@ export class FacebookSearchQuery {
 
 @QueryHandler(FacebookSearchQuery)
 export class FacebookSearchQueryHandler
-  implements IQueryHandler<FacebookSearchQuery> {
+  implements IQueryHandler<FacebookSearchQuery, FacebookSearchResponseModel> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,
@@ -46,7 +44,7 @@ export class FacebookSearchQueryHandler
     private readonly userLoginRepository: IUserLoginRepository,
   ) { }
 
-  public async execute(command: FacebookSearchQuery): Promise<any> {
+  public async execute(command: FacebookSearchQuery): Promise<FacebookSearchResponseModel> {
     const { searchTerm, filter, facebookAccessToken } = command.model;
 
     let expiresIn: number;

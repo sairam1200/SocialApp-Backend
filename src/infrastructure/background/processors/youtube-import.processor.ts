@@ -15,6 +15,7 @@ import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAc
 import { ApplicationException } from "../../../core/exceptions";
 import BullMQConfig from "../../../core/config/bullmq.config";
 import { mapToYouTubeContentModel } from "../../../domain/mappers/youtube.mapper";
+import { IContentStreamRepository } from "../../../domain/repositories/icontentStream.repository";
 
 interface CursorMap {
   [key: string]: string | null;
@@ -47,6 +48,8 @@ export class YoutubeImportProcessor extends WorkerHost {
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.INOTIFICATION_SERVICE)
     private readonly notificationService: INotificationService,
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
     private readonly gateway: ImportGateway,
   ) {
     super();
@@ -181,6 +184,10 @@ export class YoutubeImportProcessor extends WorkerHost {
             const content = this.mapContentByType(type, item, account.userId);
             if (content) {
               try {
+                await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+                  _const.PLATFORMS.YOUTUBE,
+                  content.externalId,
+                );
                 const savedContent = await this.userContentRepository.createAsync(content);
                 importedExternalIds.push(savedContent.externalId);
                 const mappedContent = mapToYouTubeContentModel(savedContent);
@@ -286,6 +293,10 @@ export class YoutubeImportProcessor extends WorkerHost {
             });
 
             try {
+              await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+                _const.PLATFORMS.YOUTUBE,
+                content.externalId,
+              );
               const savedContent = await this.userContentRepository.createAsync(content);
               importedExternalIds.push(savedContent.externalId);
               const mappedContent = mapToYouTubeContentModel(savedContent);
@@ -520,6 +531,10 @@ export class YoutubeImportProcessor extends WorkerHost {
         });
 
         try {
+          await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+            _const.PLATFORMS.YOUTUBE,
+            videoContent.externalId,
+          );
           const savedContent = await this.userContentRepository.createAsync(videoContent);
           playlistVideoIds.push(savedContent.externalId);
           const mappedContent = mapToYouTubeContentModel(savedContent);

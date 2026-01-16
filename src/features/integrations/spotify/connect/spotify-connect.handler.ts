@@ -16,8 +16,9 @@ import ApplicationException from "../../../../core/exceptions/application.except
 import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey.entity";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { SpotifyProfileModel, SpotifyUserDataModel } from "../../../../domain/contracts/spotify.model";
+import { SpotifyProfileModel, SpotifyUserDataType } from "../../../../domain/contracts/spotify.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
+import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
 
 const BASE_URL = 'https://api.spotify.com/v1';
 
@@ -82,6 +83,8 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
     private readonly eventEmitter: EventEmitter2,
   ) { }
 
@@ -133,8 +136,16 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
           explicitContentLocked: userData.data.explicit_content.filter_enabled,
           explicitContentEnabled: userData.data.explicit_content.filter_locked,
         };
+      await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+        _const.PLATFORMS.SPOTIFY,
+        newExternalId,
+      );
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
+      await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+        _const.PLATFORMS.SPOTIFY,
+        userData.data.id,
+      );
       linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
         platform: _const.PLATFORMS.SPOTIFY,
         userId: user.id,
@@ -210,9 +221,9 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<{ data: SpotifyUserDataModel, userfollowing: number }> {
+  private async fetchUserData(accessToken: string): Promise<{ data: SpotifyUserDataType, userfollowing: number }> {
     try {
-      const response = await axios.get<SpotifyUserDataModel>(`${BASE_URL}/me`, {
+      const response = await axios.get<SpotifyUserDataType>(`${BASE_URL}/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 

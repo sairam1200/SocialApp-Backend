@@ -24,6 +24,7 @@ export default {
   IYOUTUBEWEBHOOK_SERVICE: 'IYoutubeWebhookService',
   INOTIFICATION_SERVICE: 'INotificationService',
   IQUEUE_SERVICE: 'IQueueService',
+  IPLATFORM_DISCONNECT_SERVICE: 'IPlatformDisconnectService',
 
   BULL_QUEUES: {
     FACEBOOK_IMPORT: 'facebook-import',

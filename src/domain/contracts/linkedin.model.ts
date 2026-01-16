@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export interface LinkedInUserDataModel {
+export type LinkedInUserDataType = {
   id: string;
   localizedFirstName: string;
   localizedLastName: string;
@@ -83,9 +83,6 @@ export class LinkedInContentModel {
   type: string;
 
   @ApiProperty()
-  platform: string;
-
-  @ApiProperty()
   externalId: string;
 
   @ApiProperty({ required: false })
@@ -137,11 +134,11 @@ export class LinkedInSearchResponseModel {
   @ApiProperty()
   query: string;
 
-  @ApiProperty({ type: [Object] })
-  results: {
-    posts: any[];
-    people: any[];
-    companies: any[];
+  @ApiProperty()
+  result: {
+    user: LinkedInProfileModel[];
+    content: LinkedInContentModel[];
+    companies: LinkedInProfileModel[];
   };
 
   @ApiProperty({ required: false })
@@ -152,9 +149,9 @@ export class LinkedInSearchResponseModel {
 
   constructor() {
     this.query = '';
-    this.results = {
-      posts: [],
-      people: [],
+    this.result = {
+      user: [],
+      content: [],
       companies: [],
     };
     this.count = 0;

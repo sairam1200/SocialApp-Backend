@@ -25,7 +25,6 @@ export function mapToInstagramContentModel(data: UserContent): InstagramContentM
     id: data.id,
     title: data.title,
     type: data.type,
-    platform: data.platform,
     externalId: data.externalId,
     caption: data.metaData?.caption,
     mediaType: data.metaData?.mediaType,

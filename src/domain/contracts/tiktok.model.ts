@@ -29,7 +29,7 @@ export class TiktokProfileModel {
   verified: boolean;
 }
 
-export type TiktokUserDataModel = {
+export type TiktokUserDataType = {
   open_id: string;
   union_id?: string;
   display_name?: string;
@@ -43,8 +43,7 @@ export type TiktokUserDataModel = {
   video_count?: number;
 }
 
-
-export class TikTokVideoModel {
+export type TikTokVideoDataType = {
   id: string;
   create_time: number;
   cover_image_url: string;
@@ -135,10 +134,10 @@ export class TiktokSearchResponseModel {
   @ApiProperty()
   query: string;
 
-  @ApiProperty({ type: [Object] })
-  results: {
-    videos: any[];
-    users: any[];
+  @ApiProperty()
+  result: {
+    user: TiktokProfileModel[];
+    content: TikTokContentModel[];
   };
 
   @ApiProperty({ required: false })
@@ -149,9 +148,9 @@ export class TiktokSearchResponseModel {
 
   constructor() {
     this.query = '';
-    this.results = {
-      videos: [],
-      users: [],
+    this.result = {
+      user: [],
+      content: [],
     };
     this.hasMore = false;
   }

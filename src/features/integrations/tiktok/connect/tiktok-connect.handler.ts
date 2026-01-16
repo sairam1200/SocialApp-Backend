@@ -16,9 +16,10 @@ import { mapToTiktokProfileModel } from '../../../../domain/mappers/tiktok.mappe
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
-import { TiktokProfileModel, TiktokUserDataModel } from '../../../../domain/contracts/tiktok.model';
+import { TiktokProfileModel, TiktokUserDataType } from '../../../../domain/contracts/tiktok.model';
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
+import { IContentStreamRepository } from '../../../../domain/repositories/icontentStream.repository';
 
 const TIKTOK_BASE = 'https://open.tiktokapis.com/v2';
 
@@ -84,6 +85,8 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
     private readonly eventEmitter: EventEmitter2,
   ) { }
 
@@ -163,7 +166,7 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
     }
   }
 
-  private async fetchUserData(accessToken: string, openId: number): Promise<TiktokUserDataModel> {
+  private async fetchUserData(accessToken: string, openId: number): Promise<TiktokUserDataType> {
     try {
       const response = await axios.get('https://open.tiktokapis.com/v2/user/info/', {
         headers: {
@@ -206,7 +209,11 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
     return dataProtectionKey;
   }
 
-  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: TiktokUserDataModel): Promise<LinkedAccount> {
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: TiktokUserDataType): Promise<LinkedAccount> {
+    await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+      _const.PLATFORMS.TIKTOK,
+      userData.open_id,
+    );
     const userName = userData.profile_deep_link?.split('@')[1] ?? '';
 
     linkedAccount.verified = userData.is_verified;
@@ -226,7 +233,11 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
     return linkedAccount;
   }
 
-  private async createLinkedAccount(userId: string, userData: TiktokUserDataModel): Promise<LinkedAccount> {
+  private async createLinkedAccount(userId: string, userData: TiktokUserDataType): Promise<LinkedAccount> {
+    await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+      _const.PLATFORMS.TIKTOK,
+      userData.open_id,
+    );
     console.log("this is the user data", userData);
     const userName = userData.profile_deep_link?.split('@')[1] ?? '';
     const newEntry = new LinkedAccount({

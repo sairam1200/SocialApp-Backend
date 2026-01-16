@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export interface PinterestUserDataModel {
+export type PinterestUserDataType = {
   id: string;
   username: string;
   profile_image: string;
@@ -38,10 +38,10 @@ export class PinterestProfileModel {
   @ApiProperty({ default: 0 })
   followingCount: number;
 
-  @ApiProperty({default: 0})
+  @ApiProperty({ default: 0 })
   monthlyViews: number;
 
-  @ApiProperty({ default: false})
+  @ApiProperty({ default: false })
   allowImport: boolean;
 
   @ApiProperty()
@@ -63,9 +63,6 @@ export class PinterestContentModel {
 
   @ApiProperty()
   type: string;
-
-  @ApiProperty()
-  platform: string;
 
   @ApiProperty()
   externalId: string;
@@ -122,11 +119,10 @@ export class PinterestSearchResponseModel {
   @ApiProperty()
   query: string;
 
-  @ApiProperty({ type: [Object] })
-  results: {
-    pins: any[];
-    boards: any[];
-    users: any[];
+  @ApiProperty()
+  result: {
+    user: PinterestProfileModel[];
+    content: PinterestContentModel[];
   };
 
   @ApiProperty({ required: false })
@@ -134,10 +130,9 @@ export class PinterestSearchResponseModel {
 
   constructor() {
     this.query = '';
-    this.results = {
-      pins: [],
-      boards: [],
-      users: [],
+    this.result = {
+      user: [],
+      content: [],
     };
   }
 }

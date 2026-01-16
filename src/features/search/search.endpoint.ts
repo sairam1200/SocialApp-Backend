@@ -16,9 +16,7 @@ export class GlobalSearchController {
   ) { }
 
   @Post()
-  @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 200, description: 'OK', type: GlobalSearchResponseModel })
-  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   @ApiBody({ type: GlobalSearchRequestModel })
@@ -29,6 +27,5 @@ export class GlobalSearchController {
 
     const result = await this.queryBus.execute(new GlobalSearchQuery({ model }));
     return res.status(HttpStatus.OK).json(result);
-
   }
 }

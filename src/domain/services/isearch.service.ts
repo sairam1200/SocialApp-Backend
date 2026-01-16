@@ -7,6 +7,7 @@ import { TiktokSearchResponseModel } from '../contracts/tiktok.model';
 import { InstagramSearchResponseModel } from '../contracts/instagram.model';
 import { TwitterSearchResponseModel } from '../contracts/twitter.model';
 import { LinkedInSearchResponseModel } from '../contracts/linkedin.model';
+import { YoutubeSearchResponseModel } from '../contracts/youtube.model';
 
 export interface ISearchService {
   searchFacebookAsync(params: PlatformSearchParamsModel): Promise<FacebookSearchResponseModel>;
@@ -14,7 +15,7 @@ export interface ISearchService {
   searchPinterestAsync(params: PlatformSearchParamsModel): Promise<PinterestSearchResponseModel>;
   searchTwitterAsync(params: PlatformSearchParamsModel): Promise<TwitterSearchResponseModel>;
   searchSpotifyAsync(params: PlatformSearchParamsModel): Promise<SpotifySearchResponseModel>;
-  searchYoutubeAsync(params: PlatformSearchParamsModel): Promise<any>;
+  searchYoutubeAsync(params: PlatformSearchParamsModel): Promise<YoutubeSearchResponseModel>;
   searchRedditAsync(params: PlatformSearchParamsModel): Promise<RedditSearchResponseModel>;
   searchTiktokAsync(params: PlatformSearchParamsModel): Promise<TiktokSearchResponseModel>;
   searchLinkedInAsync(params: PlatformSearchParamsModel): Promise<LinkedInSearchResponseModel>;

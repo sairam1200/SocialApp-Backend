@@ -14,6 +14,7 @@ import { IUserContentRepository } from "../../../domain/repositories/iuserConten
 import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
 import BullMQConfig from "../../../core/config/bullmq.config";
 import { mapToTikTokContentModel } from "../../../domain/mappers/tiktok.mapper";
+import { IContentStreamRepository } from "../../../domain/repositories/icontentStream.repository";
 
 interface CursorMap {
   [key: string]: string | null;
@@ -46,6 +47,8 @@ export class TiktokImportProcessor extends WorkerHost {
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.INOTIFICATION_SERVICE)
     private readonly notificationService: INotificationService,
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
     private readonly gateway: ImportGateway,
   ) {
     super();
@@ -174,6 +177,10 @@ export class TiktokImportProcessor extends WorkerHost {
             };
 
             try {
+              await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+                _const.PLATFORMS.TIKTOK,
+                content.externalId,
+              );
               const savedContent = await this.userContentRepository.createAsync(content);
               importedExternalIds.push(savedContent.externalId);
               const mappedContent = mapToTikTokContentModel(savedContent);

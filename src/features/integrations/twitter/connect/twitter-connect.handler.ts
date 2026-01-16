@@ -18,8 +18,9 @@ import { mapToTwitterProfileModel } from "../../../../domain/mappers/twitter.map
 import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey.entity";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { TwitterProfileModel, TwitterUserDataModel } from "../../../../domain/contracts/twitter.model";
+import { TwitterProfileModel, TwitterUserDataType } from "../../../../domain/contracts/twitter.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
+import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
 
 const BASE_URL = 'https://api.twitter.com/2';
 
@@ -84,6 +85,8 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
     private readonly eventEmitter: EventEmitter2,
   ) { }
 
@@ -163,9 +166,9 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<TwitterUserDataModel> {
+  private async fetchUserData(accessToken: string): Promise<TwitterUserDataType> {
     try {
-      const response = await axios.get<TwitterUserDataModel>(`${BASE_URL}/users/me`, {
+      const response = await axios.get<TwitterUserDataType>(`${BASE_URL}/users/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
         params: {
           'user.fields': [
@@ -209,7 +212,11 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     return dataProtectionKey;
   }
 
-  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: TwitterUserDataModel): Promise<LinkedAccount> {
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: TwitterUserDataType): Promise<LinkedAccount> {
+    await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+      _const.PLATFORMS.TWITTER,
+      userData.data.id,
+    );
     linkedAccount.externalId = userData.data.id;
     linkedAccount.userName = userData.data.username;
     linkedAccount.profileImage = userData.data.profile_image_url;
@@ -234,7 +241,11 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     return linkedAccount;
   }
 
-  private async createLinkedAccount(userId: string, userData: TwitterUserDataModel): Promise<LinkedAccount> {
+  private async createLinkedAccount(userId: string, userData: TwitterUserDataType): Promise<LinkedAccount> {
+    await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+      _const.PLATFORMS.TWITTER,
+      userData.data.id,
+    );
     const newEntry = new LinkedAccount({
       platform: _const.PLATFORMS.TWITTER,
       userId,

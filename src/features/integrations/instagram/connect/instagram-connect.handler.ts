@@ -16,8 +16,9 @@ import ApplicationException from "../../../../core/exceptions/application.except
 import { mapToInstagramProfileModel } from "../../../../domain/mappers/instagram.mapper";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { InstagramProfileModel, InstagramUserDataModel } from "../../../../domain/contracts/instagram.model";
+import { InstagramProfileModel, InstagramUserDataType } from "../../../../domain/contracts/instagram.model";
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
+import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
 
 const PLATFORM = 'instagram';
 const GRAPH_BASE = 'https://graph.instagram.com/v22.0';
@@ -86,6 +87,8 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
     private readonly eventEmitter: EventEmitter2,
   ) { }
 
@@ -174,9 +177,9 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<InstagramUserDataModel> {
+  private async fetchUserData(accessToken: string): Promise<InstagramUserDataType> {
     try {
-      const response = await axios.get<InstagramUserDataModel>(`${GRAPH_BASE}/me`, {
+      const response = await axios.get<InstagramUserDataType>(`${GRAPH_BASE}/me`, {
         params: {
           access_token: accessToken,
           fields: 'id,name,username,email,profile_picture_url,biography,website,media_count,followers_count,follows_count',
@@ -203,7 +206,11 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
   }
 
-  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: InstagramUserDataModel): Promise<LinkedAccount> {
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: InstagramUserDataType): Promise<LinkedAccount> {
+    await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+      PLATFORM,
+      userData.id,
+    );
     linkedAccount.externalId = userData.id;
     linkedAccount.userName = userData.username;
     linkedAccount.profileImage = userData.profile_picture_url;
@@ -220,7 +227,11 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     return linkedAccount;
   }
 
-  private async createLinkedAccount(userId: string, userData: InstagramUserDataModel): Promise<LinkedAccount> {
+  private async createLinkedAccount(userId: string, userData: InstagramUserDataType): Promise<LinkedAccount> {
+    await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+      PLATFORM,
+      userData.id,
+    );
     const newEntry = new LinkedAccount({
       platform: PLATFORM,
       userId,
