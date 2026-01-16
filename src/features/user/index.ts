@@ -27,6 +27,8 @@ import { UpdateProfileImageController } from "./update/profile-image/update-prof
 import { UpdateProfileImageCommandHandler } from "./update/profile-image/update-profile-image.handler";
 import { UpdateProfileImagePrivacyController } from "./update/profile-image-privacy/update-profile-image-privacy.endpoint";
 import { UpdateProfileImagePrivacyCommandHandler } from "./update/profile-image-privacy/update-profile-image-privacy.handler";
+import { UpdatePrivacySettingsController } from "./update/privacy-settings/update-privacy-settings.endpoint";
+import { UpdatePrivacySettingsCommandHandler } from "./update/privacy-settings/update-privacy-settings.handler";
 import { UpdatePhoneNumberController } from "./phone-number/update/update-phone-number.endpoint";
 import { UpdatePhoneNumberCommandHandler } from "./phone-number/update/update-phone-number.handler";
 import { ConfirmPhoneNumberController } from "./phone-number/confirm/confirm-phone-number.endpoint";
@@ -73,6 +75,8 @@ export { UpdateProfileImageController } from "./update/profile-image/update-prof
 export { UpdateProfileImageCommand } from "./update/profile-image/update-profile-image.handler";
 export { UpdateProfileImagePrivacyController } from "./update/profile-image-privacy/update-profile-image-privacy.endpoint";
 export { UpdateProfileImagePrivacyCommand } from "./update/profile-image-privacy/update-profile-image-privacy.handler";
+export { UpdatePrivacySettingsController } from "./update/privacy-settings/update-privacy-settings.endpoint";
+export { UpdatePrivacySettingsCommand } from "./update/privacy-settings/update-privacy-settings.handler";
 export { UpdatePhoneNumberController } from "./phone-number/update/update-phone-number.endpoint";
 export { UpdatePhoneNumberCommand } from "./phone-number/update/update-phone-number.handler";
 export { ConfirmPhoneNumberController } from "./phone-number/confirm/confirm-phone-number.endpoint";
@@ -102,6 +106,7 @@ const controllers = [
   UpdateTypeController,
   UpdateProfileImageController,
   UpdateProfileImagePrivacyController,
+  UpdatePrivacySettingsController,
   UpdatePhoneNumberController,
   ConfirmPhoneNumberController,
   ActivateUserController,
@@ -125,6 +130,7 @@ const handlers = [
   UpdateTypeCommandHandler,
   UpdateProfileImageCommandHandler,
   UpdateProfileImagePrivacyCommandHandler,
+  UpdatePrivacySettingsCommandHandler,
   UpdatePhoneNumberCommandHandler,
   ConfirmPhoneNumberCommandHandler,
   ActivateUserCommandHandler,
