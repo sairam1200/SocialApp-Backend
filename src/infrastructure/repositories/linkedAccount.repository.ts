@@ -44,12 +44,12 @@ export class LinkedAccountRepository implements ILinkedAccountRepository {
     }
 
     if (filter?.platform) {
-      whereConditions.push("content.platform = :platform");
+      whereConditions.push("account.platform = :platform");
       parameters.platform = filter.platform;
     }
 
     if (filter?.verified) {
-      whereConditions.push("content.verified = :verified");
+      whereConditions.push("account.verified = :verified");
       parameters.verified = filter.verified;
     }
 

@@ -1,4 +1,4 @@
-import { Repository, In, MoreThan } from "typeorm";
+import { Repository, In, MoreThan, Brackets } from "typeorm";
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { UserContent } from "../../domain/entities";
@@ -61,7 +61,7 @@ export class UserContentRepository implements IUserContentRepository {
   async getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]> {
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;
     console.log('Query Options:', searchQuery);
-    const queryBuilder = this.userContentContext.createQueryBuilder("content");
+    const queryBuilder = this.userContentContext.createQueryBuilder("uc");
 
     if (!orderBy) {
       orderBy = "title";
@@ -73,25 +73,24 @@ export class UserContentRepository implements IUserContentRepository {
     if (searchQuery) {
       whereConditions.push(`
         (
-          content.title ILIKE :searchQuery
+          uc.title ILIKE :searchQuery
           OR EXISTS (
             SELECT 1
-            FROM LATERAL json_each_text(content."metaData") AS kv(key, value)
-            WHERE kv.value ILIKE :searchQuery
+            FROM json_each_text(uc.metaData) AS kv(key, value)
+            WHERE value ILIKE :searchQuery
           )
         )
       `);
-
       parameters.searchQuery = `%${searchQuery}%`;
     }
 
     if (filter?.externalId) {
-      whereConditions.push("content.externalId = :externalId");
+      whereConditions.push("uc.externalId = :externalId");
       parameters.externalId = filter.externalId;
     }
 
     if (filter?.type) {
-      whereConditions.push("content.type = :type");
+      whereConditions.push("uc.type = :type");
       parameters.type = filter.type;
     }
 
@@ -100,16 +99,19 @@ export class UserContentRepository implements IUserContentRepository {
     }
 
     if (searchQuery) {
-      queryBuilder.orderBy(
-        `CASE WHEN content.title ILIKE :exactSearch THEN 0 
-                 WHEN content.title ILIKE :searchQuery THEN 1 
+      const exactSearch = searchQuery.toLowerCase();
+      queryBuilder
+        .addOrderBy(
+          `CASE WHEN uc.title ILIKE :exactSearch THEN 0 
+                 WHEN uc.title ILIKE :searchQuery THEN 1 
                  ELSE 2 END`,
-        "ASC"
-      )
-        .addOrderBy(`content.${orderBy}`, order)
-        .setParameter("exactSearch", searchQuery.toLowerCase());
+          "ASC"
+        )
+        .addOrderBy(`uc.${orderBy}`, order)
+        .setParameter("exactSearch", `%${exactSearch}%`)
+        .setParameter("searchQuery", parameters.searchQuery);
     } else {
-      queryBuilder.orderBy(`content.${orderBy}`, order);
+      queryBuilder.orderBy(`cs.${orderBy}`, order);
     }
 
     queryBuilder.skip((page - 1) * pageSize)
