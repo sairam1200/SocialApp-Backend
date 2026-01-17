@@ -31,7 +31,7 @@ export class ContentStreamRepository implements IContentStreamRepository {
           content.title ILIKE :searchQuery
           OR EXISTS (
             SELECT 1
-            FROM json_each_text(content.metaData) AS kv(key, value)
+            FROM jsonb_each_text(content."metaData") AS kv(key, value)
             WHERE value ILIKE :searchQuery
           )
         )
