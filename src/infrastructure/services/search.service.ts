@@ -1106,7 +1106,7 @@ export class SearchService implements ISearchService {
       if (accessToken) {
         headers.Authorization = `Bearer ${accessToken}`;
       } else {
-        params.key = configs.youtube.clientId;
+        params.key = configs.youtube.apiKey;
       }
 
       const response = await axios.get<YouTubeSearchResponseDataType>(
