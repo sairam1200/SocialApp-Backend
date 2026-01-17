@@ -136,6 +136,12 @@ export type YouTubeSearchResponseDataType = {
 export class YoutubeSearchResponseModel {
   query: string;
   results: YouTubeContentModel[];
+  pageInfo?: {
+    totalResults: number;
+    resultsPerPage: number;
+  };
+  nextPageToken?: string;
+  prevPageToken?: string;
 
   constructor() {
     this.query = '';

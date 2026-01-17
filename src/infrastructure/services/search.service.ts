@@ -806,6 +806,8 @@ export class SearchService implements ISearchService {
       limit,
     );
 
+    let apiResponse: YouTubeSearchResponseDataType | undefined;
+
     if (shouldFetch) {
       const lockAcquired = await this.cacheService.acquireLock(cacheParams);
 
@@ -815,9 +817,16 @@ export class SearchService implements ISearchService {
       }
 
       try {
-        await this.fetchAndStoreYouTubeResults(originalQuery, limit, filters, accessToken, pageToken);
+        apiResponse = await this.fetchAndStoreYouTubeResults(originalQuery, limit, filters, accessToken, pageToken);
         if (lockAcquired) {
-          const updatedResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+          // After fetching from API, we may have stored many items in contentStream
+          // Use full limit for contentStream to ensure we get all fetched items
+          // Other sections (userContent, linkedAccount) still use their section limits
+          const fullLimitSectionLimits = {
+            ...sectionLimits,
+            contentStream: limit, // Use full limit for contentStream after API fetch
+          };
+          const updatedResults = await this.getDatabaseResults(normalizedQuery, filters, page, fullLimitSectionLimits, skips);
           dbResults.contentStream = updatedResults.contentStream;
           dbResults.userContent = updatedResults.userContent;
           dbResults.linkedAccount = updatedResults.linkedAccount;
@@ -831,7 +840,7 @@ export class SearchService implements ISearchService {
       }
     }
 
-    const response = this.buildYoutubeResponse(originalQuery, dbResults);
+    const response = this.buildYoutubeResponse(originalQuery, dbResults, apiResponse);
 
     if (shouldFetch) {
       await this.cacheService.setCachedResults(cacheParams, response);
@@ -909,10 +918,10 @@ export class SearchService implements ISearchService {
     filters: Record<string, any>,
     accessToken: string | undefined,
     pageToken?: string,
-  ): Promise<void> {
+  ): Promise<YouTubeSearchResponseDataType> {
     const ytResults = await this.fetchYouTubeOnlineAsync(false, query, limit, filters, accessToken, pageToken);
 
-    if (!ytResults?.items?.length) return;
+    if (!ytResults?.items?.length) return ytResults;
 
     const mappedResults = ytResults.items.map(item => {
       const kind = item.id?.kind || '';
@@ -951,7 +960,7 @@ export class SearchService implements ISearchService {
       });
     }).filter(c => c.externalId);
 
-    if (!mappedResults.length) return;
+    if (!mappedResults.length) return ytResults;
 
     const externalIds = mappedResults.map(c => c.externalId);
     const newIds = await this.generalRepository.checkExistingItemsAsync(externalIds, _const.PLATFORMS.YOUTUBE);
@@ -965,14 +974,23 @@ export class SearchService implements ISearchService {
     if (existingIds.length > 0) {
       await this.updateContentRefreshTimestamp(existingIds, _const.PLATFORMS.YOUTUBE);
     }
+
+    return ytResults;
   }
 
   private buildYoutubeResponse(
     originalQuery: string,
     dbResults: { contentStream: ContentStream[]; userContent: UserContent[]; linkedAccount: LinkedAccount[] },
+    apiResponse?: YouTubeSearchResponseDataType,
   ): YoutubeSearchResponseModel {
     const response = new YoutubeSearchResponseModel();
     response.query = originalQuery;
+
+    if (apiResponse) {
+      response.pageInfo = apiResponse.pageInfo;
+      response.nextPageToken = apiResponse.nextPageToken;
+      response.prevPageToken = apiResponse.prevPageToken;
+    }
 
     dbResults.contentStream.forEach(content => {
       const item = new YouTubeContentModel();
