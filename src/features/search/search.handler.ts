@@ -265,7 +265,7 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
           }
           return null;
         case _const.PLATFORMS.YOUTUBE:
-          return result.pageInfo?.nextPageToken || null;
+          return result.nextPageToken || null;
         case _const.PLATFORMS.SPOTIFY:
           // Spotify uses offset, calculate next offset
           if (result.results?.tracks?.offset !== undefined && result.results?.tracks?.items) {
@@ -343,12 +343,7 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
             (liResults.companies?.length || 0)
           );
         case _const.PLATFORMS.YOUTUBE:
-          const ytResults = result.results as any;
-          return (
-            (ytResults.videos?.length || 0) +
-            (ytResults.channels?.length || 0) +
-            (ytResults.playlists?.length || 0)
-          );
+          return (result.results?.length || 0);
         case _const.PLATFORMS.SPOTIFY:
           const spResults = result.results as any;
           return (
