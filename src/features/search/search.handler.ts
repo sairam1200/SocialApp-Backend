@@ -3,7 +3,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import fuseUtil from "../../core/utils/fuse.util";
 import { SearchHistory } from "../../domain/entities";
 import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
-import { Inject, UnauthorizedException } from "@nestjs/common";
+import { Inject } from "@nestjs/common";
 import { ISearchService } from "../../domain/services/isearch.service";
 import { deserializeObject } from "../../core/utils/serialization.util";
 import { HttpContext } from "../../core/middlewares/httpContext.middleware";
@@ -13,7 +13,7 @@ export class GlobalSearchRequestModel {
   @ApiProperty()
   searchTerm: string;
 
-  @ApiProperty({ required: false, description: "Array of platforms to search. If not provided, searches all linked platforms.", example: ["facebook", "instagram", "twitter"] })
+  @ApiProperty({ required: false, description: "Array of platforms to search. If not provided, searches all available platforms.", example: ["facebook", "instagram", "twitter"] })
   platforms?: string[];
 
   @ApiProperty({ required: false })
@@ -101,31 +101,40 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
     const { searchTerm, platforms, filter, page = 1, limit = 25, paginationTokens = {}, forceRefresh } = command.model;
     const userId = HttpContext.getCurrentUserId;
 
-    const [linkedAccounts, userLogins] = await Promise.all([
-      this.linkedAccountRepository.getByUserIdAsync(userId),
-      this.getAllUserLoginsForUser(userId),
-    ]);
+    const allPlatforms = Object.values(_const.PLATFORMS);
 
-    const linkedPlatforms = linkedAccounts.map(account => account.platform);
+    const normalizedPlatforms = platforms && platforms.length > 0
+      ? platforms.map(p => p.toLowerCase())
+      : null;
 
-    // Determine which platforms to search
-    const platformsToSearch = platforms && platforms.length > 0
-      ? platforms.filter(p => linkedPlatforms.includes(p))
-      : linkedPlatforms;
+    const platformsToSearch = normalizedPlatforms && normalizedPlatforms.length > 0
+      ? normalizedPlatforms.filter(p => allPlatforms.includes(p))
+      : allPlatforms;
 
-    if (platformsToSearch.length === 0) {
-      throw new UnauthorizedException('No linked platforms available for search. Please connect at least one platform.');
+    let tokenMap = new Map<string, string>();
+    if (userId) {
+      try {
+        const linkedAccounts = await this.linkedAccountRepository.getByUserIdAsync(userId);
+        const platforms = linkedAccounts.map(acc => acc.platform);
+
+        const loginPromises = platforms.map(platform =>
+          this.userLoginRepository.getByUserIdAndProviderAsync(userId, platform)
+            .catch(() => null)
+        );
+
+        const userLogins = (await Promise.all(loginPromises)).filter(Boolean);
+        userLogins.forEach((login: any) => {
+          const token = this.extractAccessToken(login.tokenValue);
+          if (token) {
+            tokenMap.set(login.provider, token);
+          }
+        });
+      } catch (error) {
+        console.error('Error retrieving user tokens:', error);
+      }
     }
 
-    const normalizedQuery = await this.normalizeQueryAsync(searchTerm);
-
-    const tokenMap = new Map<string, string>();
-    userLogins.forEach(login => {
-      const token = this.extractAccessToken(login.tokenValue);
-      if (token) {
-        tokenMap.set(login.provider, token);
-      }
-    });
+    const normalizedQuery = await this.normalizeQueryAsync(searchTerm, userId);
 
     const searchPromises = platformsToSearch.map(platform =>
       this.searchPlatformOptimized(
@@ -133,7 +142,7 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
         searchTerm,
         normalizedQuery,
         filter,
-        tokenMap.get(platform),
+        tokenMap.get(platform) || undefined,
         page,
         limit,
         paginationTokens[platform],
@@ -172,18 +181,6 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
     return response;
   }
 
-  private async getAllUserLoginsForUser(userId: string): Promise<any[]> {
-    const linkedAccounts = await this.linkedAccountRepository.getByUserIdAsync(userId);
-    const platforms = linkedAccounts.map(acc => acc.platform);
-
-    const loginPromises = platforms.map(platform =>
-      this.userLoginRepository.getByUserIdAndProviderAsync(userId, platform)
-        .catch(() => null)
-    );
-
-    return (await Promise.all(loginPromises)).filter(Boolean);
-  }
-
   private async searchPlatformOptimized(
     platform: string,
     originalQuery: string,
@@ -196,9 +193,7 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
     forceRefresh: boolean | undefined
   ): Promise<{ platform: string; result: any; error?: string; paginationToken?: string | null }> {
     try {
-      if (!accessToken) {
-        return { platform, result: null, error: `No access token available for ${platform}`, paginationToken: null };
-      }
+      // Access token is optional - some platforms support public search (YouTube, Reddit, Spotify)
 
       const searchParams = {
         page,
@@ -391,7 +386,7 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
     }
   }
 
-  private async normalizeQueryAsync(query: string): Promise<string> {
+  private async normalizeQueryAsync(query: string, userId?: string | null): Promise<string> {
     const trimmedQuery = (query ?? '').trim();
     if (!trimmedQuery) {
       return '';
@@ -407,22 +402,25 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
 
     const normalizedQuery = fuseUtil.normalizeSearchTerm(trimmedQuery, candidateValues);
 
-    const hasExistingEntry = similarQueries.some((item) => {
-      const original = (item.originalQuery ?? '').trim().toLowerCase();
-      return (
-        original === trimmedQuery.toLowerCase() ||
-        item.normalizedQuery === normalizedQuery
-      );
-    });
+    // Only save search history if user is logged in
+    if (userId) {
+      const hasExistingEntry = similarQueries.some((item) => {
+        const original = (item.originalQuery ?? '').trim().toLowerCase();
+        return (
+          original === trimmedQuery.toLowerCase() ||
+          item.normalizedQuery === normalizedQuery
+        );
+      });
 
-    if (!hasExistingEntry && normalizedQuery) {
-      await this.searchHistoryRepository.createAsync(
-        new SearchHistory({
-          originalQuery: trimmedQuery,
-          userId: HttpContext.getCurrentUserId,
-          normalizedQuery,
-        }),
-      );
+      if (!hasExistingEntry && normalizedQuery) {
+        await this.searchHistoryRepository.createAsync(
+          new SearchHistory({
+            originalQuery: trimmedQuery,
+            userId,
+            normalizedQuery,
+          }),
+        );
+      }
     }
 
     return normalizedQuery;
