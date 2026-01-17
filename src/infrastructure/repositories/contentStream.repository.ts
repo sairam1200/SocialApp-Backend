@@ -1,4 +1,4 @@
-import { Repository, In } from "typeorm";
+import { Repository, In, Brackets, Like } from "typeorm";
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ContentStream } from "../../domain/entities";
@@ -13,73 +13,73 @@ export class ContentStreamRepository implements IContentStreamRepository {
     private readonly contentStreamContext: Repository<ContentStream>
   ) { }
 
-  async getEntriesAsync(params: QueryOptions): Promise<[ContentStream[], number]> {
+  public async getEntriesAsync(params: QueryOptions): Promise<[ContentStream[], number]> {
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;
-    console.log('Query Options:', searchQuery);
-    const queryBuilder = this.contentStreamContext.createQueryBuilder("content");
+    const queryBuilder = this.contentStreamContext.createQueryBuilder('cs');
 
     if (!orderBy) {
       orderBy = "title";
     }
 
     const whereConditions: string[] = [];
-    const parameters: any = {};
+    const parameters: Record<string, any> = {};
 
     if (searchQuery) {
       whereConditions.push(`
         (
-          content.title ILIKE :searchQuery
+          cs.title ILIKE :searchQuery
           OR EXISTS (
             SELECT 1
-            FROM LATERAL json_each_text(content."metaData") AS kv(key, value)
-            WHERE kv.value ILIKE :searchQuery
+            FROM json_each_text(cs.metaData) AS kv(key, value)
+            WHERE value ILIKE :searchQuery
           )
         )
       `);
-
       parameters.searchQuery = `%${searchQuery}%`;
     }
 
     if (filter?.platform) {
-      whereConditions.push("content.platform = :platform");
+      whereConditions.push('cs.platform = :platform');
       parameters.platform = filter.platform;
     }
 
     if (filter?.externalId) {
-      whereConditions.push("content.externalId = :externalId");
+      whereConditions.push('cs.externalId = :externalId');
       parameters.externalId = filter.externalId;
     }
 
     if (filter?.type) {
-      whereConditions.push("content.type = :type");
+      whereConditions.push('cs.type = :type');
       parameters.type = filter.type;
     }
 
     if (filter?.subType) {
-      whereConditions.push("content.subType = :subType");
+      whereConditions.push('cs.subType = :subType');
       parameters.subType = filter.subType;
     }
 
     if (whereConditions.length > 0) {
-      queryBuilder.where(whereConditions.join(" AND "), parameters);
+      queryBuilder.where(whereConditions.join(' AND '), parameters);
     }
 
     if (searchQuery) {
-      queryBuilder.orderBy(
-        `CASE WHEN content.title ILIKE :exactSearch THEN 0 
-                 WHEN content.title ILIKE :searchQuery THEN 1 
+      const exactSearch = searchQuery.toLowerCase();
+      queryBuilder
+        .addOrderBy(
+          `CASE WHEN cs.title ILIKE :exactSearch THEN 0 
+                 WHEN cs.title ILIKE :searchQuery THEN 1 
                  ELSE 2 END`,
-        "ASC"
-      )
-        .addOrderBy(`content.${orderBy}`, order)
-        .setParameter("exactSearch", searchQuery.toLowerCase());
+          'ASC'
+        )
+        .addOrderBy(`cs.${orderBy}`, order)
+        .setParameter("exactSearch", `%${exactSearch}%`)
+        .setParameter("searchQuery", parameters.searchQuery);
     } else {
-      queryBuilder.orderBy(`content.${orderBy}`, order);
+      queryBuilder.orderBy(`cs.${orderBy}`, order);
     }
 
-    queryBuilder.skip((page - 1) * pageSize)
-      .take(pageSize);
-    const result = await queryBuilder.getManyAndCount();
+    const result = await queryBuilder.skip((page - 1) * pageSize)
+      .take(pageSize).getManyAndCount();
     console.log('Query Result:', result);
     return result
   }
