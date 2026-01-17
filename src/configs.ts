@@ -261,6 +261,7 @@ export default {
     clientSecret: envVars.YOUTUBE_CLIENT_SECRET,
     callbackUrl: envVars.YOUTUBE_CALLBACK_URL,
     webhookUrl: envVars.YOUTUBE_WEBHOOK_URL,
+    apiKey: envVars.YOUTUBE_API_KEY,
   },
   app: {
     url: envVars.APP_URL,
