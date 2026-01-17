@@ -76,8 +76,8 @@ export class UserContentRepository implements IUserContentRepository {
           content.title ILIKE :searchQuery
           OR EXISTS (
             SELECT 1
-            FROM jsonb_each_text(content."metaData") AS kv(key, value)
-            WHERE value ILIKE :searchQuery
+            FROM LATERAL json_each_text(content."metaData") AS kv(key, value)
+            WHERE kv.value ILIKE :searchQuery
           )
         )
       `);
