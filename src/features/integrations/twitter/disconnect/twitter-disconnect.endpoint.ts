@@ -5,7 +5,7 @@ import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import { Controller, Delete, HttpStatus, Res, UseGuards } from '@nestjs/common';
 import { TwitterDisconnectCommand } from './twitter-disconnect.handler';
 
-@ApiTags('Twitter')
+@ApiTags('Integrations')
 @Controller({
   path: `/integrations/twitter`,
   version: '1',

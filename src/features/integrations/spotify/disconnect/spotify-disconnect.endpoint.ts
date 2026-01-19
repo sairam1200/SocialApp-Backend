@@ -5,7 +5,7 @@ import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import { Controller, Delete, HttpStatus, Res, UseGuards } from '@nestjs/common';
 import { SpotifyDisconnectCommand } from './spotify-disconnect.handler';
 
-@ApiTags('Spotify')
+@ApiTags('Integrations')
 @Controller({
   path: `/integrations/spotify`,
   version: '1',

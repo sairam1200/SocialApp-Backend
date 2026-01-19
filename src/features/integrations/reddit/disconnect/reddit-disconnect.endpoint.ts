@@ -5,7 +5,7 @@ import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import { Controller, Delete, HttpStatus, Res, UseGuards } from '@nestjs/common';
 import { RedditDisconnectCommand } from './reddit-disconnect.handler';
 
-@ApiTags('Reddit')
+@ApiTags('Integrations')
 @Controller({
   path: `/integrations/reddit`,
   version: '1',

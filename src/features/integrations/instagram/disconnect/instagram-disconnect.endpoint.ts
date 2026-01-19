@@ -5,7 +5,7 @@ import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import { Controller, Delete, HttpStatus, Res, UseGuards } from '@nestjs/common';
 import { InstagramDisconnectCommand } from './instagram-disconnect.handler';
 
-@ApiTags('Instagram')
+@ApiTags('Integrations')
 @Controller({
   path: `/integrations/instagram`,
   version: '1',
