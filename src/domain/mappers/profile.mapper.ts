@@ -17,6 +17,7 @@ export function mapToProfileModel(
   const userModel = mapToUserModel(user, includeSensitiveFields, profileImageUrl);
   return new ProfileModel({
     ...userModel,
+    photoPrivacy: user.biometrics?.privacy,
     linkedAccounts: linkedAccounts.map(mapToLinkedAccountsModel),
     manualProfiles: manualProfiles.map(mapToManualProfileModel),
     followersCount,
