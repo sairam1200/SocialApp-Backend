@@ -5,7 +5,7 @@ import { YoutubeDisconnectCommand } from './youtube-disconnect.handler';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import { Controller, Delete, HttpStatus, Res, UseGuards } from '@nestjs/common';
 
-@ApiTags('YouTube')
+@ApiTags('Integrations')
 @Controller({
   path: `/integrations/youtube`,
   version: '1',

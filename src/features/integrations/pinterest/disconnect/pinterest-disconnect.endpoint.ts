@@ -5,7 +5,7 @@ import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import { Controller, Delete, HttpStatus, Res, UseGuards } from '@nestjs/common';
 import { PinterestDisconnectCommand } from './pinterest-disconnect.handler';
 
-@ApiTags('Pinterest')
+@ApiTags('Integrations')
 @Controller({
   path: `/integrations/pinterest`,
   version: '1',

@@ -5,7 +5,7 @@ import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import { Controller, Delete, HttpStatus, Res, UseGuards } from '@nestjs/common';
 import { LinkedInDisconnectCommand } from './linkedin-disconnect.handler';
 
-@ApiTags('LinkedIn')
+@ApiTags('Integrations')
 @Controller({
   path: `/integrations/linkedin`,
   version: '1',

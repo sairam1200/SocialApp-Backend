@@ -5,7 +5,7 @@ import { TiktokDisconnectCommand } from './tiktok-disconnect.handler';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import { Controller, Delete, HttpStatus, Res, UseGuards } from '@nestjs/common';
 
-@ApiTags('TikTok')
+@ApiTags('Integrations')
 @Controller({
   path: `/integrations/tiktok`,
   version: '1',
