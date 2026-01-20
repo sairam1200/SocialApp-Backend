@@ -80,3 +80,12 @@ export enum FollowStatus {
     Accepted = 'accepted',
     Blocked = 'blocked',
 }
+
+export enum OnboardingStep {
+  NotStarted = 'NotStarted',
+  ProfileData = 'ProfileData',
+  Topics = 'Topics',
+  Platforms = 'Platforms',
+  Confirmation = 'Confirmation',
+  Completed = 'Completed',
+}

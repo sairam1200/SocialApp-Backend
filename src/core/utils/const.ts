@@ -16,6 +16,7 @@ export default {
   ICONTENTSTREAM_REPOSITORY: "IContentStreamRepository",
   IMANUALPROFILE_REPOSITORY: "IManualProfileRepository",
   IDATAPROTECTIONKEY_REPOSITORY: "IDataProtectionKeyRepository",
+  ITOPIC_REPOSITORY: "ITopicRepository",
 
   // Service Interfaces
   IEMAIL_SERVICE: 'IEmailService',

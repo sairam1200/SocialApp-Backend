@@ -12,3 +12,4 @@ export { ILinkedAccountRepository } from './ilinkedAccount.repository';
 export { IManualProfileRepository } from './imanualProfile.repository';
 export { IDataProtectionKeyRepository } from './idataProtectionKey.repository';
 export { IUserFollowRepository } from './iuserFollow.repository';
+export { ITopicRepository } from './itopic.repository';

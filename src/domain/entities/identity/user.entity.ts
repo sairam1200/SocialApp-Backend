@@ -1,10 +1,11 @@
-import { UserType, ProfilePrivacy } from "../../enums";
+import { UserType, ProfilePrivacy, OnboardingStep } from "../../enums";
 import { BaseEntity } from "../../baseEntity";
 import { Playlist } from "../collection/playlist.entity";
 import { Entity, Column, OneToMany, OneToOne } from "typeorm";
 import { PlaylistMember } from "../collection/playlistMember.entity";
 import { UserBiometric } from "./userBiometric.entity";
 import { UserFollow } from "../userFollow.entity";
+import { UserTopic } from "../userTopic.entity";
 
 @Entity({ name: 'users', schema: 'identity' })
 export class User extends BaseEntity {
@@ -101,6 +102,17 @@ export class User extends BaseEntity {
     })
     type: UserType;
 
+    @Column({ nullable: true })
+    profileImage?: string;
+
+    @Column({
+        type: 'enum',
+        enum: OnboardingStep,
+        default: OnboardingStep.NotStarted,
+        nullable: true,
+    })
+    onboardingStep?: OnboardingStep;
+
     @OneToOne(() => UserBiometric, biometrics => biometrics.user, { cascade: true, eager: false })
     biometrics?: UserBiometric;
 
@@ -118,6 +130,9 @@ export class User extends BaseEntity {
 
     @OneToMany(() => UserFollow, follow => follow.follower)
     following: UserFollow[];
+
+    @OneToMany(() => UserTopic, userTopic => userTopic.user)
+    userTopics: UserTopic[];
 
     constructor(request: Partial<User> = {}) {
         super();

@@ -10,18 +10,7 @@ import { HttpContext } from "../../../../core/middlewares/httpContext.middleware
 import { UserBiometric } from "../../../../domain/entities/identity/userBiometric.entity";
 import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
 import { uploadBase64ToCloudinaryAsync, deleteFromCloudinaryAsync } from "../../../../core/utils/cloudinary.util";
-
-export interface UploadedFile {
-  fieldname: string;
-  originalname: string;
-  encoding: string;
-  mimetype: string;
-  size: number;
-  buffer: Buffer;
-  destination?: string;
-  filename?: string;
-  path?: string;
-}
+import { UploadedFile } from "../../../../domain/types/uploadedFile.type";
 
 export class UpdateProfileImageCommand {
   file?: UploadedFile;
@@ -58,12 +47,10 @@ export class UpdateProfileImageCommandHandler implements ICommandHandler<UpdateP
         throw new BadRequestException('File size exceeds the maximum limit of 5MB.');
       }
 
-      // Delete old custom image if exists
-      if (biometrics?.profileImageUrl) {
-        await this.deleteOldProfileImage(biometrics.profileImageUrl);
-      }
+      // Store the old profile image URL before uploading new one
+      const oldProfileImageUrl = biometrics?.profileImageUrl;
 
-      // Upload new custom image
+      // Upload new custom image first
       const base64Image = `data:${command.file.mimetype};base64,${command.file.buffer.toString('base64')}`;
       const uploadResult = await uploadBase64ToCloudinaryAsync(base64Image, "users");
 
@@ -88,6 +75,11 @@ export class UpdateProfileImageCommandHandler implements ICommandHandler<UpdateP
           biometrics.privacy = command.privacy;
         }
         await this.userRepository.upsertUserBiometricAsync(user.id, biometrics);
+      }
+
+      // Delete old profile image after successful upload and save
+      if (oldProfileImageUrl) {
+        await this.deleteOldProfileImage(oldProfileImageUrl);
       }
     } else {
       const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email.split('@')[0];
