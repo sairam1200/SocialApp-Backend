@@ -4,7 +4,7 @@ import {
   FacebookProfileModel,
   FacebookSearchItemModel,
 } from '../contracts/facebook.model';
-import { ContentStream } from 'domain/entities';
+import { ContentStream, UserContent } from 'domain/entities';
 import { StreamEntityType } from 'domain/enums';
 import _const from 'core/utils/const';
 
@@ -76,11 +76,17 @@ export function mapContentStreamToFacebookOnlineModel(content: ContentStream): F
   } as FacebookOnlineModel
 }
 
-export function mapUserContentToFacebookOnlineModel(content: any): FacebookOnlineModel {
+export function mapUserContentToFacebookOnlineModel(content: ContentStream | UserContent): FacebookOnlineModel {
+  const isContentStream = (c: ContentStream | UserContent): c is ContentStream => {
+    return 'subType' in c;
+  };
+
+  const contentType = isContentStream(content) ? content.subType : content.type;
+
   return {
     id: content.id,
     title: content.title,
-    type: content.type,
+    type: contentType,
     externalId: content.externalId,
     description: content.metaData?.description,
     picture: content.metaData?.picture,
