@@ -15,6 +15,7 @@ export namespace Globals {
     public static readonly UserType = "http://gaddr.com/claims/usertype";
     public static readonly UserName = "http://gaddr.com/claims/username";
     public static readonly ProfileImage = "http://gaddr.com/claims/profile-picture";
+    public static readonly AccountType = "http://gaddr.com/claims/account-type";
     public static readonly GivenName = "http://gaddr.com/claims/givenname";
     public static readonly FamilyName = "http://gaddr.com/claims/familyname";
     public static readonly FullName = "http://gaddr.com/claims/fullname";
