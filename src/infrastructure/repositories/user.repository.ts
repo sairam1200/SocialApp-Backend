@@ -105,12 +105,12 @@ export class UserRepository implements IUserRepository {
   }
 
   public async getUserByIdAsync(id: string): Promise<User | null> {
-    return await this.userContext.findOne({ where: { id } });
+    return await this.userContext.findOne({ where: { id }, relations: { biometrics: true } });
   }
 
   public async getUserByEmailAsync(email: string, includeNewEmail?: boolean): Promise<User | null> {
     const normalizedEmail = email?.toUpperCase();
-    const user = await this.userContext.findOne({ where: { normalizedEmail } });
+    const user = await this.userContext.findOne({ where: { normalizedEmail }, relations: { biometrics: true } });
 
     if (user || !includeNewEmail) {
       return user;
@@ -118,13 +118,14 @@ export class UserRepository implements IUserRepository {
 
     return await this.userContext
       .createQueryBuilder('user')
+      .leftJoinAndSelect('user.biometrics', 'biometrics')
       .where('LOWER(user.newEmail) = LOWER(:email)', { email })
       .getOne();
   }
 
   public async getUserByNameAsync(userName: string): Promise<User | null> {
     const normalizedUserName = userName?.toUpperCase();
-    return await this.userContext.findOne({ where: { normalizedUserName } });
+    return await this.userContext.findOne({ where: { normalizedUserName }, relations: ['biometrics'] });
   }
 
   public async getEntriesAsync(

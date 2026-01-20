@@ -13,7 +13,7 @@ export function mapToUserModel(
     gender: user.gender,
     bio: user.bio ?? null,
     lastName: user.lastName,
-    photo: profileImageUrl || null,
+    photo: profileImageUrl,
     firstName: user.firstName,
     phoneNumber: includeSensitiveFields ? user.phoneNumber : null,
     isEmailVerified: includeSensitiveFields ? user.emailConfirmed : null,

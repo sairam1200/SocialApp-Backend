@@ -14,7 +14,7 @@ export function mapToProfileModel(
   followersCount: number = 0,
   followingCount: number = 0
 ): ProfileModel {
-  const userModel = mapToUserModel(user, includeSensitiveFields, profileImageUrl);
+  const { isEmailVerified, ...userModel } = mapToUserModel(user, includeSensitiveFields, profileImageUrl);
   return new ProfileModel({
     ...userModel,
     photoPrivacy: user.biometrics?.privacy,
