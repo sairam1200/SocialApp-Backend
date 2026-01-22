@@ -63,7 +63,7 @@ export class YoutubeConnectController {
     return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
   }
 
-  @Get('connect/callback')
+  @Get('connect-callback')
   @ApiResponse({ status: 200, description: 'OK', type: YoutubeConnectCallbackResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })

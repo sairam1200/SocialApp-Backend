@@ -60,7 +60,7 @@ export class LinkedInConnectController {
     return res.redirect(HttpStatus.FOUND, authorizeURL);
   }
 
-  @Get('callback')
+  @Get('connect-callback')
   @ApiResponse({ status: 200, description: 'OK', type: LinkedInConnectCallbackResponseModel })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
