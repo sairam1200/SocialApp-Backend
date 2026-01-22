@@ -41,6 +41,14 @@ import { DeactivateUserController } from "./deactivate-user/deactivate-user.endp
 import { DeactivateUserCommandHandler } from "./deactivate-user/deactivate-user.handler";
 import { DeactivateUserRoleController } from "./deactivate-user-role/deactivate-user-role.endpoint";
 import { DeactivateUserRoleCommandHandler } from "./deactivate-user-role/deactivate-user-role.handler";
+import { GetPreferenceController } from "./settings/preferences/get/get-preference.endpoint";
+import { GetPreferenceQueryHandler } from "./settings/preferences/get/get-preference.handler";
+import { UpdateThemeController } from "./settings/preferences/update-theme/update-theme.endpoint";
+import { UpdateThemeCommandHandler } from "./settings/preferences/update-theme/update-theme.handler";
+import { GetNotificationSettingController } from "./settings/notification/get/get-notification-setting.endpoint";
+import { GetNotificationSettingQueryHandler } from "./settings/notification/get/get-notification-setting.handler";
+import { UpdateNotificationSettingController } from "./settings/notification/update/update-notification-setting.endpoint";
+import { UpdateNotificationSettingCommandHandler } from "./settings/notification/update/update-notification-setting.handler";
 
 // EXPORTS
 export { ChangePasswordController } from "./change-password/change-password.endpoint";
@@ -89,6 +97,14 @@ export { DeactivateUserController } from "./deactivate-user/deactivate-user.endp
 export { DeactivateUserCommand } from "./deactivate-user/deactivate-user.handler";
 export { DeactivateUserRoleController } from "./deactivate-user-role/deactivate-user-role.endpoint";
 export { DeactivateUserRoleCommand } from "./deactivate-user-role/deactivate-user-role.handler";
+export { GetPreferenceController } from "./settings/preferences/get/get-preference.endpoint";
+export { GetPreferenceQuery } from "./settings/preferences/get/get-preference.handler";
+export { UpdateThemeController } from "./settings/preferences/update-theme/update-theme.endpoint";
+export { UpdateThemeCommand } from "./settings/preferences/update-theme/update-theme.handler";
+export { GetNotificationSettingController } from "./settings/notification/get/get-notification-setting.endpoint";
+export { GetNotificationSettingQuery } from "./settings/notification/get/get-notification-setting.handler";
+export { UpdateNotificationSettingController } from "./settings/notification/update/update-notification-setting.endpoint";
+export { UpdateNotificationSettingCommand } from "./settings/notification/update/update-notification-setting.handler";
 
 const controllers = [
   GetUsersController,
@@ -113,6 +129,10 @@ const controllers = [
   ActivateUserRoleController,
   DeactivateUserController,
   DeactivateUserRoleController,
+  GetPreferenceController,
+  UpdateThemeController,
+  GetNotificationSettingController,
+  UpdateNotificationSettingController,
 ];
 
 const handlers = [
@@ -137,6 +157,10 @@ const handlers = [
   ActivateUserRoleCommandHandler,
   DeactivateUserCommandHandler,
   DeactivateUserRoleCommandHandler,
+  GetPreferenceQueryHandler,
+  UpdateThemeCommandHandler,
+  GetNotificationSettingQueryHandler,
+  UpdateNotificationSettingCommandHandler,
 ];
 
 const users = {

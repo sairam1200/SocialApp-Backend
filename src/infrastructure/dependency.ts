@@ -1,5 +1,5 @@
 import _const from "../core/utils/const";
-import { ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, TopicRepository, UserContentRepository, UserFollowRepository, UserLoginRepository, UserRepository, UserRoleRepository } from "./repositories";
+import { ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, TopicRepository, UserContentRepository, UserFollowRepository, UserLoginRepository, UserPreferenceRepository, UserRepository, UserRoleRepository } from "./repositories";
 import { GeneralRepository } from "./repositories/general.repository";
 import { ManualProfileRepository } from "./repositories/manualProfile.repository";
 import { EmailService, NotificationService, SearchService, SearchCacheService, TokenService, YoutubeWebhookService, QueueService, PlatformDisconnectService } from "./services";
@@ -75,6 +75,10 @@ export const dependency = {
   TopicRepository: {
     provide: _const.ITOPIC_REPOSITORY,
     useClass: TopicRepository,
+  },
+  UserPreferenceRepository: {
+    provide: _const.IUSERPREFERENCE_REPOSITORY,
+    useClass: UserPreferenceRepository,
   },
 
   TokenService: {
