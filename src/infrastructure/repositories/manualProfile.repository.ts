@@ -16,7 +16,8 @@ export class ManualProfileRepository implements IManualProfileRepository {
 
   public async getByUserIdAsync(userId: string): Promise<ManualProfile[]> {
     return await this.manualProfileContext.find({
-      where: { userId }
+      where: { userId },
+      order: { displayOrder: 'ASC' }
     });
   }
 
@@ -40,7 +41,20 @@ export class ManualProfileRepository implements IManualProfileRepository {
   }
 
   public async deleteAsync(manualProfile: ManualProfile): Promise<void> {
+    const userId = manualProfile.userId;
+    const deletedDisplayOrder = manualProfile.displayOrder;
+
     await this.manualProfileContext.remove(manualProfile);
+
+    await this.manualProfileContext
+      .createQueryBuilder()
+      .update()
+      .set({ displayOrder: () => 'displayOrder - 1' })
+      .where('userId = :userId', { userId })
+      .andWhere('displayOrder > :deletedDisplayOrder', { deletedDisplayOrder })
+      .execute();
+
+    await this.normalizeDisplayOrdersAsync(userId);
   }
 
   public async createAsync(manualProfile: Partial<ManualProfile>): Promise<ManualProfile> {
@@ -49,14 +63,12 @@ export class ManualProfileRepository implements IManualProfileRepository {
     }
 
     if (manualProfile.displayOrder == 0 || manualProfile.displayOrder == null) {
-      const maxDisplayOrder = await this.manualProfileContext
+      const countResult = await this.manualProfileContext
         .createQueryBuilder('manualProfile')
-        .select('MAX(manualProfile.displayOrder)', 'max')
         .where('manualProfile.userId = :userId', { userId: manualProfile.userId })
-        .getRawOne();
+        .getCount();
 
-      const nextDisplayOrder = (maxDisplayOrder?.max ?? 0) + 1;
-      manualProfile.displayOrder = nextDisplayOrder;
+      manualProfile.displayOrder = countResult + 1;
     }
 
     return await this.manualProfileContext.save(manualProfile);
@@ -72,20 +84,33 @@ export class ManualProfileRepository implements IManualProfileRepository {
     const userId = profileToMove.userId;
     const oldDisplayOrder = profileToMove.displayOrder;
 
-    if (newDisplayOrder === oldDisplayOrder) {
+    const totalCount = await this.manualProfileContext
+      .createQueryBuilder('manualProfile')
+      .where('manualProfile.userId = :userId', { userId })
+      .getCount();
+
+    let targetDisplayOrder = newDisplayOrder;
+    if (targetDisplayOrder < 1) {
+      targetDisplayOrder = 1;
+    } else if (targetDisplayOrder > totalCount) {
+      targetDisplayOrder = totalCount;
+    }
+
+    if (targetDisplayOrder === oldDisplayOrder) {
       return; // No change needed
     }
 
-    if (newDisplayOrder < oldDisplayOrder) {
+    if (targetDisplayOrder < oldDisplayOrder) {
       await this.manualProfileContext
         .createQueryBuilder()
         .update()
         .set({ displayOrder: () => 'displayOrder + 1' })
         .where('userId = :userId', { userId })
-        .andWhere('displayOrder >= :newDisplayOrder AND displayOrder < :oldDisplayOrder', {
-          newDisplayOrder,
+        .andWhere('displayOrder >= :targetDisplayOrder AND displayOrder < :oldDisplayOrder', {
+          targetDisplayOrder,
           oldDisplayOrder,
         })
+        .andWhere('id != :id', { id })
         .execute();
     } else {
       await this.manualProfileContext
@@ -93,15 +118,34 @@ export class ManualProfileRepository implements IManualProfileRepository {
         .update()
         .set({ displayOrder: () => 'displayOrder - 1' })
         .where('userId = :userId', { userId })
-        .andWhere('displayOrder <= :newDisplayOrder AND displayOrder > :oldDisplayOrder', {
-          newDisplayOrder,
+        .andWhere('displayOrder <= :targetDisplayOrder AND displayOrder > :oldDisplayOrder', {
+          targetDisplayOrder,
           oldDisplayOrder,
         })
+        .andWhere('id != :id', { id })
         .execute();
     }
 
-    profileToMove.displayOrder = newDisplayOrder;
+    profileToMove.displayOrder = targetDisplayOrder;
     await this.manualProfileContext.save(profileToMove);
+
+    await this.normalizeDisplayOrdersAsync(userId);
+  }
+
+  private async normalizeDisplayOrdersAsync(userId: string): Promise<void> {
+
+    const profiles = await this.manualProfileContext.find({
+      where: { userId },
+      order: { displayOrder: 'ASC' }
+    });
+
+    for (let i = 0; i < profiles.length; i++) {
+      const newOrder = i + 1;
+      if (profiles[i].displayOrder !== newOrder) {
+        profiles[i].displayOrder = newOrder;
+        await this.manualProfileContext.save(profiles[i]);
+      }
+    }
   }
 
   public async searchAsync(
@@ -149,5 +193,4 @@ export class ManualProfileRepository implements IManualProfileRepository {
     const [results, count] = await queryBuilder.getManyAndCount();
     return [results, count];
   }
-
 }
