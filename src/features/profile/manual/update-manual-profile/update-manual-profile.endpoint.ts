@@ -31,7 +31,6 @@ export class UpdateManualProfileController {
       model: request
     }));
 
-    res.status(HttpStatus.NO_CONTENT).send();
-    return res;
+    return res.status(HttpStatus.NO_CONTENT).send();
   }
 }

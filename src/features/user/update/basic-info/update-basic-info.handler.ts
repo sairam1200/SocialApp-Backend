@@ -17,6 +17,9 @@ export class UpdateBasicInfoModel {
   @ApiProperty()
   gender: string;
 
+  @ApiProperty()
+  bio?: string;
+
   constructor(request: Partial<UpdateBasicInfoModel> = {}) {
     Object.assign(this, request);
   }
@@ -34,6 +37,7 @@ const updateBasicInfoValidations = Joi.object({
   firstName: Joi.string().required(),
   lastName: Joi.string().required(),
   gender: Joi.string().required(),
+  bio: Joi.string().optional(),
 });
 
 @CommandHandler(UpdateBasicInfoCommand)
@@ -53,6 +57,7 @@ export class UpdateBasicInfoCommandHandler implements ICommandHandler<UpdateBasi
     user.firstName = command.model.firstName;
     user.lastName = command.model.lastName;
     user.gender = command.model.gender;
+    user.bio = command.model.bio;
 
     await this.userRepository.updateAsync(user);
   }

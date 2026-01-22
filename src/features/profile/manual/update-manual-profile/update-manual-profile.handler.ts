@@ -17,6 +17,7 @@ export class UpdateManualProfileCommand {
 }
 
 const updateUserValidations = Joi.object({
+  id: Joi.string().required(),
   url: Joi.string().required().uri(),
   platform: Joi.string().required(),
   icon: Joi.string().optional(),
