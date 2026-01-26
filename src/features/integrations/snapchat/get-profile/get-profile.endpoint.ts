@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import { Globals } from "../../../../core/globals";
-import { SnapchatProfileQuery } from "./get-profile.handler";
+import { SnapchatProfileQuery } from "../../snapchat/get-profile/get-profile.handler";
 import { ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";

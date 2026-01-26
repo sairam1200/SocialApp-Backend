@@ -1,13 +1,10 @@
 import axios from "axios";
-import configs from "../../../../configs";
 import { ApiProperty } from "@nestjs/swagger";
 import _const from "../../../../core/utils/const";
 import fuseUtil from "../../../../core/utils/fuse.util";
-import logger from "../../../../core/utils/winston.util";
 import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
 import { SearchHistory } from "../../../../domain/entities";
 import { Inject, UnauthorizedException } from "@nestjs/common";
-import { ApplicationException } from "../../../../core/exceptions";
 import { ISearchService } from "../../../../domain/services/isearch.service";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { SnapchatSearchResponseModel } from "../../../../domain/contracts/snapchat.model";

@@ -6,7 +6,7 @@ import { ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
 import { SnapchatProfileModel } from "../../../../domain/contracts/snapchat.model";
-import { SnapchatConnectCallbackQuery, SnapchatConnectQuery } from "./snapchat-connect.handler";
+import { SnapchatConnectCallbackQuery, SnapchatConnectQuery } from "../../snapchat/connect/snapchat-connect.handler";
 
 class SnapchatConnectCallbackResponseModel {
   @ApiProperty()
@@ -55,7 +55,7 @@ export class SnapchatConnectController {
       state: state,
     });
     
-    // Placeholder URL - actual Snapchat Kit OAuth URL may differ
+    // Placeholder URL, actual Snapchat Kit OAuth URL may differ
     const authorizeURL = `https://accounts.snapchat.com/login/oauth2/authorize?${params.toString()}`;
 
     await this.commandBus.execute(new SnapchatConnectQuery({ model: { state } }));

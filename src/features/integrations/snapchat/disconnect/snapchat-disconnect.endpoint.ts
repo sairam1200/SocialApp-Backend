@@ -3,7 +3,7 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import { Controller, Delete, HttpStatus, Res, UseGuards } from '@nestjs/common';
-import { SnapchatDisconnectCommand } from './snapchat-disconnect.handler';
+import { SnapchatDisconnectCommand } from "../../snapchat/disconnect/snapchat-disconnect.handler";
 
 @ApiTags('Integrations')
 @Controller({

@@ -3,8 +3,8 @@ import { CommandBus } from "@nestjs/cqrs";
 import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
-import { SnapchatImportCommand, SnapchatImportRequestModel } from "./snapchat-import.handler";
-import { CancelSnapchatImportCommand, CancelSnapchatImportRequestModel } from "./cancel-snapchat-import.handler";
+import { SnapchatImportCommand, SnapchatImportRequestModel } from "../../snapchat/import/snapchat-import.handler";
+import { CancelSnapchatImportCommand, CancelSnapchatImportRequestModel } from "../../snapchat/import/cancel-snapchat-import.handler";
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)

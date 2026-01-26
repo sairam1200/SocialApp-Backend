@@ -20,8 +20,8 @@ import { SnapchatProfileModel, SnapchatUserDataType } from "../../../../domain/c
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
 
-// Note: Snapchat Kit API base URL - may need adjustment based on actual API
-const BASE_URL = 'https://kit.snapchat.com/v1';
+// Note: Snapchat API base URL, needs to be adjusted based on actual API
+const BASE_URL = 'https://api.snapchat.com/v1';
 
 export class SnapchatConnectCallbackQuery {
   model: {

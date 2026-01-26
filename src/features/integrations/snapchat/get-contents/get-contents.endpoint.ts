@@ -3,7 +3,7 @@ import { CommandBus } from "@nestjs/cqrs";
 import { ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
-import { SnapchatContentsQuery } from "./get-contents.handler";
+import { SnapchatContentsQuery } from "../../snapchat/get-contents/get-contents.handler";
 
 @ApiTags('Integrations')
 @Controller({

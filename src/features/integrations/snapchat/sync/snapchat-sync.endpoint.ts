@@ -3,8 +3,8 @@ import { CommandBus } from "@nestjs/cqrs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserAccoutGuard } from "../../../../core/passport/account.guard";
 import { Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
-import { EnableSnapchatSyncCommand } from "./enable-snapchat-sync.handler";
-import { DisableSnapchatSyncCommand } from "./disable-snapchat-sync.handler";
+import { EnableSnapchatSyncCommand } from "../../snapchat/sync/enable-snapchat-sync.handler";
+import { DisableSnapchatSyncCommand } from "../../snapchat/sync/disable-snapchat-sync.handler";
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
