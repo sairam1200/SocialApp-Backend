@@ -5,11 +5,9 @@ import _const from "../../../core/utils/const";
 import logger from "../../../core/utils/winston.util";
 import { NotificationStatus, NotificationType } from "../../../domain/enums";
 import { INotificationService } from "../../../domain/services/inotification.service";
-import { ImportGateway } from "../../../infrastructure/websocket/gateways/import.gateway";
-import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
 import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
 import BullMQConfig from "../../../core/config/bullmq.config";
-import { IContentStreamRepository } from "../../../domain/repositories/icontentStream.repository";
+
 
 interface SnapchatImportJobData {
   account: any;
@@ -19,15 +17,10 @@ interface SnapchatImportJobData {
 @Processor(_const.BULL_QUEUES.SNAPCHAT_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.SNAPCHAT_IMPORT, 5))
 export class SnapchatImportProcessor extends WorkerHost {
   constructor(
-    @Inject(_const.IUSERCONTENT_REPOSITORY)
-    private readonly userContentRepository: IUserContentRepository,
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.INOTIFICATION_SERVICE)
     private readonly notificationService: INotificationService,
-    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
-    private readonly contentStreamRepository: IContentStreamRepository,
-    private readonly gateway: ImportGateway,
   ) {
     super();
     logger.info(`[SnapchatImport] Processor initialized`);
@@ -68,7 +61,7 @@ export class SnapchatImportProcessor extends WorkerHost {
 
     logger.info(`[SnapchatImport] Starting import for user ${account.userId}`);
     
-    // Note: Snapchat API has limited availability - implement fallback logic
+    // Snapchat API has limited availability, implement fallback logic
     // This is a placeholder implementation
     logger.warn(`[SnapchatImport] Snapchat API integration not yet fully implemented. Using fallback logic.`);
     
