@@ -45,7 +45,7 @@ export class SnapchatConnectController {
       'user.display_name',
       'user.bitmoji.avatar'
     ].join(' ');
-    
+
     const state = stringUtil.generateRandomString(16);
     const params = new URLSearchParams({
       response_type: 'code',
@@ -54,7 +54,7 @@ export class SnapchatConnectController {
       scope: scopes,
       state: state,
     });
-    
+
     // Placeholder URL, actual Snapchat Kit OAuth URL may differ
     const authorizeURL = `https://accounts.snapchat.com/login/oauth2/authorize?${params.toString()}`;
 
