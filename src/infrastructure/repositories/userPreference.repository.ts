@@ -12,12 +12,6 @@ interface UserPreferenceCacheModel {
   notificationChannelsEnabled: NotificationChannel[];
 }
 
-const defaultNotificationChannelsEnabled = [
-  NotificationChannel.InApp,
-  NotificationChannel.Email,
-  NotificationChannel.Push,
-];
-
 @Injectable()
 export class UserPreferenceRepository implements IUserPreferenceRepository {
   constructor(
@@ -25,76 +19,28 @@ export class UserPreferenceRepository implements IUserPreferenceRepository {
     private readonly userPreferenceContext: Repository<UserPreference>,
   ) { }
 
-  public async getPreferencesAsync(userId: string): Promise<UserPreference> {
-    return await this.getOrCreatePreferencesAsync(userId, false);
-  }
-
-  public async updateThemeAsync(userId: string, theme: Theme): Promise<UserPreference> {
-    const preferences = await this.getOrCreatePreferencesAsync(userId, true);
-    preferences.theme = theme;
-    preferences.setCurrentUser(userId);
-
-    const updated = await this.userPreferenceContext.save(preferences);
-    await this.setCachedPreferences(updated);
-    return updated;
-  }
-
-  public async updateNotificationChannelsAsync(userId: string, channels: NotificationChannel[]): Promise<UserPreference> {
-    const preferences = await this.getOrCreatePreferencesAsync(userId, true);
-    preferences.notificationChannelsEnabled = this.normalizeChannels(channels);
-    preferences.setCurrentUser(userId);
-
-    const updated = await this.userPreferenceContext.save(preferences);
-    await this.setCachedPreferences(updated);
-    return updated;
-  }
-
-  private async getOrCreatePreferencesAsync(userId: string, skipCache: boolean): Promise<UserPreference> {
-    if (!skipCache) {
-      const cached = await this.getCachedPreferences(userId);
-      if (cached) {
-        return new UserPreference({
-          userId,
-          theme: cached.theme ?? Theme.System,
-          notificationChannelsEnabled: this.normalizeChannels(cached.notificationChannelsEnabled),
-        });
-      }
-    }
-
-    let preferences = await this.userPreferenceContext.findOne({ where: { userId } });
-
-    if (!preferences) {
-      preferences = new UserPreference({
+  public async findByUserIdAsync(userId: string): Promise<UserPreference | null> {
+    const cached = await this.getCachedPreferences(userId);
+    if (cached) {
+      return new UserPreference({
         userId,
-        theme: Theme.System,
-        notificationChannelsEnabled: [...defaultNotificationChannelsEnabled],
+        theme: cached.theme,
+        notificationChannelsEnabled: cached.notificationChannelsEnabled,
       });
-      preferences.setCurrentUser(userId);
-      preferences = await this.userPreferenceContext.save(preferences);
+    }
+
+    const preferences = await this.userPreferenceContext.findOne({ where: { userId } });
+    if (preferences) {
       await this.setCachedPreferences(preferences);
-      return preferences;
     }
 
-    let needsUpdate = false;
-
-    if (!preferences.theme) {
-      preferences.theme = Theme.System;
-      needsUpdate = true;
-    }
-
-    const normalizedChannels = this.normalizeChannels(preferences.notificationChannelsEnabled);
-    if (!this.areChannelsEqual(preferences.notificationChannelsEnabled, normalizedChannels)) {
-      preferences.notificationChannelsEnabled = normalizedChannels;
-      needsUpdate = true;
-    }
-
-    if (needsUpdate) {
-      preferences.setCurrentUser(userId);
-      preferences = await this.userPreferenceContext.save(preferences);
-    }
-
-    await this.setCachedPreferences(preferences);
     return preferences;
+  }
+
+  public async saveAsync(preferences: UserPreference): Promise<UserPreference> {
+    const saved = await this.userPreferenceContext.save(preferences);
+    await this.setCachedPreferences(saved);
+    return saved;
   }
 
   private getCacheKey(userId: string): string {
@@ -116,25 +62,5 @@ export class UserPreferenceRepository implements IUserPreferenceRepository {
       },
       _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC,
     );
-  }
-
-  private normalizeChannels(channels?: NotificationChannel[]): NotificationChannel[] {
-    if (!channels || channels.length === 0) {
-      return [...defaultNotificationChannelsEnabled];
-    }
-
-    const enabled = new Set(channels);
-    enabled.add(NotificationChannel.InApp);
-
-    return defaultNotificationChannelsEnabled.filter(channel => enabled.has(channel));
-  }
-
-  private areChannelsEqual(
-    left?: NotificationChannel[],
-    right?: NotificationChannel[],
-  ): boolean {
-    if (!left || !right) return false;
-    if (left.length !== right.length) return false;
-    return left.every((value, index) => value === right[index]);
   }
 }

@@ -33,9 +33,11 @@ export class NotificationService implements INotificationService {
       metaData: metaData,
     }));
 
-    const preferences = await this.userPreferenceRepository.getPreferencesAsync(userId);
+    const preferences = await this.userPreferenceRepository.findByUserIdAsync(userId);
+    const channels = preferences?.notificationChannelsEnabled;
+    const shouldNotifyInApp = !channels || channels.length === 0 || channels.includes(NotificationChannel.InApp);
 
-    if (preferences.notificationChannelsEnabled?.includes(NotificationChannel.InApp)) {
+    if (shouldNotifyInApp) {
       this.gateway.emitNewNotification(userId, mapToNotificationModel(notification));
     }
     return notification;

@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiBody, ApiResponse, ApiTags, ApiBearerAuth } from "@nestjs/swagger";
-import { AuthenticatedAccountGuard } from "../../../../../core/passport";
+import { AuthenticatedAccountGuard } from "../../../../../../core/passport";
 import { Body, Controller, HttpStatus, Put, Res, UseGuards } from "@nestjs/common";
 import { UpdateThemeCommand, UpdateThemeRequestModel } from "./update-theme.handler";
 

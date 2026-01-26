@@ -21,3 +21,12 @@ export class NotificationPreferenceModel {
     Object.assign(this, partial);
   }
 }
+
+export class ThemePreferenceModel {
+  @ApiProperty({ enum: Theme })
+  theme: Theme;
+
+  constructor(partial?: Partial<ThemePreferenceModel>) {
+    Object.assign(this, partial);
+  }
+}

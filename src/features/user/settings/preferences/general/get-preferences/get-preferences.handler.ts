@@ -1,10 +1,10 @@
 import { Inject } from "@nestjs/common";
-import _const from "../../../../../core/utils/const";
+import _const from "../../../../../../core/utils/const";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { HttpContext } from "../../../../../core/middlewares/httpContext.middleware";
-import { IUserPreferenceRepository } from "../../../../../domain/repositories/iuserPreference.repository";
-import { NotificationPreferenceModel } from "../../../../../domain/contracts/userPreference.model";
-import { NotificationChannel } from "../../../../../domain/enums";
+import { HttpContext } from "../../../../../../core/middlewares/httpContext.middleware";
+import { IUserPreferenceRepository } from "../../../../../../domain/repositories/iuserPreference.repository";
+import { UserPreferenceModel } from "../../../../../../domain/contracts/userPreference.model";
+import { NotificationChannel, Theme } from "../../../../../../domain/enums";
 
 const defaultNotificationChannelsEnabled = [
   NotificationChannel.InApp,
@@ -23,23 +23,24 @@ const normalizeChannels = (channels?: NotificationChannel[]): NotificationChanne
   return defaultNotificationChannelsEnabled.filter(channel => enabled.has(channel));
 };
 
-export class GetNotificationSettingQuery {
-  constructor(request: Partial<GetNotificationSettingQuery> = {}) {
+export class GetPreferencesQuery {
+  constructor(request: Partial<GetPreferencesQuery> = {}) {
     Object.assign(this, request);
   }
 }
 
-@CommandHandler(GetNotificationSettingQuery)
-export class GetNotificationSettingQueryHandler implements ICommandHandler<GetNotificationSettingQuery> {
+@CommandHandler(GetPreferencesQuery)
+export class GetPreferencesQueryHandler implements ICommandHandler<GetPreferencesQuery> {
   constructor(
     @Inject(_const.IUSERPREFERENCE_REPOSITORY) private readonly userPreferenceRepository: IUserPreferenceRepository,
   ) { }
 
-  public async execute(_: GetNotificationSettingQuery): Promise<NotificationPreferenceModel> {
+  public async execute(_: GetPreferencesQuery): Promise<UserPreferenceModel> {
     const userId = HttpContext.getCurrentUserId;
     const preferences = await this.userPreferenceRepository.findByUserIdAsync(userId);
 
-    return new NotificationPreferenceModel({
+    return new UserPreferenceModel({
+      theme: preferences?.theme ?? Theme.System,
       notificationChannelsEnabled: normalizeChannels(preferences?.notificationChannelsEnabled),
     });
   }
