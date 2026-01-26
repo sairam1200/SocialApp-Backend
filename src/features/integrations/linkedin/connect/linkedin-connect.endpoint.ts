@@ -33,7 +33,7 @@ export class LinkedInConnectController {
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
-  @ApiResponse({ status: 302, description: 'FOUND', type: ConnectResponseModel })
+  @ApiResponse({ status: 200, description: 'OK', type: ConnectResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -57,19 +57,19 @@ export class LinkedInConnectController {
 
     await this.queryBus.execute(new LinkedInConnectQuery({ model: { state } }));
 
-    return res.redirect(HttpStatus.FOUND, authorizeURL);
+    return res.redirect(HttpStatus.OK, authorizeURL);
   }
 
-  @Get('callback')
+  @Get('connect-callback')
   @ApiResponse({ status: 200, description: 'OK', type: LinkedInConnectCallbackResponseModel })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Callback(@Query() query: any): Promise<LinkedInConnectCallbackResponseModel> {
 
-    const result = await this.queryBus.execute(new LinkedInConnectCallbackQuery({ 
+    const result = await this.queryBus.execute(new LinkedInConnectCallbackQuery({
       model: {
-        code: query.code, 
-        state: query.state 
+        code: query.code,
+        state: query.state
       }
     }));
 

@@ -29,8 +29,8 @@ export class TwitterConnectController {
       'users.read',
       'offline.access',
       'like.read',
-     
-      
+
+
     ].join(' ');
 
     const state = cryptoUtils.generateEncryptionKey(16);
@@ -49,10 +49,10 @@ export class TwitterConnectController {
     const authorizeURL = `https://twitter.com/i/oauth2/authorize?${params.toString()}`;
 
     await this.commandBus.execute(new TwitterConnectQuery({ model: { state, codeVerifier } }));
-    return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
+    return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });
   }
 
-  @Get('connect/callback')
+  @Get('connect-callback')
   @ApiResponse({ status: 200, description: 'OK' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })

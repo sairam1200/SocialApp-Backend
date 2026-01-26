@@ -26,7 +26,7 @@ export class GoogleAuthenticationController {
   constructor(private readonly commandBus: CommandBus) { }
 
   @Get('connect')
-  @ApiResponse({ status: 302, description: 'FOUND', type: ConnectResponseModel })
+  @ApiResponse({ status: 200, description: 'OK', type: ConnectResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -64,7 +64,7 @@ export class GoogleAuthenticationController {
         model: { state, deviceId, userAgent, ipAddress },
       }),
     );
-    return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
+    return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });
   }
 
   @Get('connect-callback')

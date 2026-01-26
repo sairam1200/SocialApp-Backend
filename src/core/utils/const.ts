@@ -59,6 +59,7 @@ export default {
     REDDIT: 'reddit',
     TIKTOK: 'tiktok',
     LINKEDIN: 'linkedin',
+    SNAPCHAT: 'snapchat',
   },
 
   KNOWN_PLATFORMS_URIS: [
