@@ -37,6 +37,7 @@ export default {
     SPOTIFY_IMPORT: 'spotify-import',
     PINTEREST_IMPORT: 'pinterest-import',
     REDDIT_IMPORT: 'reddit-import',
+    SNAPCHAT_IMPORT: 'snapchat-import',
   },
 
   EMAILTEMPLATES: {

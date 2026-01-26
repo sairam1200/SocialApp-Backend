@@ -1,12 +1,12 @@
-import { Inject } from "@nestjs/common";
-import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
+import { Inject } from "@nestjs/common";
 import _const from "../../../core/utils/const";
 import logger from "../../../core/utils/winston.util";
+import BullMQConfig from "../../../core/config/bullmq.config";
+import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { NotificationStatus, NotificationType } from "../../../domain/enums";
 import { INotificationService } from "../../../domain/services/inotification.service";
 import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
-import BullMQConfig from "../../../core/config/bullmq.config";
 
 
 interface SnapchatImportJobData {
