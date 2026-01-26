@@ -59,6 +59,9 @@ import {
   LinkedInSearchResponseModel,
 } from 'domain/contracts/linkedin.model';
 import {
+  SnapchatSearchResponseModel,
+} from 'domain/contracts/snapchat.model';
+import {
   mapContentStreamToFacebookOnlineModel,
   mapFacebookOnlineResponseToContentStream,
   mapToFacebookProfileModel,
@@ -71,6 +74,7 @@ import { mapToInstagramContentModel, mapToInstagramProfileModel } from 'domain/m
 import { mapToTikTokContentModel, mapToTiktokProfileModel } from 'domain/mappers/tiktok.mapper';
 import { mapToLinkedInContentModel, mapToLinkedInProfileModel } from 'domain/mappers/linkedin.mapper';
 import { mapToUserTweetModel, mapToLikedTweetModel, mapToTwitterProfileModel } from 'domain/mappers/twitter.mapper';
+import { mapToSnapchatProfileModel, mapToSnapchatContentModel } from 'domain/mappers/snapchat.mapper';
 import { RedditContentModel } from '../../domain/contracts/reddit.model';
 import { UserTweetModel } from '../../domain/contracts/twitter.model';
 import { PinterestContentModel } from '../../domain/contracts/pinterest.model';
@@ -2418,6 +2422,212 @@ export class SearchService implements ISearchService {
         throw new ApplicationException('Twitter API request timeout. Please try again.');
       }
       logger.error(`Error fetching Twitter results for "${query}":`, error?.response?.data || error?.message);
+      throw error;
+    }
+  }
+
+  // Snapchat Search Methods
+  public async searchSnapchatAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<SnapchatSearchResponseModel> {
+    const {
+      filters = {},
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      paginationToken,
+      page,
+      forceRefresh = false,
+    } = params;
+    const bookmark = paginationToken;
+
+    filters.platform = _const.PLATFORMS.SNAPCHAT;
+
+    const cacheParams = {
+      platform: _const.PLATFORMS.SNAPCHAT,
+      normalizedQuery,
+      filters,
+      page,
+      limit,
+    };
+
+    if (!forceRefresh) {
+      const cached = await this.cacheService.getCachedResults<SnapchatSearchResponseModel>(cacheParams);
+      if (cached) return cached;
+    }
+
+    const skips = this.getSnapchatSearchSkips(filters);
+    const sectionLimits = limitAllocatorUtil.getSectionLimits(limit, skips);
+    const dbResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+
+    const shouldFetch = this.shouldFetchFromAPI(
+      dbResults,
+      forceRefresh,
+      page,
+      bookmark,
+      limit,
+    );
+
+    if (shouldFetch && accessToken) {
+      const lockAcquired = await this.cacheService.acquireLock(cacheParams);
+
+      if (!lockAcquired) {
+        const waitingResult = await this.cacheService.waitForCachedResults<SnapchatSearchResponseModel>(cacheParams);
+        if (waitingResult) return waitingResult;
+      }
+
+      try {
+        await this.fetchAndStoreSnapchatResults(normalizedQuery, limit, filters, accessToken, bookmark);
+      } finally {
+        await this.cacheService.releaseLock(cacheParams);
+      }
+
+      const updatedResults = await this.getDatabaseResults(normalizedQuery, filters, page, sectionLimits, skips);
+      const response = this.buildSnapchatResponse(originalQuery, updatedResults);
+      await this.cacheService.setCachedResults(cacheParams, response);
+      return response;
+    }
+
+    const response = this.buildSnapchatResponse(originalQuery, dbResults);
+    return response;
+  }
+
+  private getSnapchatSearchSkips(filters: Record<string, any>): SectionSkipMap {
+    return {
+      contentStream: false,
+      userContent: false,
+      linkedAccount: filters.type && !['user'].includes(filters.type),
+      manualProfile: false,
+    };
+  }
+
+  private buildSnapchatResponse(
+    originalQuery: string,
+    dbResults: { contentStream: ContentStream[]; userContent: UserContent[]; linkedAccount: LinkedAccount[] },
+  ): SnapchatSearchResponseModel {
+    const response = new SnapchatSearchResponseModel();
+    response.query = originalQuery;
+
+    dbResults.contentStream.forEach(content => {
+      const item = mapToSnapchatContentModel(content as any);
+      response.result.content.push(item);
+    });
+
+    dbResults.userContent.forEach(content => {
+      const item = mapToSnapchatContentModel(content);
+      response.result.content.push(item);
+    });
+
+    dbResults.linkedAccount.forEach(account => {
+      const profile = mapToSnapchatProfileModel(account, false);
+      response.result.user.push(profile);
+    });
+
+    return response;
+  }
+
+  private async fetchAndStoreSnapchatResults(
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    bookmark?: string,
+  ): Promise<void> {
+    const snapchatResults = await this.fetchSnapchatOnlineAsync(false, query, limit, filters, accessToken, bookmark);
+
+    if (!snapchatResults?.data?.length) return;
+
+    const mappedResults = snapchatResults.data.map((item: any) => {
+      const type = item.type || '';
+      let subType = '';
+      let externalId = '';
+
+      if (type === 'user') {
+        subType = 'user';
+        externalId = item.id || item.username || '';
+      } else if (type === 'content' || type === 'snap') {
+        subType = 'content';
+        externalId = item.id || '';
+      }
+
+      return new ContentStream({
+        type: 'Content' as any,
+        subType,
+        title: item.title || item.display_name || item.username || '',
+        platform: _const.PLATFORMS.SNAPCHAT,
+        externalId,
+        metaData: {
+          description: item.description,
+          imageUrl: item.image_url || item.profile_image,
+          videoUrl: item.video_url,
+          link: item.link,
+          createdAt: item.created_at,
+          username: item.username,
+          displayName: item.display_name,
+        },
+        lastRefreshed: new Date(),
+      });
+    }).filter(c => c.externalId) as ContentStream[];
+
+    if (!mappedResults.length) return;
+
+    const externalIds = mappedResults.map(c => c.externalId);
+    const newIds = await this.generalRepository.checkExistingItemsAsync(externalIds, _const.PLATFORMS.SNAPCHAT);
+    const toAdd = mappedResults.filter(c => newIds.includes(c.externalId));
+    const existingIds = externalIds.filter(id => !newIds.includes(id));
+
+    if (toAdd.length > 0) {
+      await this.generalRepository.createAsync(toAdd);
+    }
+
+    if (existingIds.length > 0) {
+      await this.updateContentRefreshTimestamp(existingIds, _const.PLATFORMS.SNAPCHAT);
+    }
+  }
+
+  private async fetchSnapchatOnlineAsync(
+    skipSearch: boolean,
+    query: string,
+    limit: number,
+    filters: Record<string, any>,
+    accessToken: string,
+    bookmark?: string,
+  ): Promise<any> {
+    if (skipSearch || !accessToken) return { data: [] };
+
+    try {
+      const params: Record<string, string | number> = {
+        q: query,
+        limit: Math.min(Math.max(limit, 1), 100),
+        ...filters,
+      };
+
+      Object.keys(params).forEach(key => {
+        if (params[key] == null) delete params[key];
+      });
+
+      if (bookmark) params.bookmark = bookmark;
+
+      const response = await axios.get('https://kit.snapchat.com/v1/search', {
+        params,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      });
+
+      return response.data || { data: [] };
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401) throw new ApplicationException('Snapchat API authentication failed. Please refresh your token.');
+      if (status === 403) throw new ApplicationException('Snapchat API access forbidden.');
+      if (status === 429) throw new ApplicationException('Snapchat API rate limit exceeded. Please try again later.');
+      if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
+        throw new ApplicationException('Snapchat API request timeout. Please try again.');
+      }
+      logger.error(`Error fetching Snapchat results for "${query}":`, error?.response?.data || error?.message);
       throw error;
     }
   }

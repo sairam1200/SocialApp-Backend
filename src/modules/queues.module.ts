@@ -19,6 +19,7 @@ import { TiktokImportProcessor } from "../infrastructure/background/processors/t
 import { InstagramImportProcessor } from "../infrastructure/background/processors/instagram-import.processor";
 import { FacebookImportProcessor } from "../infrastructure/background/processors/facebook-import.processor";
 import { LinkedInImportProcessor } from "../infrastructure/background/processors/linkedin-import.processor";
+import { SnapchatImportProcessor } from "../infrastructure/background/processors/snapchat-import.processor";
 import { dependency } from "../infrastructure/dependency";
 import { ImportGateway } from "infrastructure/websocket/gateways/import.gateway";
 import { ContentStream, DataProtectionKey, Role, User, UserBiometric, UserClaim, UserLogin, UserRole } from "domain/entities";
@@ -83,6 +84,10 @@ export class QueuesModule implements NestModule {
             name: _const.BULL_QUEUES.LINKEDIN_IMPORT,
             ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.LINKEDIN_IMPORT),
           },
+          {
+            name: _const.BULL_QUEUES.SNAPCHAT_IMPORT,
+            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.SNAPCHAT_IMPORT),
+          },
         ),
       ],
       providers: [
@@ -104,6 +109,7 @@ export class QueuesModule implements NestModule {
         InstagramImportProcessor,
         FacebookImportProcessor,
         LinkedInImportProcessor,
+        SnapchatImportProcessor,
       ],
       exports: [
         dependency.QueueService,
