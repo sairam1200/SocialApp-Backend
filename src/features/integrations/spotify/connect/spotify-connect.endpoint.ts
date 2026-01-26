@@ -50,7 +50,7 @@ export class SpotifyConnectController {
 
     await this.commandBus.execute(new SpotifyConnectQuery({ model: { state } }));
 
-    return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
+    return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });
   }
 
   @Get('connect-callback')

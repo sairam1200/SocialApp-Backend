@@ -34,7 +34,7 @@ export class YoutubeConnectController {
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
-  @ApiResponse({ status: 302, description: 'FOUND', type: ConnectResponseModel })
+  @ApiResponse({ status: 200, description: 'OK', type: ConnectResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -60,7 +60,7 @@ export class YoutubeConnectController {
     const authorizeURL = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
     await this.commandBus.execute(new YoutubeConnectQuery({ model: { state } }));
-    return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
+    return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });
   }
 
   @Get('connect-callback')
