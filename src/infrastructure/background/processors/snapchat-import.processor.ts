@@ -73,21 +73,17 @@ export class SnapchatImportProcessor extends WorkerHost {
     logger.warn(`[SnapchatImport] Snapchat API integration not yet fully implemented. Using fallback logic.`);
     
     // Create a basic notification
-    const notification = await this.notificationService.createAsync(
+    const notification = await this.notificationService.notifyAsync(
       account.userId,
       NotificationType.Import,
+      "Snapchat import completed (limited functionality - API not fully available)",
+      "Snapchat import completed (limited functionality - API not fully available)",
+      true,
       {
         platform: _const.PLATFORMS.SNAPCHAT,
         status: NotificationStatus.Completed,
-        reports: [],
       },
-      "Snapchat import completed (limited functionality - API not fully available)"
     );
-
-    this.gateway.sendImportProgress(account.userId, {
-      notification: notification,
-      progress: 100,
-    });
 
     logger.info(`[SnapchatImport] Import completed for user ${account.userId}`);
   }
