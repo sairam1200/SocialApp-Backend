@@ -20,7 +20,7 @@ export class GetThemeQueryHandler implements ICommandHandler<GetThemeQuery> {
 
   public async execute(_: GetThemeQuery): Promise<ThemePreferenceModel> {
     const userId = HttpContext.getCurrentUserId;
-    const preferences = await this.userPreferenceRepository.findByUserIdAsync(userId);
+    const preferences = await this.userPreferenceRepository.getByUserIdAsync(userId);
 
     return new ThemePreferenceModel({
       theme: preferences?.theme ?? Theme.System,

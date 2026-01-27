@@ -59,7 +59,7 @@ export class UpdateNotificationSettingCommandHandler implements ICommandHandler<
     await updateNotificationSettingValidations.validateAsync(command.model);
 
     const userId = HttpContext.getCurrentUserId;
-    const existing = await this.userPreferenceRepository.findByUserIdAsync(userId);
+    const existing = await this.userPreferenceRepository.getByUserIdAsync(userId);
     const preferences = existing ?? new UserPreference({
       userId,
       theme: Theme.System,
@@ -69,6 +69,11 @@ export class UpdateNotificationSettingCommandHandler implements ICommandHandler<
     preferences.theme = preferences.theme ?? Theme.System;
     preferences.notificationChannelsEnabled = normalizeChannels(command.model.notificationChannelsEnabled);
 
-    await this.userPreferenceRepository.saveAsync(preferences);
+    if (existing) {
+      await this.userPreferenceRepository.updateAsync(preferences);
+      return;
+    }
+
+    await this.userPreferenceRepository.createAsync(preferences);
   }
 }

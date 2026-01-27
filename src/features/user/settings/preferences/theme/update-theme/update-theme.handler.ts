@@ -56,7 +56,7 @@ export class UpdateThemeCommandHandler implements ICommandHandler<UpdateThemeCom
     await updateThemeValidations.validateAsync(command.model);
 
     const userId = HttpContext.getCurrentUserId;
-    const existing = await this.userPreferenceRepository.findByUserIdAsync(userId);
+    const existing = await this.userPreferenceRepository.getByUserIdAsync(userId);
     const preferences = existing ?? new UserPreference({
       userId,
       theme: Theme.System,
@@ -66,6 +66,11 @@ export class UpdateThemeCommandHandler implements ICommandHandler<UpdateThemeCom
     preferences.notificationChannelsEnabled = normalizeChannels(preferences.notificationChannelsEnabled);
     preferences.theme = command.model.theme;
 
-    await this.userPreferenceRepository.saveAsync(preferences);
+    if (existing) {
+      await this.userPreferenceRepository.updateAsync(preferences);
+      return;
+    }
+
+    await this.userPreferenceRepository.createAsync(preferences);
   }
 }

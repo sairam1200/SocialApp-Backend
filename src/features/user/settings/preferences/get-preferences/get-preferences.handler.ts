@@ -1,10 +1,10 @@
 import { Inject } from "@nestjs/common";
-import _const from "../../../../../../core/utils/const";
+import _const from "../../../../../core/utils/const";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { HttpContext } from "../../../../../../core/middlewares/httpContext.middleware";
-import { IUserPreferenceRepository } from "../../../../../../domain/repositories/iuserPreference.repository";
-import { UserPreferenceModel } from "../../../../../../domain/contracts/userPreference.model";
-import { NotificationChannel, Theme } from "../../../../../../domain/enums";
+import { HttpContext } from "../../../../../core/middlewares/httpContext.middleware";
+import { IUserPreferenceRepository } from "../../../../../domain/repositories/iuserPreference.repository";
+import { UserPreferenceModel } from "../../../../../domain/contracts/userPreference.model";
+import { NotificationChannel, Theme } from "../../../../../domain/enums";
 
 const defaultNotificationChannelsEnabled = [
   NotificationChannel.InApp,
@@ -37,7 +37,7 @@ export class GetPreferencesQueryHandler implements ICommandHandler<GetPreference
 
   public async execute(_: GetPreferencesQuery): Promise<UserPreferenceModel> {
     const userId = HttpContext.getCurrentUserId;
-    const preferences = await this.userPreferenceRepository.findByUserIdAsync(userId);
+    const preferences = await this.userPreferenceRepository.getByUserIdAsync(userId);
 
     return new UserPreferenceModel({
       theme: preferences?.theme ?? Theme.System,

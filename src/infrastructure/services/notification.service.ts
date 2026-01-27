@@ -33,7 +33,7 @@ export class NotificationService implements INotificationService {
       metaData: metaData,
     }));
 
-    const preferences = await this.userPreferenceRepository.findByUserIdAsync(userId);
+    const preferences = await this.userPreferenceRepository.getByUserIdAsync(userId);
     const channels = preferences?.notificationChannelsEnabled;
     const shouldNotifyInApp = !channels || channels.length === 0 || channels.includes(NotificationChannel.InApp);
 

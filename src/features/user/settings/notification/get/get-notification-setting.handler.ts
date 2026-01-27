@@ -37,7 +37,7 @@ export class GetNotificationSettingQueryHandler implements ICommandHandler<GetNo
 
   public async execute(_: GetNotificationSettingQuery): Promise<NotificationPreferenceModel> {
     const userId = HttpContext.getCurrentUserId;
-    const preferences = await this.userPreferenceRepository.findByUserIdAsync(userId);
+    const preferences = await this.userPreferenceRepository.getByUserIdAsync(userId);
 
     return new NotificationPreferenceModel({
       notificationChannelsEnabled: normalizeChannels(preferences?.notificationChannelsEnabled),

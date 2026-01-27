@@ -8,7 +8,7 @@ import {
 import { User } from "./user.entity";
 import { NotificationChannel, Theme } from "../../enums";
 
-@Entity({ name: 'userPreferences', schema: 'identity' })
+@Entity({ name: 'userPreferences' })
 export class UserPreference {
   @PrimaryColumn('uuid')
   userId: string;

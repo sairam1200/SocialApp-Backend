@@ -1,6 +1,7 @@
 import { UserPreference } from "../entities";
 
 export interface IUserPreferenceRepository {
-  findByUserIdAsync(userId: string): Promise<UserPreference | null>;
-  saveAsync(preferences: UserPreference): Promise<UserPreference>;
+  getByUserIdAsync(userId: string): Promise<UserPreference | null>;
+  createAsync(preferences: UserPreference): Promise<UserPreference>;
+  updateAsync(preferences: UserPreference): Promise<void>;
 }

@@ -41,8 +41,8 @@ import { DeactivateUserController } from "./deactivate-user/deactivate-user.endp
 import { DeactivateUserCommandHandler } from "./deactivate-user/deactivate-user.handler";
 import { DeactivateUserRoleController } from "./deactivate-user-role/deactivate-user-role.endpoint";
 import { DeactivateUserRoleCommandHandler } from "./deactivate-user-role/deactivate-user-role.handler";
-import { GetPreferencesController } from "./settings/preferences/general/get-preferences/get-preferences.endpoint";
-import { GetPreferencesQueryHandler } from "./settings/preferences/general/get-preferences/get-preferences.handler";
+import { GetPreferencesController } from "./settings/preferences/get-preferences/get-preferences.endpoint";
+import { GetPreferencesQueryHandler } from "./settings/preferences/get-preferences/get-preferences.handler";
 import { UpdateThemeController } from "./settings/preferences/theme/update-theme/update-theme.endpoint";
 import { UpdateThemeCommandHandler } from "./settings/preferences/theme/update-theme/update-theme.handler";
 import { GetThemeController } from "./settings/preferences/theme/get-theme/get-theme.endpoint";
@@ -99,8 +99,8 @@ export { DeactivateUserController } from "./deactivate-user/deactivate-user.endp
 export { DeactivateUserCommand } from "./deactivate-user/deactivate-user.handler";
 export { DeactivateUserRoleController } from "./deactivate-user-role/deactivate-user-role.endpoint";
 export { DeactivateUserRoleCommand } from "./deactivate-user-role/deactivate-user-role.handler";
-export { GetPreferencesController } from "./settings/preferences/general/get-preferences/get-preferences.endpoint";
-export { GetPreferencesQuery } from "./settings/preferences/general/get-preferences/get-preferences.handler";
+export { GetPreferencesController } from "./settings/preferences/get-preferences/get-preferences.endpoint";
+export { GetPreferencesQuery } from "./settings/preferences/get-preferences/get-preferences.handler";
 export { UpdateThemeController } from "./settings/preferences/theme/update-theme/update-theme.endpoint";
 export { UpdateThemeCommand } from "./settings/preferences/theme/update-theme/update-theme.handler";
 export { GetThemeController } from "./settings/preferences/theme/get-theme/get-theme.endpoint";

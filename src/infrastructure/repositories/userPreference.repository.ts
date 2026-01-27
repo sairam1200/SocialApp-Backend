@@ -19,7 +19,7 @@ export class UserPreferenceRepository implements IUserPreferenceRepository {
     private readonly userPreferenceContext: Repository<UserPreference>,
   ) { }
 
-  public async findByUserIdAsync(userId: string): Promise<UserPreference | null> {
+  public async getByUserIdAsync(userId: string): Promise<UserPreference | null> {
     const cached = await this.getCachedPreferences(userId);
     if (cached) {
       return new UserPreference({
@@ -37,10 +37,15 @@ export class UserPreferenceRepository implements IUserPreferenceRepository {
     return preferences;
   }
 
-  public async saveAsync(preferences: UserPreference): Promise<UserPreference> {
+  public async createAsync(preferences: UserPreference): Promise<UserPreference> {
     const saved = await this.userPreferenceContext.save(preferences);
     await this.setCachedPreferences(saved);
     return saved;
+  }
+
+  public async updateAsync(preferences: UserPreference): Promise<void> {
+    const saved = await this.userPreferenceContext.save(preferences);
+    await this.setCachedPreferences(saved);
   }
 
   private getCacheKey(userId: string): string {
