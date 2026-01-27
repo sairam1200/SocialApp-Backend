@@ -7,7 +7,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { EmailModule } from './email.module';
 import { dependency } from '../infrastructure/dependency';
 import { EmailCleanupCron } from '../infrastructure/background/cron/jobs/email-cleanup.cron';
-import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole, UserLogin, DataProtectionKey, PlaylistMember, UserBiometric, Topic, UserTopic } from '../domain/entities';
+import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole, UserLogin, DataProtectionKey, PlaylistMember, UserBiometric, Topic, UserTopic, UserPreference } from '../domain/entities';
 
 @Module({
   imports: [
@@ -24,6 +24,7 @@ import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole, UserLogin, D
       DataProtectionKey,
       PlaylistMember,
       UserBiometric,
+      UserPreference,
       Topic,
       UserTopic
     ])
@@ -43,9 +44,9 @@ import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole, UserLogin, D
     dependency.UserLoginRepository,
     dependency.DataProtectionKeyRepository,
     dependency.TopicRepository,
+    dependency.UserPreferenceRepository,
     EmailCleanupCron
   ],
   exports: [],
 })
 export class UserModule {}
-
