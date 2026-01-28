@@ -80,6 +80,7 @@ import { mapToInstagramContentModel, mapToInstagramProfileModel } from 'domain/m
 import { mapToTikTokContentModel, mapToTiktokProfileModel } from 'domain/mappers/tiktok.mapper';
 import { mapToLinkedInContentModel, mapToLinkedInProfileModel } from 'domain/mappers/linkedin.mapper';
 import { mapToUserTweetModel, mapToLikedTweetModel, mapToTwitterProfileModel } from 'domain/mappers/twitter.mapper';
+import { mapToSnapchatProfileModel, mapToSnapchatContentModel } from 'domain/mappers/snapchat.mapper';
 import { RedditContentModel } from '../../domain/contracts/reddit.model';
 import { UserTweetModel } from '../../domain/contracts/twitter.model';
 import { PinterestContentModel } from '../../domain/contracts/pinterest.model';

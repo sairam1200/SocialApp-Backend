@@ -25,4 +25,5 @@ export interface ISearchService {
   searchRedditAsync(params: PlatformSearchParamsModel): Promise<RedditSearchResponseModel>;
   searchTiktokAsync(params: PlatformSearchParamsModel): Promise<TiktokSearchResponseModel>;
   searchLinkedInAsync(params: PlatformSearchParamsModel): Promise<LinkedInSearchResponseModel>;
+  searchSnapchatAsync(params: PlatformSearchParamsModel): Promise<SnapchatSearchResponseModel>;
 }

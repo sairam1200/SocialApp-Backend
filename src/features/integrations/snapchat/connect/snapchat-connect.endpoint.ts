@@ -33,7 +33,7 @@ export class SnapchatConnectController {
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
-  @ApiResponse({ status: 302, description: 'FOUND', type: ConnectResponseModel })
+  @ApiResponse({ status: 200, description: 'OK', type: ConnectResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -45,7 +45,7 @@ export class SnapchatConnectController {
       'user.display_name',
       'user.bitmoji.avatar'
     ].join(' ');
-    
+
     const state = stringUtil.generateRandomString(16);
     const params = new URLSearchParams({
       response_type: 'code',
@@ -54,12 +54,12 @@ export class SnapchatConnectController {
       scope: scopes,
       state: state,
     });
-    
+
     // Placeholder URL, actual Snapchat Kit OAuth URL may differ
     const authorizeURL = `https://accounts.snapchat.com/login/oauth2/authorize?${params.toString()}`;
 
     await this.commandBus.execute(new SnapchatConnectQuery({ model: { state } }));
-    return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
+    return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });
   }
 
   @Get('connect-callback')

@@ -149,6 +149,12 @@ const envVarsSchema = Joi.object()
       .description('TikTok OAuth client secret'),
     TIKTOK_CALLBACK_URL: Joi.string()
       .description('TikTok OAuth callback URL'),
+    SNAPCHAT_CLIENT_ID: Joi.string()
+      .description('Snapchat OAuth client ID'),
+    SNAPCHAT_CLIENT_SECRET: Joi.string()
+      .description('Snapchat OAuth client secret'),
+    SNAPCHAT_CALLBACK_URL: Joi.string()
+      .description('Snapchat OAuth callback URL'),
     LINKEDIN_CLIENT_ID: Joi.string()
       .description('LinkedIn OAuth client ID'),
     LINKEDIN_CLIENT_SECRET: Joi.string()

@@ -20,6 +20,18 @@ export enum NotificationStatus {
     Failed = 'Failed'
 }
 
+export enum Theme {
+    System = 'System',
+    Light = 'Light',
+    Dark = 'Dark',
+}
+
+export enum NotificationChannel {
+    InApp = 'inApp',
+    Email = 'email',
+    Push = 'push',
+}
+
 export enum PlaylistMemberRole {
     Owner = 'Owner',
     Editor = 'Editor',

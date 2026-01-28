@@ -4,6 +4,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import notification from "../features/notification";
 import { dependency } from "../infrastructure/dependency";
 import { Notification } from "../domain/entities/notification/notification.entity";
+import { UserPreference } from "../domain/entities";
 import { NotificationGateway } from "../infrastructure/websocket/gateways/notification.gateway";
 import { NotificationEvent } from "domain/entities/notification/notificationEvent.entity";
 import { NotificationTemplate } from "domain/entities/notification/notificationTemplate.entity";
@@ -14,12 +15,14 @@ import { NotificationTemplate } from "domain/entities/notification/notificationT
       Notification,
       NotificationEvent,
       NotificationTemplate,
+      UserPreference,
     ])
   ],
   providers: [
     JwtService,
     ...notification.addHandlers(),
     dependency.NotificationRepository,
+    dependency.UserPreferenceRepository,
     dependency.NotificationService,
     NotificationGateway,
   ],
