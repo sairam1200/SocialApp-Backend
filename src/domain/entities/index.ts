@@ -18,6 +18,7 @@ export { DataProtectionKey } from './dataProtectionKey.entity';
 export { PlaylistMember } from './collection/playlistMember.entity';
 export { PlaylistContent } from './collection/playlistContent.entity';
 export { UserBiometric } from './identity/userBiometric.entity';
+export { UserPreference } from './identity/userPreference.entity';
 export { UserFollow } from './userFollow.entity';
 export { Topic } from './topic.entity';
 export { UserTopic } from './userTopic.entity';
