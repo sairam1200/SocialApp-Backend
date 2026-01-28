@@ -10,6 +10,9 @@ export interface IQueueService {
   enqueueInstagramImport(account: LinkedAccount, accessToken: string): Promise<string>;
   enqueueFacebookImport(account: LinkedAccount, accessToken: string): Promise<string>;
   enqueueLinkedInImport(account: LinkedAccount, accessToken: string): Promise<string>;
+  enqueueSnapchatImport(account: LinkedAccount, accessToken: string): Promise<string>;
+  enqueueThreadsImport(account: LinkedAccount, accessToken: string): Promise<string>;
+  enqueueBehanceImport(account: LinkedAccount, accessToken: string): Promise<string>;
   cancelYoutubeImport(userId: string): Promise<void>;
   cancelSpotifyImport(userId: string): Promise<void>;
   cancelPinterestImport(userId: string): Promise<void>;
@@ -19,5 +22,8 @@ export interface IQueueService {
   cancelInstagramImport(userId: string): Promise<void>;
   cancelFacebookImport(userId: string): Promise<void>;
   cancelLinkedInImport(userId: string): Promise<void>;
+  cancelSnapchatImport(userId: string): Promise<void>;
+  cancelThreadsImport(userId: string): Promise<void>;
+  cancelBehanceImport(userId: string): Promise<void>;
 }
 

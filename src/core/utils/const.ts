@@ -37,6 +37,9 @@ export default {
     SPOTIFY_IMPORT: 'spotify-import',
     PINTEREST_IMPORT: 'pinterest-import',
     REDDIT_IMPORT: 'reddit-import',
+    SNAPCHAT_IMPORT: 'snapchat-import',
+    THREADS_IMPORT: 'threads-import',
+    BEHANCE_IMPORT: 'behance-import',
   },
 
   EMAILTEMPLATES: {
@@ -59,6 +62,9 @@ export default {
     REDDIT: 'reddit',
     TIKTOK: 'tiktok',
     LINKEDIN: 'linkedin',
+    SNAPCHAT: 'snapchat',
+    THREADS: 'threads',
+    BEHANCE: 'behance',
   },
 
   KNOWN_PLATFORMS_URIS: [

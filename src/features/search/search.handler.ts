@@ -236,6 +236,15 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
         case _const.PLATFORMS.TIKTOK:
           result = await this.searchService.searchTiktokAsync(searchParams);
           break;
+        case _const.PLATFORMS.SNAPCHAT:
+          result = await this.searchService.searchSnapchatAsync(searchParams);
+          break;
+        case _const.PLATFORMS.THREADS:
+          result = await this.searchService.searchThreadsAsync(searchParams);
+          break;
+        case _const.PLATFORMS.BEHANCE:
+          result = await this.searchService.searchBehanceAsync(searchParams);
+          break;
         default:
           return { platform, result: null, error: `Unsupported platform: ${platform}` };
       }

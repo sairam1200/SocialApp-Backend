@@ -155,6 +155,24 @@ const envVarsSchema = Joi.object()
       .description('LinkedIn OAuth client secret'),
     LINKEDIN_CALLBACK_URL: Joi.string()
       .description('LinkedIn OAuth callback URL'),
+    SNAPCHAT_CLIENT_ID: Joi.string()
+      .description('Snapchat OAuth client ID'),
+    SNAPCHAT_CLIENT_SECRET: Joi.string()
+      .description('Snapchat OAuth client secret'),
+    SNAPCHAT_CALLBACK_URL: Joi.string()
+      .description('Snapchat OAuth callback URL'),
+    THREADS_CLIENT_ID: Joi.string()
+      .description('Threads OAuth client ID'),
+    THREADS_CLIENT_SECRET: Joi.string()
+      .description('Threads OAuth client secret'),
+    THREADS_CALLBACK_URL: Joi.string()
+      .description('Threads OAuth callback URL'),
+    BEHANCE_CLIENT_ID: Joi.string()
+      .description('Behance OAuth client ID'),
+    BEHANCE_CLIENT_SECRET: Joi.string()
+      .description('Behance OAuth client secret'),
+    BEHANCE_CALLBACK_URL: Joi.string()
+      .description('Behance OAuth callback URL'),
     TOKEN_EXPIRATION_TIME: Joi.number()
       .default(900000)
       .description('Token expiration time in milliseconds'),
@@ -310,6 +328,21 @@ export default {
     clientId: envVars.TIKTOK_CLIENT_ID,
     clientSecret: envVars.TIKTOK_CLIENT_SECRET,
     redirectUri: envVars.TIKTOK_CALLBACK_URL,
+  },
+  snapchat: {
+    clientId: envVars.SNAPCHAT_CLIENT_ID,
+    clientSecret: envVars.SNAPCHAT_CLIENT_SECRET,
+    redirectUri: envVars.SNAPCHAT_CALLBACK_URL,
+  },
+  threads: {
+    clientId: envVars.THREADS_CLIENT_ID,
+    clientSecret: envVars.THREADS_CLIENT_SECRET,
+    redirectUri: envVars.THREADS_CALLBACK_URL,
+  },
+  behance: {
+    clientId: envVars.BEHANCE_CLIENT_ID,
+    clientSecret: envVars.BEHANCE_CLIENT_SECRET,
+    redirectUri: envVars.BEHANCE_CALLBACK_URL,
   },
   Token: {
     expirationTime: envVars.TOKEN_EXPIRATION_TIME

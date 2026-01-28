@@ -27,6 +27,12 @@ export class QueueService implements IQueueService {
     private readonly facebookImportQueue: Queue,
     @InjectQueue(_const.BULL_QUEUES.LINKEDIN_IMPORT)
     private readonly linkedinImportQueue: Queue,
+    @InjectQueue(_const.BULL_QUEUES.SNAPCHAT_IMPORT)
+    private readonly snapchatImportQueue: Queue,
+    @InjectQueue(_const.BULL_QUEUES.THREADS_IMPORT)
+    private readonly threadsImportQueue: Queue,
+    @InjectQueue(_const.BULL_QUEUES.BEHANCE_IMPORT)
+    private readonly behanceImportQueue: Queue,
   ) { }
 
   public async enqueueYoutubeImport(account: LinkedAccount, accessToken: string): Promise<string> {
@@ -305,6 +311,99 @@ export class QueueService implements IQueueService {
       }
     } else {
       logger.warn(`[QueueService] LinkedIn import job ${jobId} not found for user ${userId}`);
+    }
+  }
+
+  public async enqueueSnapchatImport(account: LinkedAccount, accessToken: string): Promise<string> {
+    const job = await this.snapchatImportQueue.add('snapchat-import-job', {
+      account,
+      accessToken,
+    }, {
+      jobId: `snapchat-import-${account.userId}`,
+    });
+
+    logger.info(`[QueueService] Snapchat import job enqueued: ${job.id} for user ${account.userId}`);
+    return job.id!;
+  }
+
+  public async enqueueThreadsImport(account: LinkedAccount, accessToken: string): Promise<string> {
+    const job = await this.threadsImportQueue.add('threads-import-job', {
+      account,
+      accessToken,
+    }, {
+      jobId: `threads-import-${account.userId}`,
+    });
+
+    logger.info(`[QueueService] Threads import job enqueued: ${job.id} for user ${account.userId}`);
+    return job.id!;
+  }
+
+  public async enqueueBehanceImport(account: LinkedAccount, accessToken: string): Promise<string> {
+    const job = await this.behanceImportQueue.add('behance-import-job', {
+      account,
+      accessToken,
+    }, {
+      jobId: `behance-import-${account.userId}`,
+    });
+
+    logger.info(`[QueueService] Behance import job enqueued: ${job.id} for user ${account.userId}`);
+    return job.id!;
+  }
+
+  public async cancelSnapchatImport(userId: string): Promise<void> {
+    const jobId = `snapchat-import-${userId}`;
+    const job = await this.snapchatImportQueue.getJob(jobId);
+
+    if (job) {
+      if (await job.isActive()) {
+        await job.remove();
+        logger.info(`[QueueService] Cancelled active Snapchat import job ${jobId} for user ${userId}`);
+      } else if (await job.isWaiting()) {
+        await job.remove();
+        logger.info(`[QueueService] Removed waiting Snapchat import job ${jobId} for user ${userId}`);
+      } else {
+        logger.warn(`[QueueService] Snapchat import job ${jobId} is not in a cancellable state`);
+      }
+    } else {
+      logger.warn(`[QueueService] Snapchat import job ${jobId} not found for user ${userId}`);
+    }
+  }
+
+  public async cancelThreadsImport(userId: string): Promise<void> {
+    const jobId = `threads-import-${userId}`;
+    const job = await this.threadsImportQueue.getJob(jobId);
+
+    if (job) {
+      if (await job.isActive()) {
+        await job.remove();
+        logger.info(`[QueueService] Cancelled active Threads import job ${jobId} for user ${userId}`);
+      } else if (await job.isWaiting()) {
+        await job.remove();
+        logger.info(`[QueueService] Removed waiting Threads import job ${jobId} for user ${userId}`);
+      } else {
+        logger.warn(`[QueueService] Threads import job ${jobId} is not in a cancellable state`);
+      }
+    } else {
+      logger.warn(`[QueueService] Threads import job ${jobId} not found for user ${userId}`);
+    }
+  }
+
+  public async cancelBehanceImport(userId: string): Promise<void> {
+    const jobId = `behance-import-${userId}`;
+    const job = await this.behanceImportQueue.getJob(jobId);
+
+    if (job) {
+      if (await job.isActive()) {
+        await job.remove();
+        logger.info(`[QueueService] Cancelled active Behance import job ${jobId} for user ${userId}`);
+      } else if (await job.isWaiting()) {
+        await job.remove();
+        logger.info(`[QueueService] Removed waiting Behance import job ${jobId} for user ${userId}`);
+      } else {
+        logger.warn(`[QueueService] Behance import job ${jobId} is not in a cancellable state`);
+      }
+    } else {
+      logger.warn(`[QueueService] Behance import job ${jobId} not found for user ${userId}`);
     }
   }
 }

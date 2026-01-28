@@ -59,6 +59,15 @@ import {
   LinkedInSearchResponseModel,
 } from 'domain/contracts/linkedin.model';
 import {
+  SnapchatSearchResponseModel,
+} from 'domain/contracts/snapchat.model';
+import {
+  ThreadsSearchResponseModel,
+} from 'domain/contracts/threads.model';
+import {
+  BehanceSearchResponseModel,
+} from 'domain/contracts/behance.model';
+import {
   mapContentStreamToFacebookOnlineModel,
   mapFacebookOnlineResponseToContentStream,
   mapToFacebookProfileModel,
@@ -2420,5 +2429,131 @@ export class SearchService implements ISearchService {
       logger.error(`Error fetching Twitter results for "${query}":`, error?.response?.data || error?.message);
       throw error;
     }
+  }
+
+  // Snapchat Search Methods
+  public async searchSnapchatAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<SnapchatSearchResponseModel> {
+    const {
+      filters = {},
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      paginationToken,
+      page,
+      forceRefresh = false,
+    } = params;
+
+    filters.platform = _const.PLATFORMS.SNAPCHAT;
+
+    const cacheParams = {
+      platform: _const.PLATFORMS.SNAPCHAT,
+      normalizedQuery,
+      filters,
+      page,
+      limit,
+    };
+
+    if (!forceRefresh) {
+      const cached = await this.cacheService.getCachedResults<SnapchatSearchResponseModel>(cacheParams);
+      if (cached) return cached;
+    }
+
+    // Snapchat API has limited availability - using fallback logic
+    const response = new SnapchatSearchResponseModel();
+    response.query = originalQuery;
+    response.result = {
+      user: [],
+      content: [],
+    };
+
+    await this.cacheService.getCachedResults(cacheParams);
+    return response;
+  }
+
+  // Threads Search Methods
+  public async searchThreadsAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<ThreadsSearchResponseModel> {
+    const {
+      filters = {},
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      paginationToken,
+      page,
+      forceRefresh = false,
+    } = params;
+
+    filters.platform = _const.PLATFORMS.THREADS;
+
+    const cacheParams = {
+      platform: _const.PLATFORMS.THREADS,
+      normalizedQuery,
+      filters,
+      page,
+      limit,
+    };
+
+    if (!forceRefresh) {
+      const cached = await this.cacheService.getCachedResults<ThreadsSearchResponseModel>(cacheParams);
+      if (cached) return cached;
+    }
+
+    // Note: Threads API not yet available - placeholder implementation
+    const response = new ThreadsSearchResponseModel();
+    response.query = originalQuery;
+    response.result = {
+      user: [],
+      content: [],
+    };
+
+    await this.cacheService.getCachedResults<ThreadsSearchResponseModel>(cacheParams);
+    return response;
+  }
+
+  // Behance Search Methods
+  public async searchBehanceAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<BehanceSearchResponseModel> {
+    const {
+      filters = {},
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      paginationToken,
+      page,
+      forceRefresh = false,
+    } = params;
+
+    filters.platform = _const.PLATFORMS.BEHANCE;
+
+    const cacheParams = {
+      platform: _const.PLATFORMS.BEHANCE,
+      normalizedQuery,
+      filters,
+      page,
+      limit,
+    };
+
+    if (!forceRefresh) {
+      const cached = await this.cacheService.getCachedResults<BehanceSearchResponseModel>(cacheParams);
+      if (cached) return cached;
+    }
+
+    // Since Behance has no official API, using fallback logic
+    const response = new BehanceSearchResponseModel();
+    response.query = originalQuery;
+    response.result = {
+      user: [],
+      content: [],
+    };
+
+    await this.cacheService.getCachedResults<BehanceSearchResponseModel>(cacheParams);
+    return response;
   }
 }
