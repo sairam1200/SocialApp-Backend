@@ -9,7 +9,7 @@ import { UpdateThemeCommand, UpdateThemeRequestModel } from "./update-theme.hand
 @ApiTags('Settings')
 @UseGuards(AuthenticatedAccountGuard)
 @Controller({
-  path: `/setting`,
+  path: `/user/setting`,
   version: '1',
 })
 export class UpdateThemeController {

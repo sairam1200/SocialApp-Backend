@@ -9,7 +9,7 @@ import { GetPreferencesQuery } from "./get-preferences.handler";
 @ApiTags('Settings')
 @UseGuards(AuthenticatedAccountGuard)
 @Controller({
-  path: `/setting`,
+  path: `/user/setting`,
   version: '1',
 })
 export class GetPreferencesController {

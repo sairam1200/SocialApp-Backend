@@ -9,7 +9,7 @@ import { GetThemeQuery } from "./get-theme.handler";
 @ApiTags('Settings')
 @UseGuards(AuthenticatedAccountGuard)
 @Controller({
-  path: `/setting`,
+  path: `/user/setting`,
   version: '1',
 })
 export class GetThemeController {
