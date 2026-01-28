@@ -1,12 +1,13 @@
 import _const from "../../core/utils/const";
 import { Globals } from "../../core/globals";
-import { NotificationType } from "../../domain/enums";
+import { NotificationChannel, NotificationType } from "../../domain/enums";
 import { forwardRef, Inject, Injectable } from "@nestjs/common";
 import { Notification } from "../../domain/entities/notification/notification.entity";
 import { HttpContext } from "../../core/middlewares/httpContext.middleware";
 import { mapToNotificationModel } from "../../domain/mappers/notification.mapper";
 import { INotificationService } from "../../domain/services/inotification.service";
 import { INotificationRepository } from "../../domain/repositories/inotification.repository";
+import { IUserPreferenceRepository } from "../../domain/repositories/iuserPreference.repository";
 import { NotificationGateway } from "../../infrastructure/websocket/gateways/notification.gateway";
 
 @Injectable()
@@ -15,6 +16,8 @@ export class NotificationService implements INotificationService {
   constructor(
     @Inject(_const.INOTIFICATION_REPOSITORY)
     private readonly notificationRepository: INotificationRepository,
+    @Inject(_const.IUSERPREFERENCE_REPOSITORY)
+    private readonly userPreferenceRepository: IUserPreferenceRepository,
     @Inject(forwardRef(() => NotificationGateway))
     private readonly gateway: NotificationGateway,
   ) { }
@@ -30,7 +33,13 @@ export class NotificationService implements INotificationService {
       metaData: metaData,
     }));
 
-    this.gateway.emitNewNotification(userId, mapToNotificationModel(notification))
+    const preferences = await this.userPreferenceRepository.getByUserIdAsync(userId);
+    const channels = preferences?.notificationChannelsEnabled;
+    const shouldNotifyInApp = !channels || channels.length === 0 || channels.includes(NotificationChannel.InApp);
+
+    if (shouldNotifyInApp) {
+      this.gateway.emitNewNotification(userId, mapToNotificationModel(notification));
+    }
     return notification;
   }
 

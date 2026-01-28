@@ -17,6 +17,7 @@ export default {
   IMANUALPROFILE_REPOSITORY: "IManualProfileRepository",
   IDATAPROTECTIONKEY_REPOSITORY: "IDataProtectionKeyRepository",
   ITOPIC_REPOSITORY: "ITopicRepository",
+  IUSERPREFERENCE_REPOSITORY: "IUserPreferenceRepository",
 
   // Service Interfaces
   IEMAIL_SERVICE: 'IEmailService',
@@ -107,6 +108,7 @@ export default {
   REDIS: {
     USER: {
       ACCOUNT: '_user_account',
+      PREFERENCES: 'preferences',
       ACCOUNT_SESSION_TTL_SEC: 604800, // 7 days
     }
   },

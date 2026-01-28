@@ -13,3 +13,4 @@ export { ContentStreamRepository } from './contentStream.repository';
 export { DataProtectionKeyRepository } from './dataProtectionKey.repository';
 export { UserFollowRepository } from './userFollow.repository';
 export { TopicRepository } from './topic.repository';
+export { UserPreferenceRepository } from './userPreference.repository';

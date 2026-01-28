@@ -3,6 +3,7 @@ import * as Joi from 'joi';
 import { Inject } from '@nestjs/common';
 import configs from '../../../../configs';
 import _const from '../../../../core/utils/const';
+import { getRedirectUrl } from '../../../../core/utils/redirectUrl.util';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
@@ -231,7 +232,7 @@ export class YoutubeConnectCallbackQueryHandler
     try {
       const response = await axios.post(`https://oauth2.googleapis.com/token`, {
         client_secret: configs.youtube.clientSecret,
-        redirect_uri: configs.youtube.callbackUrl,
+        redirect_uri: getRedirectUrl(configs.youtube.callbackUrl),
         client_id: configs.youtube.clientId,
         grant_type: 'authorization_code',
         code: code,
