@@ -23,4 +23,3 @@ export class YoutubeDisconnectCommandHandler
     await this.disconnectService.disconnectPlatformAsync(userId, _const.PLATFORMS.YOUTUBE);
   }
 }
-

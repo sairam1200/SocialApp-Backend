@@ -1,55 +1,55 @@
 import {
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    UpdateDateColumn,
-    BeforeInsert,
-    BeforeUpdate,
-    BaseEntity as TypeORMBaseEntity
+	PrimaryGeneratedColumn,
+	Column,
+	CreateDateColumn,
+	UpdateDateColumn,
+	BeforeInsert,
+	BeforeUpdate,
+	BaseEntity as TypeORMBaseEntity
 } from 'typeorm';
 
 export abstract class BaseEntity extends TypeORMBaseEntity {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+	@PrimaryGeneratedColumn('uuid')
+	id: string;
 
-    @Column({ nullable: true })
-    createdBy?: string;
+	@Column({ nullable: true })
+	createdBy?: string;
 
-    @CreateDateColumn()
-    createdOn: Date;
+	@CreateDateColumn()
+	createdOn: Date;
 
-    @Column({ nullable: true })
-    lastModifiedBy?: string;
+	@Column({ nullable: true })
+	lastModifiedBy?: string;
 
-    @UpdateDateColumn({ nullable: true })
-    lastModifiedOn?: Date;
+	@UpdateDateColumn({ nullable: true })
+	lastModifiedOn?: Date;
 
-    @Column()
-    lastRefreshed: Date;
+	@Column()
+	lastRefreshed: Date;
 
-    // Not persisted: used to pass user context
-    private _currentUser?: string;
+	// Not persisted: used to pass user context
+	private _currentUser?: string;
 
-    constructor() {
-        super();
-        //this._currentUser = "";
-        this.lastRefreshed = new Date();
-    }
+	constructor() {
+		super();
+		//this._currentUser = "";
+		this.lastRefreshed = new Date();
+	}
 
-    
-    setCurrentUser(user: string) {
-        this._currentUser = user;
-    }
 
-    @BeforeInsert()
-    private beforeInsert() {
-        this.createdBy = this._currentUser;
-        this.createdOn = new Date();
-    }
+	setCurrentUser(user: string) {
+		this._currentUser = user;
+	}
 
-    @BeforeUpdate()
-    private beforeUpdate() {
-        this.lastModifiedBy = this._currentUser;
-        this.lastModifiedOn = new Date();
-    }
+	@BeforeInsert()
+	private beforeInsert() {
+		this.createdBy = this._currentUser;
+		this.createdOn = new Date();
+	}
+
+	@BeforeUpdate()
+	private beforeUpdate() {
+		this.lastModifiedBy = this._currentUser;
+		this.lastModifiedOn = new Date();
+	}
 }

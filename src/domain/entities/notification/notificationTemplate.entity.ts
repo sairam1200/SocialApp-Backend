@@ -7,6 +7,6 @@ export class NotificationTemplate extends BaseEntity {
   @Column({ nullable: false })
   name: string;
 
-
+  
 
 }

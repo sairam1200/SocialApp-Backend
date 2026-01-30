@@ -33,19 +33,19 @@ export class ThreadsConnectController {
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
-  @ApiResponse({ status: 302, description: 'FOUND', type: ConnectResponseModel })
+  @ApiResponse({ status: 200, description: 'OK', type: ConnectResponseModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Connect(@Res() res: Response): Promise<Response | void> {
-    // Note: Threads API not yet available - placeholder implementation
-    // When Meta releases Threads API, update this with actual OAuth flow
+
     const scopes = [
       'threads_basic',
       'threads_content_publish',
-      'threads_read'
+      'threads_read_replies',
+      'threads_manage_insights'
     ].join(',');
-    
+
     const state = stringUtil.generateRandomString(16);
     const params = new URLSearchParams({
       response_type: 'code',
@@ -54,12 +54,11 @@ export class ThreadsConnectController {
       scope: scopes,
       state: state,
     });
-    
-    // Placeholder URL - will be updated when Threads API is available
+
     const authorizeURL = `https://www.threads.net/oauth/authorize?${params.toString()}`;
 
     await this.commandBus.execute(new ThreadsConnectQuery({ model: { state } }));
-    return res.status(HttpStatus.FOUND).json({ authorizeURL: authorizeURL });
+    return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });
   }
 
   @Get('connect-callback')
