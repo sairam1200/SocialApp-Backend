@@ -134,6 +134,54 @@ import { PinterestDisconnectController } from "./pinterest/disconnect/pinterest-
 import { PinterestDisconnectCommandHandler } from "./pinterest/disconnect/pinterest-disconnect.handler";
 import { RedditDisconnectController } from "./reddit/disconnect/reddit-disconnect.endpoint";
 import { RedditDisconnectCommandHandler } from "./reddit/disconnect/reddit-disconnect.handler";
+import { SnapchatConnectController } from "./snapchat/connect/snapchat-connect.endpoint";
+import { SnapchatConnectCallbackQueryHandler, SnapchatConnectQueryHandler } from "./snapchat/connect/snapchat-connect.handler";
+import { SnapchatProfileController } from "./snapchat/get-profile/get-profile.endpoint";
+import { SnapchatProfileQueryHandler } from "./snapchat/get-profile/get-profile.handler";
+import { SnapchatContentsController } from "./snapchat/get-contents/get-contents.endpoint";
+import { SnapchatContentsQueryHandler } from "./snapchat/get-contents/get-contents.handler";
+import { SnapchatImportController } from "./snapchat/import/snapchat-import.endpoint";
+import { SnapchatImportCommandHandler } from "./snapchat/import/snapchat-import.handler";
+import { CancelSnapchatImportCommandHandler } from "./snapchat/import/cancel-snapchat-import.handler";
+import { SnapchatSearchController } from "./snapchat/search/snapchat-search.endpoint";
+import { SnapchatSearchQueryHandler } from "./snapchat/search/snapchat-search.handler";
+import { SnapchatSyncController } from "./snapchat/sync/snapchat-sync.endpoint";
+import { EnableSnapchatSyncCommandHandler } from "./snapchat/sync/enable-snapchat-sync.handler";
+import { DisableSnapchatSyncCommandHandler } from "./snapchat/sync/disable-snapchat-sync.handler";
+import { SnapchatDisconnectController } from "./snapchat/disconnect/snapchat-disconnect.endpoint";
+import { SnapchatDisconnectCommandHandler } from "./snapchat/disconnect/snapchat-disconnect.handler";
+import { ThreadsConnectController } from "./threads/connect/threads-connect.endpoint";
+import { ThreadsConnectCallbackQueryHandler, ThreadsConnectQueryHandler } from "./threads/connect/threads-connect.handler";
+import { ThreadsProfileController } from "./threads/get-profile/get-profile.endpoint";
+import { ThreadsProfileQueryHandler } from "./threads/get-profile/get-profile.handler";
+import { ThreadsContentsController } from "./threads/get-contents/get-contents.endpoint";
+import { ThreadsContentsQueryHandler } from "./threads/get-contents/get-contents.handler";
+import { ThreadsImportController } from "./threads/import/threads-import.endpoint";
+import { ThreadsImportCommandHandler } from "./threads/import/threads-import.handler";
+import { CancelThreadsImportCommandHandler } from "./threads/import/cancel-threads-import.handler";
+import { ThreadsSearchController } from "./threads/search/threads-search.endpoint";
+import { ThreadsSearchQueryHandler } from "./threads/search/threads-search.handler";
+import { ThreadsSyncController } from "./threads/sync/threads-sync.endpoint";
+import { EnableThreadsSyncCommandHandler } from "./threads/sync/enable-threads-sync.handler";
+import { DisableThreadsSyncCommandHandler } from "./threads/sync/disable-threads-sync.handler";
+import { ThreadsDisconnectController } from "./threads/disconnect/threads-disconnect.endpoint";
+import { ThreadsDisconnectCommandHandler } from "./threads/disconnect/threads-disconnect.handler";
+import { BehanceConnectController } from "./behance/connect/behance-connect.endpoint";
+import { BehanceConnectCallbackQueryHandler, BehanceConnectQueryHandler } from "./behance/connect/behance-connect.handler";
+import { BehanceProfileController } from "./behance/get-profile/get-profile.endpoint";
+import { BehanceProfileQueryHandler } from "./behance/get-profile/get-profile.handler";
+import { BehanceContentsController } from "./behance/get-contents/get-contents.endpoint";
+import { BehanceContentsQueryHandler } from "./behance/get-contents/get-contents.handler";
+import { BehanceImportController } from "./behance/import/behance-import.endpoint";
+import { BehanceImportCommandHandler } from "./behance/import/behance-import.handler";
+import { CancelBehanceImportCommandHandler } from "./behance/import/cancel-behance-import.handler";
+import { BehanceSearchController } from "./behance/search/behance-search.endpoint";
+import { BehanceSearchQueryHandler } from "./behance/search/behance-search.handler";
+import { BehanceSyncController } from "./behance/sync/behance-sync.endpoint";
+import { EnableBehanceSyncCommandHandler } from "./behance/sync/enable-behance-sync.handler";
+import { DisableBehanceSyncCommandHandler } from "./behance/sync/disable-behance-sync.handler";
+import { BehanceDisconnectController } from "./behance/disconnect/behance-disconnect.endpoint";
+import { BehanceDisconnectCommandHandler } from "./behance/disconnect/behance-disconnect.handler";
 
 export { FacebookConnectController } from "./facebook/connect/facebook-connect.endpoint"
 export { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./facebook/connect/facebook-connect.handler";
@@ -297,6 +345,57 @@ export { LinkedInSyncController } from "./linkedin/sync/linkedin-sync.endpoint";
 export { EnableLinkedInSyncCommandHandler } from "./linkedin/sync/enable-linkedin-sync.handler";
 export { DisableLinkedInSyncCommandHandler } from "./linkedin/sync/disable-linkedin-sync.handler";
 
+export { SnapchatConnectController } from "./snapchat/connect/snapchat-connect.endpoint";
+export { SnapchatConnectCallbackQueryHandler, SnapchatConnectQueryHandler } from "./snapchat/connect/snapchat-connect.handler";
+export { SnapchatProfileController } from "./snapchat/get-profile/get-profile.endpoint";
+export { SnapchatProfileQueryHandler } from "./snapchat/get-profile/get-profile.handler";
+export { SnapchatContentsController } from "./snapchat/get-contents/get-contents.endpoint";
+export { SnapchatContentsQueryHandler } from "./snapchat/get-contents/get-contents.handler";
+export { SnapchatImportController } from "./snapchat/import/snapchat-import.endpoint";
+export { SnapchatImportCommandHandler } from "./snapchat/import/snapchat-import.handler";
+export { CancelSnapchatImportCommandHandler } from "./snapchat/import/cancel-snapchat-import.handler";
+export { SnapchatSearchController } from "./snapchat/search/snapchat-search.endpoint";
+export { SnapchatSearchQueryHandler } from "./snapchat/search/snapchat-search.handler";
+export { SnapchatSyncController } from "./snapchat/sync/snapchat-sync.endpoint";
+export { EnableSnapchatSyncCommandHandler } from "./snapchat/sync/enable-snapchat-sync.handler";
+export { DisableSnapchatSyncCommandHandler } from "./snapchat/sync/disable-snapchat-sync.handler";
+export { SnapchatDisconnectController } from "./snapchat/disconnect/snapchat-disconnect.endpoint";
+export { SnapchatDisconnectCommandHandler } from "./snapchat/disconnect/snapchat-disconnect.handler";
+
+export { ThreadsConnectController } from "./threads/connect/threads-connect.endpoint";
+export { ThreadsConnectCallbackQueryHandler, ThreadsConnectQueryHandler } from "./threads/connect/threads-connect.handler";
+export { ThreadsProfileController } from "./threads/get-profile/get-profile.endpoint";
+export { ThreadsProfileQueryHandler } from "./threads/get-profile/get-profile.handler";
+export { ThreadsContentsController } from "./threads/get-contents/get-contents.endpoint";
+export { ThreadsContentsQueryHandler } from "./threads/get-contents/get-contents.handler";
+export { ThreadsImportController } from "./threads/import/threads-import.endpoint";
+export { ThreadsImportCommandHandler } from "./threads/import/threads-import.handler";
+export { CancelThreadsImportCommandHandler } from "./threads/import/cancel-threads-import.handler";
+export { ThreadsSearchController } from "./threads/search/threads-search.endpoint";
+export { ThreadsSearchQueryHandler } from "./threads/search/threads-search.handler";
+export { ThreadsSyncController } from "./threads/sync/threads-sync.endpoint";
+export { EnableThreadsSyncCommandHandler } from "./threads/sync/enable-threads-sync.handler";
+export { DisableThreadsSyncCommandHandler } from "./threads/sync/disable-threads-sync.handler";
+export { ThreadsDisconnectController } from "./threads/disconnect/threads-disconnect.endpoint";
+export { ThreadsDisconnectCommandHandler } from "./threads/disconnect/threads-disconnect.handler";
+
+export { BehanceConnectController } from "./behance/connect/behance-connect.endpoint";
+export { BehanceConnectCallbackQueryHandler, BehanceConnectQueryHandler } from "./behance/connect/behance-connect.handler";
+export { BehanceProfileController } from "./behance/get-profile/get-profile.endpoint";
+export { BehanceProfileQueryHandler } from "./behance/get-profile/get-profile.handler";
+export { BehanceContentsController } from "./behance/get-contents/get-contents.endpoint";
+export { BehanceContentsQueryHandler } from "./behance/get-contents/get-contents.handler";
+export { BehanceImportController } from "./behance/import/behance-import.endpoint";
+export { BehanceImportCommandHandler } from "./behance/import/behance-import.handler";
+export { CancelBehanceImportCommandHandler } from "./behance/import/cancel-behance-import.handler";
+export { BehanceSearchController } from "./behance/search/behance-search.endpoint";
+export { BehanceSearchQueryHandler } from "./behance/search/behance-search.handler";
+export { BehanceSyncController } from "./behance/sync/behance-sync.endpoint";
+export { EnableBehanceSyncCommandHandler } from "./behance/sync/enable-behance-sync.handler";
+export { DisableBehanceSyncCommandHandler } from "./behance/sync/disable-behance-sync.handler";
+export { BehanceDisconnectController } from "./behance/disconnect/behance-disconnect.endpoint";
+export { BehanceDisconnectCommandHandler } from "./behance/disconnect/behance-disconnect.handler";
+
 const controllers = [
   FacebookConnectController,
   FacebookImportController,
@@ -359,6 +458,27 @@ const controllers = [
   LinkedInSearchController,
   LinkedInSyncController,
   LinkedInDisconnectController,
+  SnapchatConnectController,
+  SnapchatProfileController,
+  SnapchatContentsController,
+  SnapchatImportController,
+  SnapchatSearchController,
+  SnapchatSyncController,
+  SnapchatDisconnectController,
+  ThreadsConnectController,
+  ThreadsProfileController,
+  ThreadsContentsController,
+  ThreadsImportController,
+  ThreadsSearchController,
+  ThreadsSyncController,
+  ThreadsDisconnectController,
+  BehanceConnectController,
+  BehanceProfileController,
+  BehanceContentsController,
+  BehanceImportController,
+  BehanceSearchController,
+  BehanceSyncController,
+  BehanceDisconnectController,
 ];
 
 const handlers = [
@@ -438,6 +558,36 @@ const handlers = [
   LinkedInDisconnectCommandHandler,
   EnableLinkedInSyncCommandHandler,
   DisableLinkedInSyncCommandHandler,
+  SnapchatConnectCallbackQueryHandler,
+  SnapchatConnectQueryHandler,
+  SnapchatProfileQueryHandler,
+  SnapchatContentsQueryHandler,
+  SnapchatImportCommandHandler,
+  CancelSnapchatImportCommandHandler,
+  SnapchatSearchQueryHandler,
+  SnapchatDisconnectCommandHandler,
+  EnableSnapchatSyncCommandHandler,
+  DisableSnapchatSyncCommandHandler,
+  ThreadsConnectCallbackQueryHandler,
+  ThreadsConnectQueryHandler,
+  ThreadsProfileQueryHandler,
+  ThreadsContentsQueryHandler,
+  ThreadsImportCommandHandler,
+  CancelThreadsImportCommandHandler,
+  ThreadsSearchQueryHandler,
+  ThreadsDisconnectCommandHandler,
+  EnableThreadsSyncCommandHandler,
+  DisableThreadsSyncCommandHandler,
+  BehanceConnectCallbackQueryHandler,
+  BehanceConnectQueryHandler,
+  BehanceProfileQueryHandler,
+  BehanceContentsQueryHandler,
+  BehanceImportCommandHandler,
+  CancelBehanceImportCommandHandler,
+  BehanceSearchQueryHandler,
+  BehanceDisconnectCommandHandler,
+  EnableBehanceSyncCommandHandler,
+  DisableBehanceSyncCommandHandler,
 ];
 
 const integrations = {
