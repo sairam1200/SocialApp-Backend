@@ -1,130 +1,189 @@
-# Gaddr Backend
+# Gaddr Backend API
 
-Welcome to the backend of **Gaddr** — a NestJS project implementing a clean architectural folder structure based on **Vertical Slice Architecture** and **CQRS (Command Query Responsibility Segregation)**.
+> Policy Note: This document defines target architecture rules and boundaries. Implementation may lag.
 
-## ⚠️ Branching Strategy
+Gaddr backend service built with NestJS, CQRS, and a vertical-slice feature structure.
 
-### `main` Branch
+## Branching Strategy
 
-> **🚫 DO NOT COMMIT, FETCH, OR PULL FROM THIS BRANCH**
+### `main`
 
-* This is the **production** branch and is **off-limits** for all contributors.
-* Any changes made directly to `main` are strictly prohibited to protect production integrity.
+- Production branch.
+- Do not commit, fetch, or pull directly on this branch.
 
-### `staging` Branch
+### `staging`
 
-* Used for **testing features** and validating merged changes.
-* Endpoint for testing: [https://gaddr-backend-api.onrender.com](https://gaddr-backend-api.onrender.com/)
+- Pre-production validation branch.
+- Current staging endpoint: `https://gaddr-backend-api.onrender.com/`
 
-### `develop` Branch
+### `develop`
 
-* The **most up-to-date** branch.
-* All contributors should pull from this branch before making any changes.
-* Create a **Pull Request (PR)** from your feature branch into `develop`.
-* **Direct commits to `develop` are not permitted.**
----
+- Integration branch for all ongoing work.
+- Always branch from `develop`.
+- Open PRs from feature branches into `develop`.
+- Do not commit directly to `develop`.
 
-## 🛠 How to Use Migrations
+### Feature Branches
 
-> **Note:** For easier migration management with TypeORM, scripts have been added to the `package.json` .
+- Branch naming convention: `feat/<short-description>`
+- Example used for this work: `feat/readme-update`
 
-### Generate a New Migration
+## Tech Stack
 
-Run the following command from the project root:
+- NestJS 11
+- TypeORM (PostgreSQL)
+- Redis + BullMQ
+- Socket.IO (WebSocket gateways)
+- Swagger + Scalar (non-production)
+
+## Quick Start
+
+### 1. Prerequisites
+
+- Node.js 20+
+- npm
+- PostgreSQL
+- Redis
+
+### 2. Install dependencies
 
 ```bash
-npm run migration:generate -- src/infrastructure/migrations/your-migration-name
+npm install
 ```
 
-### To run existing migrations:
+### 3. Configure environment
+
+`src/configs.ts` loads environment in this order:
+1. `.env.<NODE_ENV>`
+2. `.env` (with override enabled)
+
+Minimum variables required for local development:
+
+- `NODE_ENV`
+- `PORT`
+- `PROJECT_NAME`
+- `POSTGRES_HOST`
+- `POSTGRES_PORT`
+- `POSTGRES_USERNAME`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_DATABASE`
+- `POSTGRES_ENTITIES`
+- `POSTGRES_MIGRATIONS`
+- `REDIS_HOST`
+- `REDIS_PORT`
+- `REDIS_PASSWORD`
+- `JWT_SECRET`
+- `JWT_AUDIENCE`
+- `JWT_ISSUER`
+
+### 4. Start local dependencies (optional, via Docker)
 
 ```bash
-npm run migration:run
+docker compose up -d
 ```
 
-⚠️ Note: dataSource.initialize() is already called in the application lifecycle, so migration:run is usually not required unless you're applying fresh migrations manually.
+This starts:
+- PostgreSQL on `localhost:5433`
+- Redis on `localhost:6349`
 
-
-### 🚀 Running the Project:
-
-To start the backend in development mode, use:
+### 5. Run the API
 
 ```bash
 npm run dev
 ```
 
-### 🧠 Architecture Overview:
+Base API shape:
+- Global prefix: `/api`
+- URI versioning enabled (v1 controllers are served under `/api/v1/...`)
 
-* Framework: NestJS
-* Architecture Style: Clean Architecture
-* Structural Pattern: Vertical Slice Architecture
-* Pattern: CQRS (Command Query Responsibility Segregation)
+## Migrations
 
-This structure promotes separation of concerns, scalability, and maintainability.
+Generate migration:
 
-### 📂 Folder Structure Rules
+```bash
+npm run migration:generate -- src/infrastructure/migrations/<name>
+```
 
-The folder structure of this project follows Clean Architecture principles, with a focus on Vertical Slice Architecture for feature modularity and CQRS for separating command and query concerns.
+Run migrations:
 
-#### `Core` Layer (src/core)
-Purpose: The Core Layer is where all the business logic and use cases live. This layer is independent of any external dependencies.
+```bash
+npm run migration:run
+```
 
-Structure Rules:
+Revert migration:
 
-Contains business logic, services, and application-specific rules that do not depend on frameworks or databases.
+```bash
+npm run migration:revert
+```
 
-Services here should have no dependencies on external libraries (e.g., database, frameworks).
+Notes:
+- `typeorm` script builds first and then runs TypeORM against `dist/infrastructure/persistence/data.source.js`.
+- `migrationsRun` is also configurable via environment variables.
 
-Exceptions and utility functions relevant to the application go here.
+## Architecture Overview
 
-#### `Domain` Layer (src/domain)
-Purpose: The Domain Layer encapsulates the business model of the application. It defines entities, contracts, and domain logic.
+This codebase follows clean-layer boundaries with feature slices:
 
-Structure Rules:
+- `src/core`: cross-cutting runtime concerns (middlewares, guards, shared utilities)
+- `src/domain`: entities, contracts, repository/service interfaces, mappers
+- `src/features`: HTTP vertical slices (endpoint + handler per use case)
+- `src/modules`: Nest module composition and DI wiring
+- `src/infrastructure`: concrete implementations (repositories, services, queues, websockets, migrations)
 
-Contains entities, contracts, and domain services that represent the core of the business.
+Start from:
+- `src/README.md`
+- `src/features/README.md`
+- `src/modules/README.md`
+- `src/infrastructure/README.md`
 
-Repositories in this layer are interfaces and will be implemented in the Infrastructure Layer.
+## Runtime Components
 
-The domain model is independent of any frameworks or technologies (e.g., databases, external APIs).
+- HTTP API with CQRS handlers
+- Redis-backed caching and session/state helpers
+- BullMQ processors for platform imports
+- Socket.IO gateways:
+  - `/imports`
+  - `/notifications`
 
-#### `Infrastructure` Layer (src/infrastructure)
-Purpose: The Infrastructure Layer interacts with external dependencies such as databases, external APIs, and third-party services.
+## Development Workflow
 
-Structure Rules:
+1. Pull latest `develop`.
+2. Create feature branch.
+3. Implement changes.
+4. Validate locally (`npm run lint`, relevant run commands).
+5. Open PR into `develop`.
 
-Implements repositories from the Domain Layer.
+## Architecture PR Checklist
 
-Database integration, external APIs, and any third-party services are implemented here.
+Every PR must include the architecture checklist from `.github/pull_request_template.md`.
 
-Should not contain business logic, but only concrete implementations for services and repositories.
+Rules:
+- All checklist items must be answered.
+- If any item is unchecked, add explicit justification in PR notes.
+- If a rule is intentionally violated, add a follow-up task reference and cleanup owner.
 
-#### `Presentation` Layer (Vertical Slice) (src/features)
-Purpose: The Presentation Layer follows the Vertical Slice Architecture, meaning each feature is fully contained within a slice, including its endpoints and handler.
+## Repository Conventions
 
-Structure Rules:
+- Keep business logic out of `infrastructure`.
+- Keep transport-specific logic out of `domain`.
+- Keep each endpoint use case isolated in `src/features/<feature>/<use-case>`.
+- Register new providers through `src/infrastructure/dependency.ts` and consuming modules.
 
-Each feature is isolated within its own folder (e.g., user, auth, integrations).
+## Related README Files
 
-Inside each feature folder, you’ll find the endpoint(controller) and handler for that feature.
+- `src/README.md`
+- `src/core/README.md`
+- `src/domain/README.md`
+- `src/features/README.md`
+- `src/modules/README.md`
+- `src/infrastructure/README.md`
 
-All feature-specific logic is contained in one place, making it easier to manage and scale features independently.
+## Temporary Deviations
 
-This structure follows CQRS, meaning commands (write operations) and queries (read operations) are separated.
+If implementation intentionally deviates from this policy, record it here before merge.
 
-## 📜 Naming Conventions
-`Classes`:
-
-Use PascalCase for class names and types (e.g., CreateUserCommand).
-
-`Functions`:
-
-Use camelCase for function names and methods (e.g., createUser()).
-
-`Files and Directories`:
-
-Use lowercase with hyphenated filenames for directories and files (e.g., create-user.endpoint.ts).
-
-DTOs:
-
-For request/response data objects, append Model to the name (e.g., CreateUserModel).
+- Deviation:
+- Reason:
+- Cleanup owner:
+- Target cleanup date:
+- Tracking link:
