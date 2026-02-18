@@ -113,6 +113,7 @@ export class YoutubeConnectCallbackQueryHandler
     if (!user || user.id !== dataProtectionKey.userId) {
       throw new UserNotFoundException(userData.profile.email, 'email');
     }
+    
     let linkedAccount =
       await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
         _const.PLATFORMS.YOUTUBE,
