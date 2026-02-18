@@ -173,6 +173,12 @@ const envVarsSchema = Joi.object()
       .description('Behance OAuth client secret'),
     BEHANCE_CALLBACK_URL: Joi.string()
       .description('Behance OAuth callback URL'),
+    GITHUB_CLIENT_ID: Joi.string()
+      .description('GitHub OAuth client ID'),
+    GITHUB_CLIENT_SECRET: Joi.string()
+      .description('GitHub OAuth client secret'),
+    GITHUB_CALLBACK_URL: Joi.string()
+      .description('GitHub OAuth callback URL'),
     TOKEN_EXPIRATION_TIME: Joi.number()
       .default(900000)
       .description('Token expiration time in milliseconds'),
@@ -343,6 +349,11 @@ export default {
     clientId: envVars.BEHANCE_CLIENT_ID,
     clientSecret: envVars.BEHANCE_CLIENT_SECRET,
     redirectUri: envVars.BEHANCE_CALLBACK_URL,
+  },
+  github: {
+    clientId: envVars.GITHUB_CLIENT_ID,
+    clientSecret: envVars.GITHUB_CLIENT_SECRET,
+    redirectUri: envVars.GITHUB_CALLBACK_URL,
   },
   Token: {
     expirationTime: envVars.TOKEN_EXPIRATION_TIME

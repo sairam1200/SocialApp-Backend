@@ -66,6 +66,7 @@ export default {
     SNAPCHAT: 'snapchat',
     THREADS: 'threads',
     BEHANCE: 'behance',
+    GITHUB: 'github',
   },
 
   KNOWN_PLATFORMS_URIS: [
@@ -93,6 +94,7 @@ export default {
     'bilibili.com',
     'ok.ru',
     'vk.com',
+    'github.com',
   ],
 
   TOKEN: {
