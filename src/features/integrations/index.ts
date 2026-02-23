@@ -182,6 +182,10 @@ import { EnableBehanceSyncCommandHandler } from "./behance/sync/enable-behance-s
 import { DisableBehanceSyncCommandHandler } from "./behance/sync/disable-behance-sync.handler";
 import { BehanceDisconnectController } from "./behance/disconnect/behance-disconnect.endpoint";
 import { BehanceDisconnectCommandHandler } from "./behance/disconnect/behance-disconnect.handler";
+import { GithubConnectController } from "./github/connect/github-connect.endpoint";
+import { GithubConnectQueryHandler, GithubConnectCallbackQueryHandler } from "./github/connect/github-connect.handler";
+import { GithubDisconnectController } from "./github/disconnect/github-disconnect.endpoint";
+import { GithubDisconnectCommandHandler } from "./github/disconnect/github-disconnect.handler";
 
 export { FacebookConnectController } from "./facebook/connect/facebook-connect.endpoint"
 export { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./facebook/connect/facebook-connect.handler";
@@ -396,6 +400,11 @@ export { DisableBehanceSyncCommandHandler } from "./behance/sync/disable-behance
 export { BehanceDisconnectController } from "./behance/disconnect/behance-disconnect.endpoint";
 export { BehanceDisconnectCommandHandler } from "./behance/disconnect/behance-disconnect.handler";
 
+export { GithubConnectController } from "./github/connect/github-connect.endpoint";
+export { GithubConnectQueryHandler, GithubConnectCallbackQueryHandler } from "./github/connect/github-connect.handler";
+export { GithubDisconnectController } from "./github/disconnect/github-disconnect.endpoint";
+export { GithubDisconnectCommandHandler } from "./github/disconnect/github-disconnect.handler";
+
 const controllers = [
   FacebookConnectController,
   FacebookImportController,
@@ -479,6 +488,8 @@ const controllers = [
   BehanceSearchController,
   BehanceSyncController,
   BehanceDisconnectController,
+  GithubConnectController,
+  GithubDisconnectController,
 ];
 
 const handlers = [
@@ -588,6 +599,9 @@ const handlers = [
   BehanceDisconnectCommandHandler,
   EnableBehanceSyncCommandHandler,
   DisableBehanceSyncCommandHandler,
+  GithubConnectQueryHandler,
+  GithubConnectCallbackQueryHandler,
+  GithubDisconnectCommandHandler,
 ];
 
 const integrations = {
