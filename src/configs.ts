@@ -179,6 +179,12 @@ const envVarsSchema = Joi.object()
       .description('GitHub OAuth client secret'),
     GITHUB_CALLBACK_URL: Joi.string()
       .description('GitHub OAuth callback URL'),
+    DISCORD_CLIENT_ID: Joi.string()
+      .description('Discord OAuth client ID'),
+    DISCORD_CLIENT_SECRET: Joi.string()
+      .description('Discord OAuth client secret'),
+    DISCORD_CALLBACK_URL: Joi.string()
+      .description('Discord OAuth callback URL'),
     TOKEN_EXPIRATION_TIME: Joi.number()
       .default(900000)
       .description('Token expiration time in milliseconds'),
@@ -354,6 +360,11 @@ export default {
     clientId: envVars.GITHUB_CLIENT_ID,
     clientSecret: envVars.GITHUB_CLIENT_SECRET,
     redirectUri: envVars.GITHUB_CALLBACK_URL,
+  },
+  discord: {
+    clientId: envVars.DISCORD_CLIENT_ID,
+    clientSecret: envVars.DISCORD_CLIENT_SECRET,
+    redirectUri: envVars.DISCORD_CALLBACK_URL,
   },
   Token: {
     expirationTime: envVars.TOKEN_EXPIRATION_TIME

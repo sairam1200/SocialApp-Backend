@@ -67,6 +67,7 @@ export default {
     THREADS: 'threads',
     BEHANCE: 'behance',
     GITHUB: 'github',
+    DISCORD: 'discord',
   },
 
   KNOWN_PLATFORMS_URIS: [
