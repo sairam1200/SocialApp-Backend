@@ -186,6 +186,10 @@ import { GithubConnectController } from "./github/connect/github-connect.endpoin
 import { GithubConnectQueryHandler, GithubConnectCallbackQueryHandler } from "./github/connect/github-connect.handler";
 import { GithubDisconnectController } from "./github/disconnect/github-disconnect.endpoint";
 import { GithubDisconnectCommandHandler } from "./github/disconnect/github-disconnect.handler";
+import { DiscordConnectController } from "./discord/connect/discord-connect.endpoint";
+import { DiscordConnectQueryHandler, DiscordConnectCallbackQueryHandler } from "./discord/connect/discord-connect.handler";
+import { DiscordDisconnectController } from "./discord/disconnect/discord-disconnect.endpoint";
+import { DiscordDisconnectCommandHandler } from "./discord/disconnect/discord-disconnect.handler";
 
 export { FacebookConnectController } from "./facebook/connect/facebook-connect.endpoint"
 export { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./facebook/connect/facebook-connect.handler";
@@ -405,6 +409,11 @@ export { GithubConnectQueryHandler, GithubConnectCallbackQueryHandler } from "./
 export { GithubDisconnectController } from "./github/disconnect/github-disconnect.endpoint";
 export { GithubDisconnectCommandHandler } from "./github/disconnect/github-disconnect.handler";
 
+export { DiscordConnectController } from "./discord/connect/discord-connect.endpoint";
+export { DiscordConnectQueryHandler, DiscordConnectCallbackQueryHandler } from "./discord/connect/discord-connect.handler";
+export { DiscordDisconnectController } from "./discord/disconnect/discord-disconnect.endpoint";
+export { DiscordDisconnectCommandHandler } from "./discord/disconnect/discord-disconnect.handler";
+
 const controllers = [
   FacebookConnectController,
   FacebookImportController,
@@ -490,6 +499,8 @@ const controllers = [
   BehanceDisconnectController,
   GithubConnectController,
   GithubDisconnectController,
+  DiscordConnectController,
+  DiscordDisconnectController,
 ];
 
 const handlers = [
@@ -602,6 +613,9 @@ const handlers = [
   GithubConnectQueryHandler,
   GithubConnectCallbackQueryHandler,
   GithubDisconnectCommandHandler,
+  DiscordConnectQueryHandler,
+  DiscordConnectCallbackQueryHandler,
+  DiscordDisconnectCommandHandler,
 ];
 
 const integrations = {
