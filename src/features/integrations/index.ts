@@ -190,6 +190,10 @@ import { DiscordConnectController } from "./discord/connect/discord-connect.endp
 import { DiscordConnectQueryHandler, DiscordConnectCallbackQueryHandler } from "./discord/connect/discord-connect.handler";
 import { DiscordDisconnectController } from "./discord/disconnect/discord-disconnect.endpoint";
 import { DiscordDisconnectCommandHandler } from "./discord/disconnect/discord-disconnect.handler";
+import { TwitchConnectController } from "./twitch/connect/twitch-connect.endpoint";
+import { TwitchConnectQueryHandler, TwitchConnectCallbackQueryHandler } from "./twitch/connect/twitch-connect.handler";
+import { TwitchDisconnectController } from "./twitch/disconnect/twitch-disconnect.endpoint";
+import { TwitchDisconnectCommandHandler } from "./twitch/disconnect/twitch-disconnect.handler";
 
 export { FacebookConnectController } from "./facebook/connect/facebook-connect.endpoint"
 export { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./facebook/connect/facebook-connect.handler";
@@ -413,6 +417,10 @@ export { DiscordConnectController } from "./discord/connect/discord-connect.endp
 export { DiscordConnectQueryHandler, DiscordConnectCallbackQueryHandler } from "./discord/connect/discord-connect.handler";
 export { DiscordDisconnectController } from "./discord/disconnect/discord-disconnect.endpoint";
 export { DiscordDisconnectCommandHandler } from "./discord/disconnect/discord-disconnect.handler";
+export { TwitchConnectController } from "./twitch/connect/twitch-connect.endpoint";
+export { TwitchConnectQueryHandler, TwitchConnectCallbackQueryHandler } from "./twitch/connect/twitch-connect.handler";
+export { TwitchDisconnectController } from "./twitch/disconnect/twitch-disconnect.endpoint";
+export { TwitchDisconnectCommandHandler } from "./twitch/disconnect/twitch-disconnect.handler";
 
 const controllers = [
   FacebookConnectController,
@@ -501,6 +509,8 @@ const controllers = [
   GithubDisconnectController,
   DiscordConnectController,
   DiscordDisconnectController,
+  TwitchConnectController,
+  TwitchDisconnectController,
 ];
 
 const handlers = [
@@ -616,6 +626,9 @@ const handlers = [
   DiscordConnectQueryHandler,
   DiscordConnectCallbackQueryHandler,
   DiscordDisconnectCommandHandler,
+  TwitchConnectQueryHandler,
+  TwitchConnectCallbackQueryHandler,
+  TwitchDisconnectCommandHandler,
 ];
 
 const integrations = {
