@@ -185,6 +185,12 @@ const envVarsSchema = Joi.object()
       .description('Discord OAuth client secret'),
     DISCORD_CALLBACK_URL: Joi.string()
       .description('Discord OAuth callback URL'),
+    TWITCH_CLIENT_ID: Joi.string()
+      .description('Twitch OAuth client ID'),
+    TWITCH_CLIENT_SECRET: Joi.string()
+      .description('Twitch OAuth client secret'),
+    TWITCH_CALLBACK_URL: Joi.string()
+      .description('Twitch OAuth callback URL'),
     TOKEN_EXPIRATION_TIME: Joi.number()
       .default(900000)
       .description('Token expiration time in milliseconds'),
@@ -365,6 +371,11 @@ export default {
     clientId: envVars.DISCORD_CLIENT_ID,
     clientSecret: envVars.DISCORD_CLIENT_SECRET,
     redirectUri: envVars.DISCORD_CALLBACK_URL,
+  },
+  twitch: {
+    clientId: envVars.TWITCH_CLIENT_ID,
+    clientSecret: envVars.TWITCH_CLIENT_SECRET,
+    redirectUri: envVars.TWITCH_CALLBACK_URL,
   },
   Token: {
     expirationTime: envVars.TOKEN_EXPIRATION_TIME

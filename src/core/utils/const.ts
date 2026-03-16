@@ -68,6 +68,7 @@ export default {
     BEHANCE: 'behance',
     GITHUB: 'github',
     DISCORD: 'discord',
+    TWITCH: 'twitch',
   },
 
   KNOWN_PLATFORMS_URIS: [
