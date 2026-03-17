@@ -14,3 +14,6 @@ export { DataProtectionKeyRepository } from './dataProtectionKey.repository';
 export { UserFollowRepository } from './userFollow.repository';
 export { TopicRepository } from './topic.repository';
 export { UserPreferenceRepository } from './userPreference.repository';
+export { AnalyticsRepository } from './analytics.repository';
+export { PremiumRollupRepository } from './premiumRollup.repository';
+

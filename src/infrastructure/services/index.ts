@@ -7,3 +7,4 @@ export { NotificationService } from "./notification.service";
 export { YoutubeWebhookService } from "./webhooks/youtube-webhook.service";
 export { QueueService } from "./queue.service";
 export { PlatformDisconnectService } from "./platform-disconnect.service";
+export { AnalyticsService } from "./analytics.service";
