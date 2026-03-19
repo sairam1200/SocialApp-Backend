@@ -1,7 +1,7 @@
 import { Column, Entity } from 'typeorm';
 import { BaseEntity } from '../baseEntity';
 
-@Entity({ name: 'analytics_events', schema: 'analytics' })
+@Entity({ name: 'analyticsEvents', schema: 'analytics' })
 export class AnalyticsEvent extends BaseEntity {
 
   @Column()
