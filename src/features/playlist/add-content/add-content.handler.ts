@@ -5,6 +5,7 @@ import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { mapToPlaylistContentModel } from "../../../domain/mappers/playlist.mpper";
 import { IPlaylistRepository } from "../../../domain/repositories/iplaylist.repository";
 import { PlaylistContent } from "../../../domain/entities/collection/playlistContent.entity";
+import { IAnalyticsService } from "../../../domain/services/ianalytics.service";
 import { AddPlaylistContentModel, PlaylistContentModel } from "../../../domain/contracts/playlist.model";
 
 export class AddPlaylistContentContent {
@@ -24,6 +25,7 @@ const addPlaylistContentValidation = Joi.object({
 export class AddPlaylistContentCommandHandler implements ICommandHandler<AddPlaylistContentContent, PlaylistContentModel> {
   constructor(
     @Inject(_const.IPLAYLIST_REPOSITORY) private readonly playlistRepository: IPlaylistRepository,
+    @Inject(_const.IANALYTICS_SERVICE) private readonly analyticsService: IAnalyticsService,
   ) { }
 
   public async execute(command: AddPlaylistContentContent): Promise<PlaylistContentModel> {
@@ -41,6 +43,26 @@ export class AddPlaylistContentCommandHandler implements ICommandHandler<AddPlay
       description: model.description,
       metadata: model.metadata,
     }));
+
+    const playlist = await this.playlistRepository.getByIdAsync(playlistReferenceId);
+    if (playlist) {
+      const isBookmark = playlist.name.toLowerCase() === _const.COLLECTION.BOOKMARK.NAME.toLowerCase();
+      const eventName = isBookmark 
+        ? _const.ANALYTICS_EVENTS.PLAYLIST.BOOKMARKED 
+        : _const.ANALYTICS_EVENTS.PLAYLIST.CONTENT_ADDED;
+
+      await this.analyticsService.trackEvent(
+        eventName,
+        playlist.owner.id,
+        {
+          playlistId: playlist.id,
+          contentId: model.contentId,
+          type: model.type,
+          platform: model.platform,
+          title: model.title,
+        }
+      );
+    }
 
     return mapToPlaylistContentModel(content);
   }

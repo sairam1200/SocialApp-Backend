@@ -8,6 +8,7 @@ import { PlaylistModel } from "../../../domain/contracts/playlist.model";
 import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
 import { mapToPlaylistModel } from "../../../domain/mappers/playlist.mpper";
 import { IPlaylistRepository } from "../../../domain/repositories/iplaylist.repository";
+import { IAnalyticsService } from "../../../domain/services/ianalytics.service";
 import { PlaylistAlreadyExistsException } from "../../../core/exceptions/playlist.exception";
 
 export class CreatePlaylistModel {
@@ -35,6 +36,7 @@ export class CreatePlaylistCommand {
 export class CreatePlaylistCommandHandler implements ICommandHandler<CreatePlaylistCommand, PlaylistModel> {
   constructor(
     @Inject(_const.IPLAYLIST_REPOSITORY) private readonly playlistRepository: IPlaylistRepository,
+    @Inject(_const.IANALYTICS_SERVICE) private readonly analyticsService: IAnalyticsService,
   ) { }
 
   public async execute(command: CreatePlaylistCommand): Promise<PlaylistModel> {
@@ -54,6 +56,15 @@ export class CreatePlaylistCommandHandler implements ICommandHandler<CreatePlayl
         name: model.name,
         description: model.description,
       })
+    );
+
+    await this.analyticsService.trackEvent(
+      _const.ANALYTICS_EVENTS.PLAYLIST.CREATED,
+      loggedInUserId,
+      {
+        playlistId: playlist.id,
+        name: model.name,
+      }
     );
 
     return mapToPlaylistModel(playlist);
