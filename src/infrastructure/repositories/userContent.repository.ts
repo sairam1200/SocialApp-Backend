@@ -74,6 +74,7 @@ export class UserContentRepository implements IUserContentRepository {
       whereConditions.push(`
         (
           uc.title ILIKE :searchQuery
+          OR uc.text ILIKE :searchQuery
           OR EXISTS (
             SELECT 1
             FROM json_each_text(uc.metaData) AS kv(key, value)

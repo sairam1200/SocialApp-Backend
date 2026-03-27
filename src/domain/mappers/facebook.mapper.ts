@@ -82,23 +82,24 @@ export function mapUserContentToFacebookOnlineModel(content: ContentStream | Use
   };
 
   const contentType = isContentStream(content) ? content.subType : content.type;
+  const data = content as any; // Cast for easier access to optional normalized fields
 
   return {
     id: content.id,
     title: content.title,
     type: contentType,
     externalId: content.externalId,
-    description: content.metaData?.description,
-    picture: content.metaData?.picture,
-    link: content.metaData?.link,
-    message: content.metaData?.message,
+    description: data.text || content.metaData?.description || content.metaData?.message,
+    picture: data.media?.[0]?.url || content.metaData?.picture || content.metaData?.full_picture,
+    link: data.sourceUrl || content.metaData?.link || content.metaData?.permalinkUrl,
+    message: data.text || content.metaData?.message,
     story: content.metaData?.story,
     from: content.metaData?.from,
-    reactions: content.metaData?.reactions,
-    commentCount: content.metaData?.commentCount,
-    sharesCount: content.metaData?.sharesCount,
-    permalinkUrl: content.metaData?.permalinkUrl,
-    createdAt: content.metaData?.createdAt,
-    updatedAt: content.metaData?.updatedAt,
+    reactions: data.engagement?.likes !== undefined ? { summary: { total_count: data.engagement.likes } } : content.metaData?.reactions,
+    commentCount: data.engagement?.comments ?? content.metaData?.commentCount,
+    sharesCount: data.engagement?.shares ?? content.metaData?.sharesCount,
+    permalinkUrl: data.sourceUrl || content.metaData?.permalinkUrl,
+    createdAt: data.publishedAt || content.metaData?.createdAt || content.metaData?.created_time,
+    updatedAt: content.metaData?.updatedAt || content.metaData?.updated_time,
   } as FacebookOnlineModel;
 }

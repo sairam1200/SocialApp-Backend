@@ -159,6 +159,23 @@ export class InstagramImportProcessor extends WorkerHost {
 
             content.type = 'media';
             content.title = item.caption || `Instagram ${item.media_type}`;
+            
+            // Normalized fields
+            content.text = item.caption;
+            content.publishedAt = item.timestamp ? new Date(item.timestamp) : undefined;
+            content.sourceUrl = item.permalink;
+            
+            content.media = [{
+              url: item.media_url || item.thumbnail_url,
+              type: item.media_type,
+              thumbnail: item.thumbnail_url || item.media_url
+            }];
+
+            content.engagement = {
+              likes: item.like_count,
+              comments: item.comments_count,
+            };
+
             content.metaData = {
               caption: item.caption,
               mediaType: item.media_type,
