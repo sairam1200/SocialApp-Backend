@@ -53,7 +53,6 @@ export class LogoutCommandHandler implements ICommandHandler<LogoutCommand> {
 
       await this.analyticsService.trackEvent(
         _const.ANALYTICS_EVENTS.AUTH.LOGOUT,
-        userId,
         { deviceId: model.deviceId }
       );
 

@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import _const from '../../core/utils/const';
+import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { IAnalyticsRepository } from '../../domain/repositories/ianalytics.repository';
 import { IAnalyticsService } from '../../domain/services/ianalytics.service';
 
@@ -13,9 +14,9 @@ export class AnalyticsService implements IAnalyticsService {
 
   async trackEvent(
     eventName: string,
-    userId?: string,
     properties: Record<string, any> = {},
   ): Promise<void> {
+    const userId = HttpContext.getCurrentUserId;
     await this.analyticsRepository.trackEventAsync(eventName, userId, properties);
   }
 }

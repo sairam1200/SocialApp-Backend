@@ -58,7 +58,6 @@ export class UpdateManualProfileCommandHandler implements ICommandHandler<Update
 
     await this.analyticsService.trackEvent(
       _const.ANALYTICS_EVENTS.PROFILE.UPDATED,
-      user.id,
       {
         profileId: manualProfile.id,
         platform: manualProfile.platform,

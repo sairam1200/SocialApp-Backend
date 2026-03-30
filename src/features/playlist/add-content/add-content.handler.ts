@@ -53,7 +53,6 @@ export class AddPlaylistContentCommandHandler implements ICommandHandler<AddPlay
 
       await this.analyticsService.trackEvent(
         eventName,
-        playlist.owner.id,
         {
           playlistId: playlist.id,
           contentId: model.contentId,

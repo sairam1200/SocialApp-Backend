@@ -7,8 +7,8 @@ import { Playlist } from "../../../domain/entities/collection/playlist.entity";
 import { PlaylistModel } from "../../../domain/contracts/playlist.model";
 import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
 import { mapToPlaylistModel } from "../../../domain/mappers/playlist.mpper";
-import { IPlaylistRepository } from "../../../domain/repositories/iplaylist.repository";
 import { IAnalyticsService } from "../../../domain/services/ianalytics.service";
+import { IPlaylistRepository } from "../../../domain/repositories/iplaylist.repository";
 import { PlaylistAlreadyExistsException } from "../../../core/exceptions/playlist.exception";
 
 export class CreatePlaylistModel {
@@ -60,10 +60,9 @@ export class CreatePlaylistCommandHandler implements ICommandHandler<CreatePlayl
 
     await this.analyticsService.trackEvent(
       _const.ANALYTICS_EVENTS.PLAYLIST.CREATED,
-      loggedInUserId,
       {
         playlistId: playlist.id,
-        name: model.name,
+        name: playlist.name,
       }
     );
 

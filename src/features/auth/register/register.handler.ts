@@ -110,7 +110,6 @@ export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> 
     
     await this.analyticsService.trackEvent(
       _const.ANALYTICS_EVENTS.AUTH.REGISTER,
-      user.id,
       {
         ipAddress: model.ipAddress,
         userAgent: model.userAgent,

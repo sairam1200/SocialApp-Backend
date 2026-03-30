@@ -104,6 +104,16 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
     const { searchTerm, platforms, filter, page = 1, limit = 25, paginationTokens = {}, forceRefresh } = command.model;
     const userId = HttpContext.getCurrentUserId;
 
+    await this.analyticsService.trackEvent(
+      _const.ANALYTICS_EVENTS.SEARCH.PERFORMED,
+      {
+        searchTerm,
+        platforms: platforms || [],
+        page,
+        limit,
+      }
+    );
+
     const allPlatforms = Object.values(_const.PLATFORMS);
 
     const normalizedPlatforms = platforms && platforms.length > 0
@@ -180,16 +190,6 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
     });
 
     response.totalResults = totalResults;
-
-    await this.analyticsService.trackEvent(
-      _const.ANALYTICS_EVENTS.SEARCH.PERFORMED,
-      userId,
-      {
-        searchTerm,
-        platforms: platformsToSearch,
-        totalResults,
-      }
-    );
 
     return response;
   }

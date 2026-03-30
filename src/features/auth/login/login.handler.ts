@@ -113,7 +113,6 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
 
       await this.analyticsService.trackEvent(
         _const.ANALYTICS_EVENTS.AUTH.LOGIN,
-        user.id,
         {
           ipAddress: model.ipAddress,
           userAgent: model.userAgent,

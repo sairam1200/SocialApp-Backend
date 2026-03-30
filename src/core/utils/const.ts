@@ -128,24 +128,25 @@ export default {
       DESCRIPTION: ''
     }
   },
-  
+
   ANALYTICS_EVENTS: {
     AUTH: {
-      LOGIN: 'USER_LOGIN',
-      REGISTER: 'USER_REGISTERED',
-      LOGOUT: 'USER_LOGOUT',
+      LOGIN: 'auth.login',
+      LOGOUT: 'auth.logout',
+      REGISTER: 'auth.register',
     },
     PLAYLIST: {
-      CREATED: 'PLAYLIST_CREATED',
-      DELETED: 'PLAYLIST_DELETED',
-      CONTENT_ADDED: 'PLAYLIST_CONTENT_ADDED',
-      BOOKMARKED: 'CONTENT_BOOKMARKED',
+      CREATED: 'playlist.created',
+      DELETED: 'playlist.deleted',
+      CONTENT_ADDED: 'playlist.content_added',
+      CONTENT_REMOVED: 'playlist.content_removed',
+      BOOKMARKED: 'playlist.bookmarked',
     },
     SEARCH: {
-      PERFORMED: 'SEARCH_PERFORMED',
+      PERFORMED: 'search.performed',
     },
     PROFILE: {
-      UPDATED: 'PROFILE_UPDATED',
-    }
-  }
+      UPDATED: 'profile.updated',
+    },
+  },
 }

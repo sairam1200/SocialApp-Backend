@@ -2,8 +2,8 @@ import * as Joi from "joi";
 import _const from "../../../core/utils/const";
 import { Inject, NotFoundException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { IAnalyticsService } from "../../../domain/services/ianalytics.service";
 import { IPlaylistRepository } from "../../../domain/repositories/iplaylist.repository";
+import { IAnalyticsService } from "../../../domain/services/ianalytics.service";
 
 export class DeletePlaylistCommand {
   model: {
@@ -36,13 +36,14 @@ export class DeletePlaylistCommandHandler implements ICommandHandler<DeletePlayl
       throw new NotFoundException("Content not found");
     }
 
-
     await this.playlistRepository.deleteAsync(playlist);
-    
+
     await this.analyticsService.trackEvent(
       _const.ANALYTICS_EVENTS.PLAYLIST.DELETED,
-      playlist.owner.id,
-      { playlistReferenceId: model.playlistReferenceId }
+      {
+        playlistId: playlist.id,
+        name: playlist.name,
+      }
     );
   }
 }
