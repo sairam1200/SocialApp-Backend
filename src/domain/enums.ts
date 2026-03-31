@@ -94,10 +94,10 @@ export enum FollowStatus {
 }
 
 export enum OnboardingStep {
-  NotStarted = 'NotStarted',
-  ProfileData = 'ProfileData',
-  Topics = 'Topics',
-  Platforms = 'Platforms',
-  Confirmation = 'Confirmation',
-  Completed = 'Completed',
+    NotStarted = 'NotStarted',
+    ProfileData = 'ProfileData',
+    Topics = 'Topics',
+    Platforms = 'Platforms',
+    Confirmation = 'Confirmation',
+    Completed = 'Completed',
 }

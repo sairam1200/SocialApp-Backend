@@ -1,8 +1,8 @@
 import _const from "../core/utils/const";
-import { ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, TopicRepository, UserContentRepository, UserFollowRepository, UserLoginRepository, UserPreferenceRepository, UserRepository, UserRoleRepository } from "./repositories";
+import { AnalyticsRepository, ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, PremiumRollupRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, TopicRepository, UserContentRepository, UserFollowRepository, UserLoginRepository, UserPreferenceRepository, UserRepository, UserRoleRepository } from "./repositories";
 import { GeneralRepository } from "./repositories/general.repository";
 import { ManualProfileRepository } from "./repositories/manualProfile.repository";
-import { EmailService, NotificationService, SearchService, SearchCacheService, TokenService, YoutubeWebhookService, QueueService, PlatformDisconnectService } from "./services";
+import { AnalyticsService, EmailService, NotificationService, SearchService, SearchCacheService, TokenService, YoutubeWebhookService, QueueService, PlatformDisconnectService } from "./services";
 
 /* This is the dependency object that holds all the repositories & services
  * used in the application. It is used to provide the dependencies to the
@@ -112,5 +112,19 @@ export const dependency = {
   GeneralRepository: {
     provide: _const.IGENERAL_REPOSITORY,
     useClass: GeneralRepository,
+  },
+
+  // Analytics
+  AnalyticsRepository: {
+    provide: _const.IANALYTICS_REPOSITORY,
+    useClass: AnalyticsRepository,
+  },
+  PremiumRollupRepository: {
+    provide: _const.IPREMIUMROLLUP_REPOSITORY,
+    useClass: PremiumRollupRepository,
+  },
+  AnalyticsService: {
+    provide: _const.IANALYTICS_SERVICE,
+    useClass: AnalyticsService,
   },
 };

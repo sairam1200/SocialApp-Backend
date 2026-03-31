@@ -34,17 +34,26 @@ export function mapToUserTweetModel(data: UserContent): UserTweetModel{
     type: 'tweet',
     name: data.title,
     tweetId: data.externalId,
-    tweet: data.metaData.text,
-    editHistoryTweetIds: data.metaData.edit_history_tweet_ids,
+    tweet: data.text || data.metaData?.text,
+    editHistoryTweetIds: data.metaData?.edit_history_tweet_ids,
+    createdAt: data.publishedAt || data.metaData?.created_at,
+    publicMetrics: data.engagement || data.metaData?.public_metrics,
+    entities: data.metaData?.entities,
+    media: data.media || (data.metaData?.attachments ? [data.metaData.attachments] : []),
   } as UserTweetModel;
 }
+
 export function mapToLikedTweetModel(data: UserContent): UserLikedTweetModel {
   return {
     id: data.id,
     type: 'tweet',
     name: data.title,
     tweetId: data.externalId,
-    likedTweet: data.metaData.text,
-    editHistoryTweetIds: data.metaData.edit_history_tweet_ids,
+    likedTweet: data.text || data.metaData?.text,
+    editHistoryTweetIds: data.metaData?.edit_history_tweet_ids,
+    createdAt: data.publishedAt || data.metaData?.created_at,
+    publicMetrics: data.engagement || data.metaData?.public_metrics,
+    entities: data.metaData?.entities,
+    media: data.media || (data.metaData?.attachments ? [data.metaData.attachments] : []),
   } as UserLikedTweetModel;
 }

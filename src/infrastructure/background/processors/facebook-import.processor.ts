@@ -196,6 +196,48 @@ export class FacebookImportProcessor extends WorkerHost {
                 facebookContent.name ??
                 facebookContent.message ??
                 'Facebook Post';
+              
+              // Normalized fields
+              content.text = facebookContent.message || facebookContent.story;
+              content.publishedAt = facebookContent.created_time ? new Date(facebookContent.created_time) : undefined;
+              content.sourceUrl = facebookContent.permalink_url;
+
+              // Handle media (Attachments/Albums)
+              const mediaAssets: any[] = [];
+              if (facebookContent.attachments?.data) {
+                facebookContent.attachments.data.forEach((att: any) => {
+                  if (att.subattachments?.data) {
+                    att.subattachments.data.forEach((sub: any) => {
+                      mediaAssets.push({
+                        url: sub.media?.image?.src || sub.target?.url,
+                        type: sub.type,
+                        thumbnail: sub.media?.image?.src
+                      });
+                    });
+                  } else {
+                    mediaAssets.push({
+                      url: att.media?.image?.src || att.target?.url,
+                      type: att.type,
+                      thumbnail: att.media?.image?.src
+                    });
+                  }
+                });
+              } else if (facebookContent.full_picture) {
+                mediaAssets.push({
+                  url: facebookContent.full_picture,
+                  type: facebookContent.type || 'photo',
+                  thumbnail: facebookContent.full_picture
+                });
+              }
+              content.media = mediaAssets;
+
+              // Standardized engagement
+              content.engagement = {
+                likes: facebookContent.reactions?.summary?.total_count || 0,
+                shares: facebookContent.shares?.count || 0,
+                comments: facebookContent.comments?.summary?.total_count || 0
+              };
+
               content.metaData = {
                 from: facebookContent.from,
                 link: facebookContent.link,
@@ -203,7 +245,7 @@ export class FacebookImportProcessor extends WorkerHost {
                 story: facebookContent.story,
                 message: facebookContent.message,
                 reactions: facebookContent.reactions,
-                commentCount: facebookContent.comments?.length,
+                commentCount: facebookContent.comments?.summary?.total_count || 0,
                 permalinkUrl: facebookContent.permalink_url,
                 sharesCount: facebookContent.shares?.count,
                 createdAt: facebookContent.created_time,
@@ -212,6 +254,7 @@ export class FacebookImportProcessor extends WorkerHost {
                 isHidden: facebookContent.is_hidden,
                 picture: facebookContent.full_picture,
                 via: facebookContent.via,
+                attachments: facebookContent.attachments
               };
             } else if (type === 'Likes') {
               content.type = 'likes';
@@ -435,8 +478,9 @@ export class FacebookImportProcessor extends WorkerHost {
         is_hidden,
         via,
         shares,
-        reactions,
-        comments`;
+        reactions.summary(true),
+        comments.summary(true),
+        attachments{media,target,type,subattachments{media,target,type}}`;
       case 'Likes':
         return `
         id,

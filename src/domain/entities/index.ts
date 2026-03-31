@@ -22,3 +22,5 @@ export { UserPreference } from './identity/userPreference.entity';
 export { UserFollow } from './userFollow.entity';
 export { Topic } from './topic.entity';
 export { UserTopic } from './userTopic.entity';
+export { AnalyticsEvent } from './analyticsEvent.entity';
+export { PremiumRollup } from './premiumRollup.entity';

@@ -28,6 +28,11 @@ export default {
   IQUEUE_SERVICE: 'IQueueService',
   IPLATFORM_DISCONNECT_SERVICE: 'IPlatformDisconnectService',
 
+  // Analytics
+  IANALYTICS_REPOSITORY: 'IAnalyticsRepository',
+  IPREMIUMROLLUP_REPOSITORY: 'IPremiumRollupRepository',
+  IANALYTICS_SERVICE: 'IAnalyticsService',
+
   BULL_QUEUES: {
     FACEBOOK_IMPORT: 'facebook-import',
     INSTAGRAM_IMPORT: 'instagram-import',
@@ -66,9 +71,6 @@ export default {
     SNAPCHAT: 'snapchat',
     THREADS: 'threads',
     BEHANCE: 'behance',
-    GITHUB: 'github',
-    DISCORD: 'discord',
-    TWITCH: 'twitch',
   },
 
   KNOWN_PLATFORMS_URIS: [
@@ -96,7 +98,6 @@ export default {
     'bilibili.com',
     'ok.ru',
     'vk.com',
-    'github.com',
   ],
 
   TOKEN: {
