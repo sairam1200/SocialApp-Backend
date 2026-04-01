@@ -284,11 +284,28 @@ export class YoutubeImportProcessor extends WorkerHost {
               type: 'uploaded_video',
               title: item.snippet.title,
               externalId: item.id,
+              
+              // Normalized fields
+              text: item.snippet.description,
+              publishedAt: item.snippet.publishedAt ? new Date(item.snippet.publishedAt) : undefined,
+              sourceUrl: `https://www.youtube.com/watch?v=${item.contentDetails.videoId}`,
+              media: [{
+                url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url,
+                type: 'video',
+                thumbnail: item.snippet.thumbnails?.high?.url
+              }],
+              engagement: item.statistics ? {
+                views: item.statistics.viewCount,
+                likes: item.statistics.likeCount,
+                comments: item.statistics.commentCount
+              } : undefined,
+
               metaData: {
                 videoId: item.contentDetails.videoId,
                 publishedAt: item.snippet.publishedAt,
                 description: item.snippet.description,
                 thumbnails: item.snippet.thumbnails,
+                statistics: item.statistics
               },
             });
 
@@ -452,6 +469,17 @@ export class YoutubeImportProcessor extends WorkerHost {
         baseContent.type = 'subscription';
         baseContent.title = item.snippet.title;
         baseContent.externalId = item.snippet.resourceId.channelId;
+        
+        // Normalized fields
+        baseContent.text = item.snippet.description;
+        baseContent.publishedAt = item.snippet.publishedAt ? new Date(item.snippet.publishedAt) : undefined;
+        baseContent.sourceUrl = `https://www.youtube.com/channel/${item.snippet.resourceId.channelId}`;
+        baseContent.media = [{
+          url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url,
+          type: 'channel',
+          thumbnail: item.snippet.thumbnails?.high?.url
+        }];
+
         baseContent.metaData = {
           description: item.snippet.description,
           publishedAt: item.snippet.publishedAt,
@@ -463,6 +491,17 @@ export class YoutubeImportProcessor extends WorkerHost {
         baseContent.type = 'playlist';
         baseContent.title = item.snippet.title;
         baseContent.externalId = item.id;
+
+        // Normalized fields
+        baseContent.text = item.snippet.description;
+        baseContent.publishedAt = item.snippet.publishedAt ? new Date(item.snippet.publishedAt) : undefined;
+        baseContent.sourceUrl = `https://www.youtube.com/playlist?list=${item.id}`;
+        baseContent.media = [{
+          url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url,
+          type: 'playlist',
+          thumbnail: item.snippet.thumbnails?.high?.url
+        }];
+
         baseContent.metaData = {
           playlistId: item.id,
           description: item.snippet.description,
@@ -476,6 +515,17 @@ export class YoutubeImportProcessor extends WorkerHost {
         baseContent.type = 'activity';
         baseContent.title = item.snippet.title;
         baseContent.externalId = item.id;
+
+        // Normalized fields
+        baseContent.text = item.snippet.description;
+        baseContent.publishedAt = item.snippet.publishedAt ? new Date(item.snippet.publishedAt) : undefined;
+        baseContent.sourceUrl = `https://www.youtube.com/watch?v=${item.contentDetails?.upload?.videoId || item.id}`;
+        baseContent.media = [{
+          url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url,
+          type: 'activity',
+          thumbnail: item.snippet.thumbnails?.high?.url
+        }];
+
         baseContent.metaData = {
           publishedAt: item.snippet.publishedAt,
           channelId: item.snippet.channelId,
@@ -489,6 +539,25 @@ export class YoutubeImportProcessor extends WorkerHost {
         baseContent.type = 'channel';
         baseContent.title = item.snippet.title;
         baseContent.externalId = item.id;
+
+        // Normalized fields
+        baseContent.text = item.snippet.description;
+        baseContent.publishedAt = item.snippet.publishedAt ? new Date(item.snippet.publishedAt) : undefined;
+        baseContent.sourceUrl = `https://www.youtube.com/channel/${item.id}`;
+        baseContent.media = [{
+          url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url,
+          type: 'channel',
+          thumbnail: item.snippet.thumbnails?.high?.url
+        }];
+
+        if (item.statistics) {
+          baseContent.engagement = {
+            views: item.statistics.viewCount,
+            subscribers: item.statistics.subscriberCount,
+            videos: item.statistics.videoCount
+          };
+        }
+
         baseContent.metaData = {
           description: item.snippet.description,
           publishedAt: item.snippet.publishedAt,
