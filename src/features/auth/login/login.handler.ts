@@ -6,6 +6,7 @@ import { User } from "../../../domain/entities";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { ITokenService } from "../../../domain/services/itoken.service";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
+import { IAnalyticsService } from "../../../domain/services/ianalytics.service";
 import { TokenResponseModel } from "../../../domain/contracts/tokenResponse.model";
 import { IUserLoginRepository } from "../../../domain/repositories/iuserLogin.repository";
 
@@ -52,7 +53,8 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
   constructor(
     @Inject(_const.ITOKEN_SERVICE) private readonly tokenService: ITokenService,
     @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
-    @Inject(_const.IUSERLOGIN_REPOSITORY) private readonly userLoginRepository: IUserLoginRepository
+    @Inject(_const.IUSERLOGIN_REPOSITORY) private readonly userLoginRepository: IUserLoginRepository,
+    @Inject(_const.IANALYTICS_SERVICE) private readonly analyticsService: IAnalyticsService
   ) { }
 
   public async execute(command: LoginCommand): Promise<TokenResponseModel> {
@@ -108,6 +110,15 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
 
       await this.userRepository.cacheUserAccountAsync(user, _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC);
       // TODO: Send email notification of login with new ipAddress and deviceInfo
+
+      await this.analyticsService.trackEvent(
+        _const.ANALYTICS_EVENTS.AUTH.LOGIN,
+        {
+          ipAddress: model.ipAddress,
+          userAgent: model.userAgent,
+          deviceId: model.deviceId,
+        }
+      );
 
       return new TokenResponseModel({
         access_token,

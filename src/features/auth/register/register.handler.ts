@@ -14,6 +14,7 @@ import { SendVerificationEmailCommand } from "../../../features/user";
 import { UserAlreadyExistsException } from "../../../core/exceptions";
 import { generateInitialImage } from "../../../core/utils/canvas.util";
 import { IEmailService } from "../../../domain/services/iemail.service";
+import { IAnalyticsService } from "../../../domain/services/ianalytics.service";
 import { CommandBus, CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { uploadBase64ToCloudinaryAsync } from "../../../core/utils/cloudinary.util";
 
@@ -65,6 +66,8 @@ export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> 
     private readonly commandBus: CommandBus,
     @Inject(_const.IEMAIL_SERVICE)
     private readonly emailService: IEmailService,
+    @Inject(_const.IANALYTICS_SERVICE)
+    private readonly analyticsService: IAnalyticsService,
   ) { }
 
   public async execute(command: RegisterCommand): Promise<UserModel> {
@@ -104,6 +107,14 @@ export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> 
         email: user.email,
       }
     }));
+    
+    await this.analyticsService.trackEvent(
+      _const.ANALYTICS_EVENTS.AUTH.REGISTER,
+      {
+        ipAddress: model.ipAddress,
+        userAgent: model.userAgent,
+      }
+    );
 
     this.sendWelcomeEmail(user)
     return mapToUserModel(user, true, avatar.secure_url);

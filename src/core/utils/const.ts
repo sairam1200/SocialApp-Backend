@@ -127,5 +127,26 @@ export default {
       NAME: 'bookmark',
       DESCRIPTION: ''
     }
-  }
+  },
+
+  ANALYTICS_EVENTS: {
+    AUTH: {
+      LOGIN: 'auth.login',
+      LOGOUT: 'auth.logout',
+      REGISTER: 'auth.register',
+    },
+    PLAYLIST: {
+      CREATED: 'playlist.created',
+      DELETED: 'playlist.deleted',
+      CONTENT_ADDED: 'playlist.content_added',
+      CONTENT_REMOVED: 'playlist.content_removed',
+      BOOKMARKED: 'playlist.bookmarked',
+    },
+    SEARCH: {
+      PERFORMED: 'search.performed',
+    },
+    PROFILE: {
+      UPDATED: 'profile.updated',
+    },
+  },
 }
