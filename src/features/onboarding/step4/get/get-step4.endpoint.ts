@@ -1,13 +1,13 @@
 import { Response } from "express";
 import { QueryBus } from "@nestjs/cqrs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport";
+import { UserAccoutGuard, OnboardingGuard } from "../../../../core/passport";
 import { GetOnboardingStep4Query } from "./get-step4.handler";
 import { OnboardingStep4Model } from "../../../../domain/contracts/onboarding.model";
 import { Controller, Get, HttpStatus, Res, UseGuards } from "@nestjs/common";
 
 @ApiTags('Onboarding')
-@UseGuards(UserAccoutGuard)
+@UseGuards(UserAccoutGuard, OnboardingGuard)
 @Controller({
   path: `/onboarding`,
   version: '1',
