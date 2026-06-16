@@ -62,7 +62,7 @@ export class VerifyCodeCommandHandler implements ICommandHandler<VerifyCodeComma
       return { isValid: false, expiresIn: null };
     }
 
-    const user = await this.userRepository.getUserByEmailAsync(model.email);
+    const user = await this.userRepository.getUserByEmailAsync(model.email );
     if (!user) {
       return { isValid: false, expiresIn: null };
     }

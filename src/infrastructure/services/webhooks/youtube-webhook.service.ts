@@ -30,10 +30,17 @@ export class YoutubeWebhookService {
       );
 
       logger.info(`[YoutubeWebhook] Subscription request sent for channel ${channelId}`);
-    } catch (error) {
-      logger.error(`[YoutubeWebhook] Error subscribing to channel ${channelId}:`, error);
-      throw error;
-    }
+    } catch (error: any) {
+  logger.error(
+    `[YoutubeWebhook] Subscribe failed.
+     Channel: ${channelId}
+     Status: ${error.response?.status}
+     Data: ${JSON.stringify(error.response?.data)}
+     Headers: ${JSON.stringify(error.response?.headers)}`
+  );
+
+  throw error;
+}
   }
 
   public async unsubscribeAsync(channelId: string, callbackUrl: string): Promise<void> {

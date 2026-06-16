@@ -22,7 +22,7 @@ import { TwitterProfileModel, TwitterUserDataType } from "../../../../domain/con
 import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
 import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
 
-const BASE_URL = 'https://api.twitter.com/2';
+const BASE_URL = 'https://api.x.com/2';
 
 export class TwitterConnectQuery {
   model: {
@@ -64,6 +64,7 @@ export class TwiiterConnectQueryHandler implements ICommandHandler<TwitterConnec
     const { model } = query;
 
     const expiresIn = Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
+    console.log('Saving state:', model.state);
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       model.codeVerifier,
@@ -91,6 +92,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
   ) { }
 
   public async execute(query: TwitterConnectCallbackQuery): Promise<{
+    success: boolean;
     accessToken: string,
     expiresIn: number,
     profile: TwitterProfileModel
@@ -99,7 +101,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     const { model } = query;
     await twitterConnectValidations.validateAsync(model);
     const dataProtectionKey = await this.validateStateAsync(model.state);
-    console.log('Data Protection Key:', dataProtectionKey);
+    
     const { access_token, refresh_token, expires_in } = await this.fetchToken(model.code, dataProtectionKey.value);
 
     const userData = await this.fetchUserData(access_token);
@@ -134,35 +136,57 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
     }
 
     return {
+      success: true,
       accessToken: access_token,
       expiresIn: expires_in,
       profile: mapToTwitterProfileModel(linkedAccount, true)
     }
   }
 
-  private async fetchToken(code: string, codeVerifier: string)
-    : Promise<{ access_token: string; expires_in: number; refresh_token: string; }> {
-    const basicAuth = Buffer.from(`${configs.twitter.clientId}:${configs.twitter.clientSecret}`).toString('base64');
+  private async fetchToken(
+    code: string,
+    codeVerifier: string
+  ): Promise<{
+    access_token: string;
+    expires_in: number;
+    refresh_token: string;
+  }> {
     try {
-      console.log("codeVerifier:", codeVerifier);
+      const body = new URLSearchParams({
+        code,
+        grant_type: "authorization_code",
+        client_id: configs.twitter.clientId,
+        redirect_uri: configs.twitter.redirectUri,
+        code_verifier: codeVerifier,
+      });
+      
+      const credentials = Buffer
+        .from(`${configs.twitter.clientId}:${configs.twitter.clientSecret}`)
+        .toString("base64");
+      console.log(configs.twitter.clientId);
+      console.log(configs.twitter.clientSecret);
       const response = await axios.post(
-        `${BASE_URL}/oauth2/token`,
-        `grant_type=authorization_code` +
-        `&redirect_uri=${encodeURIComponent(configs.twitter.redirectUri)}` +
-        `&code_verifier=${codeVerifier}` +
-        `&code=${encodeURIComponent(code)}`,
+        "https://api.x.com/2/oauth2/token",
+        body.toString(),
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${basicAuth}`,
-          }
+            "Content-Type":
+              "application/x-www-form-urlencoded",
+            "Authorization": `Basic ${credentials}`
+          },
         }
       );
-      console.log('Twitter token response:', response.data);
+
+      console.log("TOKEN RESPONSE", response.data);
+
       return response.data;
-    } catch (error) {
-      console.log('Error fetching token from Twitter', error);
-      throw new ApplicationException('Unexpected error during authentication with Twitter');
+    } catch (error: any) {
+      console.error(
+        "TOKEN ERROR",
+        error?.response?.data ?? error
+      );
+
+      throw error;
     }
   }
 
@@ -199,7 +223,9 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
   }
 
   private async validateStateAsync(state: string): Promise<DataProtectionKey> {
+    console.log('Callback state:', state);
     const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
+
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
     }

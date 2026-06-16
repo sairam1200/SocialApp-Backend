@@ -44,7 +44,7 @@ export class UserContentRepository implements IUserContentRepository {
   }
 
   public async getByUserIdAsync(userId: string, platform: string, cursor: string): Promise<[UserContent[], string]> {
-    const take = 10;
+    const take = 20;
     const where: any = { userId, platform };
     if (cursor) {
       where.id = MoreThan(cursor);

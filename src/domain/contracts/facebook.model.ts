@@ -54,7 +54,15 @@ export class FacebookOnlineModel {
 
   @ApiProperty({ required: false })
   story?: string;
+  @ApiProperty({ required: false, default: 0 })
+  reach?: number;
 
+  @ApiProperty({ required: false, default: 0 })
+  totalReactions?: number;
+
+  @ApiProperty({ required: false, type: Object })
+  reactionsByType?: Record<string, number>;
+  
   @ApiProperty({ required: false, type: Object })
   from?: Record<string, any>;
 

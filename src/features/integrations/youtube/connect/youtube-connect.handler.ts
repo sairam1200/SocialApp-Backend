@@ -132,7 +132,7 @@ export class YoutubeConnectCallbackQueryHandler
 
       console.log(linkedAccount);
       linkedAccount.externalId = newExternalId;
-      linkedAccount.userName = '';
+      linkedAccount.userName = userData.profile.name;
       linkedAccount.profileImage = userData.profile.picture;
       linkedAccount.externalUrl = `https://www.youtube.com/channel/${userData.channel.items[0].id}`;
       (linkedAccount.followersCount = Number.parseInt(
@@ -168,7 +168,7 @@ export class YoutubeConnectCallbackQueryHandler
           userId: user.id,
           email: userData.profile.email,
           externalId: userData.profile.id,
-          userName: '',
+          userName: userData.profile.name,
           profileImage: userData.profile.picture,
           externalUrl: `https://www.youtube.com/channel/${userData.channel.items[0].id}`,
           followersCount: Number.parseInt(
@@ -231,6 +231,7 @@ export class YoutubeConnectCallbackQueryHandler
     refresh_token: string;
   }> {
     try {
+      
       const response = await axios.post(`https://oauth2.googleapis.com/token`, {
         client_secret: configs.youtube.clientSecret,
         redirect_uri: getRedirectUrl(configs.youtube.callbackUrl),

@@ -14,6 +14,7 @@ import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin
 import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IYoutubeWebhookService } from "../../../../domain/services/webhooks/iyoutube-webhook.service";
+import { IYoutubeImportService } from "../../../../domain/services/youtube/iyoutube-import.services";
 
 export class YoutubeImportRequestModel {
   @ApiProperty()
@@ -41,6 +42,8 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     private readonly queueService: IQueueService,
     @Inject(_const.IYOUTUBEWEBHOOK_SERVICE)
     private readonly youtubeWebhookService: IYoutubeWebhookService,
+    @Inject(_const.IYOUTUBE_IMPORT_SERVICE)
+    private readonly youtubeImportService: IYoutubeImportService,
   ) { }
 
   public async execute(command: YoutubeImportCommand)
@@ -88,21 +91,48 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
       }
     }
 
-    const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.YOUTUBE, userId);
-    console.log(account);
+    const account =
+      await this.linkedAccountRepository
+        .getByPlatformAndUserIdAsync(
+          _const.PLATFORMS.YOUTUBE,
+          userId,
+        );
+
     if (!account) {
-      throw new NotFoundException("No matching Youtube profile was found!");
+      throw new NotFoundException(
+        "No matching Youtube profile was found!",
+      );
+    }
+
+    try {
+
+      const importedCount =
+        await this.youtubeImportService.importSubscriptionsAsync(
+          userId,
+          accessToken,
+        );
+
+      logger.info(
+        `[YoutubeImport] Imported ${importedCount} subscription videos`,
+      );
+
+    } catch (error) {
+
+      logger.error(
+        `[YoutubeImport] Failed importing subscriptions`,
+        error,
+      );
     }
 
     const channelId = account.metaData?.channel?.id;
     if (channelId && !account.syncEnabled && configs.youtube.webhookUrl) {
       try {
         await this.youtubeWebhookService.subscribeAsync(channelId, configs.youtube.webhookUrl);
-        logger.info(`[YoutubeImport] Webhook subscription successful for channel ${channelId}`);
+        console.log(`[YoutubeImport] Webhook subscription successful for channel ${channelId}`);
 
         account.syncEnabled = true;
         await this.linkedAccountRepository.updateAsync(account);
-        logger.info(`[YoutubeImport] Sync enabled for user ${userId}`);
+        console.log(`[YoutubeImport] Sync enabled for user ${userId}`);
       } catch (error) {
         logger.error(`[YoutubeImport] Error subscribing to webhook:`, error);
       }
@@ -154,7 +184,7 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
         ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
 
       throw new UnauthorizedException(
-        'Your Youtube session has expired or the access token is invalid. Please log in to Youtube again to continue.'
+        "RECONNECT_REQUIRED"
       );
     }
   }
@@ -193,7 +223,7 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
 
     if (now > userLogin.expiryDateUtc) {
       throw new UnauthorizedException(
-        'Your Youtube session has expired or the access token is invalid. Please log in to Youtube again to continue.'
+        "RECONNECT_REQUIRED"
       );
     }
     return userLogin;

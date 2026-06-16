@@ -19,6 +19,7 @@ import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinke
 import { FacebookProfileModel, FacebookUserDataType } from '../../../../domain/contracts/facebook.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
 import { IContentStreamRepository } from '../../../../domain/repositories/icontentStream.repository';
+import { Globals } from "../../../../core/globals";
 
 const GRAPH_BASE = 'https://graph.facebook.com/v23.0';
 
@@ -56,17 +57,41 @@ export class FacebookConnectQueryHandler implements ICommandHandler<FacebookConn
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
   ) { }
 
-  public async execute(query: FacebookConnectQuery): Promise<void> {
+  public async execute(
+    query: FacebookConnectQuery
+  ): Promise<void> {
 
     const { model } = query;
 
-    // expires in 15 minutes
-    const expiresIn = Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
-    await this.dataProtectionKeyRepository.createAsync(
-      model.state,
-      "",
-      HttpContext.getCurrentUserId,
-      expiresIn
+    const expiresIn =
+      Math.floor(Date.now() / 1000) +
+      configs.Token.expirationTime;
+
+    console.log(
+      "[FACEBOOK CONNECT] Saving state:",
+      model.state
+    );
+
+    console.log(
+  "[FACEBOOK CONNECT] User:",
+  HttpContext.user[Globals.ClaimTypes.UserId]
+);
+
+   await this.dataProtectionKeyRepository.createAsync(
+  model.state,
+  "",
+  HttpContext.user[Globals.ClaimTypes.UserId],
+  expiresIn
+);
+
+    const verify =
+      await this.dataProtectionKeyRepository.getByKeyAsync(
+        model.state
+      );
+
+    console.log(
+      "[FACEBOOK CONNECT] Saved state:",
+      verify
     );
   }
 }
@@ -92,21 +117,66 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     Promise<{ accessToken: string; expiresIn: number; profile: FacebookProfileModel }> {
 
     const { model } = query;
+    console.log("CALLBACK STATE:", model.state);
     await facebookConnectCallbackValidations.validateAsync(model);
     const dataProtectionKey = await this.validateState(model.state);
 
     const exchangeToken = await this.fetchShortLivedToken(model.code);
-    const { access_token, expires_in } = await this.fetchLongLivedToken(exchangeToken);
+   const longToken =
+  await this.fetchLongLivedToken(exchangeToken);
 
-    const userData = await this.fetchUserData(access_token);
+const accessToken = longToken.access_token;
+
+
+
+const expiresIn =
+  Number.isFinite(longToken.expires_in)
+    ? longToken.expires_in
+    : 60 * 24 * 60 * 60; // 60 days fallback
+
+    const userData = await this.fetchUserData(accessToken);
     const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
 
     if (!user) {
       throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
+const debugToken = await axios.get(
+  `${GRAPH_BASE}/debug_token`,
+  {
+    params: {
+      input_token: accessToken,
+      access_token: `${configs.facebook.clientId}|${configs.facebook.clientSecret}`,
+    },
+  },
+);
+
+const pageId =
+  debugToken.data.data.granular_scopes
+    ?.find(
+      (s: any) =>
+        s.scope === 'pages_show_list',
+    )
+    ?.target_ids?.[0];
+
+if (!pageId) {
+  throw new ApplicationException(
+    'No Facebook Page ID found in token permissions.',
+  );
+}
 
     let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(_const.PLATFORMS.FACEBOOK, user.email);
     const newExternalId = userData.id;
+  const pageResponse = await axios.get(
+  `${GRAPH_BASE}/${pageId}`,
+  {
+    params: {
+      fields: 'access_token,id,name',
+      access_token: accessToken,
+    },
+  },
+);
+const page = pageResponse.data;
+
     if (linkedAccount) {
       const oldExternalId = linkedAccount.externalId;
 
@@ -114,22 +184,38 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         logger.info(`[FacebookConnect] User ${user.id} changed Facebook account from ${oldExternalId} to ${newExternalId}`);
         this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
       }
-
-      linkedAccount = await this.updateLinkedAccount(linkedAccount, userData);
+      
+      linkedAccount = await this.updateLinkedAccount(linkedAccount, userData ,page);
+      console.log(
+  "LINKED ACCOUNT SAVED:",
+  JSON.stringify(
+    linkedAccount,
+    null,
+    2,
+  ),
+);
     } else {
-      linkedAccount = await this.createLinkedAccount(user.id, user.email, userData);
+      linkedAccount = await this.createLinkedAccount(user.id, user.email, userData ,page);
+    console.log(
+  "LINKED ACCOUNT SAVED:",
+  JSON.stringify(
+    linkedAccount,
+    null,
+    2,
+  ),
+);
     }
 
     const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.FACEBOOK);
     if (existingAccountLogin) {
-      await this.updateUserLogin(existingAccountLogin, access_token, expires_in);
+      await this.updateUserLogin(existingAccountLogin, accessToken, expiresIn);
     } else {
-      await this.createUserLogin(user.id, access_token, expires_in);
+      await this.createUserLogin(user.id, accessToken, expiresIn);
     }
 
     return {
-      accessToken: access_token,
-      expiresIn: expires_in,
+      accessToken: accessToken,
+      expiresIn: expiresIn,
       profile: mapToFacebookProfileModel(linkedAccount, true)
     }
   }
@@ -155,22 +241,28 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     }
   }
 
-  private async fetchLongLivedToken(shortLivedAccessToken: string)
-    : Promise<{ access_token: string; token_type: string; expires_in: number }> {
-    try {
-      const response = await axios.get(`${GRAPH_BASE}/oauth/access_token`, {
+  private async fetchLongLivedToken(
+    shortLivedAccessToken: string
+  ): Promise<any> {
+
+    const response = await axios.get(
+      `${GRAPH_BASE}/oauth/access_token`,
+      {
         params: {
           client_id: configs.facebook.clientId,
           client_secret: configs.facebook.clientSecret,
-          grant_type: 'fb_exchange_token',
+          grant_type: "fb_exchange_token",
           fb_exchange_token: shortLivedAccessToken,
         },
-      });
+      }
+    );
 
-      return response.data;
-    } catch (error) {
+    console.log(
+      "FACEBOOK LONG TOKEN RESPONSE:",
+      JSON.stringify(response.data, null, 2)
+    );
 
-    }
+    return response.data;
   }
 
   private async fetchUserData(accessToken: string): Promise<FacebookUserDataType> {
@@ -192,7 +284,9 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
   }
 
   private async validateState(state: string): Promise<DataProtectionKey> {
+    console.log("LOOKING FOR STATE:", state);
     const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
+    console.log("FOUND STATE:", dataProtectionKey);
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
     }
@@ -202,54 +296,80 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     }
 
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
+    console.log("AFTER DELETE");
     return dataProtectionKey;
   }
 
-  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: FacebookUserDataType): Promise<LinkedAccount> {
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: FacebookUserDataType ,  page: any): Promise<LinkedAccount> {
+    
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       _const.PLATFORMS.FACEBOOK,
-      userData.id,
+      page.id,
     );
-    linkedAccount.externalId = userData.id;
-    linkedAccount.userName = userData.name;
+    linkedAccount.externalId = page.id;
+    linkedAccount.userName = page.name;
     linkedAccount.profileImage = userData.picture?.data?.url;
     linkedAccount.followingCount = userData.friends?.summary?.total_count;
     linkedAccount.metaData = {
-      name: userData.name,
-    };
+  facebookUserId: userData.id,
+  facebookUserName: userData.name,
+  pageAccessToken: page.access_token,
+  pageName: page.name,
+};
     await this.linkedAccountRepository.updateAsync(linkedAccount);
     return linkedAccount;
   }
 
-  private async createLinkedAccount(userId: string, email: string, userData: FacebookUserDataType): Promise<LinkedAccount> {
+  private async createLinkedAccount(userId: string, email: string, userData: FacebookUserDataType ,  page: any,): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       _const.PLATFORMS.FACEBOOK,
-      userData.id,
+      page.id,
     );
     const newEntry = new LinkedAccount({
       platform: _const.PLATFORMS.FACEBOOK,
       email,
       userId,
-      externalId: userData.id,
-      userName: userData.name,
+      externalId: page.id,
+      userName:page.name,
       profileImage: userData.picture?.data?.url,
       followingCount: userData.friends?.summary?.total_count,
+      allowImport: true,
       metaData: {
-        name: userData.name,
+        facebookUserId: userData.id,
+  facebookUserName: userData.name,
+  pageAccessToken: page.access_token,
+  pageName: page.name,
       }
     });
+    
     return await this.linkedAccountRepository.createAsync(newEntry);
   }
 
-  private async updateUserLogin(userLogin: any, accessToken: string, expiresIn: number): Promise<void> {
-    // Standardize: Store as serialized object for consistency (even if platform doesn't use refresh_token)
+  private async updateUserLogin(
+    userLogin: any,
+    accessToken: string,
+    expiresIn: number
+  ): Promise<void> {
+
     const tokenValue = serializeObject({
       access_token: accessToken,
       expires_in: expiresIn,
     });
+
     userLogin.tokenValue = tokenValue;
     userLogin.addedDateUtc = new Date();
-    userLogin.expiryDateUtc = new Date(Date.now() + expiresIn * 1000);
+    if (
+      typeof expiresIn !== "number" ||
+      Number.isNaN(expiresIn)
+    ) {
+      throw new Error(
+        `Invalid Facebook expires_in: ${expiresIn}`
+      );
+    }
+    userLogin.expiryDateUtc = new Date(
+      Date.now() + expiresIn * 1000
+    );
+
     await this.userLoginRepository.updateAsync(userLogin);
   }
 

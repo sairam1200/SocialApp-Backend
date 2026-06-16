@@ -18,7 +18,10 @@ export class GetTopicsQueryHandler implements IQueryHandler<GetTopicsQuery, Topi
 
   public async execute(query: GetTopicsQuery): Promise<TopicModel[]> {
     const topics = await this.topicRepository.getAllAsync();
-
+console.log(
+    "TOPICS FROM DB:",
+    topics.length
+  );
     return topics.map(topic => new TopicModel({
       id: topic.id,
       name: topic.name,

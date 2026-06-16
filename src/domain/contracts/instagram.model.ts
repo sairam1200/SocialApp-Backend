@@ -11,14 +11,15 @@ export type InstagramUserDataType = {
   media_count?: number;
   followers_count?: number;
   follows_count?: number;
+  account_type?: string;
 }
 
 export class InstagramProfileModel {
   @ApiProperty()
   id: string;
 
-  @ApiProperty()
-  email: string;
+  @ApiProperty({ required: false })
+  email?: string;
 
   @ApiProperty()
   userName: string;
@@ -90,6 +91,15 @@ export class InstagramContentModel {
 
   @ApiProperty({ required: false, default: 0 })
   commentsCount?: number;
+
+  @ApiProperty({ required: false, default: 0 })
+  reach?: number;
+
+  @ApiProperty({ required: false, default: 0 })
+  impressions?: number;
+
+  @ApiProperty({ required: false, default: 0 })
+  saved?: number;
 }
 
 export class InstagramSearchParamsModel {

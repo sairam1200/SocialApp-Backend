@@ -12,7 +12,7 @@ import ApplicationException from "../../../../core/exceptions/application.except
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IQueueService } from "../../../../domain/services/iqueue.service";
-
+import {ITwitterImportService} from "../../../../domain/services/twitter/iX-import.service";
 export class TwitterImportRequestModel {
   @ApiProperty()
   twitterAccessToken: string;
@@ -37,16 +37,20 @@ export class TwitterImportCommandHandler implements ICommandHandler<TwitterImpor
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IQUEUE_SERVICE)
     private readonly queueService: IQueueService,
+    @Inject(_const.ITWITTER_IMPORT_SERVICE)
+  private readonly twitterImportService: ITwitterImportService,
   ) { }
 
   public async execute(command: TwitterImportCommand)
-    : Promise<{ accessToken: string, expiresIn: number }> {
+    : Promise<{ accessToken: string, expiresIn: number ,  importedCount: number}> {
 
     let expiresIn: number;
     const { twitterAccessToken: twtterAccessToken } = command.model;
-    let accessToken: string | undefined;
+    let accessToken: string ;
     const userId = HttpContext.getCurrentUserId;
+    console.log(twtterAccessToken);
     console.log("this is a user id: ", userId);
+
     if (twtterAccessToken) {
       console.log("fisrt")
       const isTokenValid = await this.verifyAccessTokenAsync(twtterAccessToken);
@@ -117,21 +121,43 @@ export class TwitterImportCommandHandler implements ICommandHandler<TwitterImpor
 
     account.allowImport = true;
     await this.linkedAccountRepository.updateAsync(account);
-
+    let importedCount=0;
     try {
-      await this.queueService.enqueueTwitterImport(account, accessToken);
-      logger.info(`[TwitterImport] Import job enqueued for user ${userId}`);
+    logger.info("[TwitterImport] Refreshing profile");
+
+await this.twitterImportService.refreshProfileAsync(
+  userId,
+  accessToken,
+  account.externalId,
+);
+
+logger.info("[TwitterImport] Importing tweets");
+
+importedCount =
+  await this.twitterImportService.importTweetsAsync(
+    userId,
+    accessToken,
+    account.externalId,
+  );
     } catch (error) {
-      logger.error(`An error occurred while enqueueing the Twitter import job: 
-        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
-      throw new ApplicationException('Failed to initiate Twitter import. Please try again later.');
-    }
+  console.error("TWITTER IMPORT ERROR");
+
+  console.error(error);
+
+  if (axios.isAxiosError(error)) {
+    console.error("STATUS:", error.response?.status);
+    console.error("DATA:", error.response?.data);
+  }
+
+  throw error;
+}
 
 
     return {
-      accessToken,
-      expiresIn
-    }
+  accessToken,
+  expiresIn,
+  importedCount,
+};
   }
 
   private async refreshTokenAsync(refreshToken: string)
@@ -181,7 +207,7 @@ export class TwitterImportCommandHandler implements ICommandHandler<TwitterImpor
           Authorization: `Bearer ${accessToken}`,
         },
       });
-
+      console.log(res.data.data.id);
       // If user data exists, token is valid
       return !!res.data?.data?.id;
     } catch (error) {

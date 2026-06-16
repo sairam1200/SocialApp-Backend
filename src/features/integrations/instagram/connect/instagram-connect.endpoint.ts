@@ -40,20 +40,24 @@ export class InstagramConnectController {
   public async Connect(@Res() res: Response): Promise<Response | void> {
 
     const scopes = [
-      'user_profile',
-      'user_media'
-    ].join(',');
+  "instagram_business_basic",
+  "instagram_business_manage_messages",
+  "instagram_business_manage_comments",
+  "instagram_business_content_publish",
+  "instagram_business_manage_insights",
+].join(",");
+const state = stringUtil.generateRandomString(16);
+const params = new URLSearchParams({
+  force_reauth: "true",
+  client_id: configs.Instagram.clientId,
+  redirect_uri: configs.Instagram.redirectUri,
+  response_type: "code",
+  scope: scopes,
+  state,
+});
 
-    const state = stringUtil.generateRandomString(16);
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: configs.Instagram.clientId,
-      redirect_uri: configs.Instagram.redirectUri,
-      scope: scopes,
-      state: state,
-      show_dialog: 'true', // Always show the login page
-    });
-    const authorizeURL = `https://api.instagram.com/oauth/authorize?${params.toString()}`;
+const authorizeURL =
+  `https://www.instagram.com/oauth/authorize?${params.toString()}`;
 
     await this.commandBus.execute(new InstagramConnectQuery({ model: { state } }));
     return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });

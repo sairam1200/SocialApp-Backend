@@ -24,13 +24,20 @@ import { VerifyCodeController } from "./verify-code/verify-code.endpoint";
 import { VerifyCodeCommandHandler } from "./verify-code/verify-code.handler";
 import { ForgotPasswordController } from "./forgot-password/forgot-password.endpoint";
 import { ForgotPasswordCommandHandler } from "./forgot-password/forgot-password.handler";
-
+import { CurrentUserController } from "./current-user/current-user.endpoint";
+import { CurrentUserQuery } from "./current-user/current-user.handler";
 export { LoginController } from "./login/login.endpoint";
 export { LoginCommandHandler } from "./login/login.handler";
 
 export { GoogleAuthenticationController } from "./external/google-auth/google-auth.endpoint";
 export { GoogleConnectCallbackQueryHandler, GoogleConnectQueryHandler } from "./external/google-auth/google-auth.handler";
+export {
+  CurrentUserController,
+} from "./current-user/current-user.endpoint";
 
+export {
+  CurrentUserQuery,
+} from "./current-user/current-user.handler";
 export { FacebookAuthenticationController } from "./external/facebook-auth/facebook-auth.endpoint";
 export { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./external/facebook-auth/facebook-auth.handler";
 
@@ -75,6 +82,7 @@ const controllers = [
   LogoutController,
   VerifyCodeController,
   ForgotPasswordController,
+  CurrentUserController,
 ];
 
 const handlers = [
@@ -93,6 +101,7 @@ const handlers = [
   LogoutCommandHandler,
   VerifyCodeCommandHandler,
   ForgotPasswordCommandHandler,
+  CurrentUserQuery,
 ];
 
 const authentication = {

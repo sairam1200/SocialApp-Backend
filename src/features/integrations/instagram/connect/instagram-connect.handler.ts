@@ -21,7 +21,7 @@ import { IDataProtectionKeyRepository } from "../../../../domain/repositories/id
 import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
 
 const PLATFORM = 'instagram';
-const GRAPH_BASE = 'https://graph.instagram.com/v22.0';
+const GRAPH_BASE = 'https://graph.instagram.com/';
 
 export class InstagramConnectQuery {
   model: {
@@ -96,11 +96,20 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     Promise<{ accessToken: string; expiresIn: number; profile: InstagramProfileModel; }> {
     const { model } = query;
     await instagramConnectCallbackValidations.validateAsync(model);
+
     await this.validateState(model.state);
 
-    const exchangeToken = await this.fetchShortLivedToken(model.code);
-    const { access_token, expires_in } = await this.fetchLongLivedToken(exchangeToken);
+    const tokenResponse =
+      await this.fetchShortLivedToken(
+        model.code,
+      );
 
+    const access_token =
+      tokenResponse.access_token;
+
+    const expires_in =
+      tokenResponse.expires_in ??
+      3600;
     const userData = await this.fetchUserData(access_token);
     const user = await this.userRepository.getUserByIdAsync(HttpContext.user[Globals.ClaimTypes.UserId]);
 
@@ -108,7 +117,12 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
       throw new ApplicationException('Prevented: Alduterated Request Received!');
     }
 
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(PLATFORM, user.email);
+    let linkedAccount =
+      await this.linkedAccountRepository
+        .getByPlatformAndUserIdAsync(
+          PLATFORM,
+          user.id,
+        );
     const newExternalId = userData.id;
     if (linkedAccount) {
       const oldExternalId = linkedAccount.externalId;
@@ -137,25 +151,32 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     }
   }
 
-  private async fetchShortLivedToken(code: string): Promise<string> {
-    try {
+  private async fetchShortLivedToken(
+    code: string,
+  ): Promise<{
+    access_token: string;
+    expires_in?: number;
+  }> {
+    const body = new URLSearchParams({
+      client_id: configs.Instagram.clientId,
+      client_secret: configs.Instagram.clientSecret,
+      grant_type: "authorization_code",
+      redirect_uri: configs.Instagram.redirectUri,
+      code,
+    });
 
-      const response = await axios.get(`${GRAPH_BASE}/oauth/access_token`, {
-        params: {
-          client_id: configs.Instagram.clientId,
-          redirect_uri: configs.Instagram.redirectUri,
-          client_secret: configs.Instagram.clientSecret,
-          code,
+    const response = await axios.post(
+      "https://api.instagram.com/oauth/access_token",
+      body.toString(),
+      {
+        headers: {
+          "Content-Type":
+            "application/x-www-form-urlencoded",
         },
-      });
+      },
+    );
 
-      const { access_token } = response.data;
-      return access_token;
-
-    } catch (error) {
-      logger.error('Error fetching short-lived token from Instagram', error);
-      throw new ApplicationException('Unexpected error during authentication with Instagram');
-    }
+    return response.data;
   }
 
   private async fetchLongLivedToken(shortLivedAccessToken: string)
@@ -171,9 +192,18 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
       });
 
       return response.data;
-    } catch (error) {
-      logger.error('Error fetching long-lived token from Instagram', error);
-      throw new ApplicationException('Unexpected error during authentication with Instagram');
+    } catch (error: any) {
+      console.error(
+        "LONG TOKEN ERROR:",
+        error?.response?.status,
+      );
+
+      console.error(
+        "LONG TOKEN DATA:",
+        error?.response?.data,
+      );
+
+      throw error;
     }
   }
 
@@ -182,10 +212,13 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
       const response = await axios.get<InstagramUserDataType>(`${GRAPH_BASE}/me`, {
         params: {
           access_token: accessToken,
-          fields: 'id,name,username,email,profile_picture_url,biography,website,media_count,followers_count,follows_count',
+          fields: "id,username,name,profile_picture_url,biography,website,media_count,followers_count,follows_count",
         },
       });
-
+      console.log(
+        "TUSER DATA RESPONSE:",
+        response.data,
+      );
       return response.data;
     } catch (error) {
       logger.error('Error fetching user data from Instagram', error);
@@ -213,15 +246,15 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     );
     linkedAccount.externalId = userData.id;
     linkedAccount.userName = userData.username;
-    linkedAccount.profileImage = userData.profile_picture_url;
-    linkedAccount.followersCount = userData.followers_count;
-    linkedAccount.followingCount = userData.follows_count;
+    linkedAccount.profileImage = userData.profile_picture_url ?? "";
+    linkedAccount.followersCount = userData.followers_count ?? 0;
+    linkedAccount.followingCount = userData.follows_count ?? 0;
     linkedAccount.metaData = {
-      name: userData.name,
-      biography: userData.biography,
-      websiteUrl: userData.website,
-      mediaCount: userData.media_count,
-      accountType: userData.type,
+      name: userData.name ?? "",
+      biography: userData.biography ?? "",
+      websiteUrl: userData.website ?? "",
+      mediaCount: userData.media_count ?? 0,
+      accountType: userData.account_type ?? "",
     };
     await this.linkedAccountRepository.updateAsync(linkedAccount);
     return linkedAccount;

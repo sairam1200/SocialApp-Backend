@@ -10,6 +10,7 @@ import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IYoutubeWebhookService } from "../../../../domain/services/webhooks/iyoutube-webhook.service";
 import { IQueueService } from "../../../../domain/services/iqueue.service";
+import { Globals } from "core/globals";
 
 export class EnableYoutubeSyncCommand {
   constructor(request: Partial<EnableYoutubeSyncCommand> = {}) {
@@ -31,8 +32,8 @@ export class EnableYoutubeSyncCommandHandler implements ICommandHandler<EnableYo
   ) { }
 
   public async execute(command: EnableYoutubeSyncCommand): Promise<{ syncEnabled: boolean }> {
-    const userId = HttpContext.getCurrentUserId;
-
+    const userId = HttpContext.user[Globals.ClaimTypes.UserId];
+    console.log(`[EnableYoutubeSyncCommand] Executing for user ${userId}`);
     const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
       _const.PLATFORMS.YOUTUBE,
       userId,
@@ -50,17 +51,17 @@ export class EnableYoutubeSyncCommandHandler implements ICommandHandler<EnableYo
     if (!configs.youtube.webhookUrl) {
       throw new NotFoundException("YouTube webhook URL not configured.");
     }
-
+    console.log(`Attempting to subscribe to YouTube webhook for channel ${channelId} with callback URL ${configs.youtube.webhookUrl}`);
     try {
       await this.youtubeWebhookService.subscribeAsync(channelId, configs.youtube.webhookUrl);
-      logger.info(`[YoutubeSync] Webhook subscription successful for channel ${channelId}`);
+      console.info(`[YoutubeSync] Webhook subscription successful for channel ${channelId}`);
     } catch (error) {
       logger.error(`[YoutubeSync] Error subscribing to webhook:`, error);
       throw error;
     }
 
     account.syncEnabled = true;
-    logger.info(`[YoutubeSync] Sync enabled for user ${userId}`);
+    console.info(`[YoutubeSync] Sync enabled for user ${userId}`);
 
     try {
       const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(

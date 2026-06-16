@@ -3,7 +3,12 @@ import { ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepo
 import { GeneralRepository } from "./repositories/general.repository";
 import { ManualProfileRepository } from "./repositories/manualProfile.repository";
 import { EmailService, NotificationService, SearchService, SearchCacheService, TokenService, YoutubeWebhookService, QueueService, PlatformDisconnectService } from "./services";
+import {YoutubeImportService} from "../infrastructure/services/youtube/youtube-imports.service";
+import {FacebookImportService} from "../infrastructure/services/facebook/facebook-imports.service";
+import { InstagramImportService } from "../infrastructure/services/instagram/instagram-import.service";
+import { TwitterImportService } from "../infrastructure/services/Twitter/x-import.service";
 
+import { PinterestImportService } from "./services/pinterest/pinterest-import.service";
 /* This is the dependency object that holds all the repositories & services
  * used in the application. It is used to provide the dependencies to the
  * modules in the application. This is a good practice to keep the
@@ -113,4 +118,24 @@ export const dependency = {
     provide: _const.IGENERAL_REPOSITORY,
     useClass: GeneralRepository,
   },
+  YoutubeImportService: {
+  provide: _const.IYOUTUBE_IMPORT_SERVICE,
+  useClass: YoutubeImportService,
+}, 
+FacebookImportService: {
+  provide: _const.IFACEBOOK_IMPORT_SERVICE,
+    useClass: FacebookImportService,
+}, 
+InstagramImportService: {
+      provide: _const.IINSTAGRAM_IMPORT_SERVICE,
+      useClass: InstagramImportService,
+    },
+TwitterImportService:{
+  provide: _const.ITWITTER_IMPORT_SERVICE,
+      useClass: TwitterImportService,
+},
+PinterestImportService:{
+  provide: _const.IPINTEREST_IMPORT_SERVICE,
+  useClass: PinterestImportService,
+}
 };

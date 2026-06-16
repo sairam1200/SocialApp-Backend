@@ -6,20 +6,21 @@ import { Globals } from "../../../../core/globals";
 import logger from "../../../../core/utils/winston.util";
 import { Inject, NotFoundException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+
 import { UserLogin } from "../../../../domain/entities";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import ApplicationException from "../../../../core/exceptions/application.exception";
+
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { IQueueService } from "../../../../domain/services/iqueue.service";
-
+import { IInstagramImportService } from "../../../../domain/services/instagram/iInstagram-import.service";
+import { deserializeObject } from "../../../../core/utils/serialization.util";
 export class InstagramImportRequestModel {
   @ApiProperty()
   instagramAccessToken: string;
 }
 
 export class InstagramImportCommand {
-
   model: InstagramImportRequestModel;
 
   constructor(request: Partial<InstagramImportCommand> = {}) {
@@ -28,117 +29,225 @@ export class InstagramImportCommand {
 }
 
 @CommandHandler(InstagramImportCommand)
-export class InstagramImportCommandHandler implements ICommandHandler<InstagramImportCommand> {
-
+export class InstagramImportCommandHandler
+  implements ICommandHandler<InstagramImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
+
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-    @Inject(_const.IQUEUE_SERVICE)
-    private readonly queueService: IQueueService,
+
+    @Inject(_const.IINSTAGRAM_IMPORT_SERVICE)
+    private readonly instagramImportService: IInstagramImportService,
   ) { }
 
-  public async execute(command: InstagramImportCommand): Promise<{ accessToken: string, expiresIn: number }> {
+  public async execute(
+    command: InstagramImportCommand,
+  ): Promise<{
+    accessToken: string;
+    expiresIn: number;
+    importedCount: number;
+  }> {
+    let expiresIn = 0;
+    let accessToken: string;
 
-    let expiresIn: number;
     const now = new Date();
+    const userId =
+      HttpContext.user[Globals.ClaimTypes.UserId];
+
     const { instagramAccessToken } = command.model;
-    let accessToken: string | undefined;
-    const userId = HttpContext.user[Globals.ClaimTypes.UserId];
 
     if (instagramAccessToken) {
-      const isTokenValid = await this.verifyAccessTokenAsync(instagramAccessToken);
-      if (!isTokenValid) {
-        const userLogin = await this.getUserLoginAsync(userId);
-        const isTokenValid = await this.verifyAccessTokenAsync(accessToken);
-        if (!isTokenValid) {
+      const isTokenValid =
+        await this.verifyAccessTokenAsync(
+          instagramAccessToken,
+        );
+
+      if (isTokenValid) {
+        accessToken = instagramAccessToken;
+        expiresIn = 60 * 60 * 24 * 60; // fallback
+      } else {
+        const userLogin =
+          await this.getUserLoginAsync(userId);
+
+        const tokenData = deserializeObject(
+          userLogin.tokenValue,
+        ) as {
+          access_token: string;
+          expires_in: number;
+        };
+        console.log("TOKEN DATA:", tokenData);
+        const accessTokenFromDb =
+          tokenData.access_token;
+
+        const fallbackTokenValid =
+          await this.verifyAccessTokenAsync(
+            accessTokenFromDb,
+          );
+        console.log("token valid", fallbackTokenValid);
+        if (!fallbackTokenValid) {
           throw new ApplicationException(
-            'Your Instagram session has expired or the access token is invalid. Please log in to Instagram again to continue.'
+            "Your Instagram session has expired or the access token is invalid. Please log in to Instagram again to continue.",
           );
         }
 
-        accessToken = userLogin.tokenValue;
-        expiresIn = Math.floor((userLogin.expiryDateUtc.getTime() - now.getTime()) / 1000);
-      } else {
-        accessToken = instagramAccessToken;
+        accessToken = accessTokenFromDb;
+
+        expiresIn = Math.floor(
+          (userLogin.expiryDateUtc.getTime() -
+            now.getTime()) /
+          1000,
+        );
       }
     } else {
-      const userLogin = await this.getUserLoginAsync(userId);
-      const isTokenValid = await this.verifyAccessTokenAsync(accessToken);
+      const userLogin =
+        await this.getUserLoginAsync(userId);
+
+      const tokenData = deserializeObject(
+        userLogin.tokenValue,
+      ) as {
+        access_token: string;
+        expires_in: number;
+      };
+
+      const accessTokenFromDb =
+        tokenData.access_token;
+
+      console.log(
+        "[InstagramImport] Token from DB:",
+        accessTokenFromDb,
+      );
+
+      const isTokenValid =
+        await this.verifyAccessTokenAsync(
+          accessTokenFromDb,
+        );
+
       if (!isTokenValid) {
         throw new ApplicationException(
-          'Your Instagram session has expired or the access token is invalid. Please log in to Instagram again to continue.'
+          "RECONNECT_REQUIRED"
         );
       }
 
-      accessToken = userLogin.tokenValue;
-      expiresIn = Math.floor((userLogin.expiryDateUtc.getTime() - now.getTime()) / 1000);
+      accessToken = accessTokenFromDb;
+
+      expiresIn = Math.floor(
+        (userLogin.expiryDateUtc.getTime() -
+          now.getTime()) /
+        1000,
+      );
     }
 
-    const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.INSTAGRAM, userId);
+
+    const account =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.INSTAGRAM,
+        userId,
+      );
+
     if (!account) {
-      throw new NotFoundException('No matching Instagram profile was found!');
+      throw new NotFoundException(
+        "No matching Instagram profile was found!",
+      );
     }
 
     account.allowImport = true;
-    await this.linkedAccountRepository.updateAsync(account);
+
+    await this.linkedAccountRepository.updateAsync(
+      account,
+    );
+
+    logger.info("[InstagramImport] Refreshing profile");
 
     try {
-      await this.queueService.enqueueInstagramImport(account, accessToken);
-      logger.info(`[InstagramImport] Import job enqueued for user ${userId}`);
-    } catch (error) {
-      logger.error(`An error occurred while enqueuing the Instagram import job: 
-        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
-      throw new ApplicationException('Failed to initiate Instagram import. Please try again later.');
+      await this.instagramImportService.refreshProfileAsync(
+        userId,
+        accessToken,
+        account.externalId,
+      );
+    } catch (error: any) {
+      console.error(
+        "REFRESH PROFILE ERROR:",
+        error?.response?.data ?? error,
+      );
+      throw error;
     }
 
-    return {
-      accessToken,
-      expiresIn
+    logger.info("[InstagramImport] Importing media");
+
+    try {
+      const importedCount =
+        await this.instagramImportService.importMediaAsync(
+          userId,
+          accessToken,
+          account.externalId,
+        );
+
+      return {
+        accessToken,
+        expiresIn,
+        importedCount,
+      };
+    } catch (error: any) {
+      console.error(
+        "IMPORT MEDIA ERROR:",
+        error?.response?.data ?? error,
+      );
+      throw error;
     }
   }
 
-  private async verifyAccessTokenAsync(accessToken: string): Promise<boolean> {
-
+  private async verifyAccessTokenAsync(
+    accessToken: string,
+  ): Promise<boolean> {
     try {
-      const appAccessToken = `${configs.Instagram.clientId}|${configs.Instagram.clientSecret}`;
-
-      const response = await axios.get(`https://graph.facebook.com/v22.0/debug_token`, {
-        params: {
-          input_token: accessToken,
-          access_token: appAccessToken
+      const response = await axios.get(
+        "https://graph.instagram.com/me",
+        {
+          params: {
+            fields: "id,username",
+            access_token: accessToken,
+          },
         },
-      });
+      );
 
-      const data = response.data.data;
-      return data.is_valid;
-    } catch (error) {
-      logger.error(`An error occurred while processing the Instagram import command: 
-          ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
+      console.log(
+        "[InstagramImport] VERIFY RESPONSE:",
+        response.data,
+      );
+
+      return !!response.data?.id;
+    } catch (error: any) {
+      console.error(
+        "[InstagramImport] VERIFY ERROR:",
+        error?.response?.data,
+      );
 
       return false;
-      // throw new ApplicationException("Something went wrong while verifying the Instagram access token. Please try again later.");
     }
   }
 
-  private async getUserLoginAsync(userId: string): Promise<UserLogin> {
+  private async getUserLoginAsync(
+    userId: string,
+  ): Promise<UserLogin> {
     const now = new Date();
 
-    const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(
-      userId,
-      _const.PLATFORMS.INSTAGRAM
-    );
+    const userLogin =
+      await this.userLoginRepository.getByUserIdAndProviderAsync(
+        userId,
+        _const.PLATFORMS.INSTAGRAM,
+      );
 
     if (!userLogin) {
       throw new ApplicationException(
-        'No Instagram account linked to your user profile. Please link your Instagram account to proceed.'
+        "No Instagram account linked to your user profile. Please link your Instagram account to proceed.",
       );
     }
 
     if (now > userLogin.expiryDateUtc) {
       throw new ApplicationException(
-        'Your Instagram session has expired or the access token is invalid. Please log in to Instagram again to continue.'
+        "RECONNECT_REQUIRED",
       );
     }
 

@@ -35,5 +35,6 @@ export function mapToInstagramContentModel(data: UserContent): InstagramContentM
     username: data.metaData?.username,
     likeCount: data.metaData?.likeCount,
     commentsCount: data.metaData?.commentsCount,
+    reach: data.metaData?.reach,
   } as InstagramContentModel;
 }

@@ -13,7 +13,7 @@ import ApplicationException from "../../../../core/exceptions/application.except
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IQueueService } from "../../../../domain/services/iqueue.service";
-
+import { IPinterestImportService } from "domain/services/pinterest/ipinterest-import.service";
 export class PinterestImportRequestModel {
   @ApiProperty()
   pinterestAccessToken: string;
@@ -38,6 +38,8 @@ export class PinterestImportCommandHandler implements ICommandHandler<PinterestI
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IQUEUE_SERVICE)
     private readonly queueService: IQueueService,
+    @Inject(_const.IPINTEREST_IMPORT_SERVICE)
+    private readonly pinterestImportService: IPinterestImportService,
   ) { }
 
   public async execute(command: PinterestImportCommand)
@@ -62,7 +64,7 @@ export class PinterestImportCommandHandler implements ICommandHandler<PinterestI
         if (refresh_token) {
           userLogin.tokenValue = refresh_token;
           userLogin.expiryDateUtc = new Date(Date.now() + refresh_token_expires_in * 1000);
-          this.userLoginRepository.updateAsync(userLogin);
+          await this.userLoginRepository.updateAsync(userLogin);
         }
 
         accessToken = access_token;
@@ -86,16 +88,34 @@ export class PinterestImportCommandHandler implements ICommandHandler<PinterestI
     if (!account.syncEnabled) {
       account.syncEnabled = true;
       await this.linkedAccountRepository.updateAsync(account);
-      logger.info(`[PinterestImport] Sync enabled for user ${userId}`);
+      console.log(`[PinterestImport] Sync enabled for user ${userId}`);
     }
 
     try {
-      await this.queueService.enqueuePinterestImport(account, accessToken);
-      logger.info(`[PinterestImport] Import job enqueued for user ${userId}`);
+      console.log("[PinterestImport] Starting import");
+
+      await this.pinterestImportService.importPinsAsync(
+        userId,
+        accessToken,
+        account.externalId,
+      );
+
     } catch (error) {
-      logger.error(`An error occurred while enqueueing the Pinterest import job: 
-        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
-      throw new ApplicationException('Failed to initiate Pinterest import. Please try again later.');
+      logger.error("Pinterest import failed", error);
+
+      throw new ApplicationException(
+        'Failed to import Pinterest pins.'
+      );
+    }
+
+    try {
+      await this.pinterestImportService.refreshProfileAsync(
+        userId,
+        accessToken,
+        account.externalId,
+      );
+    } catch (error) {
+      logger.error("Pinterest profile refresh failed", error);
     }
     return {
       accessToken,

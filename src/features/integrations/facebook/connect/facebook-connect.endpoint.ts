@@ -28,10 +28,14 @@ class FacebookConnectCallbackResponseModel {
   path: `/integrations/facebook`,
   version: '1',
 })
+
+
 export class FacebookConnectController {
 
-  constructor(private readonly queryBus: QueryBus) { }
 
+  constructor(
+    private readonly commandBus: CommandBus,
+  ) { }
   @Get('connect')
   @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 200, description: 'OK', type: ConnectResponseModel })
@@ -41,17 +45,12 @@ export class FacebookConnectController {
   public async Connect(@Res() res: Response): Promise<Response | void> {
 
     const scopes = [
-      'email',
       'public_profile',
-      'user_friends',
-      'user_birthday',
-      'user_gender',
-      'user_hometown',
-      'user_link',
-      'user_location',
-      'user_photos',
-      'user_posts',
-      'user_videos'
+      'email',
+      'pages_show_list',
+      'pages_read_engagement',
+      'pages_read_user_content',
+      'read_insights',
     ].join(',');
 
     const state = stringUtil.generateRandomString(16);
@@ -60,13 +59,13 @@ export class FacebookConnectController {
       client_id: configs.facebook.clientId,
       redirect_uri: getRedirectUrl(configs.facebook.redirectUri),
       scope: scopes,
-      state: state,
-      show_dialog: 'true', // Always show the login page
+      state,
+      auth_type: 'rerequest',
     });
 
     const authorizeURL = `https://www.facebook.com/v23.0/dialog/oauth?${params.toString()}`;
 
-    await this.queryBus.execute(new FacebookConnectQuery({ model: { state } }));
+    await this.commandBus.execute(new FacebookConnectQuery({ model: { state } }));
     return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });
   }
 
@@ -81,7 +80,7 @@ export class FacebookConnectController {
     @Res() res: Response
   ): Promise<Response | void> {
 
-    const result = await this.queryBus.execute(new FacebookConnectCallbackQuery({ model: { code, state } }));
+    const result = await this.commandBus.execute(new FacebookConnectCallbackQuery({ model: { code, state } }));
     return res.status(HttpStatus.OK).json(result);
   }
 }

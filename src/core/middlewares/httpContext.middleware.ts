@@ -56,16 +56,40 @@ export class HttpContextMiddleware implements NestMiddleware {
 
   async use(req: Request, res: Response, next: NextFunction) {
     // Debug logging
-    logger.info(`[HttpContext] Request URL: ${req.url}`);
-    logger.info(`[HttpContext] Authorization header: ${req.headers.authorization ? 'Present' : 'Missing'}`);
+
+    console.log(
+      "AUTH HEADER:",
+      req.headers.authorization
+    );
+
     
-    const access_token = extractTokenFromHeader(req);
+    const headerToken =
+      extractTokenFromHeader(req);
+    console.log(
+      "TOKEN FOUND:",
+      !!headerToken
+    );
+    const cookieToken =
+      req.cookies?.access_token ||
+      req.cookies?.ACCESS_TOKEN;
+
+    const access_token =
+      headerToken || cookieToken;
     if (!access_token) {
       logger.info('[HttpContext] No access token found in request');
       HttpContext.run(req, res, null, next);
     } else {
       logger.info('[HttpContext] Access token found, attempting to get user');
       const user = await getUserFromAccessTokenAsync(access_token, res, this.jwtService, true);
+      console.log(
+  "ACCESS TOKEN:",
+  access_token.substring(0, 50)
+);
+
+console.log(
+  "USER RESULT:",
+  user
+);
       logger.info(`[HttpContext] User resolved: ${user ? 'Yes' : 'No'}`);
       if (user) {
         logger.info(`[HttpContext] User type: ${user[Globals.ClaimTypes.UserType]}`);

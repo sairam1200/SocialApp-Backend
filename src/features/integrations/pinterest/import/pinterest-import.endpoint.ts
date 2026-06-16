@@ -30,8 +30,10 @@ export class PinterestImportController {
   ): Promise<Response | void> {
 
     const result = await this.commandBus.execute(new PinterestImportCommand({ model }));
-    if (model.pinterestAccessToken) {
-      return res.status(HttpStatus.OK).json({ message: "Pinterest import has begun." });
+    if (model?.pinterestAccessToken) {
+      return res.status(HttpStatus.OK).json({
+        message: "Pinterest import has begun."
+      });
     }
 
     return res.status(HttpStatus.OK).json({ message: "Pinterest import has begun.", ...result });

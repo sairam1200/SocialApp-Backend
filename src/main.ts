@@ -9,7 +9,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { addScalarApiDocs, addSwaggerApiDocs, addWebSocketDocs } from './core/utils/apiDocs.util';
 import { ErrorHandlersFilter } from './core/exceptions/exceptionHandler.filter';
 import { ApiDocRedirectMiddleware } from './core/middlewares/apiDocRedirect.middleware';
-
+import cookieParser from 'cookie-parser';
 async function bootstrap() {
   process.on('unhandledRejection', (reason, promise) => {
     logger.error(`Unhandled Promise Rejection: ${reason}`);
@@ -22,10 +22,10 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   await dataSource.initialize();
   app.enableShutdownHooks();
-
+const cookieParser = require('cookie-parser');
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
-
+  app.use(cookieParser());
   app.enableVersioning({
     type: VersioningType.URI,
   });
@@ -37,7 +37,7 @@ async function bootstrap() {
   }
 
   app.enableCors({
-    origin: '*',
+      origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-turnstile-token', 'x-client-origin', 'x-redirect-url'],

@@ -8,11 +8,10 @@ import integrations from "../features/integrations";
 import search from "../features/search";
 import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
-import { SearchCacheService, YoutubeWebhookService } from "infrastructure/services";
+import { SearchCacheService } from "infrastructure/services";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
 import { PlatformRollbackListener } from "../infrastructure/background/listeners/platform-rollback.listener";
 import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserBiometric, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
-
 @Module({
   imports: [
     CqrsModule,
@@ -56,6 +55,12 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     dependency.SearchHistoryRepository,
     dependency.YoubeWebHookService,
     dependency.PlatformDisconnectService,
+    dependency.YoutubeImportService,
+    dependency.FacebookImportService,
+    dependency.InstagramImportService,
+    dependency.TwitterImportService,
+    dependency.PinterestImportService,
+    
   ],
   exports: [],
 })

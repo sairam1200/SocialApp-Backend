@@ -51,6 +51,11 @@ import { GetNotificationSettingController } from "./settings/notification/get/ge
 import { GetNotificationSettingQueryHandler } from "./settings/notification/get/get-notification-setting.handler";
 import { UpdateNotificationSettingController } from "./settings/notification/update/update-notification-setting.endpoint";
 import { UpdateNotificationSettingCommandHandler } from "./settings/notification/update/update-notification-setting.handler";
+import { CompleteOnboardingController }
+from "./onboarding/complete/complete-onboarding.endpoint";
+
+import { CompleteOnboardingCommandHandler }
+from "./onboarding/complete/complete-onboarding.handler";
 
 // EXPORTS
 export { ChangePasswordController } from "./change-password/change-password.endpoint";
@@ -138,6 +143,7 @@ const controllers = [
   UpdateThemeController,
   GetNotificationSettingController,
   UpdateNotificationSettingController,
+  CompleteOnboardingController,
 ];
 
 const handlers = [
@@ -167,6 +173,7 @@ const handlers = [
   UpdateThemeCommandHandler,
   GetNotificationSettingQueryHandler,
   UpdateNotificationSettingCommandHandler,
+  CompleteOnboardingCommandHandler,
 ];
 
 const users = {

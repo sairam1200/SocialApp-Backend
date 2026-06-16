@@ -7,7 +7,7 @@ export function mapToYoutubeProfileModel(data: LinkedAccount, includeSensitiveFi
   return {
     id: data.id,
     userId: data.userId,
-    userName: data.userName,
+    userName: data.metaData.name,
     name: data.metaData.name,
     youtubeId: data.externalId,
     allowImport: data.allowImport,

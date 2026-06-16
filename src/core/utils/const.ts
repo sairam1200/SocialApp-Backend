@@ -27,6 +27,11 @@ export default {
   INOTIFICATION_SERVICE: 'INotificationService',
   IQUEUE_SERVICE: 'IQueueService',
   IPLATFORM_DISCONNECT_SERVICE: 'IPlatformDisconnectService',
+  IYOUTUBE_IMPORT_SERVICE: 'IYoutubeImportService',
+  IFACEBOOK_IMPORT_SERVICE:'IFacebookImportService',
+  IINSTAGRAM_IMPORT_SERVICE: 'IInstagramImportService',
+  ITWITTER_IMPORT_SERVICE:'ITwitterImportService',
+  IPINTEREST_IMPORT_SERVICE:'IPinterestImportService',
 
   BULL_QUEUES: {
     FACEBOOK_IMPORT: 'facebook-import',

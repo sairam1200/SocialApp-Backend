@@ -1,5 +1,5 @@
 import { Response, Request } from "express";
-import { Controller, HttpStatus, Post, Res, Req, Headers, HttpCode, Query, Body } from "@nestjs/common";
+import { Controller, HttpStatus, Post, Res, Req, Get, Headers, HttpCode, Query, Body } from "@nestjs/common";
 import { ApiTags, ApiExcludeEndpoint } from "@nestjs/swagger";
 import logger from "../../../../core/utils/winston.util";
 
@@ -10,6 +10,36 @@ import logger from "../../../../core/utils/winston.util";
 })
 export class YoutubeWebhookController {
 
+  @Get('webhook')
+  @ApiExcludeEndpoint()
+  public verifyWebhook(
+    @Query('hub.mode') mode?: string,
+    @Query('hub.topic') topic?: string,
+    @Query('hub.challenge') challenge?: string,
+    @Query('hub.verify_token') verifyToken?: string,
+    @Res() res?: Response,
+  ): Response {
+    logger.debug(
+      `[YoutubeWebhook] Verification request: mode=${mode}, topic=${topic}`,
+    );
+
+    const expectedToken =
+      process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN || 'default_verify_token';
+
+    if (verifyToken !== expectedToken) {
+      logger.warn(
+        `[YoutubeWebhook] Invalid verify token: ${verifyToken}`,
+      );
+
+      return res!.status(HttpStatus.FORBIDDEN).send('Invalid verify token');
+    }
+
+    logger.info(
+      `[YoutubeWebhook] Subscription verified for topic: ${topic}`,
+    );
+
+    return res!.status(HttpStatus.OK).send(challenge);
+  }
   @Post('webhook')
   @ApiExcludeEndpoint()
   @HttpCode(HttpStatus.OK)
@@ -24,7 +54,11 @@ export class YoutubeWebhookController {
     @Body() body?: any,
   ): Promise<Response | void> {
     logger.debug(`[YoutubeWebhook] Received webhook request: mode=${mode}, topic=${topic}`);
-
+    logger.info('======================');
+    logger.info('YOUTUBE WEBHOOK HIT');
+    logger.info(req.headers['content-type']);
+    logger.info(body);
+    logger.info('======================');
     if (mode === 'subscribe' || mode === 'unsubscribe') {
       const expectedToken = process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN || 'default_verify_token';
 

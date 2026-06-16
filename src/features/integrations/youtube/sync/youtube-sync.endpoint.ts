@@ -26,7 +26,10 @@ export class YoutubeSyncController {
   public async EnableSync(
     @Res() res: Response
   ): Promise<Response | void> {
+    console.log("EnableYoutubeSyncCommand result:");
+    
     const result = await this.commandBus.execute(new EnableYoutubeSyncCommand());
+    
     return res.status(HttpStatus.OK).json(result);
   }
 

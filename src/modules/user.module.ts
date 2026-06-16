@@ -8,11 +8,12 @@ import { EmailModule } from './email.module';
 import { dependency } from '../infrastructure/dependency';
 import { EmailCleanupCron } from '../infrastructure/background/cron/jobs/email-cleanup.cron';
 import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole, UserLogin, DataProtectionKey, PlaylistMember, UserBiometric, Topic, UserTopic, UserPreference } from '../domain/entities';
-
+import { AuthModule } from "./auth.module";
 @Module({
   imports: [
     CqrsModule,
     EmailModule,
+    AuthModule,
     TypeOrmModule.forFeature([
       User,
       Role,

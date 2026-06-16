@@ -30,6 +30,7 @@ export class YoutubeImportController {
   ): Promise<Response | void> {
 
     const result = await this.commandBus.execute(new YoutubeImportCommand({ model }));
+    console.log("YoutubeImportCommand result:", result);
     if (model.youtubeAccessToken) {
       return res.status(HttpStatus.OK).json({ message: "Youtube import has begun." });
     }

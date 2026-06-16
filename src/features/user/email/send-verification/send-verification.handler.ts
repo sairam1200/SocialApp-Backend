@@ -52,7 +52,7 @@ export class SendVerificationEmailCommandHandler implements ICommandHandler<Send
 
     await sendVerificationEmailValidations.validateAsync(model);
 
-    const user = await this.userRepository.getUserByEmailAsync(model.email);
+    const user = await this.userRepository.getUserByEmailAsync(model.email,true);
     if (!user) {
       logger.info(`User not found: ${model.email}`);
       return;

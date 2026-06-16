@@ -46,7 +46,7 @@ export class TwitterConnectController {
       code_challenge: challenge,
       code_challenge_method: 'S256'
     });
-    const authorizeURL = `https://twitter.com/i/oauth2/authorize?${params.toString()}`;
+    const authorizeURL = `https://x.com/i/oauth2/authorize?${params.toString()}`;
 
     await this.commandBus.execute(new TwitterConnectQuery({ model: { state, codeVerifier } }));
     return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });
@@ -61,6 +61,7 @@ export class TwitterConnectController {
     @Query('code') code: string,
     @Query('state') state: string,
     @Res() res: Response): Promise<Response | void> {
+       console.log("TWITTER CALLBACK HIT");
     const result = await this.commandBus.execute(new TwitterConnectCallbackQuery({
       model: { code, state }
     }));

@@ -11,6 +11,9 @@ process.env.NODE_ENV = nodeEnv;
 // Load the appropriate .env file based on the environment
 dotenv.config({ path: path.join(process.cwd(), `.env.${nodeEnv}`) })
 dotenv.config({ override: true })
+console.log(
+  "CONFIG FILE LOADED"
+);
 
 const envVarsSchema = Joi.object()
   .keys({
@@ -43,10 +46,10 @@ const envVarsSchema = Joi.object()
       .required()
       .description('Issuer claim for JWT tokens'),
     JWT_ACCESS_EXPIRATION_MINUTES: Joi.string()
-      .default('1m')
+      .default('7d')
       .description('Access token expiration time (e.g., 1m, 10m)'),
     JWT_REFRESH_EXPIRATION_HOURS: Joi.string()
-      .default('1h')
+      .default('30d')
       .description('Refresh token expiration time (e.g., 1h, 24h)'),
     POSTGRES_HOST: Joi.string()
       .default('localhost')
@@ -274,6 +277,7 @@ export default {
     algorithm: envVars.ENCRYPTION_ALGORITHM,
     iv: envVars.ENCRYPTION_IV,
   },
+  
   youtube: {
     clientId: envVars.YOUTUBE_CLIENT_ID,
     clientSecret: envVars.YOUTUBE_CLIENT_SECRET,
@@ -281,6 +285,7 @@ export default {
     webhookUrl: envVars.YOUTUBE_WEBHOOK_URL,
     apiKey: envVars.YOUTUBE_API_KEY,
   },
+  
   app: {
     url: envVars.APP_URL,
   },

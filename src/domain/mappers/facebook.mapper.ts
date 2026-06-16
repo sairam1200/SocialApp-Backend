@@ -16,7 +16,7 @@ export function mapToFacebookProfileModel(
     id: data.id,
     userId: data.userId,
     userName: data.userName,
-    name: data.metaData.name,
+    name: data.metaData.facebookUserName,
     facebookId: data.externalId,
     allowImport: data.allowImport,
     profileImage: data.profileImage,
@@ -76,29 +76,63 @@ export function mapContentStreamToFacebookOnlineModel(content: ContentStream): F
   } as FacebookOnlineModel
 }
 
-export function mapUserContentToFacebookOnlineModel(content: ContentStream | UserContent): FacebookOnlineModel {
-  const isContentStream = (c: ContentStream | UserContent): c is ContentStream => {
-    return 'subType' in c;
+export function mapUserContentToFacebookOnlineModel(
+  content: ContentStream | UserContent
+): FacebookOnlineModel {
+  const isContentStream = (
+    c: ContentStream | UserContent,
+  ): c is ContentStream => {
+    return "subType" in c;
   };
 
-  const contentType = isContentStream(content) ? content.subType : content.type;
+  const contentType = isContentStream(content)
+    ? content.subType
+    : content.type;
 
   return {
-    id: content.id,
-    title: content.title,
-    type: contentType,
-    externalId: content.externalId,
-    description: content.metaData?.description,
-    picture: content.metaData?.picture,
-    link: content.metaData?.link,
-    message: content.metaData?.message,
-    story: content.metaData?.story,
-    from: content.metaData?.from,
-    reactions: content.metaData?.reactions,
-    commentCount: content.metaData?.commentCount,
-    sharesCount: content.metaData?.sharesCount,
-    permalinkUrl: content.metaData?.permalinkUrl,
-    createdAt: content.metaData?.createdAt,
-    updatedAt: content.metaData?.updatedAt,
-  } as FacebookOnlineModel;
+  id: content.id,
+  title: content.title,
+  type: contentType,
+  externalId: content.externalId,
+
+  postId: content.metaData?.postId,
+
+  description: content.metaData?.description,
+
+  picture: content.metaData?.imageUrl,
+
+  message: content.metaData?.message,
+
+  permalinkUrl: content.metaData?.permalink,
+
+  createdAt: content.metaData?.createdTime,
+
+  link: content.metaData?.link,
+
+  story: content.metaData?.story,
+
+  from: content.metaData?.from,
+
+  reactions: content.metaData?.analytics?.reactions,
+
+  commentCount: content.metaData?.analytics?.comments,
+
+  sharesCount: content.metaData?.sharesCount,
+
+  reach: content.metaData?.analytics?.reach,
+
+  totalReactions:
+    content.metaData?.analytics?.totalReactions,
+
+  reactionsByType:
+    content.metaData?.analytics?.reactionsByType,
+
+  engagement:
+    content.metaData?.analytics?.engagement,
+
+  engagementRate:
+    content.metaData?.analytics?.engagementRate,
+
+  updatedAt: content.metaData?.updatedAt,
+} as FacebookOnlineModel; 
 }

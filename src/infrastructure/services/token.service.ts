@@ -55,20 +55,28 @@ export class TokenService implements ITokenService {
     }
   }
 
-  public generateEncryptedToken(claims: any, tokenExpiration?: string): string {
-    const expiresIn = tokenExpiration ?? configs.jwt.accessTokenExpiration;
+  public generateEncryptedToken(
+  claims: any,
+  tokenExpiration?: string
+): string {
 
-    const { exp, iat, iss, aud, ...cleanClaims } = claims;
+  const expiresIn =
+    tokenExpiration ??
+    configs.jwt.accessTokenExpiration;
 
-    const token = this.jwtService.sign(cleanClaims, {
+  const { exp, iat, iss, aud, ...cleanClaims } =
+    claims;
+
+  return this.jwtService.sign(
+    cleanClaims,
+    {
       secret: configs.jwt.secret,
       expiresIn,
       issuer: configs.jwt.issuer,
       audience: configs.jwt.audience,
-    });
-
-    return token;
-  }
+    }
+  );
+}
 
   private async getClaimsAsync(user: User): Promise<any> {
     const roles = await this.roleRepository.getByUserAsync(user);
@@ -89,10 +97,14 @@ export class TokenService implements ITokenService {
       [Globals.ClaimTypes.ProfileImage]: user.biometrics?.profileImageUrl || user.biometrics?.defaultProfileImageUrl || null,
       [Globals.ClaimTypes.FullName]: `${user.lastName} ${user.firstName}`,
       [Globals.ClaimTypes.UserType]: user.type,
+        onboardingStep: user.onboardingStep,
       [Globals.ClaimTypes.Roles]: roleClaims,
       [Globals.ClaimTypes.Permission]: permissionClaims,
     };
-
+console.log(
+  "ONBOARDING STEP IN JWT:",
+  user.onboardingStep
+);
     return claims;
   }
 }

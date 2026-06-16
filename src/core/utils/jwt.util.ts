@@ -17,14 +17,31 @@ export async function getUserFromAccessTokenAsync(
     });
 
   } catch (error) {
+    console.error(
+      "JWT VERIFY ERROR",
+      error
+    );
+
     if (error instanceof TokenExpiredError) {
-      response.setHeader('Token-Expired', 'true');
+      response.setHeader(
+        "Token-Expired",
+        "true"
+      );
     }
-    // throw new UnauthorizedException('Unauthorized: Invalid or expired token.');
+
+    return undefined;
   }
 }
 
 export function extractTokenFromHeader(request: any): string | null {
+  console.log(
+    "AUTH HEADER:",
+    request.headers.authorization
+  );
   const token = request.headers.authorization?.split(' ')[1];
+  console.log(
+    "TOKEN FOUND:",
+    !!token
+  );
   return token || null;
 }

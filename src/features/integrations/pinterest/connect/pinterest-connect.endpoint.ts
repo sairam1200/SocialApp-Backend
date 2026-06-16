@@ -40,10 +40,12 @@ export class PinterestConnectController {
   public async Connect(@Res() res: Response): Promise<Response | void> {
 
     const scopes = [
-      'user_accounts:read',
-      'pins:read',
-      'boards:read'
-    ].join(' ');
+  'user_accounts:read',
+  'pins:read',
+  'pins:write',
+  'boards:read',
+  'boards:write'
+].join(',');
     const state = stringUtil.generateRandomString(16);
     const params = new URLSearchParams({
       response_type: 'code',

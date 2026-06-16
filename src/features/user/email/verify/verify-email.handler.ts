@@ -59,7 +59,7 @@ export class VerifyEmailCommandHandler implements ICommandHandler<VerifyEmailCom
 
     const isEmailChange = user.newEmail && user.newEmail.toLowerCase() === model.email.toLowerCase();
 
-    const dataProtectionKey = await this.validateVerificationCodeAsync(user.id, model.code, isEmailChange ? model.email : undefined);
+    const dataProtectionKey = await this.validateVerificationCodeAsync(user.id, model.code, isEmailChange ? model.email : undefined );
 
     if (isEmailChange) {
       await this.userRepository.setEmailAsync(user, user.newEmail);
@@ -99,7 +99,15 @@ export class VerifyEmailCommandHandler implements ICommandHandler<VerifyEmailCom
         key.expiresIn &&
         key.expiresIn >= currentTime
     );
-
+console.log({
+  expectedKey,
+  enteredCode: code,
+  verificationKeys: verificationKeys.map(x => ({
+    key: x.key,
+    value: x.value,
+    expiresIn: x.expiresIn,
+  })),
+});
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid or expired verification code');
     }

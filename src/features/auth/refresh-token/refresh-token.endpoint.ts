@@ -18,7 +18,6 @@ export class RefreshTokenController {
   }
 
   @Post('refresh-access-token')
-  @UseGuards(RefreshTokenGuard)
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })

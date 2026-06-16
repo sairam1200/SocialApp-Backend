@@ -23,6 +23,7 @@ interface YoutubeChannelModel {
   snippet: {
     title: string; // Channel title
     description: string; // Channel description
+    customUrl?: string; // channel handle
     thumbnails: {
       default: { url: string };
       medium: { url: string };
@@ -37,7 +38,8 @@ interface YoutubeChannelModel {
   };
   contentDetails: {
     relatedPlaylists: {
-      uploads: string; // Playlist ID for the user's uploaded videos
+      uploads: string; 
+      likes: string;// Playlist ID for the user's uploaded videos
     };
   };
   brandingSettings: {
@@ -69,6 +71,8 @@ export class YoutubeProfileModel {
   allowImport: boolean;
   @ApiProperty()
   profileImage: string;
+  @ApiProperty()
+  customUrl: string;
   @ApiProperty({ default: 0 })
   followersCount: number;
   @ApiProperty({ default: 0 })
@@ -79,7 +83,7 @@ export class YoutubeProfileModel {
       id: { type: 'string' },
       title: { type: 'string' },
       viewCount: { type: 'number', default: 0 },
-      desciption: { type: 'string' },
+      description: { type: 'string' },
       videoCount: { type: 'number', default: 0 },
       thumbthumbnail: { type: 'string' },
     },
@@ -88,7 +92,8 @@ export class YoutubeProfileModel {
     id: string;
     title: string;
     viewCount: number;
-    desciption: string;
+    customUrl: string;
+    description: string;
     videoCount: number;
     thumbthumbnail: string;
   };
