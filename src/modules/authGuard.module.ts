@@ -1,10 +1,7 @@
 import { Module } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { CqrsModule } from "@nestjs/cqrs";
-import { User, UserClaim, UserBiometric } from "../domain/entities";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { dependency } from "../infrastructure/dependency";
-import { TurnstileGuard, AdminAccoutGuard, GuestAccoutGuard, UserAccoutGuard } from "../core/passport";
+import { TurnstileGuard, AdminAccoutGuard, GuestAccoutGuard, UserAccoutGuard, OnboardingGuard } from "../core/passport";
 
 @Module({
   imports: [
@@ -16,12 +13,14 @@ import { TurnstileGuard, AdminAccoutGuard, GuestAccoutGuard, UserAccoutGuard } f
     AdminAccoutGuard,
     GuestAccoutGuard,
     TurnstileGuard,
+    OnboardingGuard,
   ],
   exports: [
     UserAccoutGuard,
     AdminAccoutGuard,
     GuestAccoutGuard,
     TurnstileGuard,
+    OnboardingGuard,
   ],
 })
 export class AuthGuardsModule { }

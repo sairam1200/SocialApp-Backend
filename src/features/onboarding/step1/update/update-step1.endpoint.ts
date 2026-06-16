@@ -2,13 +2,13 @@ import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiConsumes, ApiResponse, ApiTags, ApiBody } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport";
+import { UserAccoutGuard, OnboardingGuard } from "../../../../core/passport";
 import { OnboardingStep1Command } from "./update-step1.handler";
 import { OnboardingStep1Model, OnboardingStatusModel } from "../../../../domain/contracts/onboarding.model";
 import { Body, Controller, HttpStatus, Post, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 
 @ApiTags('Onboarding')
-@UseGuards(UserAccoutGuard)
+@UseGuards(UserAccoutGuard, OnboardingGuard)
 @Controller({
   path: `/onboarding`,
   version: '1',

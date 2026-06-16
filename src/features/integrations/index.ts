@@ -182,6 +182,18 @@ import { EnableBehanceSyncCommandHandler } from "./behance/sync/enable-behance-s
 import { DisableBehanceSyncCommandHandler } from "./behance/sync/disable-behance-sync.handler";
 import { BehanceDisconnectController } from "./behance/disconnect/behance-disconnect.endpoint";
 import { BehanceDisconnectCommandHandler } from "./behance/disconnect/behance-disconnect.handler";
+import { GithubConnectController } from "./github/connect/github-connect.endpoint";
+import { GithubConnectQueryHandler, GithubConnectCallbackQueryHandler } from "./github/connect/github-connect.handler";
+import { GithubDisconnectController } from "./github/disconnect/github-disconnect.endpoint";
+import { GithubDisconnectCommandHandler } from "./github/disconnect/github-disconnect.handler";
+import { DiscordConnectController } from "./discord/connect/discord-connect.endpoint";
+import { DiscordConnectQueryHandler, DiscordConnectCallbackQueryHandler } from "./discord/connect/discord-connect.handler";
+import { DiscordDisconnectController } from "./discord/disconnect/discord-disconnect.endpoint";
+import { DiscordDisconnectCommandHandler } from "./discord/disconnect/discord-disconnect.handler";
+import { TwitchConnectController } from "./twitch/connect/twitch-connect.endpoint";
+import { TwitchConnectQueryHandler, TwitchConnectCallbackQueryHandler } from "./twitch/connect/twitch-connect.handler";
+import { TwitchDisconnectController } from "./twitch/disconnect/twitch-disconnect.endpoint";
+import { TwitchDisconnectCommandHandler } from "./twitch/disconnect/twitch-disconnect.handler";
 
 export { FacebookConnectController } from "./facebook/connect/facebook-connect.endpoint"
 export { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./facebook/connect/facebook-connect.handler";
@@ -396,6 +408,20 @@ export { DisableBehanceSyncCommandHandler } from "./behance/sync/disable-behance
 export { BehanceDisconnectController } from "./behance/disconnect/behance-disconnect.endpoint";
 export { BehanceDisconnectCommandHandler } from "./behance/disconnect/behance-disconnect.handler";
 
+export { GithubConnectController } from "./github/connect/github-connect.endpoint";
+export { GithubConnectQueryHandler, GithubConnectCallbackQueryHandler } from "./github/connect/github-connect.handler";
+export { GithubDisconnectController } from "./github/disconnect/github-disconnect.endpoint";
+export { GithubDisconnectCommandHandler } from "./github/disconnect/github-disconnect.handler";
+
+export { DiscordConnectController } from "./discord/connect/discord-connect.endpoint";
+export { DiscordConnectQueryHandler, DiscordConnectCallbackQueryHandler } from "./discord/connect/discord-connect.handler";
+export { DiscordDisconnectController } from "./discord/disconnect/discord-disconnect.endpoint";
+export { DiscordDisconnectCommandHandler } from "./discord/disconnect/discord-disconnect.handler";
+export { TwitchConnectController } from "./twitch/connect/twitch-connect.endpoint";
+export { TwitchConnectQueryHandler, TwitchConnectCallbackQueryHandler } from "./twitch/connect/twitch-connect.handler";
+export { TwitchDisconnectController } from "./twitch/disconnect/twitch-disconnect.endpoint";
+export { TwitchDisconnectCommandHandler } from "./twitch/disconnect/twitch-disconnect.handler";
+
 const controllers = [
   FacebookConnectController,
   FacebookImportController,
@@ -479,6 +505,12 @@ const controllers = [
   BehanceSearchController,
   BehanceSyncController,
   BehanceDisconnectController,
+  GithubConnectController,
+  GithubDisconnectController,
+  DiscordConnectController,
+  DiscordDisconnectController,
+  TwitchConnectController,
+  TwitchDisconnectController,
 ];
 
 const handlers = [
@@ -588,6 +620,15 @@ const handlers = [
   BehanceDisconnectCommandHandler,
   EnableBehanceSyncCommandHandler,
   DisableBehanceSyncCommandHandler,
+  GithubConnectQueryHandler,
+  GithubConnectCallbackQueryHandler,
+  GithubDisconnectCommandHandler,
+  DiscordConnectQueryHandler,
+  DiscordConnectCallbackQueryHandler,
+  DiscordDisconnectCommandHandler,
+  TwitchConnectQueryHandler,
+  TwitchConnectCallbackQueryHandler,
+  TwitchDisconnectCommandHandler,
 ];
 
 const integrations = {
