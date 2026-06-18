@@ -11,7 +11,7 @@ import ApplicationException from "../../../../core/exceptions/application.except
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
 import { IQueueService } from "../../../../domain/services/iqueue.service";
-
+import { ILinkedInImportService } from "../../../../domain/services/linkedin/ilinkedin-import.service"
 const PLATFORM = 'linkedin';
 const API_BASE = 'https://api.linkedin.com/v2';
 
@@ -38,6 +38,8 @@ export class LinkedInImportCommandHandler implements ICommandHandler<LinkedInImp
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IQUEUE_SERVICE)
     private readonly queueService: IQueueService,
+    @Inject(_const.ILINKEDIN_IMPORT_SERVICE)
+    private readonly linkedInImportService: ILinkedInImportService,
   ) { }
 
   public async execute(command: LinkedInImportCommand): Promise<{ accessToken: string; expiresIn: number; }> {
@@ -74,32 +76,62 @@ export class LinkedInImportCommandHandler implements ICommandHandler<LinkedInImp
     account.allowImport = true;
     await this.linkedAccountRepository.updateAsync(account);
 
+    logger.info("[LinkedInImport] Refreshing profile");
+
     try {
-      await this.queueService.enqueueLinkedInImport(account, accessToken);
-      logger.info(`[LinkedInImport] Import job enqueued for user ${userId}`);
-    } catch (error) {
-      logger.error(`An error occurred while enqueuing the LinkedIn import job: 
-        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
-      throw new ApplicationException('Failed to initiate LinkedIn import. Please try again later.');
+      await this.linkedInImportService.refreshProfileAsync(
+        userId,
+        accessToken,
+      );
+    } catch (error: any) {
+      logger.error(
+        "[LinkedInImport] Refresh profile failed",
+        error?.response?.data ?? error,
+      );
+
+      throw error;
     }
 
-    return {
-      accessToken,
-      expiresIn
-    };
+    logger.info("[LinkedInImport] Importing content");
+
+    try {
+      await this.linkedInImportService.importOrganizationPostsAsync(
+        userId,
+        accessToken,
+        account.metaData?.organizationId,
+      );
+
+      return {
+        accessToken,
+        expiresIn,
+      };
+    } catch (error: any) {
+      logger.error(
+        "[LinkedInImport] Import content failed",
+        error?.response?.data ?? error,
+      );
+
+      throw error;
+    }
+
+
   }
 
-  private async verifyAccessTokenAsync(accessToken: string): Promise<boolean> {
+  private async verifyAccessTokenAsync(
+    accessToken: string,
+  ): Promise<boolean> {
     try {
-      const response = await axios.get(`${API_BASE}/people/~:(id)`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
+      const response = await axios.get(
+        "https://api.linkedin.com/v2/userinfo",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         },
-      });
+      );
 
-      return response.status === 200 && !!response.data?.id;
-    } catch (error) {
-      logger.error('LinkedIn token verification failed', error);
+      return !!response.data?.sub;
+    } catch {
       return false;
     }
   }

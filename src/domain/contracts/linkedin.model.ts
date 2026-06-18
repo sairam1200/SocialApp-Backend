@@ -2,34 +2,28 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export type LinkedInUserDataType = {
   id: string;
+
   localizedFirstName: string;
+
   localizedLastName: string;
-  profilePicture?: {
-    displayImage?: string;
-    'displayImage~'?: {
-      elements?: Array<{
-        identifiers?: Array<{
-          identifier: string;
-        }>;
-        data?: {
-          'com.linkedin.digitalmedia.mediaartifact.StillImage'?: {
-            displaySize?: {
-              width?: number;
-              height?: number;
-            };
-          };
-        };
-      }>;
-    };
-  };
+
   vanityName?: string;
+
+  email?: string;
+
+  profilePicture: {
+    displayImage?: string;
+  };
+
   headline?: string;
+
   industry?: string;
+
   location?: {
     country?: string;
     region?: string;
   };
-}
+};
 
 export class LinkedInProfileModel {
   @ApiProperty()

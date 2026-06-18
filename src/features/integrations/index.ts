@@ -89,7 +89,10 @@ import { TikTokSyncController } from "./tiktok/sync/tiktok-sync.endpoint";
 import { EnableTiktokSyncCommandHandler } from "./tiktok/sync/enable-tiktok-sync.handler";
 import { DisableTiktokSyncCommandHandler } from "./tiktok/sync/disable-tiktok-sync.handler";
 import { LinkedInConnectController } from "./linkedin/connect/linkedin-connect.endpoint";
-import { LinkedInConnectCallbackQueryHandler } from "./linkedin/connect/linkedin-connect.handler";
+import {
+  LinkedInConnectCallbackQueryHandler,
+  LinkedInConnectQueryHandler,
+} from "./linkedin/connect/linkedin-connect.handler";
 import { LinkedInProfileController } from "./linkedin/get-profile/get-profile.endpoint";
 import { LinkedInProfileQueryHandler } from "./linkedin/get-profile/get-profile.handler";
 import { LinkedInContentsController } from "./linkedin/get-contents/get-contents.endpoint";
@@ -582,6 +585,7 @@ const handlers = [
   EnableTiktokSyncCommandHandler,
   DisableTiktokSyncCommandHandler,
   LinkedInConnectCallbackQueryHandler,
+  LinkedInConnectQueryHandler,
   LinkedInProfileQueryHandler,
   LinkedInContentsQueryHandler,
   LinkedInImportCommandHandler,

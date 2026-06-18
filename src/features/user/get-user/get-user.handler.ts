@@ -38,8 +38,8 @@ export class GetUserQueryHandler implements ICommandHandler<GetUserQuery> {
   public async execute(query: GetUserQuery): Promise<UserModel> {
 
     await getUserQueryValidations.params.validateAsync(query);
-
-    const user = await this.userRepository.getUserByNameAsync(query.userName);
+      const userName = decodeURIComponent(query.userName);
+    const user = await this.userRepository.getUserByNameAsync(userName);
     if (!user) {
       throw new UserNotFoundException(query.userName, 'username');
     }

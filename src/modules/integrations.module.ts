@@ -8,12 +8,10 @@ import integrations from "../features/integrations";
 import search from "../features/search";
 import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
-<<<<<<< HEAD
-import { SearchCacheService } from "infrastructure/services";
-=======
+
 import { AuthGuardsModule } from "./authGuard.module";
 import { SearchCacheService, YoutubeWebhookService } from "infrastructure/services";
->>>>>>> feature/authorization-guard-onboarding
+
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
 import { PlatformRollbackListener } from "../infrastructure/background/listeners/platform-rollback.listener";
 import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserBiometric, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
@@ -66,6 +64,7 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     dependency.InstagramImportService,
     dependency.TwitterImportService,
     dependency.PinterestImportService,
+    dependency.LinkedInImportService,
     
   ],
   exports: [],

@@ -7,7 +7,7 @@ import {YoutubeImportService} from "../infrastructure/services/youtube/youtube-i
 import {FacebookImportService} from "../infrastructure/services/facebook/facebook-imports.service";
 import { InstagramImportService } from "../infrastructure/services/instagram/instagram-import.service";
 import { TwitterImportService } from "../infrastructure/services/Twitter/x-import.service";
-
+import { LinkedInImportService} from "../infrastructure/services/linkedin/linkedin-import.service";
 import { PinterestImportService } from "./services/pinterest/pinterest-import.service";
 /* This is the dependency object that holds all the repositories & services
  * used in the application. It is used to provide the dependencies to the
@@ -137,5 +137,9 @@ TwitterImportService:{
 PinterestImportService:{
   provide: _const.IPINTEREST_IMPORT_SERVICE,
   useClass: PinterestImportService,
-}
+},
+LinkedInImportService:{
+  provide: _const.ILINKEDIN_IMPORT_SERVICE,
+  useClass: LinkedInImportService,
+},
 };

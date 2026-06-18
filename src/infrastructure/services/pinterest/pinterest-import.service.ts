@@ -16,7 +16,7 @@ export class PinterestImportService {
 
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
-  ) {}
+  ) { }
 
   async importPinsAsync(
     userId: string,
@@ -30,13 +30,13 @@ export class PinterestImportService {
       _const.PLATFORMS.PINTEREST,
     );
 
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+    };
+
     const boardsResponse = await axios.get(
       `${BASE_URL}/boards`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      },
+      { headers },
     );
 
     const boards = boardsResponse.data?.items ?? [];
@@ -45,12 +45,9 @@ export class PinterestImportService {
       try {
         const pinsResponse = await axios.get(
           `${BASE_URL}/boards/${board.id}/pins`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          },
+          { headers },
         );
+
 
         const pins = pinsResponse.data?.items ?? [];
 
@@ -60,13 +57,76 @@ export class PinterestImportService {
             pin.media?.images?.["600x"]?.url ??
             null;
 
+          let analytics = {
+            impressions: 0,
+            saves: 0,
+            pinClicks: 0,
+            outboundClicks: 0,
+          };
+          const pinCreatedAt = new Date(pin.created_at);
+
+          const ninetyDaysAgo = new Date();
+          ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 89);
+
+          const analyticsStartDate =
+            pinCreatedAt > ninetyDaysAgo
+              ? pinCreatedAt
+              : ninetyDaysAgo;
+          try {
+            const analyticsResponse = await axios.get(
+              `${BASE_URL}/pins/${pin.id}/analytics`,
+              {
+                headers,
+                params: {
+                  start_date: analyticsStartDate
+                    .toISOString()
+                    .split("T")[0],
+
+                  end_date: new Date()
+                    .toISOString()
+                    .split("T")[0],
+                  metric_types:
+                    "IMPRESSION,SAVE,PIN_CLICK,OUTBOUND_CLICK",
+                },
+              },
+            );
+
+            const analyticsData =
+              analyticsResponse.data;
+         console.log(analyticsData);
+            analytics = {
+              impressions:
+                analyticsData?.IMPRESSION ??
+                analyticsData?.impression ??
+                0,
+
+              saves:
+                analyticsData?.SAVE ??
+                analyticsData?.save ??
+                0,
+
+              pinClicks:
+                analyticsData?.PIN_CLICK ??
+                analyticsData?.pin_click ??
+                0,
+
+              outboundClicks:
+                analyticsData?.OUTBOUND_CLICK ??
+                analyticsData?.outbound_click ??
+                0,
+            };
+          } catch (analyticsError) {
+            console.warn(
+              `[Pinterest] Analytics unavailable for pin ${pin.id}`,
+              analyticsError?.response?.data,
+            );
+          }
+
           await this.userContentRepository.createAsync(
             new UserContent({
               userId,
               platform: _const.PLATFORMS.PINTEREST,
-
               type: "PIN",
-
               externalId: pin.id,
 
               title:
@@ -87,6 +147,8 @@ export class PinterestImportService {
 
                 note: pin.note,
 
+                analytics,
+
                 importedAt:
                   new Date().toISOString(),
               },
@@ -101,6 +163,8 @@ export class PinterestImportService {
           error?.response?.data,
         );
       }
+
+
     }
 
     return importedCount;

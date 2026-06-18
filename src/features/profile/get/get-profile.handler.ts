@@ -46,7 +46,11 @@ export class GetProfileQueryHandler implements ICommandHandler<GetProfileQuery, 
 
     await getProfileQueryValidations.params.validateAsync(query);
 
-    const user = await this.userRepository.getUserByNameAsync(query.userName);
+
+const decodedUserName = decodeURIComponent(query.userName);
+
+
+    const user = await this.userRepository.getUserByNameAsync(decodedUserName);
 
     if (!user) {
       throw new UserNotFoundException(query.userName, 'username');

@@ -6,7 +6,7 @@ import _const from "../../../../core/utils/const";
 import { Globals } from "../../../../core/globals";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import logger from "../../../../core/utils/winston.util";
-import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
+import { CommandHandler, ICommandHandler, } from "@nestjs/cqrs";
 import { DataProtectionKey } from "../../../../domain/entities";
 import { PlatformConnectCleanupEvent } from "../../../../domain/events";
 import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
@@ -50,8 +50,9 @@ const linkedInConnectCallbackValidations = Joi.object({
   state: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
 });
 
-@QueryHandler(LinkedInConnectQuery)
-export class LinkedInConnectQueryHandler implements IQueryHandler<LinkedInConnectQuery> {
+@CommandHandler(LinkedInConnectQuery)
+export class LinkedInConnectQueryHandler
+  implements ICommandHandler<LinkedInConnectQuery> {
 
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
@@ -72,8 +73,9 @@ export class LinkedInConnectQueryHandler implements IQueryHandler<LinkedInConnec
   }
 }
 
-@QueryHandler(LinkedInConnectCallbackQuery)
-export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<LinkedInConnectCallbackQuery> {
+@CommandHandler(LinkedInConnectCallbackQuery)
+export class LinkedInConnectCallbackQueryHandler
+  implements ICommandHandler<LinkedInConnectCallbackQuery> {
 
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
@@ -98,8 +100,27 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
 
     const { accessToken, refreshToken, expiresIn } = await this.fetchAccessTokenAsync(model.code);
     const userData = await this.fetchUserDataAsync(accessToken);
-    const userEmail = await this.fetchUserEmailAsync(accessToken);
+    const userEmail = userData.email ?? "";
+    const organizations =
+      await this.fetchOrganizationsAsync(
+        accessToken,
+      );
 
+    if (!organizations.length) {
+      throw new ApplicationException(
+        "No LinkedIn organization admin permissions found.",
+      );
+    }
+
+    const organizationUrn =
+      organizations[0].organizationalTarget;
+    const organizationId =
+      organizationUrn.split(":").pop();
+    const organization =
+      await this.fetchOrganizationDetailsAsync(
+        accessToken,
+        organizationId,
+      );
     const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
     if (!user) {
       throw new ApplicationException('Prevented: Alduterated Request Received!');
@@ -119,10 +140,17 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
         logger.info(`[LinkedInConnect] User ${user.id} changed LinkedIn account from ${oldExternalId} to ${newExternalId}`);
         this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
       }
-
-      linkedAccount = await this.updateLinkedAccount(linkedAccount, userData, userEmail);
+      console.log(
+        "updating LINKEDIN STATE:",
+        model.state
+      );
+      linkedAccount = await this.updateLinkedAccount(linkedAccount, userData, userEmail, organization,);
     } else {
-      linkedAccount = await this.createLinkedAccount(user.id, userData, userEmail);
+      console.log(
+        "CREATING LINKEDIN STATE:",
+        model.state
+      );
+      linkedAccount = await this.createLinkedAccount(user.id, userData, userEmail, organization,);
     }
 
     const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.LINKEDIN);
@@ -135,7 +163,7 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
     if (existingAccountLogin) {
       await this.updateUserLogin(existingAccountLogin, tokenValue, expiresIn);
     } else {
-      await this.createUserLogin(user.id, tokenValue, expiresIn);
+      await this.createUserLogin(user.id, tokenValue, expiresIn,);
     }
 
     return {
@@ -171,39 +199,105 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
       throw new ApplicationException('Failed to authenticate with LinkedIn');
     }
   }
-
-  private async fetchUserDataAsync(accessToken: string): Promise<LinkedInUserDataType> {
-    try {
-      const response = await axios.get(`${API_BASE}/me?projection=(id,localizedFirstName,localizedLastName,profilePicture(displayImage~:playableStreams))`, {
+  private async fetchOrganizationDetailsAsync(
+    accessToken: string,
+    organizationId: string,
+  ): Promise<any> {
+    const response = await axios.get(
+      `https://api.linkedin.com/rest/organizations/${organizationId}`,
+      {
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
+          "LinkedIn-Version": "202401",
         },
-      });
+      },
+    );
+
+    return response.data;
+  }
+  private async fetchOrganizationsAsync(
+    accessToken: string,
+  ): Promise<any[]> {
+    try {
+      const response = await axios.get(
+        "https://api.linkedin.com/rest/organizationalEntityAcls",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "LinkedIn-Version": "202506",
+            "X-Restli-Protocol-Version": "2.0.0",
+          },
+          params: {
+            q: "roleAssignee",
+            role: "ADMINISTRATOR",
+          },
+        },
+      );
+
+      return response.data?.elements ?? [];
+    } catch (error: any) {
+      console.log(
+        "LINKEDIN ORG ERROR STATUS:",
+        error.response?.status,
+      );
+       
+      console.log(
+        "LINKEDIN ORG ERROR DATA:",
+        JSON.stringify(error.response?.data, null, 2),
+      );
+
+      throw error;
+    }
+  }
+  private async fetchUserDataAsync(
+    accessToken: string,
+  ): Promise<LinkedInUserDataType> {
+    try {
+      const response = await axios.get(
+        'https://api.linkedin.com/v2/userinfo',
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
 
       const userData = response.data;
 
-      // Extract the profile picture URL from LinkedIn v2 API response
-      let profilePictureUrl = '';
-      if (userData.profilePicture && userData.profilePicture['displayImage~']) {
-        const displayImages = userData.profilePicture['displayImage~'].elements;
-        if (displayImages && displayImages.length > 0) {
-          // Get the largest available image (last element is usually the largest)
-          const largestImage = displayImages[displayImages.length - 1];
-          if (largestImage.identifiers && largestImage.identifiers.length > 0) {
-            profilePictureUrl = largestImage.identifiers[0].identifier;
-          }
-        }
-      }
+      console.log(
+        'LINKEDIN USER INFO:',
+        JSON.stringify(userData, null, 2),
+      );
 
       return {
-        ...userData,
+        id: userData.sub,
+        localizedFirstName: userData.given_name ?? '',
+        localizedLastName: userData.family_name ?? '',
+        vanityName: userData.name ?? '',
         profilePicture: {
-          displayImage: profilePictureUrl
-        }
-      };
-    } catch (error) {
-      logger.error('LinkedIn user data fetch failed', error);
-      throw new ApplicationException('Failed to fetch LinkedIn profile data');
+          displayImage: userData.picture ?? '',
+        },
+        email: userData.email ?? '',
+      } as LinkedInUserDataType;
+    } catch (error: any) {
+      console.error(
+        'LINKEDIN USERINFO ERROR:',
+        error?.response?.status,
+      );
+
+      console.error(
+        'LINKEDIN USERINFO DATA:',
+        error?.response?.data,
+      );
+
+      logger.error(
+        'LinkedIn user data fetch failed',
+        error,
+      );
+
+      throw new ApplicationException(
+        'Failed to fetch LinkedIn profile data',
+      );
     }
   }
 
@@ -225,7 +319,17 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
 
 
   private async validateStateAsync(state: string): Promise<DataProtectionKey> {
-    const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
+    console.log("VALIDATING STATE:", state);
+
+    const dataProtectionKey =
+      await this.dataProtectionKeyRepository.getByKeyAsync(
+        state,
+      );
+
+    console.log(
+      "FOUND DATA PROTECTION KEY:",
+      dataProtectionKey,
+    );
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
     }
@@ -238,7 +342,7 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
     return dataProtectionKey;
   }
 
-  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: LinkedInUserDataType, userEmail: string): Promise<LinkedAccount> {
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: LinkedInUserDataType, userEmail: string, organization: any,): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       PLATFORM,
       userData.id,
@@ -253,13 +357,43 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
       lastName: userData.localizedLastName,
       headline: userData.headline || '',
       industry: userData.industry || '',
-      location: userData.location ? `${userData.location.region || ''}, ${userData.location.country || ''}`.trim().replace(/^,\s*/, '') : '',
+      location: userData.location
+        ? `${userData.location.region || ''}, ${userData.location.country || ''}`
+          .trim()
+          .replace(/^,\s*/, '')
+        : '',
+
+      organizationId: organization?.id,
+
+      organizationName:
+        organization?.localizedName,
+
+      organizationVanityName:
+        organization?.vanityName,
+
+      organizationType:
+        organization?.organizationType,
+
+      organizationDescription:
+        organization?.localizedDescription,
+
+      organizationWebsite:
+        organization?.website,
+
+      organizationStaffCount:
+        organization?.staffCount,
+
+      organizationIndustries:
+        organization?.industries,
+
+      organizationUrn:
+        `urn:li:organization:${organization?.id}`,
     };
     await this.linkedAccountRepository.updateAsync(linkedAccount);
     return linkedAccount;
   }
 
-  private async createLinkedAccount(userId: string, userData: LinkedInUserDataType, userEmail: string): Promise<LinkedAccount> {
+  private async createLinkedAccount(userId: string, userData: LinkedInUserDataType, userEmail: string, organization: any,): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       PLATFORM,
       userData.id,
@@ -277,7 +411,37 @@ export class LinkedInConnectCallbackQueryHandler implements IQueryHandler<Linked
       lastName: userData.localizedLastName,
       headline: userData.headline || '',
       industry: userData.industry || '',
-      location: userData.location ? `${userData.location.region || ''}, ${userData.location.country || ''}`.trim().replace(/^,\s*/, '') : '',
+      location: userData.location
+        ? `${userData.location.region || ''}, ${userData.location.country || ''}`
+          .trim()
+          .replace(/^,\s*/, '')
+        : '',
+
+      organizationId: organization?.id,
+
+      organizationName:
+        organization?.localizedName,
+
+      organizationVanityName:
+        organization?.vanityName,
+
+      organizationType:
+        organization?.organizationType,
+
+      organizationDescription:
+        organization?.localizedDescription,
+
+      organizationWebsite:
+        organization?.website,
+
+      organizationStaffCount:
+        organization?.staffCount,
+
+      organizationIndustries:
+        organization?.industries,
+
+      organizationUrn:
+        `urn:li:organization:${organization?.id}`,
     };
     return await this.linkedAccountRepository.createAsync(newEntry);
   }

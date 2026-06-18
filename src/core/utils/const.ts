@@ -32,6 +32,7 @@ export default {
   IINSTAGRAM_IMPORT_SERVICE: 'IInstagramImportService',
   ITWITTER_IMPORT_SERVICE:'ITwitterImportService',
   IPINTEREST_IMPORT_SERVICE:'IPinterestImportService',
+  ILINKEDIN_IMPORT_SERVICE: 'ILinkedInImportService',
 
   BULL_QUEUES: {
     FACEBOOK_IMPORT: 'facebook-import',

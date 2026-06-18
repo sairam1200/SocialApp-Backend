@@ -37,11 +37,21 @@ const cookieParser = require('cookie-parser');
   }
 
   app.enableCors({
-      origin: true,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-turnstile-token', 'x-client-origin', 'x-redirect-url'],
-  });
+  origin: [
+    'http://localhost:3000',
+    'https://socialapp-sg.onrender.com',
+    'https://almost-backtrack-drapery.ngrok-free.dev',
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'x-turnstile-token',
+    'x-client-origin',
+    'x-redirect-url',
+  ],
+});
 
   app.use(ApiDocRedirectMiddleware);
   app.useGlobalFilters(new ErrorHandlersFilter());

@@ -38,16 +38,16 @@ export class OnboardingGuard implements CanActivate {
     console.log('accountKey:', accountKey);
 
     const userAccount = await redis.getFromRedisAsync<{
-      usonboardingSteper: string;
+      useronboardingStep: string;
       concurrencyStamp: string;
       securityStamp: string;
     }>(accountKey);
 
     console.log('userAccount:', userAccount);
-    console.log('onboardingStep value:', userAccount?.usonboardingSteper);
+    console.log('onboardingStep value:', userAccount?.useronboardingStep);
     console.log('completed enum value:', OnboardingStep.Completed);
 
-    if (userAccount?.usonboardingSteper === OnboardingStep.Completed) {
+    if (userAccount?.useronboardingStep === OnboardingStep.Completed) {
       throw new ForbiddenException(
         'Forbidden: Onboarding has already been completed.',
       );

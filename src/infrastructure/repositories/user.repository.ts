@@ -80,7 +80,7 @@ export class UserRepository implements IUserRepository {
       await redis.storeInRedisAsync(key, {
         concurrencyStamp: user.concurrencyStamp,
         securityStamp: user.securityStamp,
-        usonboardingSteper: user.onboardingStep
+        useronboardingStep: user.onboardingStep
         // Add more user account related 
       }, _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC);
     }

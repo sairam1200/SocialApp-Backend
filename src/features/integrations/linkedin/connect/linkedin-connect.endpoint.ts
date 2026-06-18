@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { QueryBus } from "@nestjs/cqrs";
+import { CommandBus } from "@nestjs/cqrs";
 import configs from "../../../../configs";
 import { ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { stringUtil } from "../../../../core/utils/string.util";
@@ -29,7 +29,9 @@ class LinkedInConnectCallbackResponseModel {
 })
 export class LinkedInConnectController {
 
-  constructor(private readonly queryBus: QueryBus) { }
+  constructor(
+    private readonly commandBus: CommandBus,
+  ) { }
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
@@ -37,11 +39,15 @@ export class LinkedInConnectController {
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-  public async Connect(@Res() res: Response): Promise<Response | void> {
+  public async Connect(): Promise<ConnectResponseModel> {
 
     const scopes = [
+      'openid',
       'profile',
-      'email'
+      'email',
+      'r_organization_admin',
+  'r_organization_social',
+  "w_member_social",
     ].join(' ');
 
     const state = stringUtil.generateRandomString(16);
@@ -55,9 +61,15 @@ export class LinkedInConnectController {
 
     const authorizeURL = `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;
 
-    await this.queryBus.execute(new LinkedInConnectQuery({ model: { state } }));
+    await this.commandBus.execute(
+      new LinkedInConnectQuery({
+        model: { state },
+      }),
+    );
 
-    return res.redirect(HttpStatus.OK, authorizeURL);
+    return {
+  authorizeURL,
+};
   }
 
   @Get('connect-callback')
@@ -66,12 +78,15 @@ export class LinkedInConnectController {
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Callback(@Query() query: any): Promise<LinkedInConnectCallbackResponseModel> {
 
-    const result = await this.queryBus.execute(new LinkedInConnectCallbackQuery({
-      model: {
-        code: query.code,
-        state: query.state
-      }
-    }));
+    const result =
+      await this.commandBus.execute(
+        new LinkedInConnectCallbackQuery({
+          model: {
+            code: query.code,
+            state: query.state,
+          },
+        }),
+      );
 
     return {
       accessToken: result.accessToken,
