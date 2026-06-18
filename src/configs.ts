@@ -261,7 +261,7 @@ if (error) {
 export default {
   env: envVars.NODE_ENV,
   projectName: envVars.PROJECT_NAME,
-  port: envVars.PORT,
+  port: envVars.PORT ||5000,
   log: {
     level: envVars.NODE_ENV === 'development' ? 'debug' : 'info',
     path: envVars.LOG_PATH,
