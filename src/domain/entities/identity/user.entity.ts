@@ -88,6 +88,12 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   securityStamp?: string;
 
+  @Column({ nullable: true, unique: true })
+  referralCode?: string;
+
+  @Column({ nullable: true })
+  referredBy?: string;
+
   @Column({
     type: 'enum',
     enum: ProfilePrivacy,

@@ -9,7 +9,7 @@ export class UserContentNormalize1774359048001 implements MigrationInterface {
             new TableColumn({ name: "publishedAt", type: "timestamp", isNullable: true }),
             new TableColumn({ name: "sourceUrl", type: "varchar", isNullable: true }),
             new TableColumn({ name: "engagement", type: "jsonb", isNullable: true }),
-            new TableColumn({ name: "tags", type: "simple-array", isNullable: true }),
+            new TableColumn({ name: "tags", type: "text", isNullable: true }),
         ]);
 
         await queryRunner.createIndex("userContents", new TableIndex({

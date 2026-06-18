@@ -51,6 +51,8 @@ import { GetNotificationSettingController } from "./settings/notification/get/ge
 import { GetNotificationSettingQueryHandler } from "./settings/notification/get/get-notification-setting.handler";
 import { UpdateNotificationSettingController } from "./settings/notification/update/update-notification-setting.endpoint";
 import { UpdateNotificationSettingCommandHandler } from "./settings/notification/update/update-notification-setting.handler";
+import { GetReferralCodeController } from "./referral/get-referral-code/get-referral-code.endpoint";
+import { GetReferralCodeQueryHandler } from "./referral/get-referral-code/get-referral-code.handler";
 
 // EXPORTS
 export { ChangePasswordController } from "./change-password/change-password.endpoint";
@@ -109,6 +111,8 @@ export { GetNotificationSettingController } from "./settings/notification/get/ge
 export { GetNotificationSettingQuery } from "./settings/notification/get/get-notification-setting.handler";
 export { UpdateNotificationSettingController } from "./settings/notification/update/update-notification-setting.endpoint";
 export { UpdateNotificationSettingCommand } from "./settings/notification/update/update-notification-setting.handler";
+export { GetReferralCodeController } from "./referral/get-referral-code/get-referral-code.endpoint";
+export { GetReferralCodeQuery } from "./referral/get-referral-code/get-referral-code.handler";
 
 const controllers = [
   GetUsersController,
@@ -138,6 +142,7 @@ const controllers = [
   UpdateThemeController,
   GetNotificationSettingController,
   UpdateNotificationSettingController,
+  GetReferralCodeController,
 ];
 
 const handlers = [
@@ -167,6 +172,7 @@ const handlers = [
   UpdateThemeCommandHandler,
   GetNotificationSettingQueryHandler,
   UpdateNotificationSettingCommandHandler,
+  GetReferralCodeQueryHandler,
 ];
 
 const users = {

@@ -8,6 +8,7 @@ import integrations from "../features/integrations";
 import search from "../features/search";
 import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
+import { AnalyticsModule } from "./analytics.module";
 import { SearchCacheService, YoutubeWebhookService } from "infrastructure/services";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
 import { PlatformRollbackListener } from "../infrastructure/background/listeners/platform-rollback.listener";
@@ -17,6 +18,7 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
   imports: [
     CqrsModule,
     NotificationModule,
+    AnalyticsModule,
     QueuesModule.register(),
     TypeOrmModule.forFeature([
       User,

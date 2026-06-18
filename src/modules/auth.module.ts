@@ -8,6 +8,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthGuardsModule } from './authGuard.module';
 import { dependency } from '../infrastructure/dependency';
 import { NotificationModule } from './notification.module';
+import { AnalyticsModule } from './analytics.module';
 import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, DataProtectionKey, UserBiometric } from '../domain/entities';
 
 @Module({
@@ -16,6 +17,7 @@ import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, D
     EmailModule,
     AuthGuardsModule,
     NotificationModule,
+    AnalyticsModule,
     TypeOrmModule.forFeature([
       UserLogin,
       User,

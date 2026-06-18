@@ -6,12 +6,14 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import bookmark from "../features/playlist/bookmark";
 import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
+import { AnalyticsModule } from "./analytics.module";
 import { Playlist, PlaylistContent, PlaylistMember, Role, User, UserRole } from "../domain/entities";
 
 @Module({
   imports: [
     CqrsModule,
     NotificationModule,
+    AnalyticsModule,
     TypeOrmModule.forFeature([
       User,
       Role,

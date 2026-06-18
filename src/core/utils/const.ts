@@ -71,6 +71,9 @@ export default {
     SNAPCHAT: 'snapchat',
     THREADS: 'threads',
     BEHANCE: 'behance',
+    TWITCH: 'twitch',
+    GITHUB: 'github',
+    DISCORD: 'discord',
   },
 
   KNOWN_PLATFORMS_URIS: [

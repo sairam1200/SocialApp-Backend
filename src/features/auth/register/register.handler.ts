@@ -37,6 +37,9 @@ export class RegisterModel {
   @ApiProperty()
   ipAddress: string;
 
+  @ApiProperty({ required: false })
+  referralCode?: string;
+
   constructor(request: Partial<RegisterModel> = {}) {
     Object.assign(this, request);
   }
@@ -57,6 +60,7 @@ const createUserValidations = Joi.object({
   lastName: Joi.string().required(),
   userAgent: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
   ipAddress: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  referralCode: Joi.string().optional().allow('', null),
 });
 
 @CommandHandler(RegisterCommand)
@@ -107,7 +111,20 @@ export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> 
         email: user.email,
       }
     }));
-    
+
+    // Apply referral code if provided
+    if (model.referralCode) {
+      try {
+        const inviter = await this.userRepository.getUserByReferralCodeAsync(model.referralCode);
+        if (inviter) {
+          user.referredBy = inviter.id;
+          await this.userRepository.updateAsync(user);
+        }
+      } catch (error) {
+        logger.error(`Failed to apply referral code '${model.referralCode}' for user ${user.id}`, error);
+      }
+    }
+
     await this.analyticsService.trackEvent(
       _const.ANALYTICS_EVENTS.AUTH.REGISTER,
       {
