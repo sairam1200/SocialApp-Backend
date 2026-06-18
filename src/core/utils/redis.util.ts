@@ -9,7 +9,11 @@ const prefix = 'gaddr'
 const instance = new Redis({
   host: configs.redis.host,
   port: configs.redis.port,
+  username: configs.redis.username,
   password: configs.redis.password,
+
+  tls: {},
+
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
 });
@@ -18,15 +22,17 @@ const createBullMQConnection = (options?: { maxRetriesPerRequest?: number | null
   return new Redis({
     host: configs.redis.host,
     port: configs.redis.port,
-    password: configs.redis.password,
     username: configs.redis.username,
+    password: configs.redis.password,
+
+    tls: {},
+
     maxRetriesPerRequest: options?.maxRetriesPerRequest ?? null,
     enableReadyCheck: false,
     enableOfflineQueue: false,
     lazyConnect: true,
     keepAlive: 30000,
     connectTimeout: 10000,
-    enableAutoPipelining: true,
     // Performance tuning
     retryStrategy: (times: number) => {
       const delay = Math.min(times * 50, 2000);
