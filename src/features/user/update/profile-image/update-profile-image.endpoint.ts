@@ -5,7 +5,8 @@ import { UpdateProfileImageCommand } from "./update-profile-image.handler";
 import { ApiConsumes, ApiResponse, ApiTags, ApiBody } from "@nestjs/swagger";
 import { AuthenticatedAccountGuard, UserAccoutGuard } from "../../../../core/passport";
 import { Controller, HttpStatus, Patch, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
-
+import { Req } from "@nestjs/common";
+import { Request } from "express";
 @ApiTags('Account')
 @UseGuards(UserAccoutGuard)
 @Controller({
@@ -38,13 +39,18 @@ export class UpdateProfileImageController {
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-  public async Update(
-    @UploadedFile() file: any,
-    @Res() res: Response
-  ): Promise<Response> {
-    
-    await this.commandBus.execute(new UpdateProfileImageCommand({ file }));
-    res.status(HttpStatus.NO_CONTENT).send(null);
-    return res;
-  }
+public async Update(
+  @UploadedFile() file: any,
+  @Req() req: Request,
+  @Res() res: Response
+) {
+  console.log("CONTENT TYPE", req.headers["content-type"]);
+  console.log("FILE", file);
+
+  await this.commandBus.execute(
+    new UpdateProfileImageCommand({ file })
+  );
+
+  return res.status(HttpStatus.NO_CONTENT).send();
+}
 }
