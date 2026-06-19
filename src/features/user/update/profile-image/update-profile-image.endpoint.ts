@@ -42,6 +42,7 @@ export class UpdateProfileImageController {
     @UploadedFile() file: any,
     @Res() res: Response
   ): Promise<Response> {
+    
     await this.commandBus.execute(new UpdateProfileImageCommand({ file }));
     res.status(HttpStatus.NO_CONTENT).send(null);
     return res;

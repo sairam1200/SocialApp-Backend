@@ -28,8 +28,9 @@ export class UpdateProfileImageCommandHandler implements ICommandHandler<UpdateP
   ) { }
 
   public async execute(command: UpdateProfileImageCommand): Promise<void> {
-
+      
     const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
+    console.log("COMMAND FILE", command.file);
     if (!user) {
       throw new UserNotFoundException();
     }
