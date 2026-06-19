@@ -1,12 +1,12 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { PermissionsGuard } from "../../../core/passport/permissions.guard";
+import { UserAccoutGuard } from "../../../core/passport/account.guard";
 import { DeactivateUserCommand } from "./deactivate-user.handler";
 import { Controller, HttpStatus, Patch, Query, Res, UseGuards } from "@nestjs/common";
 
 @ApiTags('Users')
-@UseGuards(PermissionsGuard)
+@UseGuards(UserAccoutGuard)
 @Controller({
     path: `/user`,
     version: '1',
