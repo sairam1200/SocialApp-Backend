@@ -144,7 +144,7 @@ console.log(
 
   private getAccountLockMessage(user: User): string {
     if (!user.isActive) {
-      return "Your account has been disabled by an administrator.";
+      return "Your account has been deactivated.";
     }
 
     return user.accessFailedCount >= 5

@@ -28,6 +28,7 @@ export class UpdateProfileImageCommandHandler implements ICommandHandler<UpdateP
   ) { }
 
   public async execute(command: UpdateProfileImageCommand): Promise<void> {
+
     const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
     if (!user) {
       throw new UserNotFoundException();
@@ -78,7 +79,10 @@ export class UpdateProfileImageCommandHandler implements ICommandHandler<UpdateP
       }
 
       // Delete old profile image after successful upload and save
-      if (oldProfileImageUrl) {
+      if (
+        oldProfileImageUrl &&
+        oldProfileImageUrl !== uploadResult.secure_url
+      ) {
         await this.deleteOldProfileImage(oldProfileImageUrl);
       }
     } else {
