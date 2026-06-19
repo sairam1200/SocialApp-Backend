@@ -11,9 +11,6 @@ const instance = new Redis({
   port: configs.redis.port,
   username: configs.redis.username,
   password: configs.redis.password,
-
-  tls: {},
-
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
 });
