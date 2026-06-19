@@ -36,6 +36,11 @@ export class DeactivateUserCommandHandler implements ICommandHandler<DeactivateU
     }
 
     user.isActive = false;
+
+
+    user.securityStamp =
+      crypto.randomUUID();
+
     await this.userRepository.updateAsync(user);
   }
 }
