@@ -4,7 +4,7 @@ import _const from "../../../core/utils/const";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { UserNotFoundException } from "../../../core/exceptions";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
-
+import { randomUUID } from "crypto";
 export class DeactivateUserCommand {
   userId: string;
 
@@ -38,8 +38,7 @@ export class DeactivateUserCommandHandler implements ICommandHandler<DeactivateU
     user.isActive = false;
 
 
-    user.securityStamp =
-      crypto.randomUUID();
+    user.securityStamp = randomUUID();
 
     await this.userRepository.updateAsync(user);
   }
