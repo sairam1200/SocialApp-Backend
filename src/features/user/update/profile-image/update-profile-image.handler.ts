@@ -55,7 +55,7 @@ export class UpdateProfileImageCommandHandler implements ICommandHandler<UpdateP
       // Upload new custom image first
       const base64Image = `data:${command.file.mimetype};base64,${command.file.buffer.toString('base64')}`;
       const uploadResult = await uploadBase64ToCloudinaryAsync(base64Image, "users");
-
+console.log("UPLOAD RESULT", uploadResult);
       // Create or update UserBiometrics
       if (!biometrics) {
         // Generate initials image if UserBiometrics doesn't exist

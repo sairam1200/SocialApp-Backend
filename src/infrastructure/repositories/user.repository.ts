@@ -452,7 +452,8 @@ export class UserRepository implements IUserRepository {
       const currentUserId = HttpContext.getCurrentUserId;
       if (currentUserId) {
         existing.setCurrentUser(currentUserId);
-      }
+      }console.log('Incoming biometrics:', biometrics);
+console.log('profileImageUrl:', biometrics.profileImageUrl);
       return await this.userBiometricsContext.save(existing);
     } else {
       biometrics.userId = userId;
