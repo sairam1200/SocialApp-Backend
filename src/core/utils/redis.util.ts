@@ -24,9 +24,6 @@ const createBullMQConnection = (options?: { maxRetriesPerRequest?: number | null
     port: configs.redis.port,
     username: configs.redis.username,
     password: configs.redis.password,
-
-    tls: {},
-
     maxRetriesPerRequest: options?.maxRetriesPerRequest ?? null,
     enableReadyCheck: false,
     enableOfflineQueue: false,
