@@ -196,6 +196,9 @@ export class YoutubeImportProcessor extends WorkerHost {
                   _const.PLATFORMS.YOUTUBE,
                   mappedContent,
                 );
+                logger.info(
+  `[ImportGateway] Emitting new-content to ${account.userId}`
+);
 
                 if (type === 'Playlists' && item.id) {
                   const playlistVideoIds = await this.importPlaylistVideos(accessToken, item.id, account.userId, importedExternalIds);
