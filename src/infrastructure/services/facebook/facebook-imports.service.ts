@@ -84,7 +84,7 @@ const attachmentType =
           externalId: post.id,
 
           title:
-            post.message?.substring(0, 45) ??
+            post.message?.substring(0, 120) ??
             "Facebook Post",
 
           metaData: {
