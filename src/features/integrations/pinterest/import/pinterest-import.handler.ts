@@ -192,7 +192,7 @@ export class PinterestImportCommandHandler implements ICommandHandler<PinterestI
 
     if (now > userLogin.expiryDateUtc) {
       throw new UnauthorizedException(
-        'Your Pinterest session has expired or the access token is invalid. Please log in to Pinterest again to continue.'
+        'RECONNECT_REQUIRED'
       );
     }
 

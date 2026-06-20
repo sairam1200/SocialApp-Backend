@@ -167,7 +167,7 @@ export class FacebookImportCommandHandler
 
     if (!isTokenValid) {
       throw new UnauthorizedException(
-        "Facebook login expired. Please reconnect your Facebook account.",
+        "RECONNECT_REQUIRED",
       );
     }
 
