@@ -22,6 +22,7 @@ export function mapToYoutubeProfileModel(data: LinkedAccount, includeSensitiveFi
 }
 
 export function mapToYouTubeContentModel(data: UserContent): YouTubeContentModel {
+  
   return {
     id: data.id,
     title: data.title,
@@ -36,6 +37,8 @@ export function mapToYouTubeContentModel(data: UserContent): YouTubeContentModel
     likeCount: data.metaData?.likeCount,
     commentCount: data.metaData?.commentCount,
     duration: data.metaData?.duration,
-    Shorts: data.metaData?.isShort,
+    shorts: data.metaData?.isShort,
+    
   } as YouTubeContentModel;
+  
 }
