@@ -34,7 +34,7 @@ export class FacebookImportService {
       {
         params: {
           fields:
-            "id,message,created_time,permalink_url,full_picture,type,status_type",
+            "id,message,created_time,permalink_url,full_picture,attachments{media_type,type}",
           access_token: pageAccessToken,
         },
       },
@@ -67,6 +67,11 @@ const comments =
 
 const shares =
   statsResponse.data?.shares?.count ?? 0;
+  const mediaType =
+  post.attachments?.data?.[0]?.media_type;
+
+const attachmentType =
+  post.attachments?.data?.[0]?.type;
       await this.userContentRepository.createAsync(
         new UserContent({
           userId,
@@ -74,7 +79,7 @@ const shares =
           platform:
             _const.PLATFORMS.FACEBOOK,
 
-          type: post.type?? post.status_type ??"null",
+          type: mediaType ?? attachmentType ?? "post",
 
           externalId: post.id,
 
