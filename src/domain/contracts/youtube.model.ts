@@ -193,4 +193,6 @@ export class YouTubeContentModel {
 
   @ApiProperty({ required: false })
   duration?: string;
+  @ApiProperty({required: false})
+  shorts?: boolean;
 }

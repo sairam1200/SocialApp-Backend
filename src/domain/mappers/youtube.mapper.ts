@@ -36,5 +36,6 @@ export function mapToYouTubeContentModel(data: UserContent): YouTubeContentModel
     likeCount: data.metaData?.likeCount,
     commentCount: data.metaData?.commentCount,
     duration: data.metaData?.duration,
+    Shorts: data.metaData?.isShort,
   } as YouTubeContentModel;
 }
