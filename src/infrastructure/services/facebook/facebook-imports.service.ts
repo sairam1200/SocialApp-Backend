@@ -34,7 +34,7 @@ export class FacebookImportService {
       {
         params: {
           fields:
-            "id,message,created_time,permalink_url,full_picture",
+            "id,message,created_time,permalink_url,full_picture,type,status_type",
           access_token: pageAccessToken,
         },
       },
@@ -74,7 +74,7 @@ const shares =
           platform:
             _const.PLATFORMS.FACEBOOK,
 
-          type: post.type?? "null",
+          type: post.type?? post.status_type ??"null",
 
           externalId: post.id,
 
