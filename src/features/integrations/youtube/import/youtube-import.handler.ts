@@ -112,10 +112,6 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
           accessToken,
         );
 
-      logger.info(
-        `[YoutubeImport] Imported ${importedCount} subscription videos`,
-      );
-
     } catch (error) {
 
       logger.error(
