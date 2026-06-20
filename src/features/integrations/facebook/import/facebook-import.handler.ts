@@ -310,7 +310,7 @@ await this.facebookImportService.importPagePostsAsync(
       const { access_token, expires_in } = response.data;
       if (!access_token) {
         throw new ApplicationException(
-          'Your Facebook session has expired or the access token is invalid. Please log in to Facebook again to continue.',
+          'RECONNECT_REQUIRED',
         );
       }
 
@@ -414,7 +414,7 @@ private async getPageAccessTokenAsync(
 
     if (now > userLogin.expiryDateUtc) {
       throw new ApplicationException(
-        'Your Facebook session has expired or the access token is invalid. Please log in to Facebook again to continue.',
+        'RECONNECT_REQUIRED',
       );
     }
 
