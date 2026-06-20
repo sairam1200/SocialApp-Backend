@@ -74,7 +74,7 @@ const shares =
           platform:
             _const.PLATFORMS.FACEBOOK,
 
-          type: "POST",
+          type: post.type ,
 
           externalId: post.id,
 
