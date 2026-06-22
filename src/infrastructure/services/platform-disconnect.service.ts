@@ -1,8 +1,9 @@
 import _const from '../../core/utils/const';
 import logger from '../../core/utils/winston.util';
 import { Injectable, Inject } from '@nestjs/common';
+import { EntityManager, In } from 'typeorm';
 import { StreamEntityType } from '../../domain/enums';
-import { ContentStream, LinkedAccount, UserContent } from '../../domain/entities';
+import { ContentStream, LinkedAccount, UserContent, UserLogin } from '../../domain/entities';
 import { IUserLoginRepository } from '../../domain/repositories/iuserLogin.repository';
 import { IUserContentRepository } from '../../domain/repositories/iuserContent.repository';
 import { ILinkedAccountRepository } from '../../domain/repositories/ilinkedAccount.repository';
@@ -22,38 +23,48 @@ export class PlatformDisconnectService implements IPlatformDisconnectService {
     private readonly userLoginRepository: IUserLoginRepository,
   ) { }
 
-  public async disconnectPlatformAsync(userId: string, platform: string): Promise<void> {
+  public async disconnectPlatformAsync(userId: string, platform: string, entityManager?: EntityManager): Promise<void> {
     logger.info(`[PlatformDisconnect] Starting disconnect for user ${userId}, platform ${platform}`);
 
-    const linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-      platform,
-      userId,
-    );
+    const linkedAccount = entityManager
+      ? await entityManager.getRepository(LinkedAccount).findOne({ where: { userId, platform } })
+      : await this.linkedAccountRepository.getByPlatformAndUserIdAsync(platform, userId);
 
     if (!linkedAccount) {
       logger.warn(`[PlatformDisconnect] No linked account found for user ${userId}, platform ${platform}`);
       return;
     }
 
+    const userLogin = entityManager
+      ? await entityManager.getRepository(UserLogin).findOne({ where: { userId, provider: platform } })
+      : await this.userLoginRepository.getByUserIdAndProviderAsync(userId, platform);
+
     const userContents = await this.fetchAllUserContentAsync(userId, platform);
-    const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, platform);
 
     await Promise.all([
-      this.backupUserContentToContentStreamAsync(userId, platform, userContents),
-      this.backupProfileToContentStreamAsync(linkedAccount),
+      this.backupUserContentToContentStreamAsync(userId, platform, userContents, entityManager),
+      this.backupProfileToContentStreamAsync(linkedAccount, entityManager),
     ]);
 
-    const deletePromises: Promise<void | LinkedAccount>[] = [
-      this.userContentRepository.deleteByUserIdAndPlatformAsync(userId, platform),
-    ];
-
-    if (userLogin) {
-      deletePromises.push(this.userLoginRepository.deleteAsync(userLogin));
+    if (entityManager) {
+      if (userContents.length > 0) {
+        const externalIds = userContents.map(uc => uc.externalId);
+        await entityManager.getRepository(UserContent).delete({ userId, platform, externalId: In(externalIds) });
+      }
+      if (userLogin) {
+        await entityManager.getRepository(UserLogin).delete(userLogin.id);
+      }
+      await entityManager.getRepository(LinkedAccount).delete(linkedAccount.id);
+    } else {
+      const deletePromises: Promise<void | LinkedAccount>[] = [
+        this.userContentRepository.deleteByUserIdAndPlatformAsync(userId, platform),
+      ];
+      if (userLogin) {
+        deletePromises.push(this.userLoginRepository.deleteAsync(userLogin));
+      }
+      deletePromises.push(this.linkedAccountRepository.deleteAsync(linkedAccount));
+      await Promise.all(deletePromises);
     }
-
-    deletePromises.push(this.linkedAccountRepository.deleteAsync(linkedAccount));
-
-    await Promise.all(deletePromises);
 
     logger.info(`[PlatformDisconnect] Successfully disconnected platform ${platform} for user ${userId} - backed up ${userContents.length} content items and profile`);
   }
@@ -85,6 +96,7 @@ export class PlatformDisconnectService implements IPlatformDisconnectService {
     userId: string,
     platform: string,
     userContents: UserContent[],
+    entityManager?: EntityManager,
   ): Promise<void> {
     if (userContents.length === 0) {
       return;
@@ -93,7 +105,11 @@ export class PlatformDisconnectService implements IPlatformDisconnectService {
     const externalIds = userContents.map(uc => uc.externalId);
     const now = new Date();
 
-    await this.contentStreamRepository.deleteByPlatformAndExternalIdsAsync(platform, externalIds);
+    if (entityManager) {
+      await entityManager.getRepository(ContentStream).delete({ platform, externalId: In(externalIds) });
+    } else {
+      await this.contentStreamRepository.deleteByPlatformAndExternalIdsAsync(platform, externalIds);
+    }
 
     const contentStreams = userContents.map(userContent =>
       new ContentStream({
@@ -112,16 +128,15 @@ export class PlatformDisconnectService implements IPlatformDisconnectService {
       })
     );
 
-    await this.contentStreamRepository.createAsync(contentStreams);
+    if (entityManager) {
+      await entityManager.getRepository(ContentStream).save(contentStreams);
+    } else {
+      await this.contentStreamRepository.createAsync(contentStreams);
+    }
     logger.info(`[PlatformDisconnect] Backed up ${contentStreams.length} UserContent records to ContentStream for platform ${platform}`);
   }
 
-  private async backupProfileToContentStreamAsync(linkedAccount: LinkedAccount): Promise<void> {
-    await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
-      linkedAccount.platform,
-      linkedAccount.externalId,
-    );
-
+  private async backupProfileToContentStreamAsync(linkedAccount: LinkedAccount, entityManager?: EntityManager): Promise<void> {
     const now = new Date();
     const contentStream = new ContentStream({
       type: StreamEntityType.Profile,
@@ -145,6 +160,15 @@ export class PlatformDisconnectService implements IPlatformDisconnectService {
       lastRefreshed: now,
     });
 
-    await this.contentStreamRepository.createAsync([contentStream]);
+    if (entityManager) {
+      await entityManager.getRepository(ContentStream).delete({ platform: linkedAccount.platform, externalId: linkedAccount.externalId });
+      await entityManager.getRepository(ContentStream).save([contentStream]);
+    } else {
+      await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+        linkedAccount.platform,
+        linkedAccount.externalId,
+      );
+      await this.contentStreamRepository.createAsync([contentStream]);
+    }
   }
 }

@@ -14,6 +14,7 @@ export interface IQueueService {
   enqueueThreadsImport(account: LinkedAccount, accessToken: string): Promise<string>;
   enqueueBehanceImport(account: LinkedAccount, accessToken: string): Promise<string>;
   cancelYoutubeImport(userId: string): Promise<void>;
+  cancelYoutubeUpload(videoIds: string[]): Promise<void>;
   cancelSpotifyImport(userId: string): Promise<void>;
   cancelPinterestImport(userId: string): Promise<void>;
   cancelRedditImport(userId: string): Promise<void>;

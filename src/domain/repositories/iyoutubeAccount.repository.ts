@@ -8,4 +8,5 @@ export interface IYoutubeAccountRepository {
   getByChannelIdAsync(channelId: string): Promise<YoutubeAccount | null>;
   getByUserIdAsync(userId: string): Promise<YoutubeAccount | null>;
   getConnectedByUserIdAsync(userId: string): Promise<YoutubeAccount | null>;
+  deleteByUserIdAsync(userId: string): Promise<void>;
 }

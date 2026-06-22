@@ -34,4 +34,8 @@ export class YoutubeVideoRepository implements IYoutubeVideoRepository {
   async getByStatusAsync(status: string): Promise<YoutubeVideo[]> {
     return this.repo.find({ where: { status } });
   }
+
+  async deleteByAccountIdAsync(accountId: string): Promise<void> {
+    await this.repo.delete({ accountId });
+  }
 }

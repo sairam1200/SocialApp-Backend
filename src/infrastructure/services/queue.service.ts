@@ -11,6 +11,8 @@ export class QueueService implements IQueueService {
   constructor(
     @InjectQueue(_const.BULL_QUEUES.YOUTUBE_IMPORT)
     private readonly youtubeImportQueue: Queue,
+    @InjectQueue(_const.BULL_QUEUES.YOUTUBE_UPLOAD)
+    private readonly youtubeUploadQueue: Queue,
     @InjectQueue(_const.BULL_QUEUES.SPOTIFY_IMPORT)
     private readonly spotifyImportQueue: Queue,
     @InjectQueue(_const.BULL_QUEUES.PINTEREST_IMPORT)
@@ -75,6 +77,23 @@ export class QueueService implements IQueueService {
       }
     } else {
       logger.warn(`[QueueService] YouTube import job ${jobId} not found for user ${userId}`);
+    }
+  }
+
+  public async cancelYoutubeUpload(videoIds: string[]): Promise<void> {
+    for (const videoId of videoIds) {
+      const jobId = `youtube-upload-${videoId}`;
+      try {
+        const job = await this.youtubeUploadQueue.getJob(jobId);
+        if (job) {
+          if (await job.isActive() || await job.isWaiting()) {
+            await job.remove();
+            logger.info(`[QueueService] Removed YouTube upload job ${jobId}`);
+          }
+        }
+      } catch (error: any) {
+        logger.warn(`[QueueService] Failed to cancel upload job ${jobId}: ${error.message}`);
+      }
     }
   }
 

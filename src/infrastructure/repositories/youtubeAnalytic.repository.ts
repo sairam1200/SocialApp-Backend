@@ -33,4 +33,9 @@ export class YoutubeAnalyticRepository implements IYoutubeAnalyticRepository {
       order: { snapshotDate: 'ASC' },
     });
   }
+
+  async deleteByVideoIdsAsync(videoIds: string[]): Promise<void> {
+    if (videoIds.length === 0) return;
+    await this.repo.delete(videoIds.map(id => ({ videoId: id })));
+  }
 }

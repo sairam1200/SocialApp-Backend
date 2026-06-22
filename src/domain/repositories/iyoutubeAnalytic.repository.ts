@@ -6,4 +6,5 @@ export interface IYoutubeAnalyticRepository {
   getByVideoIdAsync(videoId: string): Promise<YoutubeAnalytic[]>;
   getLatestByVideoIdAsync(videoId: string): Promise<YoutubeAnalytic | null>;
   getByVideoIdAndDateRangeAsync(videoId: string, startDate: Date, endDate: Date): Promise<YoutubeAnalytic[]>;
+  deleteByVideoIdsAsync(videoIds: string[]): Promise<void>;
 }

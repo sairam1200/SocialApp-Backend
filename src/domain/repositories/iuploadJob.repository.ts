@@ -6,4 +6,5 @@ export interface IUploadJobRepository {
   getByIdAsync(id: string): Promise<UploadJob | null>;
   getByVideoIdAsync(videoId: string): Promise<UploadJob | null>;
   getPendingRetriesAsync(): Promise<UploadJob[]>;
+  deleteByVideoIdsAsync(videoIds: string[]): Promise<void>;
 }

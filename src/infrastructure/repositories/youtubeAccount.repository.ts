@@ -38,4 +38,8 @@ export class YoutubeAccountRepository implements IYoutubeAccountRepository {
   async getConnectedByUserIdAsync(userId: string): Promise<YoutubeAccount | null> {
     return this.repo.findOne({ where: { userId, connected: true } });
   }
+
+  async deleteByUserIdAsync(userId: string): Promise<void> {
+    await this.repo.delete({ userId });
+  }
 }

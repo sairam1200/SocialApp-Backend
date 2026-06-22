@@ -7,4 +7,5 @@ export interface IYoutubeVideoRepository {
   getByAccountIdAsync(accountId: string): Promise<YoutubeVideo[]>;
   getByYoutubeVideoIdAsync(youtubeVideoId: string): Promise<YoutubeVideo | null>;
   getByStatusAsync(status: string): Promise<YoutubeVideo[]>;
+  deleteByAccountIdAsync(accountId: string): Promise<void>;
 }
