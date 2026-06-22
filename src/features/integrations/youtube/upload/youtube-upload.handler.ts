@@ -40,7 +40,7 @@ const uploadValidationSchema = Joi.object({
   tags: Joi.array().items(Joi.string().max(100)).max(500).optional(),
   visibility: Joi.string().valid('public', 'private', 'unlisted').optional().default('public'),
   publishAt: Joi.date().iso().greater('now').optional(),
-});
+}).required();
 
 @CommandHandler(YoutubeUploadCommand)
 export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploadCommand> {
@@ -62,6 +62,9 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
     status: string;
   }> {
     const { model } = command;
+    if (!model) {
+      throw new YoutubeValidationError('Invalid request body');
+    }
     await uploadValidationSchema.validateAsync(model).catch((err) => {
       throw new YoutubeValidationError(err.message);
     });
