@@ -28,6 +28,66 @@ import { BehanceImportProcessor } from "../infrastructure/background/processors/
 import { dependency } from "../infrastructure/dependency";
 import { ImportGateway } from "infrastructure/websocket/gateways/import.gateway";
 import { ContentStream, DataProtectionKey, Role, User, UserBiometric, UserClaim, UserLogin, UserRole } from "domain/entities";
+// Store BullModule.registerQueue result so we can re-export all queue tokens
+const registeredQueues = BullModule.registerQueue(
+  {
+    name: _const.BULL_QUEUES.FACEBOOK_IMPORT,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.FACEBOOK_IMPORT),
+  },
+  {
+    name: _const.BULL_QUEUES.INSTAGRAM_IMPORT,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.INSTAGRAM_IMPORT),
+  },
+  {
+    name: _const.BULL_QUEUES.YOUTUBE_IMPORT,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_IMPORT),
+  },
+  {
+    name: _const.BULL_QUEUES.SPOTIFY_IMPORT,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.SPOTIFY_IMPORT),
+  },
+  {
+    name: _const.BULL_QUEUES.YOUTUBE_UPLOAD,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_UPLOAD),
+  },
+  {
+    name: _const.BULL_QUEUES.YOUTUBE_ANALYTICS_SYNC,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_ANALYTICS_SYNC),
+  },
+  {
+    name: _const.BULL_QUEUES.PINTEREST_IMPORT,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.PINTEREST_IMPORT),
+  },
+  {
+    name: _const.BULL_QUEUES.REDDIT_IMPORT,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.REDDIT_IMPORT),
+  },
+  {
+    name: _const.BULL_QUEUES.TWITTER_IMPORT,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.TWITTER_IMPORT),
+  },
+  {
+    name: _const.BULL_QUEUES.TIKTOK_IMPORT,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.TIKTOK_IMPORT),
+  },
+  {
+    name: _const.BULL_QUEUES.LINKEDIN_IMPORT,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.LINKEDIN_IMPORT),
+  },
+  {
+    name: _const.BULL_QUEUES.SNAPCHAT_IMPORT,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.SNAPCHAT_IMPORT),
+  },
+  {
+    name: _const.BULL_QUEUES.THREADS_IMPORT,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.THREADS_IMPORT),
+  },
+  {
+    name: _const.BULL_QUEUES.BEHANCE_IMPORT,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.BEHANCE_IMPORT),
+  },
+);
+
 @Module({})
 export class QueuesModule implements NestModule {
   static register(): DynamicModule {
@@ -56,64 +116,7 @@ export class QueuesModule implements NestModule {
           prefix: 'gaddr-backend',
           defaultJobOptions: BullMQConfig.getDefaultJobOptions(),
         }),
-        BullModule.registerQueue(
-          {
-            name: _const.BULL_QUEUES.FACEBOOK_IMPORT,
-            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.FACEBOOK_IMPORT),
-          },
-          {
-            name: _const.BULL_QUEUES.INSTAGRAM_IMPORT,
-            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.INSTAGRAM_IMPORT),
-          },
-          {
-            name: _const.BULL_QUEUES.YOUTUBE_IMPORT,
-            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_IMPORT),
-          },
-          {
-            name: _const.BULL_QUEUES.SPOTIFY_IMPORT,
-            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.SPOTIFY_IMPORT),
-          },
-          {
-            name: _const.BULL_QUEUES.YOUTUBE_UPLOAD,
-            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_UPLOAD),
-          },
-          {
-            name: _const.BULL_QUEUES.YOUTUBE_ANALYTICS_SYNC,
-            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_ANALYTICS_SYNC),
-          },
-          {
-            name: _const.BULL_QUEUES.PINTEREST_IMPORT,
-            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.PINTEREST_IMPORT),
-          },
-          {
-            name: _const.BULL_QUEUES.REDDIT_IMPORT,
-            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.REDDIT_IMPORT),
-          },
-          {
-            name: _const.BULL_QUEUES.TWITTER_IMPORT,
-            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.TWITTER_IMPORT),
-          },
-          {
-            name: _const.BULL_QUEUES.TIKTOK_IMPORT,
-            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.TIKTOK_IMPORT),
-          },
-          {
-            name: _const.BULL_QUEUES.LINKEDIN_IMPORT,
-            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.LINKEDIN_IMPORT),
-          },
-          {
-            name: _const.BULL_QUEUES.SNAPCHAT_IMPORT,
-            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.SNAPCHAT_IMPORT),
-          },
-          {
-            name: _const.BULL_QUEUES.THREADS_IMPORT,
-            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.THREADS_IMPORT),
-          },
-          {
-            name: _const.BULL_QUEUES.BEHANCE_IMPORT,
-            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.BEHANCE_IMPORT),
-          },
-        ),
+        registeredQueues,
       ],
       providers: [
         JwtService,
@@ -149,6 +152,7 @@ export class QueuesModule implements NestModule {
       ],
       exports: [
         dependency.QueueService,
+        registeredQueues,
       ]
     };
   }

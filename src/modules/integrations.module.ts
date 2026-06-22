@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 import _const from "../core/utils/const";
 import { JwtService } from "@nestjs/jwt";
 import { CqrsModule } from "@nestjs/cqrs";
-import { BullModule } from '@nestjs/bullmq';
 import { QueuesModule } from "./queues.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import integrations from "../features/integrations";
@@ -22,8 +21,6 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     AuthGuardsModule,
     NotificationModule,
     QueuesModule.register(),
-    // Removed duplicate BullModule.registerQueue — all queues are registered
-    // in QueuesModule to ensure a single shared Redis connection across all queues
     TypeOrmModule.forFeature([
       User,
       UserRole,
