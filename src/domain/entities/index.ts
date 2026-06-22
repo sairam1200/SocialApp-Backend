@@ -22,3 +22,7 @@ export { UserPreference } from './identity/userPreference.entity';
 export { UserFollow } from './userFollow.entity';
 export { Topic } from './topic.entity';
 export { UserTopic } from './userTopic.entity';
+export { YoutubeAccount } from './youtubeAccount.entity';
+export { YoutubeVideo } from './youtubeVideo.entity';
+export { YoutubeAnalytic } from './youtubeAnalytic.entity';
+export { UploadJob } from './uploadJob.entity';

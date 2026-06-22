@@ -33,6 +33,14 @@ export default {
   ITWITTER_IMPORT_SERVICE:'ITwitterImportService',
   IPINTEREST_IMPORT_SERVICE:'IPinterestImportService',
   ILINKEDIN_IMPORT_SERVICE: 'ILinkedInImportService',
+  IYOUTUBE_PUBLISHING_SERVICE: 'IYoutubePublishingService',
+  IYOUTUBE_ANALYTICS_SERVICE: 'IYoutubeAnalyticsService',
+
+  // Repository Interfaces
+  IYOUTUBEACCOUNT_REPOSITORY: 'IYoutubeAccountRepository',
+  IYOUTUBEVIDEO_REPOSITORY: 'IYoutubeVideoRepository',
+  IYOUTUBEANALYTIC_REPOSITORY: 'IYoutubeAnalyticRepository',
+  IUPLOADJOB_REPOSITORY: 'IUploadJobRepository',
 
   BULL_QUEUES: {
     FACEBOOK_IMPORT: 'facebook-import',
@@ -47,6 +55,8 @@ export default {
     SNAPCHAT_IMPORT: 'snapchat-import',
     THREADS_IMPORT: 'threads-import',
     BEHANCE_IMPORT: 'behance-import',
+    YOUTUBE_UPLOAD: 'youtube-upload',
+    YOUTUBE_ANALYTICS_SYNC: 'youtube-analytics-sync',
   },
 
   EMAILTEMPLATES: {

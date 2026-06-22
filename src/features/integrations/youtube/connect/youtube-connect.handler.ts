@@ -19,6 +19,9 @@ import { mapToYoutubeProfileModel } from '../../../../domain/mappers/youtube.map
 import { IUserLoginRepository, ILinkedAccountRepository, IDataProtectionKeyRepository } from '../../../../domain/repositories';
 import { GoogleUserDataType, YoutubeChannelDataType, YoutubeProfileModel } from '../../../../domain/contracts/youtube.model';
 import { IContentStreamRepository } from '../../../../domain/repositories/icontentStream.repository';
+import { YoutubeAccount } from '../../../../domain/entities/youtubeAccount.entity';
+import { IYoutubeAccountRepository } from '../../../../domain/repositories/iyoutubeAccount.repository';
+import { cryptoUtils } from '../../../../core/utils/crypto.util';
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
 
@@ -87,6 +90,8 @@ export class YoutubeConnectCallbackQueryHandler
     private readonly userRepository: IUserRepository,
     @Inject(_const.ICONTENTSTREAM_REPOSITORY)
     private readonly contentStreamRepository: IContentStreamRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
     private readonly eventEmitter: EventEmitter2,
   ) { }
 
@@ -130,7 +135,6 @@ export class YoutubeConnectCallbackQueryHandler
         this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
       }
 
-      console.log(linkedAccount);
       linkedAccount.externalId = newExternalId;
       linkedAccount.userName = userData.profile.name;
       linkedAccount.profileImage = userData.profile.picture;
@@ -214,6 +218,32 @@ export class YoutubeConnectCallbackQueryHandler
         '',
         tokenValue,
         new Date(Date.now() + 100 * 24 * 60 * 60 * 1000),
+      );
+    }
+
+    const channelId = userData.channel.items[0].id;
+    const channelTitle = userData.channel.items[0].snippet.title;
+    let youtubeAccount = await this.youtubeAccountRepository.getByChannelIdAsync(channelId);
+
+    if (youtubeAccount) {
+      youtubeAccount.accessToken = cryptoUtils.encrypt(access_token);
+      youtubeAccount.refreshToken = cryptoUtils.encrypt(refresh_token);
+      youtubeAccount.tokenExpiry = new Date(Date.now() + expires_in * 1000);
+      youtubeAccount.channelTitle = channelTitle;
+      youtubeAccount.connected = true;
+      youtubeAccount.disconnectedAt = undefined;
+      await this.youtubeAccountRepository.updateAsync(youtubeAccount);
+    } else {
+      youtubeAccount = await this.youtubeAccountRepository.createAsync(
+        new YoutubeAccount({
+          userId: user.id,
+          channelId,
+          channelTitle,
+          accessToken: cryptoUtils.encrypt(access_token),
+          refreshToken: cryptoUtils.encrypt(refresh_token),
+          tokenExpiry: new Date(Date.now() + expires_in * 1000),
+          connected: true,
+        }),
       );
     }
 

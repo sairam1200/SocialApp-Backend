@@ -1,9 +1,11 @@
 import _const from "../core/utils/const";
-import { ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, TopicRepository, UserContentRepository, UserFollowRepository, UserLoginRepository, UserPreferenceRepository, UserRepository, UserRoleRepository } from "./repositories";
+import { ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, TopicRepository, UserContentRepository, UserFollowRepository, UserLoginRepository, UserPreferenceRepository, UserRepository, UserRoleRepository, YoutubeAccountRepository, YoutubeVideoRepository, YoutubeAnalyticRepository, UploadJobRepository } from "./repositories";
 import { GeneralRepository } from "./repositories/general.repository";
 import { ManualProfileRepository } from "./repositories/manualProfile.repository";
 import { EmailService, NotificationService, SearchService, SearchCacheService, TokenService, YoutubeWebhookService, QueueService, PlatformDisconnectService } from "./services";
 import {YoutubeImportService} from "../infrastructure/services/youtube/youtube-imports.service";
+import {YoutubePublishingService} from "../infrastructure/services/youtube/youtube-publishing.service";
+import {YoutubeAnalyticsService} from "../infrastructure/services/youtube/youtube-analytics.service";
 import {FacebookImportService} from "../infrastructure/services/facebook/facebook-imports.service";
 import { InstagramImportService } from "../infrastructure/services/instagram/instagram-import.service";
 import { TwitterImportService } from "../infrastructure/services/Twitter/x-import.service";
@@ -141,5 +143,29 @@ PinterestImportService:{
 LinkedInImportService:{
   provide: _const.ILINKEDIN_IMPORT_SERVICE,
   useClass: LinkedInImportService,
+},
+YoutubeAccountRepository: {
+  provide: _const.IYOUTUBEACCOUNT_REPOSITORY,
+  useClass: YoutubeAccountRepository,
+},
+YoutubeVideoRepository: {
+  provide: _const.IYOUTUBEVIDEO_REPOSITORY,
+  useClass: YoutubeVideoRepository,
+},
+YoutubeAnalyticRepository: {
+  provide: _const.IYOUTUBEANALYTIC_REPOSITORY,
+  useClass: YoutubeAnalyticRepository,
+},
+UploadJobRepository: {
+  provide: _const.IUPLOADJOB_REPOSITORY,
+  useClass: UploadJobRepository,
+},
+YoutubePublishingService: {
+  provide: _const.IYOUTUBE_PUBLISHING_SERVICE,
+  useClass: YoutubePublishingService,
+},
+YoutubeAnalyticsService: {
+  provide: _const.IYOUTUBE_ANALYTICS_SERVICE,
+  useClass: YoutubeAnalyticsService,
 },
 };

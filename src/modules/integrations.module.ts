@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import _const from "../core/utils/const";
 import { JwtService } from "@nestjs/jwt";
 import { CqrsModule } from "@nestjs/cqrs";
+import { BullModule } from '@nestjs/bullmq';
 import { QueuesModule } from "./queues.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import integrations from "../features/integrations";
@@ -14,13 +15,17 @@ import { SearchCacheService, YoutubeWebhookService } from "infrastructure/servic
 
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
 import { PlatformRollbackListener } from "../infrastructure/background/listeners/platform-rollback.listener";
-import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserBiometric, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
+import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserBiometric, UserClaim, UserContent, UserLogin, UserRole, YoutubeAccount, YoutubeVideo, YoutubeAnalytic, UploadJob } from "../domain/entities";
 @Module({
   imports: [
     CqrsModule,
     AuthGuardsModule,
     NotificationModule,
     QueuesModule.register(),
+    BullModule.registerQueue(
+      { name: _const.BULL_QUEUES.YOUTUBE_UPLOAD },
+      { name: _const.BULL_QUEUES.YOUTUBE_ANALYTICS_SYNC },
+    ),
     TypeOrmModule.forFeature([
       User,
       UserRole,
@@ -32,7 +37,11 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
       LinkedAccount,
       SearchHistory,
       DataProtectionKey,
-      ContentStream
+      ContentStream,
+      YoutubeAccount,
+      YoutubeVideo,
+      YoutubeAnalytic,
+      UploadJob,
     ])
   ],
   controllers: [
@@ -65,7 +74,12 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     dependency.TwitterImportService,
     dependency.PinterestImportService,
     dependency.LinkedInImportService,
-    
+    dependency.YoutubeAccountRepository,
+    dependency.YoutubeVideoRepository,
+    dependency.YoutubeAnalyticRepository,
+    dependency.UploadJobRepository,
+    dependency.YoutubePublishingService,
+    dependency.YoutubeAnalyticsService,
   ],
   exports: [],
 })

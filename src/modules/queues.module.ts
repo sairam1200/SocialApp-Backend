@@ -7,10 +7,13 @@ import { ExpressAdapter } from '@bull-board/express';
 import { NotificationModule } from "./notification.module";
 import { UserContent } from "../domain/entities/userContent.entity";
 import { LinkedAccount } from "../domain/entities/linkedAccount.entity";
+import { YoutubeAccount, YoutubeVideo, YoutubeAnalytic, UploadJob } from "../domain/entities";
 import { BullBoardAuthMiddleware } from "../core/middlewares/bullBoardAuth.middleware";
 import { DynamicModule, MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import BullMQConfig from "../core/config/bullmq.config";
 import { YoutubeImportProcessor } from "../infrastructure/background/processors/youtube-import.processor";
+import { YoutubeUploadProcessor } from "../infrastructure/background/processors/youtube-upload.processor";
+import { YoutubeAnalyticsSyncProcessor } from "../infrastructure/background/processors/youtube-analytics-sync.processor";
 import { SpotifyImportProcessor } from "../infrastructure/background/processors/spotify-import.processor";
 import { PinterestImportProcessor } from "../infrastructure/background/processors/pinterest-import.processor";
 import { RedditImportProcessor } from "../infrastructure/background/processors/reddit-import.processor";
@@ -43,6 +46,10 @@ export class QueuesModule implements NestModule {
           LinkedAccount,
           DataProtectionKey,
           ContentStream,
+          YoutubeAccount,
+          YoutubeVideo,
+          YoutubeAnalytic,
+          UploadJob,
         ]),
         BullModule.forRoot({
           ...BullMQConfig.getConnectionConfig(),
@@ -110,6 +117,13 @@ export class QueuesModule implements NestModule {
         dependency.LinkedAccountRepository,
         dependency.ContentStreamRepository,
 
+        dependency.YoutubeAccountRepository,
+        dependency.YoutubeVideoRepository,
+        dependency.YoutubeAnalyticRepository,
+        dependency.UploadJobRepository,
+        dependency.YoutubePublishingService,
+        dependency.YoutubeAnalyticsService,
+
         YoutubeImportProcessor,
         SpotifyImportProcessor,
         PinterestImportProcessor,
@@ -122,6 +136,8 @@ export class QueuesModule implements NestModule {
         SnapchatImportProcessor,
         ThreadsImportProcessor,
         BehanceImportProcessor,
+        YoutubeUploadProcessor,
+        YoutubeAnalyticsSyncProcessor,
       ],
       exports: [
         dependency.QueueService,

@@ -14,3 +14,7 @@ export { DataProtectionKeyRepository } from './dataProtectionKey.repository';
 export { UserFollowRepository } from './userFollow.repository';
 export { TopicRepository } from './topic.repository';
 export { UserPreferenceRepository } from './userPreference.repository';
+export { YoutubeAccountRepository } from './youtubeAccount.repository';
+export { YoutubeVideoRepository } from './youtubeVideo.repository';
+export { YoutubeAnalyticRepository } from './youtubeAnalytic.repository';
+export { UploadJobRepository } from './uploadJob.repository';
