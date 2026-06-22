@@ -113,11 +113,10 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
         );
 
     } catch (error) {
-
-      logger.error(
-        `[YoutubeImport] Failed importing subscriptions`,
-        error,
-      );
+      logger.error('[YoutubeImport] Failed importing subscriptions', {
+        error: error?.message,
+        stack: error?.stack,
+      });
     }
 
     const channelId = account.metaData?.channel?.id;
@@ -138,8 +137,10 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
       await this.queueService.enqueueYoutubeImport(account, accessToken);
       logger.info(`[YoutubeImport] Import job enqueued for user ${userId}`);
     } catch (error) {
-      logger.error(`An error occurred while enqueueing the Youtube import job: 
-        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
+      logger.error('[YoutubeImport] Failed to enqueue import job', {
+        error: error?.message,
+        stack: error?.stack,
+      });
       throw new ApplicationException('Failed to initiate Youtube import. Please try again later.');
     }
 
