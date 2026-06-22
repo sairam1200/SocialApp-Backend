@@ -78,6 +78,10 @@ export class QueuesModule implements NestModule {
             ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_UPLOAD),
           },
           {
+            name: _const.BULL_QUEUES.YOUTUBE_ANALYTICS_SYNC,
+            ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_ANALYTICS_SYNC),
+          },
+          {
             name: _const.BULL_QUEUES.PINTEREST_IMPORT,
             ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.PINTEREST_IMPORT),
           },

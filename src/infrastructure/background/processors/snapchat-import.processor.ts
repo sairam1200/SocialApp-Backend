@@ -14,7 +14,7 @@ interface SnapchatImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.SNAPCHAT_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.SNAPCHAT_IMPORT, 5))
+@Processor(_const.BULL_QUEUES.SNAPCHAT_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.SNAPCHAT_IMPORT, 2))
 export class SnapchatImportProcessor extends WorkerHost {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)

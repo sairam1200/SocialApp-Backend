@@ -11,7 +11,7 @@ interface BehanceImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.BEHANCE_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.BEHANCE_IMPORT, 5))
+@Processor(_const.BULL_QUEUES.BEHANCE_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.BEHANCE_IMPORT, 2))
 export class BehanceImportProcessor extends WorkerHost {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)

@@ -36,7 +36,7 @@ interface TiktokImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.TIKTOK_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.TIKTOK_IMPORT, 5))
+@Processor(_const.BULL_QUEUES.TIKTOK_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.TIKTOK_IMPORT, 2))
 export class TiktokImportProcessor extends WorkerHost {
   private readonly NOTIFICATION_UPDATE_INTERVAL = 10;
 

@@ -36,7 +36,7 @@ interface PinterestImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.PINTEREST_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.PINTEREST_IMPORT, 5))
+@Processor(_const.BULL_QUEUES.PINTEREST_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.PINTEREST_IMPORT, 2))
 export class PinterestImportProcessor extends WorkerHost {
   private readonly NOTIFICATION_UPDATE_INTERVAL = 10;
 

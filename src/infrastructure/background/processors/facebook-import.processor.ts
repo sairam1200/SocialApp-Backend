@@ -35,7 +35,7 @@ interface FacebookImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.FACEBOOK_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.FACEBOOK_IMPORT, 5))
+@Processor(_const.BULL_QUEUES.FACEBOOK_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.FACEBOOK_IMPORT, 2))
 export class FacebookImportProcessor extends WorkerHost {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)

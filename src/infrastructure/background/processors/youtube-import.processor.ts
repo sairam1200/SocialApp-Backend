@@ -37,7 +37,7 @@ interface YoutubeImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.YOUTUBE_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.YOUTUBE_IMPORT, 5))
+@Processor(_const.BULL_QUEUES.YOUTUBE_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.YOUTUBE_IMPORT, 2))
 export class YoutubeImportProcessor extends WorkerHost {
   private readonly NOTIFICATION_UPDATE_INTERVAL = 10;
 

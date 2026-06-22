@@ -41,11 +41,11 @@ export class BullMQConfig {
 
   static getWorkerOptions(
     queueName: string,
-    concurrency: number = 10,
+    concurrency: number = 2,
     options?: Partial<WorkerOptions>
   ): Partial<WorkerOptions> {
     const cpuCount = require('os').cpus().length;
-    const optimalConcurrency = Math.max(concurrency, cpuCount * 2);
+    const optimalConcurrency = Math.min(concurrency, Math.max(cpuCount * 2, 1));
 
     return {
       connection: redis.getBullMQConnection(),

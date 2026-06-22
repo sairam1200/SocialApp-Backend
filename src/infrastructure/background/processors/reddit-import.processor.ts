@@ -37,7 +37,7 @@ interface RedditImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.REDDIT_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.REDDIT_IMPORT, 5))
+@Processor(_const.BULL_QUEUES.REDDIT_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.REDDIT_IMPORT, 2))
 export class RedditImportProcessor extends WorkerHost {
   private readonly NOTIFICATION_UPDATE_INTERVAL = 10;
 

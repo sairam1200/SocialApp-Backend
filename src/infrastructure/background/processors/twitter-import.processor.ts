@@ -37,7 +37,7 @@ interface TwitterImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.TWITTER_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.TWITTER_IMPORT, 5))
+@Processor(_const.BULL_QUEUES.TWITTER_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.TWITTER_IMPORT, 2))
 export class TwitterImportProcessor extends WorkerHost {
   private readonly NOTIFICATION_UPDATE_INTERVAL = 10;
 

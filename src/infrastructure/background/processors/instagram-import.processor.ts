@@ -36,7 +36,7 @@ interface InstagramImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.INSTAGRAM_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.INSTAGRAM_IMPORT, 5))
+@Processor(_const.BULL_QUEUES.INSTAGRAM_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.INSTAGRAM_IMPORT, 2))
 export class InstagramImportProcessor extends WorkerHost {
   private readonly NOTIFICATION_UPDATE_INTERVAL = 10;
 

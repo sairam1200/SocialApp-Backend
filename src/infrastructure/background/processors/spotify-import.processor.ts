@@ -36,7 +36,7 @@ interface SpotifyImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.SPOTIFY_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.SPOTIFY_IMPORT, 5))
+@Processor(_const.BULL_QUEUES.SPOTIFY_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.SPOTIFY_IMPORT, 2))
 export class SpotifyImportProcessor extends WorkerHost {
   private readonly NOTIFICATION_UPDATE_INTERVAL = 10;
 

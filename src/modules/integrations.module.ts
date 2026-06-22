@@ -22,10 +22,8 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     AuthGuardsModule,
     NotificationModule,
     QueuesModule.register(),
-    BullModule.registerQueue(
-      { name: _const.BULL_QUEUES.YOUTUBE_UPLOAD },
-      { name: _const.BULL_QUEUES.YOUTUBE_ANALYTICS_SYNC },
-    ),
+    // Removed duplicate BullModule.registerQueue — all queues are registered
+    // in QueuesModule to ensure a single shared Redis connection across all queues
     TypeOrmModule.forFeature([
       User,
       UserRole,

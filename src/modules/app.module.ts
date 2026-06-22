@@ -1,6 +1,8 @@
 import configs from '../configs';
 import { JwtModule } from '@nestjs/jwt';
 import _const from '../core/utils/const';
+import redis from '../core/utils/redis.util';
+import logger from '../core/utils/winston.util';
 import { UserModule } from './user.module';
 import { RoleModule } from './role.module';
 import { AuthModule } from './auth.module';
@@ -17,7 +19,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DataSeeder } from '../infrastructure/services/data.seeder';
 import { postgresOptions } from '../infrastructure/persistence/data.source';
 import { HttpContextMiddleware } from '../core/middlewares/httpContext.middleware';
-import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
 
 @Module({
   imports: [
@@ -40,7 +42,7 @@ import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap } from '
     FollowModule,
   ],
 })
-export class AppModule implements OnApplicationBootstrap, NestModule {
+export class AppModule implements OnApplicationBootstrap, OnApplicationShutdown, NestModule {
   constructor(
     private readonly dataSeeder: DataSeeder
   ) { }
@@ -53,5 +55,10 @@ export class AppModule implements OnApplicationBootstrap, NestModule {
 
   async onApplicationBootstrap(): Promise<void> {
     await this.dataSeeder.initializeAsync();
+  }
+
+  async onApplicationShutdown(signal?: string): Promise<void> {
+    logger.info(`Application shutting down (signal: ${signal})`);
+    await redis.disconnectFromRedis();
   }
 } 

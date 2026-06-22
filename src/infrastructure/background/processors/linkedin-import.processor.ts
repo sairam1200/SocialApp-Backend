@@ -36,7 +36,7 @@ interface LinkedInImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.LINKEDIN_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.LINKEDIN_IMPORT, 5))
+@Processor(_const.BULL_QUEUES.LINKEDIN_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.LINKEDIN_IMPORT, 2))
 export class LinkedInImportProcessor extends WorkerHost {
   private readonly NOTIFICATION_UPDATE_INTERVAL = 10;
 

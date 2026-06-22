@@ -1,4 +1,4 @@
-import { Redis, Cluster } from 'ioredis';
+import { Redis } from 'ioredis';
 import configs from "../../configs";
 import logger from "./winston.util";
 import { deserializeObject, serializeObject } from './serialization.util';
@@ -6,6 +6,43 @@ import { deserializeObject, serializeObject } from './serialization.util';
 type Prefix = 'gaddr'
 const prefix = 'gaddr'
 
+// Simple in-memory LRU cache to reduce Redis round-trips for frequently-read keys.
+// Each entry has a TTL; expired entries are lazily evicted on read.
+const memoryCache = new Map<string, { value: any; expiresAt: number }>();
+const MEMORY_CACHE_TTL_MS = Number(process.env.MEMORY_CACHE_TTL_MS) || 15000; // 15s default
+
+function setMemoryCache(key: string, value: any, ttlMs?: number): void {
+  memoryCache.set(key, {
+    value,
+    expiresAt: Date.now() + (ttlMs ?? MEMORY_CACHE_TTL_MS),
+  });
+}
+
+function getMemoryCache<T>(key: string): T | undefined {
+  const entry = memoryCache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() > entry.expiresAt) {
+    memoryCache.delete(key);
+    return undefined;
+  }
+  return entry.value as T;
+}
+
+function clearMemoryCache(key?: string): void {
+  if (key) {
+    memoryCache.delete(key);
+  } else {
+    memoryCache.clear();
+  }
+}
+
+// SINGLE Redis connection used for everything:
+//   - Application caching (getFromRedisAsync, storeInRedisAsync)
+//   - BullMQ queues, workers, and events
+//
+// BullMQ workers internally clone this connection for BLPOP blocking ops,
+// but the clones share the same underlying TCP socket when possible.
+// maxRetriesPerRequest: null is REQUIRED by BullMQ for workers/queues.
 const instance = new Redis({
   host: configs.redis.host,
   port: configs.redis.port,
@@ -13,41 +50,24 @@ const instance = new Redis({
   password: configs.redis.password,
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
+  enableOfflineQueue: false,
+  lazyConnect: true,
+  keepAlive: 30000,
+  connectTimeout: 10000,
+  retryStrategy: (times: number) => {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  },
+  reconnectOnError: (err: Error) => {
+    const targetError = 'READONLY';
+    if (err.message.includes(targetError)) {
+      return true;
+    }
+    return false;
+  },
 });
 
-const createBullMQConnection = (options?: { maxRetriesPerRequest?: number | null }) => {
-  return new Redis({
-    host: configs.redis.host,
-    port: configs.redis.port,
-    username: configs.redis.username,
-    password: configs.redis.password,
-    maxRetriesPerRequest: options?.maxRetriesPerRequest ?? null,
-    enableReadyCheck: false,
-    enableOfflineQueue: false,
-    lazyConnect: true,
-    keepAlive: 30000,
-    connectTimeout: 10000,
-    // Performance tuning
-    retryStrategy: (times: number) => {
-      const delay = Math.min(times * 50, 2000);
-      return delay;
-    },
-    reconnectOnError: (err: Error) => {
-      const targetError = 'READONLY';
-      if (err.message.includes(targetError)) {
-        return true;
-      }
-      return false;
-    },
-  });
-};
-
-// Shared BullMQ connection instance - single connection reused across all queues and workers
-// This prevents connection exhaustion by reusing one connection instead of creating new ones per queue/worker
-const sharedBullMQConnection = createBullMQConnection();
-
-// Keep subscriber connection separate if needed, but reuse for now
-const bullMQSubscriberConnection = sharedBullMQConnection;
+let connectionMonitor: ReturnType<typeof setInterval> | null = null;
 
 function getRedisKey<T extends string = any | '*'>(key: T, ...concatKeys: string[]): `${Prefix}:${T}${string | ''}` {
   return `${prefix}:${key}${concatKeys && concatKeys.length ? `:${concatKeys.join('_')}` : ''
@@ -56,40 +76,48 @@ function getRedisKey<T extends string = any | '*'>(key: T, ...concatKeys: string
 
 async function connectToRedis() {
   try {
-    await instance.ping();
-    logger.info('Redis client already connected');
-  } catch (e) {
-    try {
+    if (instance.status !== 'ready') {
       await instance.connect();
-      logger.info('Redis client connected');
-    } catch (connectError) {
-      logger.error(
-        `Redis client connection failed, Error: ${JSON.stringify(connectError)}`
-      );
-      throw connectError;
+      logger.info('Redis client connected (shared instance)');
+    } else {
+      logger.info('Redis client already connected');
     }
+  } catch (connectError) {
+    logger.error(`Redis client connection failed: ${JSON.stringify(connectError)}`);
+    throw connectError;
   }
 
-  // Connect shared BullMQ connection
-  try {
-    if (!sharedBullMQConnection.status || sharedBullMQConnection.status !== 'ready') {
-      await sharedBullMQConnection.connect();
-      logger.info('Shared BullMQ Redis connection connected');
+  // Start connection monitor — reads Redis INFO every 30s
+  connectionMonitor = setInterval(async () => {
+    try {
+      const info = await instance.info('clients');
+      const match = info.match(/connected_clients:(\d+)/);
+      if (match) {
+        const connCount = parseInt(match[1], 10);
+        logger.debug(`[RedisMonitor] connected_clients: ${connCount}`);
+        if (connCount > 25) {
+          logger.warn(`[RedisMonitor] WARNING: ${connCount} clients connected (limit: 30)`);
+        }
+      }
+    } catch {
+      // INFO command can fail during reconnection; ignore
     }
-  } catch (error) {
-    logger.error(`Shared BullMQ Redis connection failed: ${JSON.stringify(error)}`);
-    throw error;
-  }
+  }, 30000);
+}
 
-  // Connect BullMQ subscriber connection (only if needed separately)
+async function disconnectFromRedis() {
+  if (connectionMonitor) {
+    clearInterval(connectionMonitor);
+    connectionMonitor = null;
+  }
   try {
-    if (!bullMQSubscriberConnection.status || bullMQSubscriberConnection.status !== 'ready') {
-      await bullMQSubscriberConnection.connect();
-      logger.info('BullMQ Redis subscriber connection connected');
+    if (instance.status === 'ready' || instance.status === 'connecting') {
+      await instance.quit();
+      logger.info('Redis client disconnected gracefully');
     }
   } catch (error) {
-    logger.error(`BullMQ Redis subscriber connection failed: ${JSON.stringify(error)}`);
-    throw error;
+    logger.error(`Redis disconnect error: ${error}`);
+    instance.disconnect();
   }
 }
 
@@ -100,35 +128,44 @@ async function storeInRedisAsync(key: string, data: object, duration?: number) {
   } else {
     await instance.set(key, value, 'EX', duration);
   }
+  // Update in-memory cache so subsequent reads don't hit Redis
+  setMemoryCache(key, data, duration ? duration * 1000 : undefined);
   return true;
 }
 
 async function getFromRedisAsync<T = any>(key: string): Promise<T | null> {
+  // Check in-memory cache first
+  const cached = getMemoryCache<T>(key);
+  if (cached !== undefined) return cached;
+
   const data = await instance.get(key);
   if (data) {
-    return deserializeObject<T>(data);
+    const parsed = deserializeObject<T>(data);
+    // Populate in-memory cache for subsequent reads
+    setMemoryCache(key, parsed);
+    return parsed;
   }
   return null;
 }
 
 async function removeFromRedisAsync(key: string) {
   await instance.del(key);
+  clearMemoryCache(key);
 }
 
-// BullMQ connection configuration - returns the shared connection instance
-// All queues and workers will reuse this single connection
-const getBullMQConnection = () => sharedBullMQConnection;
+// BullMQ expects this exact shape: { connection: Redis }
+const getBullMQConnection = () => instance;
 
 const redis = {
   instance,
-  bullMQConnection: sharedBullMQConnection,
-  bullMQSubscriberConnection,
   getBullMQConnection,
   getRedisKey,
   connectToRedis,
+  disconnectFromRedis,
   storeInRedisAsync,
   getFromRedisAsync,
-  removeFromRedisAsync
+  removeFromRedisAsync,
+  clearMemoryCache,
 };
 
 export default redis;

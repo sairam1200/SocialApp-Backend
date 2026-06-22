@@ -14,7 +14,7 @@ interface ThreadsImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.THREADS_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.THREADS_IMPORT, 5))
+@Processor(_const.BULL_QUEUES.THREADS_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.THREADS_IMPORT, 2))
 export class ThreadsImportProcessor extends WorkerHost {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
