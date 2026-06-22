@@ -128,7 +128,7 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
 
     return {
       videoId: savedVideo.id,
-      status: 'pending',
+      status: 'queued',
     };
   }
 }

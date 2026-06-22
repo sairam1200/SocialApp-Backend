@@ -1,4 +1,3 @@
-import { Response } from 'express';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
@@ -35,8 +34,8 @@ class UploadResponseDto {
   @ApiProperty()
   videoId: string;
 
-  @ApiProperty()
-  youtubeUrl: string;
+  @ApiProperty({required: false})
+  youtubeUrl?: string;
 
   @ApiProperty({ required: false })
   publishAt?: string;
@@ -60,10 +59,10 @@ export class YoutubeUploadController {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Upload(
-    @Body() body: UploadRequestDto,
-    @Res() res: Response,
-  ): Promise<Response | void> {
-    const result = await this.commandBus.execute(new YoutubeUploadCommand({ model: body }));
-    return res.status(HttpStatus.OK).json(result);
-  }
+  @Body() body: UploadRequestDto,
+): Promise<UploadResponseDto> {                     // ← removed @Res()
+  return this.commandBus.execute(                    // ← no manual res.json()
+    new YoutubeUploadCommand({ model: body })
+  );
+}
 }
