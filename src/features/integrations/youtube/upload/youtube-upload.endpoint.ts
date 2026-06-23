@@ -75,18 +75,24 @@ export class YoutubeUploadController {
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN — Account disconnected' })
   public async Upload(
-    @Headers('content-type') contentType: string,
+    @Headers() headers: Record<string, string>,
     @Body() body: UploadRequestDto,
   ): Promise<UploadResponseDto> {
+    const contentType = headers['content-type'] || '';
+
+    console.log('[YoutubeUploadController] INCOMING HEADERS:', JSON.stringify(headers, null, 2));
+    console.log('[YoutubeUploadController] Content-Type:', contentType);
+    console.log('[YoutubeUploadController] REQUEST BODY:', JSON.stringify(body, null, 2));
+
     if (!contentType || !contentType.includes('application/json')) {
-      throw new BadRequestException('Content-Type must be application/json');
+      throw new BadRequestException(
+        `Invalid Content-Type received: "${contentType}". Expected Content-Type: application/json`,
+      );
     }
 
     if (!body || typeof body !== 'object' || Object.keys(body).length === 0) {
       throw new BadRequestException('Request body is empty or malformed');
     }
-
-    console.log('[YoutubeUploadController] REQUEST BODY:', JSON.stringify(body, null, 2));
 
     return this.commandBus.execute(
       new YoutubeUploadCommand({ model: body }),
