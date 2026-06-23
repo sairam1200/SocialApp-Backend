@@ -39,10 +39,6 @@ export class FacebookImportService {
         },
       },
     );
-    console.log(
-      "FACEBOOK POSTS RESPONSE:",
-      JSON.stringify(postsResponse.data, null, 2),
-    );
     const posts = postsResponse.data?.data ?? [];
 
     for (const post of posts) {

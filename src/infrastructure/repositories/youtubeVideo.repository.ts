@@ -24,7 +24,7 @@ export class YoutubeVideoRepository implements IYoutubeVideoRepository {
   }
 
   async getByAccountIdAsync(accountId: string): Promise<YoutubeVideo[]> {
-    return this.repo.find({ where: { accountId } });
+    return this.repo.find({ where: { accountId }, take: 1000 });
   }
 
   async getByYoutubeVideoIdAsync(youtubeVideoId: string): Promise<YoutubeVideo | null> {
@@ -32,7 +32,7 @@ export class YoutubeVideoRepository implements IYoutubeVideoRepository {
   }
 
   async getByStatusAsync(status: string): Promise<YoutubeVideo[]> {
-    return this.repo.find({ where: { status } });
+    return this.repo.find({ where: { status }, take: 1000 });
   }
 
   async deleteByAccountIdAsync(accountId: string): Promise<void> {

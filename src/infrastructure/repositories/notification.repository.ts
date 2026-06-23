@@ -16,6 +16,7 @@ export class NotificationRepository implements INotificationRepository {
     return await this.notificationContext.find({
       where: { notifyId: userId },
       order: { createdOn: "DESC" },
+      take: 1000,
     });
   }
 

@@ -12,11 +12,11 @@ export class BullMQConfig {
     return {
       removeOnComplete: {
         age: 3600, // 1 hour in seconds
-        count: 1000,
+        count: 100,
       },
       removeOnFail: {
         age: 86400, // 24 hours in seconds
-        count: 5000,
+        count: 500,
       },
       attempts: 3,
       backoff: {
@@ -33,7 +33,7 @@ export class BullMQConfig {
       defaultJobOptions: this.getDefaultJobOptions(),
       streams: {
         events: {
-          maxLen: 10000,
+          maxLen: 1000,
         },
       },
     } as Partial<QueueOptions>;
@@ -45,7 +45,7 @@ export class BullMQConfig {
     options?: Partial<WorkerOptions>
   ): Partial<WorkerOptions> {
     const cpuCount = require('os').cpus().length;
-    const optimalConcurrency = Math.min(concurrency, Math.max(cpuCount * 2, 1));
+    const optimalConcurrency = Math.min(concurrency, Math.max(cpuCount, 1));
 
     return {
       connection: redis.getBullMQConnection(),
@@ -57,11 +57,11 @@ export class BullMQConfig {
       maxStalledCount: 1,
       removeOnComplete: {
         age: 3600, // 1 hour in seconds
-        count: 1000,
+        count: 100,
       },
       removeOnFail: {
         age: 86400, // 24 hours in seconds
-        count: 5000,
+        count: 500,
       },
       metrics: {
         maxDataPoints: 100,

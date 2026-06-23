@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import * as crypto from 'crypto';
+import * as https from 'https';
 import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -215,28 +216,18 @@ export class YoutubePublishingService {
 
       const metadataBody = JSON.stringify(videoMetadata);
       const metadataLength = Buffer.byteLength(metadataBody);
+      const totalSize = this.calculateMultipartSize(metadataLength, fileSize);
 
       const headers: Record<string, string> = {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'multipart/related; boundary=boundary123',
-        'Content-Length': String(this.calculateMultipartSize(metadataLength, fileSize)),
+        'Content-Length': String(totalSize),
       };
 
-      const multipartBody = this.buildMultipartBody(metadataBody, tempFilePath);
+      logger.info(`[YoutubePublishing] Uploading video to YouTube (streaming, ${totalSize} bytes)`);
+      const uploadResult = await this.streamMultipartUpload(tempFilePath, metadataBody, headers);
 
-      logger.info(`[YoutubePublishing] Uploading video to YouTube`);
-      const uploadResponse = await axios.post(
-        `${UPLOAD_BASE_URL}?part=snippet,status`,
-        multipartBody,
-        {
-          headers,
-          maxContentLength: Infinity,
-          maxBodyLength: Infinity,
-          timeout: 600000,
-        },
-      );
-
-      const youtubeVideoId = uploadResponse.data.id;
+      const youtubeVideoId = uploadResult.id;
       const youtubeUrl = `https://youtube.com/watch?v=${youtubeVideoId}`;
 
       logger.info(`[YoutubePublishing] Video uploaded successfully: ${youtubeUrl}`);
@@ -325,27 +316,25 @@ export class YoutubePublishingService {
         writer.on('error', (err) => reject(new YoutubeDownloadError(`Failed to save thumbnail to disk: ${err.message}`)));
       });
 
-      const imageBuffer = fs.readFileSync(tempFilePath);
+      const fileSize = fs.statSync(tempFilePath).size;
       const boundary = 'thumbBoundary';
       const header = `--${boundary}\r\nContent-Type: image/${fileExt.replace('.', '')}\r\n\r\n`;
       const footer = `\r\n--${boundary}--\r\n`;
-      const body = Buffer.concat([
-        Buffer.from(header, 'utf-8'),
-        imageBuffer,
-        Buffer.from(footer, 'utf-8'),
-      ]);
+      const totalSize = Buffer.byteLength(header, 'utf-8') + fileSize + Buffer.byteLength(footer, 'utf-8');
 
-      await axios.post(
+      const thumbHeaders: Record<string, string> = {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': `multipart/related; boundary=${boundary}`,
+        'Content-Length': String(totalSize),
+      };
+
+      await this.streamMultipartUpload(
+        tempFilePath,
+        '',
+        thumbHeaders,
         `https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${youtubeVideoId}`,
-        body,
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': `multipart/related; boundary=${boundary}`,
-            'Content-Length': String(body.length),
-          },
-          timeout: 60000,
-        },
+        boundary,
+        `image/${fileExt.replace('.', '')}`,
       );
 
       logger.info(`[YoutubePublishing] Thumbnail uploaded for video ${youtubeVideoId}`);
@@ -362,19 +351,83 @@ export class YoutubePublishingService {
     }
   }
 
-  private buildMultipartBody(metadataJson: string, filePath: string): Buffer {
-    const fileBuffer = fs.readFileSync(filePath);
-    const boundary = 'boundary123';
-    const metadataPart = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadataJson}\r\n`;
-    const filePart = `--${boundary}\r\nContent-Type: application/octet-stream\r\n\r\n`;
-    const footer = `\r\n--${boundary}--\r\n`;
+  private streamMultipartUpload(
+    filePath: string,
+    metadataJson: string,
+    headers: Record<string, string>,
+    uploadUrl?: string,
+    boundary?: string,
+    contentType?: string,
+  ): Promise<any> {
+    const url = new URL(uploadUrl || `${UPLOAD_BASE_URL}?part=snippet,status`);
+    const b = boundary || 'boundary123';
+    const ctype = contentType || 'application/octet-stream';
 
-    return Buffer.concat([
-      Buffer.from(metadataPart, 'utf-8'),
-      Buffer.from(filePart, 'utf-8'),
-      fileBuffer,
-      Buffer.from(footer, 'utf-8'),
-    ]);
+    const metadataPart = metadataJson
+      ? Buffer.from(
+          `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadataJson}\r\n--${b}\r\nContent-Type: ${ctype}\r\n\r\n`,
+          'utf-8',
+        )
+      : Buffer.from(`--${b}\r\nContent-Type: ${ctype}\r\n\r\n`, 'utf-8');
+    const footer = Buffer.from(`\r\n--${b}--\r\n`, 'utf-8');
+
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const settle = (err?: any, result?: any) => {
+        if (settled) return;
+        settled = true;
+        if (err) reject(err);
+        else resolve(result);
+      };
+
+      const req = https.request({
+        method: 'POST',
+        hostname: url.hostname,
+        path: url.pathname + url.search,
+        headers,
+        timeout: 600000,
+      });
+
+      req.on('response', (res) => {
+        let body = '';
+        res.on('data', (chunk: Buffer) => (body += chunk.toString()));
+        res.on('end', () => {
+          if (res.statusCode! >= 200 && res.statusCode! < 300) {
+            try {
+              settle(null, JSON.parse(body));
+            } catch {
+              settle(null, {}); // Non-JSON response (thumbnails may return empty)
+            }
+          } else {
+            if (res.statusCode === 429 || res.statusCode === 403) {
+              settle(new YoutubeRateLimitError('YouTube upload rate limit exceeded'));
+            } else {
+              settle(new YoutubeUploadError(`YouTube API returned ${res.statusCode}: ${body.substring(0, 500)}`));
+            }
+          }
+        });
+        res.on('error', (err) => settle(new YoutubeUploadError(`Upload response error: ${err.message}`)));
+      });
+
+      req.on('error', (err: NodeJS.ErrnoException) => {
+        settle(new YoutubeUploadError(`Upload connection error: ${err.message}`));
+      });
+
+      req.on('timeout', () => {
+        req.destroy();
+        settle(new YoutubeUploadError('YouTube upload timed out'));
+      });
+
+      req.write(metadataPart);
+
+      const fileStream = fs.createReadStream(filePath, { highWaterMark: 65536 });
+      fileStream.pipe(req, { end: false });
+      fileStream.on('end', () => req.end(footer));
+      fileStream.on('error', (err) => {
+        req.destroy();
+        settle(new YoutubeDownloadError(`Failed to read temp file: ${err.message}`));
+      });
+    });
   }
 
   private calculateMultipartSize(metadataLength: number, fileSize: number): number {

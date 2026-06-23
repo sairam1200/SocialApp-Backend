@@ -8,10 +8,18 @@ const prefix = 'gaddr'
 
 // Simple in-memory LRU cache to reduce Redis round-trips for frequently-read keys.
 // Each entry has a TTL; expired entries are lazily evicted on read.
+// Max 100 entries prevents unbounded memory growth from burst writes.
 const memoryCache = new Map<string, { value: any; expiresAt: number }>();
 const MEMORY_CACHE_TTL_MS = Number(process.env.MEMORY_CACHE_TTL_MS) || 15000; // 15s default
+const MAX_CACHE_ENTRIES = 100;
 
 function setMemoryCache(key: string, value: any, ttlMs?: number): void {
+  if (memoryCache.size >= MAX_CACHE_ENTRIES) {
+    const firstKey = memoryCache.keys().next().value;
+    if (firstKey !== undefined) {
+      memoryCache.delete(firstKey);
+    }
+  }
   memoryCache.set(key, {
     value,
     expiresAt: Date.now() + (ttlMs ?? MEMORY_CACHE_TTL_MS),
