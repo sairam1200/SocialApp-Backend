@@ -164,20 +164,15 @@ async function removeFromRedisAsync(key: string) {
   clearMemoryCache(key);
 }
 
-// BullMQ expects either { connection: Redis } (shared) or { connection: RedisOptions } (own client).
-// For QUEUES: pass the shared instance → 0 new connections.
-// For WORKERS: pass connection config → Worker creates its own blocking + main connections.
+// Returns the shared Redis instance for BullMQ queues and workers.
+// - QUEUES: pass this → QueueBase sets shared=true → uses instance directly → 0 new connections
+// - WORKERS: pass this → handleProcessor sets connection from queueOpts → Worker sets shared=true
+//   for the main client (reuses instance), and creates 1 duplicate for the blocking client
 const getBullMQConnection = () => instance;
-
-// Returns plain connection config (NOT instance) for use in worker options.
-// This prevents BullMQ from calling .duplicate() on the shared instance,
-// allowing each worker to self-manage its connection lifecycle.
-const getBullMQConnectionConfig = () => ({ ...REDIS_OPTS });
 
 const redis: {
   instance: Redis;
   getBullMQConnection: () => Redis;
-  getBullMQConnectionConfig: () => RedisOptions;
   getRedisKey: <T extends string = string>(key: T, ...concatKeys: string[]) => string;
   connectToRedis: () => Promise<void>;
   disconnectFromRedis: () => Promise<void>;
@@ -188,7 +183,6 @@ const redis: {
 } = {
   instance,
   getBullMQConnection,
-  getBullMQConnectionConfig,
   getRedisKey,
   connectToRedis,
   disconnectFromRedis,

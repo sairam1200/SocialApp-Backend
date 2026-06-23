@@ -55,8 +55,12 @@ export class BullMQConfig {
 
   /**
    * Returns worker options.
-   * IMPORTANT: Uses connection CONFIG (not instance) so BullMQ creates
-   * self-managed connections instead of duplicating the shared instance.
+   * Uses the shared Redis instance so the main client (this.connection)
+   * reuses the existing connection (shared=true → 0 new connections).
+   * BullMQ still creates a duplicate for the blocking client via
+   * instance.duplicate() (1 connection per worker).
+   *
+   * Total for 14 workers: 1 (shared) + 14 (blocking) = 15 connections.
    */
   static getWorkerOptions(
     queueName: string,
@@ -64,9 +68,9 @@ export class BullMQConfig {
     options?: Partial<WorkerOptions>
   ): Partial<WorkerOptions> {
     return {
-      // Connection CONFIG, not instance. BullMQ creates its own client
-      // for both the main and blocking connections.
-      connection: redis.getBullMQConnectionConfig(),
+      // Shared instance — QueueBase sets shared=true, no new client created.
+      // The blocking connection is duplicated automatically (1 per worker).
+      connection: redis.getBullMQConnection(),
       prefix: 'gaddr-backend',
       concurrency: Math.max(1, Math.min(concurrency, 2)), // Max 2: prevent OOM on 512 MB
       lockDuration: 60000, // 60 seconds (was 30): prevents premature timeout on slow uploads
