@@ -3,6 +3,7 @@ import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import _const from '../../../core/utils/const';
 import logger from '../../../core/utils/winston.util';
+import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
 import { IYoutubeAccountRepository } from '../../../domain/repositories/iyoutubeAccount.repository';
 import { IYoutubeVideoRepository } from '../../../domain/repositories/iyoutubeVideo.repository';
 import { IUploadJobRepository } from '../../../domain/repositories/iuploadJob.repository';
@@ -13,12 +14,15 @@ import BullMQConfig from '../../../core/config/bullmq.config';
 interface YoutubeUploadJobData {
   videoId: string;
   accountId: string;
+  channelId: string;
   r2Key: string;
 }
 
 @Processor(_const.BULL_QUEUES.YOUTUBE_UPLOAD, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.YOUTUBE_UPLOAD, 1))
 export class YoutubeUploadProcessor extends WorkerHost {
   constructor(
+    @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
+    private readonly linkedAccountRepo: ILinkedAccountRepository,
     @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
     private readonly accountRepo: IYoutubeAccountRepository,
     @Inject(_const.IYOUTUBEVIDEO_REPOSITORY)
@@ -55,12 +59,32 @@ export class YoutubeUploadProcessor extends WorkerHost {
   }
 
   public async process(job: Job<YoutubeUploadJobData>): Promise<void> {
-    const { videoId, accountId, r2Key } = job.data;
+    const { videoId, accountId, channelId, r2Key } = job.data;
 
-    const account = await this.accountRepo.getByIdAsync(accountId);
+    logger.debug('[YoutubeUploadProcessor] Resolving linked account', {
+      videoId,
+      accountId,
+      channelId,
+      r2Key,
+    });
+
+    const linkedAccount = await this.linkedAccountRepo.getByIdAsync(accountId);
+    if (!linkedAccount || linkedAccount.platform !== _const.PLATFORMS.YOUTUBE) {
+      logger.error('[YoutubeUploadProcessor] Linked account not found', { accountId, platform: 'youtube', found: !!linkedAccount });
+      throw new Error('YouTube account not found');
+    }
+
+    const account = await this.accountRepo.getByChannelIdAsync(channelId);
     if (!account || !account.connected) {
+      logger.error('[YoutubeUploadProcessor] YouTube token account not found', { channelId, found: !!account });
       throw new Error('YouTube account not found or disconnected');
     }
+
+    logger.debug('[YoutubeUploadProcessor] Account resolved', {
+      linkedAccountId: linkedAccount.id,
+      channelId: account.channelId,
+      youtubeAccountId: account.id,
+    });
 
     const video = await this.videoRepo.getByIdAsync(videoId);
     if (!video) {

@@ -7,7 +7,7 @@ import { HttpContext } from '../../../../core/middlewares/httpContext.middleware
 import { Globals } from '../../../../core/globals';
 import { YoutubeVideo } from '../../../../domain/entities/youtubeVideo.entity';
 import { UploadJob } from '../../../../domain/entities/uploadJob.entity';
-import { IYoutubeAccountRepository } from '../../../../domain/repositories/iyoutubeAccount.repository';
+import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { IYoutubeVideoRepository } from '../../../../domain/repositories/iyoutubeVideo.repository';
 import { IUploadJobRepository } from '../../../../domain/repositories/iuploadJob.repository';
 import { YoutubeValidationError } from '../../../../core/exceptions/youtube-publishing.exception';
@@ -47,8 +47,8 @@ const uploadValidationSchema = Joi.object({
 @CommandHandler(YoutubeUploadCommand)
 export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploadCommand> {
   constructor(
-    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
-    private readonly accountRepo: IYoutubeAccountRepository,
+    @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
+    private readonly linkedAccountRepo: ILinkedAccountRepository,
     @Inject(_const.IYOUTUBEVIDEO_REPOSITORY)
     private readonly videoRepo: IYoutubeVideoRepository,
     @Inject(_const.IUPLOADJOB_REPOSITORY)
@@ -75,19 +75,35 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
 
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
 
-    const account = await this.accountRepo.getByIdAsync(model.accountId);
-    if (!account || account.userId !== userId) {
+    logger.debug('[YoutubeUpload] Resolving linked account', {
+      linkedAccountId: model.accountId,
+      userId,
+      platform: 'youtube',
+    });
+
+    const linkedAccount = await this.linkedAccountRepo.getByIdAsync(model.accountId);
+    if (!linkedAccount || linkedAccount.platform !== _const.PLATFORMS.YOUTUBE || linkedAccount.userId !== userId) {
+      logger.warn('[YoutubeUpload] Linked account lookup failed', {
+        linkedAccountId: model.accountId,
+        userId,
+        platform: 'youtube',
+        found: !!linkedAccount,
+        platformMatch: linkedAccount ? linkedAccount.platform === _const.PLATFORMS.YOUTUBE : 'N/A',
+        userIdMatch: linkedAccount ? linkedAccount.userId === userId : 'N/A',
+      });
       throw new YoutubeValidationError('YouTube account not found or does not belong to user');
     }
 
-    if (!account.connected) {
-      throw new YoutubeValidationError('YouTube account is disconnected');
-    }
+    logger.debug('[YoutubeUpload] Linked account resolved', {
+      linkedAccountId: linkedAccount.id,
+      channelId: linkedAccount.externalId,
+      userId: linkedAccount.userId,
+    });
 
     const publishAt = model.publishAt ? new Date(model.publishAt) : undefined;
 
     const video = new YoutubeVideo({
-      accountId: account.id,
+      accountId: linkedAccount.id,
       title: model.title,
       description: model.description || '',
       tags: model.tags || [],
@@ -111,7 +127,8 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
     await this.uploadQueue.add('youtube-upload-job',
       {
         videoId: savedVideo.id,
-        accountId: account.id,
+        accountId: linkedAccount.id,
+        channelId: linkedAccount.externalId,
         r2Key: model.r2Key,
       },
       {
