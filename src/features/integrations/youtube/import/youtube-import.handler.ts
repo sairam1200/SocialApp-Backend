@@ -106,14 +106,33 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
 
     try {
 
-      const importedCount =
+      const subscriptionCount =
         await this.youtubeImportService.importSubscriptionsAsync(
           userId,
           accessToken,
         );
 
+      logger.info(`[YoutubeImport] Imported ${subscriptionCount} subscription videos`, { userId });
+
     } catch (error) {
       logger.error('[YoutubeImport] Failed importing subscriptions', {
+        error: error?.message,
+        stack: error?.stack,
+      });
+    }
+
+    try {
+
+      const uploadCount =
+        await this.youtubeImportService.importUploadsAsync(
+          userId,
+          accessToken,
+        );
+
+      logger.info(`[YoutubeImport] Imported ${uploadCount} channel videos`, { userId });
+
+    } catch (error) {
+      logger.error('[YoutubeImport] Failed importing channel uploads', {
         error: error?.message,
         stack: error?.stack,
       });

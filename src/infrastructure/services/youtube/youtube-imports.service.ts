@@ -36,7 +36,119 @@ export class YoutubeImportService
 
     let importedCount = 0;
 
-    // move uploads logic here
+    const channelResponse = await axios.get(
+      "https://www.googleapis.com/youtube/v3/channels",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: {
+          part: "snippet,contentDetails",
+          mine: true,
+        },
+      },
+    );
+
+    const channel = channelResponse.data?.items?.[0];
+    if (!channel) return 0;
+
+    const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
+    if (!uploadsPlaylistId) return 0;
+
+    let nextPageToken: string | null = null;
+
+    do {
+      const playlistResponse = await axios.get(
+        "https://www.googleapis.com/youtube/v3/playlistItems",
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          params: {
+            part: "snippet,contentDetails",
+            playlistId: uploadsPlaylistId,
+            maxResults: 50,
+            pageToken: nextPageToken ?? undefined,
+          },
+        },
+      );
+
+      const items = playlistResponse.data?.items ?? [];
+      nextPageToken = playlistResponse.data?.nextPageToken ?? null;
+
+      const videoIds = items
+        .map((v: any) => v.contentDetails?.videoId)
+        .filter(Boolean);
+
+      if (videoIds.length === 0) continue;
+
+      const statsResponse = await axios.get(
+        "https://www.googleapis.com/youtube/v3/videos",
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          params: {
+            part: "statistics,contentDetails",
+            id: videoIds.join(","),
+          },
+        },
+      );
+
+      const videoDetailsMap = new Map(
+        (statsResponse.data?.items ?? []).map((item: any) => [
+          item.id,
+          {
+            statistics: item.statistics,
+            duration: item.contentDetails?.duration,
+          },
+        ]),
+      );
+
+      for (const item of items) {
+        const videoId = item.contentDetails?.videoId;
+        if (!videoId) continue;
+
+        const details = videoDetailsMap.get(videoId) as
+          | {
+              statistics?: {
+                viewCount?: string;
+                likeCount?: string;
+                commentCount?: string;
+              };
+              duration?: string;
+            }
+          | undefined;
+
+        const duration = details?.duration ?? "PT0S";
+        const durationSeconds = this.parseDurationToSeconds(duration);
+        const isShort = durationSeconds <= 180;
+
+        await this.userContentRepository.createAsync(
+          new UserContent({
+            userId,
+            platform: _const.PLATFORMS.YOUTUBE,
+            type: "uploaded_video",
+            externalId: videoId,
+            title: item.snippet?.title ?? "Untitled Video",
+            metaData: {
+              videoId,
+              isShort,
+              duration,
+              description: item.snippet?.description,
+              publishedAt: item.snippet?.publishedAt,
+              viewCount: Number(details?.statistics?.viewCount ?? 0),
+              likeCount: Number(details?.statistics?.likeCount ?? 0),
+              commentCount: Number(details?.statistics?.commentCount ?? 0),
+              thumbnail:
+                item.snippet?.thumbnails?.high?.url ??
+                item.snippet?.thumbnails?.medium?.url ??
+                item.snippet?.thumbnails?.default?.url,
+              channelId: channel.id,
+              channelTitle: channel.snippet?.title,
+              youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`,
+              importedAt: new Date().toISOString(),
+            },
+          }),
+        );
+
+        importedCount++;
+      }
+    } while (nextPageToken);
 
     return importedCount;
   }
