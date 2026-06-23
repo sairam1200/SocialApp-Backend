@@ -30,3 +30,9 @@ export class YoutubeValidationError extends ApplicationException {
     super(message, HttpStatus.BAD_REQUEST);
   }
 }
+
+export class YoutubeDownloadError extends ApplicationException {
+  constructor(message = 'Failed to download media from URL') {
+    super(message, HttpStatus.BAD_REQUEST);
+  }
+}

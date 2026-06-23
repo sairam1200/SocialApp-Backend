@@ -13,7 +13,17 @@ import { YoutubeAccount } from '../../../domain/entities/youtubeAccount.entity';
 import { YoutubeVideo } from '../../../domain/entities/youtubeVideo.entity';
 import { IYoutubeAccountRepository } from '../../../domain/repositories/iyoutubeAccount.repository';
 import { IYoutubeVideoRepository } from '../../../domain/repositories/iyoutubeVideo.repository';
-import { YoutubeAuthError, YoutubeUploadError, YoutubeRateLimitError } from '../../../core/exceptions/youtube-publishing.exception';
+import {
+  YoutubeAuthError,
+  YoutubeUploadError,
+  YoutubeRateLimitError,
+  YoutubeDownloadError,
+} from '../../../core/exceptions/youtube-publishing.exception';
+
+const MAX_VIDEO_SIZE_BYTES = 256 * 1024 * 1024; // 256 MB
+const MAX_THUMBNAIL_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_VIDEO_MIME_PREFIXES = ['video/', 'application/octet-stream'];
+const ALLOWED_THUMBNAIL_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const UPLOAD_BASE_URL = 'https://www.googleapis.com/upload/youtube/v3/videos';
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
@@ -70,23 +80,73 @@ export class YoutubePublishingService {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    const fileExt = path.extname(new URL(videoUrl).pathname) || '.mp4';
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(videoUrl);
+    } catch {
+      throw new YoutubeDownloadError('videoUrl is malformed');
+    }
+
+    if (parsedUrl.protocol !== 'https:') {
+      throw new YoutubeDownloadError('videoUrl must use HTTPS protocol');
+    }
+
+    const fileExt = path.extname(parsedUrl.pathname) || '.mp4';
     const tempFilePath = path.join(tempDir, `${crypto.randomUUID()}${fileExt}`);
 
     try {
       logger.info(`[YoutubePublishing] Downloading video from ${videoUrl}`);
-      const downloadResponse = await axios({
-        method: 'GET',
-        url: videoUrl,
-        responseType: 'stream',
-        timeout: 600000,
-      });
+
+      let downloadResponse;
+      try {
+        downloadResponse = await axios({
+          method: 'GET',
+          url: videoUrl,
+          responseType: 'stream',
+          timeout: 600000,
+          maxRedirects: 5,
+          validateStatus: (status) => status < 400,
+          headers: {
+            'Accept': 'video/*, application/octet-stream',
+          },
+        });
+      } catch (err: any) {
+        if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
+          throw new YoutubeDownloadError(`Cannot reach storage provider at ${parsedUrl.hostname}`);
+        }
+        if (err.response?.status === 404) {
+          throw new YoutubeDownloadError(`Video URL returned 404 — file not found at storage provider`);
+        }
+        if (err.response?.status === 403) {
+          throw new YoutubeDownloadError(`Video URL returned 403 — access denied by storage provider`);
+        }
+        if (err.code === 'ECONNABORTED') {
+          throw new YoutubeDownloadError('Video download timed out after 600 seconds');
+        }
+        throw new YoutubeDownloadError(`Failed to download video: ${err.message}`);
+      }
+
+      const contentType = downloadResponse.headers['content-type'] || '';
+      const contentLength = parseInt(downloadResponse.headers['content-length'] || '0', 10);
+
+      if (contentLength > MAX_VIDEO_SIZE_BYTES) {
+        throw new YoutubeDownloadError(
+          `Video file too large (${(contentLength / 1024 / 1024).toFixed(1)} MB). Maximum: ${MAX_VIDEO_SIZE_BYTES / 1024 / 1024} MB`,
+        );
+      }
+
+      const isVideoMime = ALLOWED_VIDEO_MIME_PREFIXES.some((p) => contentType.startsWith(p));
+      if (contentType && !isVideoMime) {
+        throw new YoutubeDownloadError(
+          `Unsupported video content type "${contentType}". Expected video/* or application/octet-stream`,
+        );
+      }
 
       const writer = fs.createWriteStream(tempFilePath);
       await new Promise<void>((resolve, reject) => {
         downloadResponse.data.pipe(writer);
         writer.on('finish', resolve);
-        writer.on('error', reject);
+        writer.on('error', (err) => reject(new YoutubeDownloadError(`Failed to save video to disk: ${err.message}`)));
       });
 
       const fileSize = fs.statSync(tempFilePath).size;
@@ -158,22 +218,61 @@ export class YoutubePublishingService {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    const fileExt = path.extname(new URL(thumbnailUrl).pathname) || '.jpg';
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(thumbnailUrl);
+    } catch {
+      throw new YoutubeDownloadError('thumbnailUrl is malformed');
+    }
+
+    if (parsedUrl.protocol !== 'https:') {
+      throw new YoutubeDownloadError('thumbnailUrl must use HTTPS protocol');
+    }
+
+    const fileExt = path.extname(parsedUrl.pathname) || '.jpg';
     const tempFilePath = path.join(tempDir, `${crypto.randomUUID()}${fileExt}`);
 
     try {
-      const downloadResponse = await axios({
-        method: 'GET',
-        url: thumbnailUrl,
-        responseType: 'stream',
-        timeout: 60000,
-      });
+      let downloadResponse;
+      try {
+        downloadResponse = await axios({
+          method: 'GET',
+          url: thumbnailUrl,
+          responseType: 'stream',
+          timeout: 60000,
+          maxRedirects: 5,
+          validateStatus: (status) => status < 400,
+        });
+      } catch (err: any) {
+        if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED') {
+          throw new YoutubeDownloadError(`Cannot reach storage provider at ${parsedUrl.hostname}`);
+        }
+        if (err.response?.status === 404) {
+          throw new YoutubeDownloadError(`Thumbnail URL returned 404 — file not found at storage provider`);
+        }
+        throw new YoutubeDownloadError(`Failed to download thumbnail: ${err.message}`);
+      }
+
+      const contentType = downloadResponse.headers['content-type'] || '';
+      const contentLength = parseInt(downloadResponse.headers['content-length'] || '0', 10);
+
+      if (contentLength > MAX_THUMBNAIL_SIZE_BYTES) {
+        throw new YoutubeDownloadError(
+          `Thumbnail too large (${(contentLength / 1024 / 1024).toFixed(1)} MB). Maximum: ${MAX_THUMBNAIL_SIZE_BYTES / 1024 / 1024} MB`,
+        );
+      }
+
+      if (contentType && !ALLOWED_THUMBNAIL_MIME_TYPES.includes(contentType)) {
+        throw new YoutubeDownloadError(
+          `Unsupported thumbnail content type "${contentType}". Expected image/jpeg, image/png, or image/webp`,
+        );
+      }
 
       const writer = fs.createWriteStream(tempFilePath);
       await new Promise<void>((resolve, reject) => {
         downloadResponse.data.pipe(writer);
         writer.on('finish', resolve);
-        writer.on('error', reject);
+        writer.on('error', (err) => reject(new YoutubeDownloadError(`Failed to save thumbnail to disk: ${err.message}`)));
       });
 
       const imageBuffer = fs.readFileSync(tempFilePath);

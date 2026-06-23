@@ -33,8 +33,14 @@ export class YoutubeUploadCommand {
 
 const uploadValidationSchema = Joi.object({
   accountId: Joi.string().uuid().required(),
-  videoUrl: Joi.string().uri().required(),
-  thumbnailUrl: Joi.string().uri().optional(),
+  videoUrl: Joi.string().uri({ scheme: ['https'] }).required().messages({
+    'string.uri': 'videoUrl must be a valid HTTPS URL',
+    'string.uriCustomScheme': 'videoUrl must use HTTPS protocol',
+  }),
+  thumbnailUrl: Joi.string().uri({ scheme: ['https'] }).optional().allow('').messages({
+    'string.uri': 'thumbnailUrl must be a valid HTTPS URL',
+    'string.uriCustomScheme': 'thumbnailUrl must use HTTPS protocol',
+  }),
   title: Joi.string().min(1).max(100).required(),
   description: Joi.string().max(5000).optional().allow(''),
   tags: Joi.array().items(Joi.string().max(100)).max(500).optional(),
@@ -62,7 +68,14 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
     status: string;
   }> {
     const { model } = command;
+    console.log('[YoutubeUploadHandler] COMMAND PAYLOAD:', JSON.stringify(command));
+    console.log('[YoutubeUploadHandler] MODEL:', JSON.stringify(model));
+    logger.info('[YoutubeUpload] Received command', {
+      command: JSON.stringify(command),
+      model: JSON.stringify(model),
+    });
     if (!model) {
+      logger.error('[YoutubeUpload] Invalid request body — model is null/undefined. Command keys:', Object.keys(command));
       throw new YoutubeValidationError('Invalid request body');
     }
     await uploadValidationSchema.validateAsync(model).catch((err) => {
