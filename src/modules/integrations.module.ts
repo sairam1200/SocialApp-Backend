@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 import _const from "../core/utils/const";
 import { JwtService } from "@nestjs/jwt";
 import { CqrsModule } from "@nestjs/cqrs";
-import { QueuesModule } from "./queues.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import integrations from "../features/integrations";
 import search from "../features/search";
@@ -20,7 +19,6 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     CqrsModule,
     AuthGuardsModule,
     NotificationModule,
-    QueuesModule.register(),
     TypeOrmModule.forFeature([
       User,
       UserRole,

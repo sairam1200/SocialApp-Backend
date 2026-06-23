@@ -135,8 +135,6 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
         jobId: `youtube-upload-${savedVideo.id}`,
         attempts: 5,
         backoff: { type: 'exponential', delay: 60000 },
-        removeOnComplete: false,
-        removeOnFail: false,
       },
     );
 

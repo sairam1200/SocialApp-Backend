@@ -1,10 +1,10 @@
 import _const from "../core/utils/const";
 import { JwtService } from "@nestjs/jwt";
 import { BullModule } from '@nestjs/bullmq';
+import { Logger } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { createBullBoard } from '@bull-board/api';
 import { ExpressAdapter } from '@bull-board/express';
-import { NotificationModule } from "./notification.module";
 import { UserContent } from "../domain/entities/userContent.entity";
 import { LinkedAccount } from "../domain/entities/linkedAccount.entity";
 import { YoutubeAccount, YoutubeVideo, YoutubeAnalytic, UploadJob } from "../domain/entities";
@@ -28,73 +28,42 @@ import { BehanceImportProcessor } from "../infrastructure/background/processors/
 import { dependency } from "../infrastructure/dependency";
 import { ImportGateway } from "infrastructure/websocket/gateways/import.gateway";
 import { ContentStream, DataProtectionKey, Role, User, UserBiometric, UserClaim, UserLogin, UserRole } from "domain/entities";
-// Store BullModule.registerQueue result so we can re-export all queue tokens
+
+const logger = new Logger('QueuesModule');
+
+// 14 named queues, all registered globally.
 const registeredQueues = BullModule.registerQueue(
-  {
-    name: _const.BULL_QUEUES.FACEBOOK_IMPORT,
-    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.FACEBOOK_IMPORT),
-  },
-  {
-    name: _const.BULL_QUEUES.INSTAGRAM_IMPORT,
-    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.INSTAGRAM_IMPORT),
-  },
-  {
-    name: _const.BULL_QUEUES.YOUTUBE_IMPORT,
-    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_IMPORT),
-  },
-  {
-    name: _const.BULL_QUEUES.SPOTIFY_IMPORT,
-    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.SPOTIFY_IMPORT),
-  },
-  {
-    name: _const.BULL_QUEUES.YOUTUBE_UPLOAD,
-    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_UPLOAD),
-  },
-  {
-    name: _const.BULL_QUEUES.YOUTUBE_ANALYTICS_SYNC,
-    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_ANALYTICS_SYNC),
-  },
-  {
-    name: _const.BULL_QUEUES.PINTEREST_IMPORT,
-    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.PINTEREST_IMPORT),
-  },
-  {
-    name: _const.BULL_QUEUES.REDDIT_IMPORT,
-    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.REDDIT_IMPORT),
-  },
-  {
-    name: _const.BULL_QUEUES.TWITTER_IMPORT,
-    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.TWITTER_IMPORT),
-  },
-  {
-    name: _const.BULL_QUEUES.TIKTOK_IMPORT,
-    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.TIKTOK_IMPORT),
-  },
-  {
-    name: _const.BULL_QUEUES.LINKEDIN_IMPORT,
-    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.LINKEDIN_IMPORT),
-  },
-  {
-    name: _const.BULL_QUEUES.SNAPCHAT_IMPORT,
-    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.SNAPCHAT_IMPORT),
-  },
-  {
-    name: _const.BULL_QUEUES.THREADS_IMPORT,
-    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.THREADS_IMPORT),
-  },
-  {
-    name: _const.BULL_QUEUES.BEHANCE_IMPORT,
-    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.BEHANCE_IMPORT),
-  },
+  { name: _const.BULL_QUEUES.FACEBOOK_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.FACEBOOK_IMPORT) },
+  { name: _const.BULL_QUEUES.INSTAGRAM_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.INSTAGRAM_IMPORT) },
+  { name: _const.BULL_QUEUES.YOUTUBE_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_IMPORT) },
+  { name: _const.BULL_QUEUES.SPOTIFY_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.SPOTIFY_IMPORT) },
+  { name: _const.BULL_QUEUES.YOUTUBE_UPLOAD, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_UPLOAD) },
+  { name: _const.BULL_QUEUES.YOUTUBE_ANALYTICS_SYNC, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_ANALYTICS_SYNC) },
+  { name: _const.BULL_QUEUES.PINTEREST_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.PINTEREST_IMPORT) },
+  { name: _const.BULL_QUEUES.REDDIT_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.REDDIT_IMPORT) },
+  { name: _const.BULL_QUEUES.TWITTER_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.TWITTER_IMPORT) },
+  { name: _const.BULL_QUEUES.TIKTOK_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.TIKTOK_IMPORT) },
+  { name: _const.BULL_QUEUES.LINKEDIN_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.LINKEDIN_IMPORT) },
+  { name: _const.BULL_QUEUES.SNAPCHAT_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.SNAPCHAT_IMPORT) },
+  { name: _const.BULL_QUEUES.THREADS_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.THREADS_IMPORT) },
+  { name: _const.BULL_QUEUES.BEHANCE_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.BEHANCE_IMPORT) },
 );
 
 @Module({})
 export class QueuesModule implements NestModule {
   static register(): DynamicModule {
+    // Processors / Workers — only register when DISABLE_WORKERS is NOT set.
+    // This allows web-only instances to skip worker creation.
+    const enableWorkers = process.env.DISABLE_WORKERS !== 'true';
+    if (!enableWorkers) {
+      logger.warn('DISABLE_WORKERS=true — Workers will NOT be registered');
+    }
+
     return {
+      // Global: exports available in every module without re-importing
+      global: true,
       module: QueuesModule,
       imports: [
-        NotificationModule,
         TypeOrmModule.forFeature([
           User,
           UserRole,
@@ -113,8 +82,6 @@ export class QueuesModule implements NestModule {
         ]),
         BullModule.forRoot({
           ...BullMQConfig.getConnectionConfig(),
-          prefix: 'gaddr-backend',
-          defaultJobOptions: BullMQConfig.getDefaultJobOptions(),
         }),
         registeredQueues,
       ],
@@ -136,25 +103,31 @@ export class QueuesModule implements NestModule {
         dependency.YoutubeAnalyticsService,
         dependency.R2StorageService,
 
-        YoutubeImportProcessor,
-        SpotifyImportProcessor,
-        PinterestImportProcessor,
-        RedditImportProcessor,
-        TwitterImportProcessor,
-        TiktokImportProcessor,
-        InstagramImportProcessor,
-        FacebookImportProcessor,
-        LinkedInImportProcessor,
-        SnapchatImportProcessor,
-        ThreadsImportProcessor,
-        BehanceImportProcessor,
-        YoutubeUploadProcessor,
-        YoutubeAnalyticsSyncProcessor,
+        // Conditionally register workers (processors decorated with @Processor)
+        // When DISABLE_WORKERS=true, consumers use this module but no workers run.
+        ...(enableWorkers
+          ? [
+              YoutubeImportProcessor,
+              SpotifyImportProcessor,
+              PinterestImportProcessor,
+              RedditImportProcessor,
+              TwitterImportProcessor,
+              TiktokImportProcessor,
+              InstagramImportProcessor,
+              FacebookImportProcessor,
+              LinkedInImportProcessor,
+              SnapchatImportProcessor,
+              ThreadsImportProcessor,
+              BehanceImportProcessor,
+              YoutubeUploadProcessor,
+              YoutubeAnalyticsSyncProcessor,
+            ]
+          : []),
       ],
       exports: [
         dependency.QueueService,
         registeredQueues,
-      ]
+      ],
     };
   }
 

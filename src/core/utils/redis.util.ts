@@ -1,4 +1,4 @@
-import { Redis } from 'ioredis';
+import { Redis, RedisOptions } from 'ioredis';
 import configs from "../../configs";
 import logger from "./winston.util";
 import { deserializeObject, serializeObject } from './serialization.util';
@@ -44,14 +44,15 @@ function clearMemoryCache(key?: string): void {
   }
 }
 
-// SINGLE Redis connection used for everything:
+// SINGLE Redis instance used for:
 //   - Application caching (getFromRedisAsync, storeInRedisAsync)
-//   - BullMQ queues, workers, and events
+//   - BullMQ queue connections (shared, no extra client created)
 //
-// BullMQ workers internally clone this connection for BLPOP blocking ops,
-// but the clones share the same underlying TCP socket when possible.
+// BullMQ workers MUST create their OWN blocking connections (BG POP).
+// This is a BullMQ requirement and consumes 1 connection per worker.
+//
 // maxRetriesPerRequest: null is REQUIRED by BullMQ for workers/queues.
-const instance = new Redis({
+const REDIS_OPTS: RedisOptions = {
   host: configs.redis.host,
   port: configs.redis.port,
   username: configs.redis.username,
@@ -73,7 +74,9 @@ const instance = new Redis({
     }
     return false;
   },
-});
+};
+
+const instance = new Redis(REDIS_OPTS);
 
 let connectionMonitor: ReturnType<typeof setInterval> | null = null;
 
@@ -161,12 +164,31 @@ async function removeFromRedisAsync(key: string) {
   clearMemoryCache(key);
 }
 
-// BullMQ expects this exact shape: { connection: Redis }
+// BullMQ expects either { connection: Redis } (shared) or { connection: RedisOptions } (own client).
+// For QUEUES: pass the shared instance → 0 new connections.
+// For WORKERS: pass connection config → Worker creates its own blocking + main connections.
 const getBullMQConnection = () => instance;
 
-const redis = {
+// Returns plain connection config (NOT instance) for use in worker options.
+// This prevents BullMQ from calling .duplicate() on the shared instance,
+// allowing each worker to self-manage its connection lifecycle.
+const getBullMQConnectionConfig = () => ({ ...REDIS_OPTS });
+
+const redis: {
+  instance: Redis;
+  getBullMQConnection: () => Redis;
+  getBullMQConnectionConfig: () => RedisOptions;
+  getRedisKey: (key: any, ...concatKeys: string[]) => string;
+  connectToRedis: () => Promise<void>;
+  disconnectFromRedis: () => Promise<void>;
+  storeInRedisAsync: (key: string, value: object, ttl?: number) => Promise<boolean>;
+  getFromRedisAsync: (key: string) => Promise<any>;
+  removeFromRedisAsync: (key: string) => Promise<void>;
+  clearMemoryCache: () => void;
+} = {
   instance,
   getBullMQConnection,
+  getBullMQConnectionConfig,
   getRedisKey,
   connectToRedis,
   disconnectFromRedis,

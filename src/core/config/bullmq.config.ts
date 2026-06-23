@@ -1,29 +1,43 @@
 import { QueueOptions, WorkerOptions, JobsOptions } from 'bullmq';
 import redis from '../utils/redis.util';
 
+const FIFTEEN_MINUTES = 15 * 60;
+const ONE_HOUR = 3600;
+const ONE_DAY = 86400;
+const THREE_DAYS = 3 * 86400;
+
 export class BullMQConfig {
+  /**
+   * Shared config applied to every queue via forRoot.
+   * Uses the shared Redis instance so queues do NOT create extra connections.
+   */
   static getConnectionConfig() {
     return {
       connection: redis.getBullMQConnection(),
+      prefix: 'gaddr-backend',
+      defaultJobOptions: this.getDefaultJobOptions(),
     };
   }
 
   static getDefaultJobOptions(): JobsOptions {
     return {
+      // Auto-remove completed jobs after 15 min or 50 completed jobs
+      // Prevents Redis memory exhaustion on the 30 MB plan
       removeOnComplete: {
-        age: 3600, // 1 hour in seconds
-        count: 100,
+        age: FIFTEEN_MINUTES,
+        count: 50,
       },
+      // Keep failed jobs longer for debugging but cap count
       removeOnFail: {
-        age: 86400, // 24 hours in seconds
-        count: 500,
+        age: ONE_DAY,
+        count: 200,
       },
       attempts: 3,
       backoff: {
         type: 'exponential',
-        delay: 2000, // 2 seconds in milliseconds
+        delay: 2000,
       },
-    } as JobsOptions;
+    };
   }
 
   static getQueueOptions(queueName: string): Partial<QueueOptions> {
@@ -33,49 +47,60 @@ export class BullMQConfig {
       defaultJobOptions: this.getDefaultJobOptions(),
       streams: {
         events: {
-          maxLen: 1000,
+          maxLen: 100, // Reduced from 1000: saves memory on 30 MB plan
         },
       },
-    } as Partial<QueueOptions>;
+    };
   }
 
+  /**
+   * Returns worker options.
+   * IMPORTANT: Uses connection CONFIG (not instance) so BullMQ creates
+   * self-managed connections instead of duplicating the shared instance.
+   */
   static getWorkerOptions(
     queueName: string,
-    concurrency: number = 2,
+    concurrency: number = 1,
     options?: Partial<WorkerOptions>
   ): Partial<WorkerOptions> {
-    const cpuCount = require('os').cpus().length;
-    const optimalConcurrency = Math.min(concurrency, Math.max(cpuCount, 1));
-
     return {
-      connection: redis.getBullMQConnection(),
+      // Connection CONFIG, not instance. BullMQ creates its own client
+      // for both the main and blocking connections.
+      connection: redis.getBullMQConnectionConfig(),
       prefix: 'gaddr-backend',
-      concurrency: optimalConcurrency,
-      lockDuration: 30000, // 30 seconds in milliseconds
-      lockRenewTime: 15000, // 15 seconds in milliseconds
-      stalledInterval: 30000, // 30 seconds in milliseconds
-      maxStalledCount: 1,
+      concurrency: Math.max(1, Math.min(concurrency, 2)), // Max 2: prevent OOM on 512 MB
+      lockDuration: 60000, // 60 seconds (was 30): prevents premature timeout on slow uploads
+      lockRenewTime: 30000, // 30 seconds (was 15): renew lock every 30s
+      stalledInterval: 60000, // 60 seconds (was 30): check stalled less often
+      maxStalledCount: 3, // (was 1): allow 2 retries after stall before failing
       removeOnComplete: {
-        age: 3600, // 1 hour in seconds
-        count: 100,
+        age: FIFTEEN_MINUTES,
+        count: 50,
       },
       removeOnFail: {
-        age: 86400, // 24 hours in seconds
-        count: 500,
+        age: ONE_DAY,
+        count: 200,
       },
       metrics: {
-        maxDataPoints: 100,
+        maxDataPoints: 10, // Reduced from 100: saves memory
       },
       skipLockRenewal: false,
       ...options,
     };
   }
 
-  static getBulkJobOptions() {
+  /**
+   * Aggressive cleanup for ephemeral (non-critical) jobs.
+   */
+  static getEphemeralJobOptions() {
     return {
-      removeOnComplete: true,
+      removeOnComplete: {
+        age: FIFTEEN_MINUTES,
+        count: 50,
+      },
       removeOnFail: {
-        age: 3600, // 1 hour in seconds
+        age: ONE_HOUR,
+        count: 50,
       },
     };
   }

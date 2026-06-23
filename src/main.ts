@@ -19,6 +19,8 @@ async function bootstrap() {
     logger.error(`Uncaught Exception: ${reason}`);
   });
 
+  await redis.connectToRedis();
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   await dataSource.initialize();
   app.enableShutdownHooks();
@@ -55,8 +57,6 @@ const cookieParser = require('cookie-parser');
 
   app.use(ApiDocRedirectMiddleware);
   app.useGlobalFilters(new ErrorHandlersFilter());
-
-  await redis.connectToRedis();
 
   await app.listen(configs.port);
 

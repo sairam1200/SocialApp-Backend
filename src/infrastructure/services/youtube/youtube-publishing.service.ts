@@ -145,9 +145,18 @@ export class YoutubePublishingService {
       const settle = (err?: any, result?: string) => {
         if (settled) return;
         settled = true;
+        clearInterval(progressInterval);
         if (err) reject(err);
         else resolve(result!);
       };
+
+      // Periodic progress heartbeat — keeps BullMQ from marking the job as stalled
+      // during long transfers, and gives the caller visibility into progress.
+      let progressValue = 30;
+      const progressInterval = setInterval(() => {
+        progressValue = Math.min(progressValue + 5, 85);
+        onProgress?.(progressValue, 'Uploading video to YouTube...');
+      }, 15000);
 
       const req = https.request({
         method: 'PUT',

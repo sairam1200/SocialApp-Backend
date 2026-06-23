@@ -4,6 +4,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import _const from '../../../../core/utils/const';
 import logger from '../../../../core/utils/winston.util';
+import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { IYoutubeVideoRepository } from '../../../../domain/repositories/iyoutubeVideo.repository';
 import { IUploadJobRepository } from '../../../../domain/repositories/iuploadJob.repository';
 
@@ -18,6 +19,8 @@ export class YoutubeRetryUploadController {
     private readonly videoRepo: IYoutubeVideoRepository,
     @Inject(_const.IUPLOADJOB_REPOSITORY)
     private readonly uploadJobRepo: IUploadJobRepository,
+    @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
+    private readonly linkedAccountRepo: ILinkedAccountRepository,
     @InjectQueue(_const.BULL_QUEUES.YOUTUBE_UPLOAD)
     private readonly uploadQueue: Queue,
   ) {}
@@ -44,6 +47,12 @@ export class YoutubeRetryUploadController {
       throw new BadRequestException('Video has no associated R2 file');
     }
 
+    // Resolve channelId from the linked account (needed by processor)
+    const linkedAccount = await this.linkedAccountRepo.getByIdAsync(video.accountId);
+    if (!linkedAccount) {
+      throw new NotFoundException('Linked account not found for video');
+    }
+
     video.status = 'pending';
     await this.videoRepo.updateAsync(video);
 
@@ -61,14 +70,13 @@ export class YoutubeRetryUploadController {
       {
         videoId: video.id,
         accountId: video.accountId,
+        channelId: linkedAccount.externalId,
         r2Key: video.r2Key,
       },
       {
         jobId: `youtube-upload-${video.id}-retry-${Date.now()}`,
         attempts: 5,
         backoff: { type: 'exponential', delay: 60000 },
-        removeOnComplete: false,
-        removeOnFail: false,
       },
     );
 

@@ -110,6 +110,7 @@ export class YoutubeUploadProcessor extends WorkerHost {
       await this.uploadJobRepo.updateAsync(uploadJob);
 
       await this.updateProgress(uploadJob, 5, 'Initiating upload...');
+      await job.updateProgress(5);
 
       const { youtubeVideoId, youtubeUrl } = await this.publishingService.uploadVideoFromR2(
         account,
@@ -119,6 +120,9 @@ export class YoutubeUploadProcessor extends WorkerHost {
           this.updateProgress(uploadJob, progress, message).catch((err) =>
             logger.warn('[YoutubeUploadProcessor] Failed to update progress', err),
           );
+          job.updateProgress(progress).catch((err) =>
+            logger.warn('[YoutubeUploadProcessor] Failed to update BullMQ progress', err),
+          );
         },
       );
 
@@ -126,6 +130,7 @@ export class YoutubeUploadProcessor extends WorkerHost {
       video.youtubeUrl = youtubeUrl;
 
       await this.updateProgress(uploadJob, 95, 'Finalizing...');
+      await job.updateProgress(95);
 
       if (video.publishAt) {
         video.status = 'scheduled';
