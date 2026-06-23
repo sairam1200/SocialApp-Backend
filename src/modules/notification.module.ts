@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Global, Module } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import notification from "../features/notification";
@@ -9,6 +9,7 @@ import { NotificationGateway } from "../infrastructure/websocket/gateways/notifi
 import { NotificationEvent } from "domain/entities/notification/notificationEvent.entity";
 import { NotificationTemplate } from "domain/entities/notification/notificationTemplate.entity";
 
+@Global()
 @Module({
   imports: [
     TypeOrmModule.forFeature([
