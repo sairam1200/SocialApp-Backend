@@ -1,5 +1,5 @@
 import { CommandBus } from '@nestjs/cqrs';
-import { ApiProperty, ApiBody, ApiConsumes, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiProperty, ApiConsumes, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import { Controller, Post, UseGuards, Body, BadRequestException, UseInterceptors, UploadedFile, Inject } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';

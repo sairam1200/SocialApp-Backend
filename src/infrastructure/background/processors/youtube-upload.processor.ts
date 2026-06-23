@@ -7,6 +7,7 @@ import { IYoutubeAccountRepository } from '../../../domain/repositories/iyoutube
 import { IYoutubeVideoRepository } from '../../../domain/repositories/iyoutubeVideo.repository';
 import { IUploadJobRepository } from '../../../domain/repositories/iuploadJob.repository';
 import { YoutubePublishingService } from '../../services/youtube/youtube-publishing.service';
+import { R2StorageService } from '../../../shared/storage/r2/r2-storage.service';
 import BullMQConfig from '../../../core/config/bullmq.config';
 
 interface YoutubeUploadJobData {
@@ -26,6 +27,8 @@ export class YoutubeUploadProcessor extends WorkerHost {
     private readonly uploadJobRepo: IUploadJobRepository,
     @Inject(_const.IYOUTUBE_PUBLISHING_SERVICE)
     private readonly publishingService: YoutubePublishingService,
+    @Inject(_const.IR2_STORAGE_SERVICE)
+    private readonly r2Storage: R2StorageService,
   ) {
     super();
   }
@@ -116,8 +119,6 @@ export class YoutubeUploadProcessor extends WorkerHost {
       uploadJob.nextRetryAt = undefined;
       await this.uploadJobRepo.updateAsync(uploadJob);
 
-      await this.publishingService.deleteFromR2(r2Key);
-
       logger.info(`[YoutubeUploadProcessor] Video ${videoId} uploaded successfully: ${youtubeUrl}`);
     } catch (error: any) {
       video.status = 'failed';
@@ -139,6 +140,23 @@ export class YoutubeUploadProcessor extends WorkerHost {
       logger.error(`[YoutubeUploadProcessor] Upload failed for video ${videoId} (attempt ${attemptCount}): ${error.message}`);
 
       throw error;
+    } finally {
+      await this.cleanupR2(r2Key, videoId, job.id!);
+    }
+  }
+
+  private async cleanupR2(r2Key: string, videoId: string, jobId: string): Promise<void> {
+    logger.info(`[R2Storage] Cleanup started`, { videoId, r2Key, jobId });
+    try {
+      const exists = await this.r2Storage.fileExists(r2Key);
+      if (!exists) {
+        logger.info(`[R2Storage] Cleanup skipped (file missing)`, { videoId, r2Key, jobId });
+        return;
+      }
+      await this.r2Storage.deleteFile(r2Key);
+      logger.info(`[R2Storage] Cleanup successful`, { videoId, r2Key, jobId });
+    } catch (cleanupError) {
+      logger.warn(`[R2Storage] Cleanup failed`, { videoId, r2Key, jobId, error: cleanupError });
     }
   }
 }
