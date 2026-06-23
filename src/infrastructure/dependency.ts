@@ -11,6 +11,7 @@ import { InstagramImportService } from "../infrastructure/services/instagram/ins
 import { TwitterImportService } from "../infrastructure/services/Twitter/x-import.service";
 import { LinkedInImportService} from "../infrastructure/services/linkedin/linkedin-import.service";
 import { PinterestImportService } from "./services/pinterest/pinterest-import.service";
+import { R2StorageService } from "../shared/storage/r2/r2-storage.service";
 /* This is the dependency object that holds all the repositories & services
  * used in the application. It is used to provide the dependencies to the
  * modules in the application. This is a good practice to keep the
@@ -167,5 +168,9 @@ YoutubePublishingService: {
 YoutubeAnalyticsService: {
   provide: _const.IYOUTUBE_ANALYTICS_SERVICE,
   useClass: YoutubeAnalyticsService,
+},
+R2StorageService: {
+  provide: _const.IR2_STORAGE_SERVICE,
+  useClass: R2StorageService,
 },
 };

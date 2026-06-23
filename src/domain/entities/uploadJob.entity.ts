@@ -25,6 +25,12 @@ export class UploadJob extends BaseEntity {
   @Column({ nullable: true })
   nextRetryAt?: Date;
 
+  @Column({ nullable: true })
+  r2Key?: string;
+
+  @Column({ nullable: true, type: 'bigint' })
+  fileSize?: number;
+
   constructor(request: Partial<UploadJob> = {}) {
     super();
     Object.assign(this, request);

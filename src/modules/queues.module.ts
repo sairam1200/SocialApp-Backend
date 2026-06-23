@@ -134,6 +134,7 @@ export class QueuesModule implements NestModule {
         dependency.UploadJobRepository,
         dependency.YoutubePublishingService,
         dependency.YoutubeAnalyticsService,
+        dependency.R2StorageService,
 
         YoutubeImportProcessor,
         SpotifyImportProcessor,

@@ -252,6 +252,14 @@ const envVarsSchema = Joi.object()
     FRONTEND_URL: Joi.string()
       .default('https://gaddr.com')
       .description('Frontend application URL'),
+    CLOUDFLARE_ACCOUNT_ID: Joi.string()
+      .description('Cloudflare account ID for R2'),
+    R2_BUCKET: Joi.string()
+      .description('Cloudflare R2 bucket name'),
+    R2_ACCESS_KEY_ID: Joi.string()
+      .description('Cloudflare R2 access key ID'),
+    R2_SECRET_ACCESS_KEY: Joi.string()
+      .description('Cloudflare R2 secret access key'),
   })
   .unknown();
 
@@ -433,5 +441,13 @@ export default {
   },
   frontend: {
     url: envVars.FRONTEND_URL,
+  },
+  r2: {
+    accountId: envVars.CLOUDFLARE_ACCOUNT_ID,
+    bucket: envVars.R2_BUCKET,
+    accessKeyId: envVars.R2_ACCESS_KEY_ID,
+    secretAccessKey: envVars.R2_SECRET_ACCESS_KEY,
+    endpoint: `https://${envVars.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    region: 'auto',
   },
 }

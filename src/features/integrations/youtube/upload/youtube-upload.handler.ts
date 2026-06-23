@@ -17,13 +17,13 @@ import { Queue } from 'bullmq';
 export class YoutubeUploadCommand {
   model: {
     accountId: string;
-    videoUrl: string;
-    thumbnailUrl?: string;
+    r2Key: string;
     title: string;
     description?: string;
     tags?: string[];
     visibility?: 'public' | 'private' | 'unlisted';
     publishAt?: string;
+    fileSize?: number;
   };
 
   constructor(request: Partial<YoutubeUploadCommand> = {}) {
@@ -33,19 +33,15 @@ export class YoutubeUploadCommand {
 
 const uploadValidationSchema = Joi.object({
   accountId: Joi.string().uuid().required(),
-  videoUrl: Joi.string().uri({ scheme: ['https'] }).required().messages({
-    'string.uri': 'videoUrl must be a valid HTTPS URL',
-    'string.uriCustomScheme': 'videoUrl must use HTTPS protocol',
-  }),
-  thumbnailUrl: Joi.string().uri({ scheme: ['https'] }).optional().allow('').messages({
-    'string.uri': 'thumbnailUrl must be a valid HTTPS URL',
-    'string.uriCustomScheme': 'thumbnailUrl must use HTTPS protocol',
+  r2Key: Joi.string().required().messages({
+    'string.empty': 'r2Key is required',
   }),
   title: Joi.string().min(1).max(100).required(),
   description: Joi.string().max(5000).optional().allow(''),
   tags: Joi.array().items(Joi.string().max(100)).max(500).optional(),
   visibility: Joi.string().valid('public', 'private', 'unlisted').optional().default('public'),
   publishAt: Joi.date().iso().greater('now').optional(),
+  fileSize: Joi.number().positive().optional(),
 }).required();
 
 @CommandHandler(YoutubeUploadCommand)
@@ -69,14 +65,8 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
     status: string;
   }> {
     const { model } = command;
-    console.log('[YoutubeUploadHandler] COMMAND PAYLOAD:', JSON.stringify(command));
-    console.log('[YoutubeUploadHandler] MODEL:', JSON.stringify(model));
-    logger.info('[YoutubeUpload] Received command', {
-      command: JSON.stringify(command),
-      model: JSON.stringify(model),
-    });
+
     if (!model) {
-      logger.error('[YoutubeUpload] Invalid request body — model is null/undefined. Command keys:', Object.keys(command));
       throw new YoutubeValidationError('Invalid request body');
     }
     await uploadValidationSchema.validateAsync(model).catch((err) => {
@@ -102,8 +92,7 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
       description: model.description || '',
       tags: model.tags || [],
       visibility: model.visibility || 'public',
-      videoUrl: model.videoUrl,
-      thumbnailUrl: model.thumbnailUrl,
+      r2Key: model.r2Key,
       publishAt,
       status: publishAt ? 'scheduled' : 'pending',
     });
@@ -114,6 +103,8 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
       videoId: savedVideo.id,
       status: 'pending',
       attempts: 0,
+      r2Key: model.r2Key,
+      fileSize: model.fileSize,
     });
     await this.uploadJobRepo.createAsync(uploadJob);
 
@@ -121,19 +112,18 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
       {
         videoId: savedVideo.id,
         accountId: account.id,
-        videoUrl: model.videoUrl,
-        thumbnailUrl: model.thumbnailUrl,
+        r2Key: model.r2Key,
       },
       {
         jobId: `youtube-upload-${savedVideo.id}`,
-        attempts: 10,
+        attempts: 5,
         backoff: { type: 'exponential', delay: 60000 },
         removeOnComplete: false,
         removeOnFail: false,
       },
     );
 
-    logger.info(`[YoutubeUpload] Upload job queued for video ${savedVideo.id}`);
+    logger.info(`[YoutubeUpload] Upload job queued for video ${savedVideo.id}, r2Key: ${model.r2Key}`);
 
     if (publishAt) {
       return {

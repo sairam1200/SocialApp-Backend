@@ -35,6 +35,7 @@ export default {
   ILINKEDIN_IMPORT_SERVICE: 'ILinkedInImportService',
   IYOUTUBE_PUBLISHING_SERVICE: 'IYoutubePublishingService',
   IYOUTUBE_ANALYTICS_SERVICE: 'IYoutubeAnalyticsService',
+  IR2_STORAGE_SERVICE: 'IR2StorageService',
 
   // Repository Interfaces
   IYOUTUBEACCOUNT_REPOSITORY: 'IYoutubeAccountRepository',

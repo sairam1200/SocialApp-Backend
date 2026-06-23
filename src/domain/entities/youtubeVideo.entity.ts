@@ -37,6 +37,9 @@ export class YoutubeVideo extends BaseEntity {
   @Column({ nullable: true })
   videoUrl?: string;
 
+  @Column({ nullable: true })
+  r2Key?: string;
+
   @Column({ type: 'simple-array', nullable: true })
   tags?: string[];
 

@@ -75,6 +75,7 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     dependency.UploadJobRepository,
     dependency.YoutubePublishingService,
     dependency.YoutubeAnalyticsService,
+    dependency.R2StorageService,
   ],
   exports: [],
 })

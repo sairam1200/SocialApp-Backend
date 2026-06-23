@@ -78,7 +78,9 @@ import { DisableYoutubeSyncCommandHandler } from "./youtube/sync/disable-youtube
 import { YoutubeWebhookController } from "./youtube/webhook/youtube-webhook.endpoint";
 import { YoutubeUploadController } from "./youtube/upload/youtube-upload.endpoint";
 import { YoutubeUploadCommandHandler } from "./youtube/upload/youtube-upload.handler";
-import { YoutubeUploadProgressController } from "./youtube/upload-progress/upload-progress.endpoint";
+import { YoutubeUploadStatusController } from "./youtube/upload-status/upload-status.endpoint";
+import { YoutubeRetryUploadController } from "./youtube/retry-upload/retry-upload.endpoint";
+import { R2StorageService } from "../../shared/storage/r2/r2-storage.service";
 import { YoutubeStatsController } from "./youtube/get-stats/youtube-stats.endpoint";
 import { YoutubeStatsQueryHandler } from "./youtube/get-stats/youtube-stats.handler";
 import { YoutubeDataSyncCommandHandler } from "./youtube/sync/youtube-data-sync.handler";
@@ -339,7 +341,8 @@ export { YoutubeDisconnectController } from "./youtube/disconnect/youtube-discon
 export { YoutubeDisconnectCommandHandler } from "./youtube/disconnect/youtube-disconnect.handler";
 export { YoutubeUploadController } from "./youtube/upload/youtube-upload.endpoint";
 export { YoutubeUploadCommandHandler } from "./youtube/upload/youtube-upload.handler";
-export { YoutubeUploadProgressController } from "./youtube/upload-progress/upload-progress.endpoint";
+export { YoutubeUploadStatusController } from "./youtube/upload-status/upload-status.endpoint";
+export { YoutubeRetryUploadController } from "./youtube/retry-upload/retry-upload.endpoint";
 export { YoutubeStatsController } from "./youtube/get-stats/youtube-stats.endpoint";
 export { YoutubeStatsQueryHandler } from "./youtube/get-stats/youtube-stats.handler";
 export { YoutubeDataSyncCommandHandler } from "./youtube/sync/youtube-data-sync.handler";
@@ -490,7 +493,8 @@ const controllers = [
   YoutubeWebhookController,
   YoutubeDisconnectController,
   YoutubeUploadController,
-  YoutubeUploadProgressController,
+  YoutubeUploadStatusController,
+  YoutubeRetryUploadController,
   YoutubeStatsController,
   TiktokConnectController,
   TikTokProfileController,

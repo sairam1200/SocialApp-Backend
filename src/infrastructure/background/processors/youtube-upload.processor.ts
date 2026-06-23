@@ -12,8 +12,7 @@ import BullMQConfig from '../../../core/config/bullmq.config';
 interface YoutubeUploadJobData {
   videoId: string;
   accountId: string;
-  videoUrl: string;
-  thumbnailUrl?: string;
+  r2Key: string;
 }
 
 @Processor(_const.BULL_QUEUES.YOUTUBE_UPLOAD, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.YOUTUBE_UPLOAD, 1))
@@ -53,7 +52,7 @@ export class YoutubeUploadProcessor extends WorkerHost {
   }
 
   public async process(job: Job<YoutubeUploadJobData>): Promise<void> {
-    const { videoId, accountId, videoUrl, thumbnailUrl } = job.data;
+    const { videoId, accountId, r2Key } = job.data;
 
     const account = await this.accountRepo.getByIdAsync(accountId);
     if (!account || !account.connected) {
@@ -63,6 +62,11 @@ export class YoutubeUploadProcessor extends WorkerHost {
     const video = await this.videoRepo.getByIdAsync(videoId);
     if (!video) {
       throw new Error('Video record not found');
+    }
+
+    if (video.youtubeVideoId) {
+      logger.info(`[YoutubeUploadProcessor] Video ${videoId} already uploaded (youtubeVideoId=${video.youtubeVideoId}), skipping`);
+      return;
     }
 
     let uploadJob = await this.uploadJobRepo.getByVideoIdAsync(videoId);
@@ -78,12 +82,12 @@ export class YoutubeUploadProcessor extends WorkerHost {
       uploadJob.attempts = (uploadJob.attempts || 0) + 1;
       await this.uploadJobRepo.updateAsync(uploadJob);
 
-      await this.updateProgress(uploadJob, 5, 'Validating video file...');
+      await this.updateProgress(uploadJob, 5, 'Initiating upload...');
 
-      const { youtubeVideoId, youtubeUrl } = await this.publishingService.uploadVideo(
+      const { youtubeVideoId, youtubeUrl } = await this.publishingService.uploadVideoFromR2(
         account,
         video,
-        videoUrl,
+        r2Key,
         (progress: number, message: string) => {
           this.updateProgress(uploadJob, progress, message).catch((err) =>
             logger.warn('[YoutubeUploadProcessor] Failed to update progress', err),
@@ -93,16 +97,6 @@ export class YoutubeUploadProcessor extends WorkerHost {
 
       video.youtubeVideoId = youtubeVideoId;
       video.youtubeUrl = youtubeUrl;
-
-      if (thumbnailUrl) {
-        await this.updateProgress(uploadJob, 85, 'Uploading thumbnail...');
-        try {
-          await this.publishingService.uploadThumbnail(account, youtubeVideoId, thumbnailUrl);
-          video.thumbnailUrl = thumbnailUrl;
-        } catch (thumbError) {
-          logger.warn(`[YoutubeUploadProcessor] Thumbnail upload failed for video ${videoId}, proceeding without thumbnail`);
-        }
-      }
 
       await this.updateProgress(uploadJob, 95, 'Finalizing...');
 
@@ -121,6 +115,8 @@ export class YoutubeUploadProcessor extends WorkerHost {
       uploadJob.lastError = undefined;
       uploadJob.nextRetryAt = undefined;
       await this.uploadJobRepo.updateAsync(uploadJob);
+
+      await this.publishingService.deleteFromR2(r2Key);
 
       logger.info(`[YoutubeUploadProcessor] Video ${videoId} uploaded successfully: ${youtubeUrl}`);
     } catch (error: any) {

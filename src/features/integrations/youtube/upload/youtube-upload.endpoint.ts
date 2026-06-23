@@ -1,34 +1,18 @@
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiProperty, ApiBody, ApiConsumes, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
-import { Controller, Post, UseGuards, Body, BadRequestException, Headers } from '@nestjs/common';
+import { Controller, Post, UseGuards, Body, BadRequestException, UseInterceptors, UploadedFile, Inject } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
 import { YoutubeUploadCommand } from './youtube-upload.handler';
-
-class UploadRequestDto {
-  @ApiProperty({ description: 'YouTube account ID (UUID)' })
-  accountId: string;
-
-  @ApiProperty({ description: 'Public HTTPS URL of the video file (MP4, MOV, AVI, etc.)' })
-  videoUrl: string;
-
-  @ApiProperty({ required: false, description: 'Public HTTPS URL of the thumbnail image (JPEG, PNG, WebP)' })
-  thumbnailUrl?: string;
-
-  @ApiProperty({ description: 'Video title (max 100 characters)' })
-  title: string;
-
-  @ApiProperty({ required: false, description: 'Video description (max 5000 characters)' })
-  description?: string;
-
-  @ApiProperty({ required: false, isArray: true, type: String, description: 'Video tags (max 500)' })
-  tags?: string[];
-
-  @ApiProperty({ required: false, enum: ['public', 'private', 'unlisted'], default: 'public' })
-  visibility?: 'public' | 'private' | 'unlisted';
-
-  @ApiProperty({ required: false, description: 'ISO 8601 scheduled publish datetime (must be in the future)' })
-  publishAt?: string;
-}
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import * as crypto from 'crypto';
+import _const from '../../../../core/utils/const';
+import { R2StorageService } from '../../../../shared/storage/r2/r2-storage.service';
+import logger from '../../../../core/utils/winston.util';
+import { YoutubeValidationError } from '../../../../core/exceptions/youtube-publishing.exception';
 
 class UploadResponseDto {
   @ApiProperty({ description: 'Internal video record ID' })
@@ -47,19 +31,7 @@ class UploadResponseDto {
   status: string;
 }
 
-const requestExample = {
-  summary: 'YouTube Upload Request',
-  value: {
-    accountId: '550e8400-e29b-41d4-a716-446655440000',
-    videoUrl: 'https://res.cloudinary.com/demo/video/upload/sample.mp4',
-    thumbnailUrl: 'https://res.cloudinary.com/demo/image/upload/thumb.jpg',
-    title: 'My Video Title',
-    description: 'Optional video description',
-    tags: ['tag1', 'tag2'],
-    visibility: 'public',
-    publishAt: '2026-07-01T12:00:00.000Z',
-  },
-};
+const TEMP_DIR = path.join(os.tmpdir(), 'youtube-uploads');
 
 @ApiTags('Integrations')
 @Controller({
@@ -67,38 +39,71 @@ const requestExample = {
   version: '1',
 })
 export class YoutubeUploadController {
-  constructor(private readonly commandBus: CommandBus) {}
+  constructor(
+    private readonly commandBus: CommandBus,
+    @Inject(_const.IR2_STORAGE_SERVICE)
+    private readonly r2Storage: R2StorageService,
+  ) {}
 
   @Post('upload')
   @UseGuards(UserAccoutGuard)
-  @ApiConsumes('application/json')
-  @ApiBody({ type: UploadRequestDto, examples: { request: requestExample } })
+  @UseInterceptors(
+    FileInterceptor('video', {
+      storage: diskStorage({
+        destination: (_req, _file, cb) => {
+          if (!fs.existsSync(TEMP_DIR)) {
+            fs.mkdirSync(TEMP_DIR, { recursive: true });
+          }
+          cb(null, TEMP_DIR);
+        },
+        filename: (_req, file, cb) => {
+          cb(null, `${crypto.randomUUID()}-${file.originalname || 'video'}`);
+        },
+      }),
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: 'Upload job queued', type: UploadResponseDto })
-  @ApiResponse({ status: 400, description: 'BAD_REQUEST — Invalid payload or URL' })
+  @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
-  @ApiResponse({ status: 403, description: 'FORBIDDEN — Account disconnected' })
+  @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Upload(
-    @Headers() headers: Record<string, string>,
-    @Body() body: UploadRequestDto,
+    @UploadedFile() video: Express.Multer.File,
+    @Body() fields: Record<string, any>,
   ): Promise<UploadResponseDto> {
-    const contentType = headers['content-type'] || '';
+    if (!video) {
+      throw new BadRequestException('Video file is required');
+    }
 
-    console.log('[YoutubeUploadController] INCOMING HEADERS:', JSON.stringify(headers, null, 2));
-    console.log('[YoutubeUploadController] Content-Type:', contentType);
-    console.log('[YoutubeUploadController] REQUEST BODY:', JSON.stringify(body, null, 2));
+    const r2Key = `videos/${fields.accountId}/${crypto.randomUUID()}${path.extname(video.originalname || '.mp4')}`;
 
-    if (!contentType || !contentType.includes('application/json')) {
-      throw new BadRequestException(
-        `Invalid Content-Type received: "${contentType}". Expected Content-Type: application/json`,
+    try {
+      const fileStream = fs.createReadStream(video.path);
+      await this.r2Storage.uploadStream(r2Key, fileStream, video.mimetype || 'video/mp4');
+
+      logger.info(`[YoutubeUpload] Video streamed to R2: ${r2Key} (${video.size} bytes)`);
+
+      return this.commandBus.execute(
+        new YoutubeUploadCommand({
+          model: {
+            accountId: fields.accountId,
+            r2Key,
+            title: fields.title,
+            description: fields.description,
+            tags: fields.tags
+              ? (typeof fields.tags === 'string' ? fields.tags.split(',').map((t: string) => t.trim()) : fields.tags)
+              : [],
+            visibility: fields.visibility || 'public',
+            publishAt: fields.publishAt || undefined,
+            fileSize: video.size,
+          },
+        }),
       );
+    } catch (err: any) {
+      this.r2Storage.deleteFile(r2Key).catch(() => {});
+      throw new YoutubeValidationError(`Upload failed: ${err.message}`);
+    } finally {
+      try { if (fs.existsSync(video.path)) fs.unlinkSync(video.path); } catch {}
     }
-
-    if (!body || typeof body !== 'object' || Object.keys(body).length === 0) {
-      throw new BadRequestException('Request body is empty or malformed');
-    }
-
-    return this.commandBus.execute(
-      new YoutubeUploadCommand({ model: body }),
-    );
   }
 }

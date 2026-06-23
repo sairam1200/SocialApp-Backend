@@ -1,16 +1,12 @@
 import axios from 'axios';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import * as crypto from 'crypto';
 import * as https from 'https';
 import { Injectable, Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Readable } from 'stream';
 import configs from '../../../configs';
 import _const from '../../../core/utils/const';
 import logger from '../../../core/utils/winston.util';
 import { cryptoUtils } from '../../../core/utils/crypto.util';
+import { R2StorageService } from '../../../shared/storage/r2/r2-storage.service';
 import { YoutubeAccount } from '../../../domain/entities/youtubeAccount.entity';
 import { YoutubeVideo } from '../../../domain/entities/youtubeVideo.entity';
 import { IYoutubeAccountRepository } from '../../../domain/repositories/iyoutubeAccount.repository';
@@ -19,14 +15,7 @@ import {
   YoutubeAuthError,
   YoutubeUploadError,
   YoutubeRateLimitError,
-  YoutubeDownloadError,
 } from '../../../core/exceptions/youtube-publishing.exception';
-
-const MAX_VIDEO_SIZE_BYTES = (configs.youtube.maxVideoSizeMB || 100) * 1024 * 1024;
-const MAX_THUMBNAIL_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
-const ALLOWED_VIDEO_MIME_PREFIXES = ['video/', 'application/octet-stream'];
-const ALLOWED_THUMBNAIL_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const TEMP_UPLOAD_DIR = configs.youtube.tempUploadDir || os.tmpdir();
 
 const UPLOAD_BASE_URL = 'https://www.googleapis.com/upload/youtube/v3/videos';
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
@@ -38,6 +27,8 @@ export class YoutubePublishingService {
     private readonly accountRepo: IYoutubeAccountRepository,
     @Inject(_const.IYOUTUBEVIDEO_REPOSITORY)
     private readonly videoRepo: IYoutubeVideoRepository,
+    @Inject(_const.IR2_STORAGE_SERVICE)
+    private readonly r2Storage: R2StorageService,
   ) {}
 
   async ensureValidAccessToken(account: YoutubeAccount): Promise<string> {
@@ -71,320 +62,101 @@ export class YoutubePublishingService {
     }
   }
 
-  async uploadVideo(
+  async uploadVideoFromR2(
     account: YoutubeAccount,
     video: YoutubeVideo,
-    videoUrl: string,
+    r2Key: string,
     onProgress?: (progress: number, message: string) => void,
   ): Promise<{ youtubeVideoId: string; youtubeUrl: string }> {
     const accessToken = await this.ensureValidAccessToken(account);
 
-    const youtubeUploadsDir = path.join(TEMP_UPLOAD_DIR, 'youtube-uploads');
-    if (!fs.existsSync(youtubeUploadsDir)) {
-      fs.mkdirSync(youtubeUploadsDir, { recursive: true });
-    }
+    onProgress?.(10, 'Initiating resumable upload...');
+    const uploadUrl = await this.initResumableUpload(accessToken, video);
 
-    let parsedUrl: URL;
-    try {
-      parsedUrl = new URL(videoUrl);
-    } catch {
-      throw new YoutubeDownloadError('videoUrl is malformed');
-    }
+    onProgress?.(30, 'Uploading video to YouTube...');
+    const youtubeVideoId = await this.streamUploadToYouTube(uploadUrl, accessToken, r2Key, onProgress);
 
-    if (parsedUrl.protocol !== 'https:') {
-      throw new YoutubeDownloadError('videoUrl must use HTTPS protocol');
-    }
+    const youtubeUrl = `https://youtube.com/watch?v=${youtubeVideoId}`;
+    logger.info(`[YoutubePublishing] Video uploaded successfully: ${youtubeUrl}`);
 
-    const fileExt = path.extname(parsedUrl.pathname) || '.mp4';
-    const tempFilePath = path.join(youtubeUploadsDir, `${crypto.randomUUID()}${fileExt}`);
-
-    try {
-      logger.info(`[YoutubePublishing] Validating video URL: ${videoUrl}`);
-
-      let headResponse;
-      try {
-        headResponse = await axios({
-          method: 'HEAD',
-          url: videoUrl,
-          timeout: 15000,
-          maxRedirects: 5,
-          validateStatus: (status) => status < 400,
-        });
-      } catch (err: any) {
-        if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
-          throw new YoutubeDownloadError(`Cannot reach storage provider at ${parsedUrl.hostname}`);
-        }
-        if (err.response?.status === 404) {
-          throw new YoutubeDownloadError(`Video URL returned 404 — file not found at storage provider`);
-        }
-        if (err.response?.status === 403) {
-          throw new YoutubeDownloadError(`Video URL returned 403 — access denied by storage provider`);
-        }
-        if (err.code === 'ECONNABORTED') {
-          throw new YoutubeDownloadError('Video URL validation timed out');
-        }
-        throw new YoutubeDownloadError(`Failed to validate video URL: ${err.message}`);
-      }
-
-      const headContentType = headResponse.headers['content-type'] || '';
-      const headContentLength = parseInt(headResponse.headers['content-length'] || '0', 10);
-
-      const isVideoMime = ALLOWED_VIDEO_MIME_PREFIXES.some((p) => headContentType.startsWith(p));
-      if (headContentType && !isVideoMime) {
-        throw new YoutubeDownloadError(
-          `Unsupported video content type "${headContentType}". Expected video/* or application/octet-stream`,
-        );
-      }
-
-      if (headContentLength > MAX_VIDEO_SIZE_BYTES) {
-        throw new YoutubeDownloadError(
-          `Video file too large (${(headContentLength / 1024 / 1024).toFixed(1)} MB). Maximum: ${MAX_VIDEO_SIZE_BYTES / 1024 / 1024} MB`,
-        );
-      }
-
-      logger.info(`[YoutubePublishing] Video validated: ${(headContentLength / 1024 / 1024).toFixed(1)} MB, type: ${headContentType}`);
-      logger.info(`[YoutubePublishing] Downloading video from ${videoUrl}`);
-      onProgress?.(10, 'Downloading video...');
-
-      let downloadResponse;
-      try {
-        downloadResponse = await axios({
-          method: 'GET',
-          url: videoUrl,
-          responseType: 'stream',
-          timeout: 600000,
-          maxRedirects: 5,
-          validateStatus: (status) => status < 400,
-          headers: {
-            'Accept': 'video/*, application/octet-stream',
-          },
-        });
-      } catch (err: any) {
-        if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
-          throw new YoutubeDownloadError(`Cannot reach storage provider at ${parsedUrl.hostname}`);
-        }
-        if (err.response?.status === 404) {
-          throw new YoutubeDownloadError(`Video URL returned 404 — file not found at storage provider`);
-        }
-        if (err.response?.status === 403) {
-          throw new YoutubeDownloadError(`Video URL returned 403 — access denied by storage provider`);
-        }
-        if (err.code === 'ECONNABORTED') {
-          throw new YoutubeDownloadError('Video download timed out after 600 seconds');
-        }
-        throw new YoutubeDownloadError(`Failed to download video: ${err.message}`);
-      }
-
-      const contentType = downloadResponse.headers['content-type'] || '';
-      const contentLength = parseInt(downloadResponse.headers['content-length'] || '0', 10);
-
-      if (contentLength > MAX_VIDEO_SIZE_BYTES) {
-        throw new YoutubeDownloadError(
-          `Video file too large (${(contentLength / 1024 / 1024).toFixed(1)} MB). Maximum: ${MAX_VIDEO_SIZE_BYTES / 1024 / 1024} MB`,
-        );
-      }
-
-      const isVideoMimeDownload = ALLOWED_VIDEO_MIME_PREFIXES.some((p) => contentType.startsWith(p));
-      if (contentType && !isVideoMimeDownload) {
-        throw new YoutubeDownloadError(
-          `Unsupported video content type "${contentType}". Expected video/* or application/octet-stream`,
-        );
-      }
-
-      const writer = fs.createWriteStream(tempFilePath);
-      await new Promise<void>((resolve, reject) => {
-        downloadResponse.data.pipe(writer);
-        writer.on('finish', resolve);
-        writer.on('error', (err) => reject(new YoutubeDownloadError(`Failed to save video to disk: ${err.message}`)));
-      });
-
-      const fileSize = fs.statSync(tempFilePath).size;
-      logger.info(`[YoutubePublishing] Downloaded ${fileSize} bytes to ${tempFilePath}`);
-      onProgress?.(50, 'Uploading to YouTube...');
-
-      const videoMetadata = {
-        snippet: {
-          title: video.title,
-          description: video.description || '',
-          tags: video.tags || [],
-        },
-        status: {
-          privacyStatus: video.publishAt ? 'private' : (video.visibility || 'public'),
-          publishAt: video.publishAt ? video.publishAt.toISOString() : undefined,
-        },
-      };
-
-      const metadataBody = JSON.stringify(videoMetadata);
-      const metadataLength = Buffer.byteLength(metadataBody);
-      const totalSize = this.calculateMultipartSize(metadataLength, fileSize);
-
-      const headers: Record<string, string> = {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'multipart/related; boundary=boundary123',
-        'Content-Length': String(totalSize),
-      };
-
-      logger.info(`[YoutubePublishing] Uploading video to YouTube (streaming, ${totalSize} bytes)`);
-      const uploadResult = await this.streamMultipartUpload(tempFilePath, metadataBody, headers);
-
-      const youtubeVideoId = uploadResult.id;
-      const youtubeUrl = `https://youtube.com/watch?v=${youtubeVideoId}`;
-
-      logger.info(`[YoutubePublishing] Video uploaded successfully: ${youtubeUrl}`);
-      onProgress?.(80, 'Finalizing...');
-
-      return { youtubeVideoId, youtubeUrl };
-    } catch (error: any) {
-      if (error.response?.status === 429 || error.response?.status === 403) {
-        throw new YoutubeRateLimitError('YouTube upload rate limit exceeded');
-      }
-      logger.error('[YoutubePublishing] Video upload failed', error.response?.data || error.message);
-      throw new YoutubeUploadError(error.response?.data?.error?.message || 'Video upload failed');
-    } finally {
-      try {
-        if (fs.existsSync(tempFilePath)) {
-          fs.unlinkSync(tempFilePath);
-        }
-      } catch (e) {
-        logger.warn('[YoutubePublishing] Failed to clean up temp file', e);
-      }
-    }
+    return { youtubeVideoId, youtubeUrl };
   }
 
-  async uploadThumbnail(account: YoutubeAccount, youtubeVideoId: string, thumbnailUrl: string): Promise<void> {
-    const accessToken = await this.ensureValidAccessToken(account);
-
-    const thumbDir = path.join(TEMP_UPLOAD_DIR, 'youtube-thumbnails');
-    if (!fs.existsSync(thumbDir)) {
-      fs.mkdirSync(thumbDir, { recursive: true });
-    }
-
-    let parsedUrl: URL;
-    try {
-      parsedUrl = new URL(thumbnailUrl);
-    } catch {
-      throw new YoutubeDownloadError('thumbnailUrl is malformed');
-    }
-
-    if (parsedUrl.protocol !== 'https:') {
-      throw new YoutubeDownloadError('thumbnailUrl must use HTTPS protocol');
-    }
-
-    const fileExt = path.extname(parsedUrl.pathname) || '.jpg';
-    const tempFilePath = path.join(thumbDir, `${crypto.randomUUID()}${fileExt}`);
-
-    try {
-      let downloadResponse;
-      try {
-        downloadResponse = await axios({
-          method: 'GET',
-          url: thumbnailUrl,
-          responseType: 'stream',
-          timeout: 60000,
-          maxRedirects: 5,
-          validateStatus: (status) => status < 400,
-        });
-      } catch (err: any) {
-        if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED') {
-          throw new YoutubeDownloadError(`Cannot reach storage provider at ${parsedUrl.hostname}`);
-        }
-        if (err.response?.status === 404) {
-          throw new YoutubeDownloadError(`Thumbnail URL returned 404 — file not found at storage provider`);
-        }
-        throw new YoutubeDownloadError(`Failed to download thumbnail: ${err.message}`);
-      }
-
-      const contentType = downloadResponse.headers['content-type'] || '';
-      const contentLength = parseInt(downloadResponse.headers['content-length'] || '0', 10);
-
-      if (contentLength > MAX_THUMBNAIL_SIZE_BYTES) {
-        throw new YoutubeDownloadError(
-          `Thumbnail too large (${(contentLength / 1024 / 1024).toFixed(1)} MB). Maximum: ${MAX_THUMBNAIL_SIZE_BYTES / 1024 / 1024} MB`,
-        );
-      }
-
-      if (contentType && !ALLOWED_THUMBNAIL_MIME_TYPES.includes(contentType)) {
-        throw new YoutubeDownloadError(
-          `Unsupported thumbnail content type "${contentType}". Expected image/jpeg, image/png, or image/webp`,
-        );
-      }
-
-      const writer = fs.createWriteStream(tempFilePath);
-      await new Promise<void>((resolve, reject) => {
-        downloadResponse.data.pipe(writer);
-        writer.on('finish', resolve);
-        writer.on('error', (err) => reject(new YoutubeDownloadError(`Failed to save thumbnail to disk: ${err.message}`)));
-      });
-
-      const fileSize = fs.statSync(tempFilePath).size;
-      const boundary = 'thumbBoundary';
-      const header = `--${boundary}\r\nContent-Type: image/${fileExt.replace('.', '')}\r\n\r\n`;
-      const footer = `\r\n--${boundary}--\r\n`;
-      const totalSize = Buffer.byteLength(header, 'utf-8') + fileSize + Buffer.byteLength(footer, 'utf-8');
-
-      const thumbHeaders: Record<string, string> = {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': `multipart/related; boundary=${boundary}`,
-        'Content-Length': String(totalSize),
-      };
-
-      await this.streamMultipartUpload(
-        tempFilePath,
-        '',
-        thumbHeaders,
-        `https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${youtubeVideoId}`,
-        boundary,
-        `image/${fileExt.replace('.', '')}`,
-      );
-
-      logger.info(`[YoutubePublishing] Thumbnail uploaded for video ${youtubeVideoId}`);
-    } catch (error: any) {
-      logger.error('[YoutubePublishing] Thumbnail upload failed', error.response?.data || error.message);
-    } finally {
-      try {
-        if (fs.existsSync(tempFilePath)) {
-          fs.unlinkSync(tempFilePath);
-        }
-      } catch (e) {
-        logger.warn('[YoutubePublishing] Failed to clean up thumbnail temp file', e);
-      }
-    }
-  }
-
-  private streamMultipartUpload(
-    filePath: string,
-    metadataJson: string,
-    headers: Record<string, string>,
-    uploadUrl?: string,
-    boundary?: string,
-    contentType?: string,
-  ): Promise<any> {
-    const url = new URL(uploadUrl || `${UPLOAD_BASE_URL}?part=snippet,status`);
-    const b = boundary || 'boundary123';
-    const ctype = contentType || 'application/octet-stream';
-
-    const metadataPart = metadataJson
-      ? Buffer.from(
-          `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadataJson}\r\n--${b}\r\nContent-Type: ${ctype}\r\n\r\n`,
-          'utf-8',
-        )
-      : Buffer.from(`--${b}\r\nContent-Type: ${ctype}\r\n\r\n`, 'utf-8');
-    const footer = Buffer.from(`\r\n--${b}--\r\n`, 'utf-8');
+  private async initResumableUpload(accessToken: string, video: YoutubeVideo): Promise<string> {
+    const metadata = {
+      snippet: {
+        title: video.title,
+        description: video.description || '',
+        tags: video.tags || [],
+      },
+      status: {
+        privacyStatus: video.publishAt ? 'private' : (video.visibility || 'public'),
+        publishAt: video.publishAt ? video.publishAt.toISOString() : undefined,
+      },
+    };
 
     return new Promise((resolve, reject) => {
+      const metadataBody = JSON.stringify(metadata);
+      const req = https.request({
+        method: 'POST',
+        hostname: 'www.googleapis.com',
+        path: '/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json; charset=UTF-8',
+          'X-Upload-Content-Length': '0',
+          'X-Upload-Content-Type': 'video/*',
+          'Content-Length': String(Buffer.byteLength(metadataBody)),
+        },
+        timeout: 30000,
+      });
+
+      req.on('response', (res) => {
+        if (res.statusCode === 200 && res.headers.location) {
+          resolve(res.headers.location);
+        } else {
+          let body = '';
+          res.on('data', (chunk: Buffer) => (body += chunk.toString()));
+          res.on('end', () => {
+            reject(new YoutubeUploadError(`YouTube resumable init failed (${res.statusCode}): ${body.substring(0, 300)}`));
+          });
+        }
+      });
+
+      req.on('error', (err) => reject(new YoutubeUploadError(`Resumable init connection error: ${err.message}`)));
+      req.on('timeout', () => { req.destroy(); reject(new YoutubeUploadError('Resumable init timed out')); });
+
+      req.write(metadataBody);
+      req.end();
+    });
+  }
+
+  private async streamUploadToYouTube(
+    uploadUrl: string,
+    accessToken: string,
+    r2Key: string,
+    onProgress?: (progress: number, message: string) => void,
+  ): Promise<string> {
+    const r2Stream = await this.r2Storage.getStream(r2Key);
+
+    return new Promise((resolve, reject) => {
+      const url = new URL(uploadUrl);
       let settled = false;
-      const settle = (err?: any, result?: any) => {
+      const settle = (err?: any, result?: string) => {
         if (settled) return;
         settled = true;
         if (err) reject(err);
-        else resolve(result);
+        else resolve(result!);
       };
 
       const req = https.request({
-        method: 'POST',
+        method: 'PUT',
         hostname: url.hostname,
         path: url.pathname + url.search,
-        headers,
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'video/*',
+        },
         timeout: 600000,
       });
 
@@ -394,49 +166,46 @@ export class YoutubePublishingService {
         res.on('end', () => {
           if (res.statusCode! >= 200 && res.statusCode! < 300) {
             try {
-              settle(null, JSON.parse(body));
+              const parsed = JSON.parse(body);
+              settle(null, parsed.id);
             } catch {
-              settle(null, {}); // Non-JSON response (thumbnails may return empty)
+              settle(new YoutubeUploadError('YouTube upload response parse error'));
             }
           } else {
             if (res.statusCode === 429 || res.statusCode === 403) {
               settle(new YoutubeRateLimitError('YouTube upload rate limit exceeded'));
             } else {
-              settle(new YoutubeUploadError(`YouTube API returned ${res.statusCode}: ${body.substring(0, 500)}`));
+              settle(new YoutubeUploadError(`YouTube upload failed (${res.statusCode}): ${body.substring(0, 500)}`));
             }
           }
         });
         res.on('error', (err) => settle(new YoutubeUploadError(`Upload response error: ${err.message}`)));
       });
 
-      req.on('error', (err: NodeJS.ErrnoException) => {
-        settle(new YoutubeUploadError(`Upload connection error: ${err.message}`));
-      });
+      req.on('error', (err) => settle(new YoutubeUploadError(`Upload connection error: ${err.message}`)));
 
       req.on('timeout', () => {
         req.destroy();
         settle(new YoutubeUploadError('YouTube upload timed out'));
       });
 
-      req.write(metadataPart);
-
-      const fileStream = fs.createReadStream(filePath, { highWaterMark: 65536 });
-      fileStream.pipe(req, { end: false });
-      fileStream.on('end', () => req.end(footer));
-      fileStream.on('error', (err) => {
+      r2Stream.pipe(req);
+      r2Stream.on('end', () => {
+        onProgress?.(90, 'Finalizing upload...');
+      });
+      r2Stream.on('error', (err) => {
         req.destroy();
-        settle(new YoutubeDownloadError(`Failed to read temp file: ${err.message}`));
+        settle(new YoutubeUploadError(`R2 stream error: ${err.message}`));
       });
     });
   }
 
-  private calculateMultipartSize(metadataLength: number, fileSize: number): number {
-    const boundary = 'boundary123';
-    const metadataPart = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`;
-    const filePart = `--${boundary}\r\nContent-Type: application/octet-stream\r\n\r\n`;
-    const footer = `\r\n--${boundary}--\r\n`;
-    return Buffer.byteLength(metadataPart, 'utf-8') + metadataLength + 2 +
-      Buffer.byteLength(filePart, 'utf-8') + fileSize +
-      Buffer.byteLength(footer, 'utf-8');
+  async deleteFromR2(r2Key: string): Promise<void> {
+    try {
+      await this.r2Storage.deleteFile(r2Key);
+      logger.info(`[YoutubePublishing] Deleted from R2: ${r2Key}`);
+    } catch (err) {
+      logger.warn(`[YoutubePublishing] Failed to delete from R2: ${r2Key}`, err);
+    }
   }
 }
