@@ -178,11 +178,11 @@ const redis: {
   instance: Redis;
   getBullMQConnection: () => Redis;
   getBullMQConnectionConfig: () => RedisOptions;
-  getRedisKey: (key: any, ...concatKeys: string[]) => string;
+  getRedisKey: <T extends string = string>(key: T, ...concatKeys: string[]) => string;
   connectToRedis: () => Promise<void>;
   disconnectFromRedis: () => Promise<void>;
   storeInRedisAsync: (key: string, value: object, ttl?: number) => Promise<boolean>;
-  getFromRedisAsync: (key: string) => Promise<any>;
+  getFromRedisAsync: <T = any>(key: string) => Promise<T | null>;
   removeFromRedisAsync: (key: string) => Promise<void>;
   clearMemoryCache: () => void;
 } = {
