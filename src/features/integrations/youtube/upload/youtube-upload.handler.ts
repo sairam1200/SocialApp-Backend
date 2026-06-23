@@ -128,7 +128,6 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
       {
         videoId: savedVideo.id,
         accountId: linkedAccount.id,
-        channelId: linkedAccount.externalId,
         r2Key: model.r2Key,
       },
       {

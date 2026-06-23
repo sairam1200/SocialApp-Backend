@@ -70,7 +70,6 @@ export class YoutubeRetryUploadController {
       {
         videoId: video.id,
         accountId: video.accountId,
-        channelId: linkedAccount.externalId,
         r2Key: video.r2Key,
       },
       {

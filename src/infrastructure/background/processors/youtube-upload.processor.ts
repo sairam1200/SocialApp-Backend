@@ -14,7 +14,6 @@ import BullMQConfig from '../../../core/config/bullmq.config';
 interface YoutubeUploadJobData {
   videoId: string;
   accountId: string;
-  channelId: string;
   r2Key: string;
 }
 
@@ -59,12 +58,11 @@ export class YoutubeUploadProcessor extends WorkerHost {
   }
 
   public async process(job: Job<YoutubeUploadJobData>): Promise<void> {
-    const { videoId, accountId, channelId, r2Key } = job.data;
+    const { videoId, accountId, r2Key } = job.data;
 
     logger.debug('[YoutubeUploadProcessor] Resolving linked account', {
       videoId,
       accountId,
-      channelId,
       r2Key,
     });
 
@@ -74,9 +72,9 @@ export class YoutubeUploadProcessor extends WorkerHost {
       throw new Error('YouTube account not found');
     }
 
-    const account = await this.accountRepo.getByChannelIdAsync(channelId);
+    const account = await this.accountRepo.getByUserIdAsync(linkedAccount.userId);
     if (!account || !account.connected) {
-      logger.error('[YoutubeUploadProcessor] YouTube token account not found', { channelId, found: !!account });
+      logger.error('[YoutubeUploadProcessor] YouTube token account not found', { userId: linkedAccount.userId, found: !!account });
       throw new Error('YouTube account not found or disconnected');
     }
 
@@ -101,6 +99,8 @@ export class YoutubeUploadProcessor extends WorkerHost {
       throw new Error('Upload job not found');
     }
 
+    logger.info(`[UPLOAD JOB STARTED] videoId=${videoId} r2Key=${r2Key} fileSize=${uploadJob.fileSize}`);
+
     try {
       video.status = 'uploading';
       await this.videoRepo.updateAsync(video);
@@ -116,6 +116,7 @@ export class YoutubeUploadProcessor extends WorkerHost {
         account,
         video,
         r2Key,
+        uploadJob.fileSize,
         (progress: number, message: string) => {
           this.updateProgress(uploadJob, progress, message).catch((err) =>
             logger.warn('[YoutubeUploadProcessor] Failed to update progress', err),
@@ -148,7 +149,10 @@ export class YoutubeUploadProcessor extends WorkerHost {
       uploadJob.nextRetryAt = undefined;
       await this.uploadJobRepo.updateAsync(uploadJob);
 
-      logger.info(`[YoutubeUploadProcessor] Video ${videoId} uploaded successfully: ${youtubeUrl}`);
+      logger.info(`[UPLOAD JOB COMPLETED] videoId=${videoId} youtubeVideoId=${youtubeVideoId} youtubeUrl=${youtubeUrl}`);
+
+      // Cleanup R2 only on success — file is now on YouTube
+      await this.cleanupR2(r2Key, videoId, job.id!);
     } catch (error: any) {
       video.status = 'failed';
       await this.videoRepo.updateAsync(video);
@@ -166,11 +170,9 @@ export class YoutubeUploadProcessor extends WorkerHost {
       uploadJob.nextRetryAt = attemptCount >= 10 ? undefined : nextRetry;
       await this.uploadJobRepo.updateAsync(uploadJob);
 
-      logger.error(`[YoutubeUploadProcessor] Upload failed for video ${videoId} (attempt ${attemptCount}): ${error.message}`);
+      logger.error(`[UPLOAD JOB FAILED] videoId=${videoId} attempt=${attemptCount} error=${error.message} stack=${error.stack}`);
 
       throw error;
-    } finally {
-      await this.cleanupR2(r2Key, videoId, job.id!);
     }
   }
 

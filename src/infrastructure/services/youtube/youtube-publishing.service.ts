@@ -1,7 +1,6 @@
 import axios from 'axios';
 import * as https from 'https';
 import { Injectable, Inject } from '@nestjs/common';
-import { Readable } from 'stream';
 import configs from '../../../configs';
 import _const from '../../../core/utils/const';
 import logger from '../../../core/utils/winston.util';
@@ -19,6 +18,7 @@ import {
 
 const UPLOAD_BASE_URL = 'https://www.googleapis.com/upload/youtube/v3/videos';
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
+const CHUNK_SIZE = 1 * 1024 * 1024; // 1 MB
 
 @Injectable()
 export class YoutubePublishingService {
@@ -66,18 +66,24 @@ export class YoutubePublishingService {
     account: YoutubeAccount,
     video: YoutubeVideo,
     r2Key: string,
+    fileSize: number | undefined,
     onProgress?: (progress: number, message: string) => void,
   ): Promise<{ youtubeVideoId: string; youtubeUrl: string }> {
     const accessToken = await this.ensureValidAccessToken(account);
 
+    logger.info(`[YOUTUBE UPLOAD START] videoId=${video.id} title="${video.title}" r2Key=${r2Key} fileSize=${fileSize}`);
+
     onProgress?.(10, 'Initiating resumable upload...');
     const uploadUrl = await this.initResumableUpload(accessToken, video);
 
+    logger.info(`[YOUTUBE UPLOAD] Chunk Size: ${CHUNK_SIZE} (1 MB)`);
+    logger.info(`[YOUTUBE UPLOAD] Upload Started`);
+
     onProgress?.(30, 'Uploading video to YouTube...');
-    const youtubeVideoId = await this.streamUploadToYouTube(uploadUrl, accessToken, r2Key, onProgress);
+    const youtubeVideoId = await this.streamUploadToYouTube(uploadUrl, accessToken, r2Key, fileSize, onProgress);
 
     const youtubeUrl = `https://youtube.com/watch?v=${youtubeVideoId}`;
-    logger.info(`[YoutubePublishing] Video uploaded successfully: ${youtubeUrl}`);
+    logger.info(`[YOUTUBE UPLOAD COMPLETED] videoId=${video.id} youtubeVideoId=${youtubeVideoId}`);
 
     return { youtubeVideoId, youtubeUrl };
   }
@@ -112,7 +118,7 @@ export class YoutubePublishingService {
       });
 
       req.on('response', (res) => {
-        if (res.statusCode === 200 && res.headers.location) {
+        if ((res.statusCode === 200 || res.statusCode === 201) && res.headers.location) {
           resolve(res.headers.location);
         } else {
           let body = '';
@@ -135,29 +141,122 @@ export class YoutubePublishingService {
     uploadUrl: string,
     accessToken: string,
     r2Key: string,
+    fileSize: number | undefined,
     onProgress?: (progress: number, message: string) => void,
   ): Promise<string> {
     const r2Stream = await this.r2Storage.getStream(r2Key);
 
-    return new Promise((resolve, reject) => {
-      const url = new URL(uploadUrl);
+    let buffer = Buffer.alloc(0);
+    let bytesUploaded = 0;
+    const uploadStartTime = Date.now();
+
+    const doFlush = async (
+      endOfStream: boolean,
+      settle: (err?: any, result?: string) => void,
+    ): Promise<boolean> => {
+      while (buffer.length >= CHUNK_SIZE || (endOfStream && buffer.length > 0)) {
+        const sliceSize = endOfStream && buffer.length < CHUNK_SIZE ? buffer.length : CHUNK_SIZE;
+        const slice = buffer.subarray(0, sliceSize);
+        buffer = buffer.subarray(sliceSize);
+
+        const isFinal = endOfStream && buffer.length === 0;
+        const startByte = bytesUploaded;
+        const endByte = bytesUploaded + slice.length - 1;
+
+        const videoId = await this.uploadChunk(
+          uploadUrl, accessToken, slice,
+          startByte, endByte,
+          fileSize || bytesUploaded + slice.length,
+          isFinal,
+        );
+
+        bytesUploaded += slice.length;
+
+        if (fileSize && fileSize > 0) {
+          const pct = Math.round((bytesUploaded / fileSize) * 100);
+          const elapsedSec = (Date.now() - uploadStartTime) / 1000;
+          const speed = elapsedSec > 0 ? parseFloat((bytesUploaded / elapsedSec / (1024 * 1024)).toFixed(2)) : 0;
+          logger.info(`[YOUTUBE UPLOAD] Progress: ${pct}% Speed: ${speed} MB/s`);
+          const progressValue = Math.min(30 + Math.round(pct * 0.55), 85);
+          onProgress?.(progressValue, `Uploading... ${pct}%`);
+        }
+
+        if (videoId) {
+          settle(null, videoId);
+          return true;
+        }
+      }
+      return false;
+    };
+
+    return new Promise<string>((resolve, reject) => {
       let settled = false;
+      let flushing = false;
+
       const settle = (err?: any, result?: string) => {
         if (settled) return;
         settled = true;
-        clearInterval(progressInterval);
         if (err) reject(err);
         else resolve(result!);
       };
 
-      // Periodic progress heartbeat — keeps BullMQ from marking the job as stalled
-      // during long transfers, and gives the caller visibility into progress.
-      let progressValue = 30;
-      const progressInterval = setInterval(() => {
-        progressValue = Math.min(progressValue + 5, 85);
-        onProgress?.(progressValue, 'Uploading video to YouTube...');
-      }, 15000);
+      const scheduleFlush = () => {
+        if (flushing) return;
+        flushing = true;
+        doFlush(false, settle).finally(() => {
+          flushing = false;
+          if (!settled) {
+            r2Stream.resume();
+          }
+        });
+      };
 
+      r2Stream.on('data', (chunk: Buffer) => {
+        buffer = Buffer.concat([buffer, chunk]);
+        if (buffer.length >= CHUNK_SIZE && !flushing) {
+          r2Stream.pause();
+          scheduleFlush();
+        }
+      });
+
+      r2Stream.on('end', () => {
+        const doEndFlush = async () => {
+          while (flushing) {
+            await new Promise((r) => setImmediate(r));
+          }
+          if (buffer.length > 0 && !settled) {
+            flushing = true;
+            await doFlush(true, settle);
+            flushing = false;
+          }
+          if (!settled) {
+            settle(new YoutubeUploadError('Upload finished but no video ID received'));
+          }
+        };
+        doEndFlush();
+      });
+
+      r2Stream.on('error', (err) => {
+        settle(new YoutubeUploadError(`R2 stream error: ${err.message}`));
+      });
+    });
+  }
+
+  private async uploadChunk(
+    uploadUrl: string,
+    accessToken: string,
+    chunkData: Buffer,
+    startByte: number,
+    endByte: number,
+    totalSize: number,
+    isFinal: boolean,
+  ): Promise<string | null> {
+    const url = new URL(uploadUrl);
+    const contentRange = isFinal
+      ? `bytes ${startByte}-${endByte}/${totalSize}`
+      : `bytes ${startByte}-${endByte}/*`;
+
+    return new Promise((resolve, reject) => {
       const req = https.request({
         method: 'PUT',
         hostname: url.hostname,
@@ -165,47 +264,39 @@ export class YoutubePublishingService {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'video/*',
+          'Content-Length': String(chunkData.length),
+          'Content-Range': contentRange,
         },
-        timeout: 600000,
       });
 
       req.on('response', (res) => {
         let body = '';
         res.on('data', (chunk: Buffer) => (body += chunk.toString()));
         res.on('end', () => {
-          if (res.statusCode! >= 200 && res.statusCode! < 300) {
+          if (res.statusCode === 308) {
+            resolve(null);
+          } else if (res.statusCode! >= 200 && res.statusCode! < 300) {
             try {
               const parsed = JSON.parse(body);
-              settle(null, parsed.id);
+              resolve(parsed.id);
             } catch {
-              settle(new YoutubeUploadError('YouTube upload response parse error'));
+              reject(new YoutubeUploadError('YouTube upload response parse error'));
             }
           } else {
             if (res.statusCode === 429 || res.statusCode === 403) {
-              settle(new YoutubeRateLimitError('YouTube upload rate limit exceeded'));
+              reject(new YoutubeRateLimitError('YouTube upload rate limit exceeded'));
             } else {
-              settle(new YoutubeUploadError(`YouTube upload failed (${res.statusCode}): ${body.substring(0, 500)}`));
+              reject(new YoutubeUploadError(`YouTube upload failed (${res.statusCode}): ${body.substring(0, 500)}`));
             }
           }
         });
-        res.on('error', (err) => settle(new YoutubeUploadError(`Upload response error: ${err.message}`)));
+        res.on('error', (err) => reject(new YoutubeUploadError(`Upload response error: ${err.message}`)));
       });
 
-      req.on('error', (err) => settle(new YoutubeUploadError(`Upload connection error: ${err.message}`)));
+      req.on('error', (err) => reject(new YoutubeUploadError(`Upload connection error: ${err.message}`)));
 
-      req.on('timeout', () => {
-        req.destroy();
-        settle(new YoutubeUploadError('YouTube upload timed out'));
-      });
-
-      r2Stream.pipe(req);
-      r2Stream.on('end', () => {
-        onProgress?.(90, 'Finalizing upload...');
-      });
-      r2Stream.on('error', (err) => {
-        req.destroy();
-        settle(new YoutubeUploadError(`R2 stream error: ${err.message}`));
-      });
+      req.write(chunkData);
+      req.end();
     });
   }
 
