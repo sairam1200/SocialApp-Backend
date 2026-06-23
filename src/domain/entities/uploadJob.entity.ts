@@ -13,6 +13,12 @@ export class UploadJob extends BaseEntity {
   @Column({ default: 0 })
   attempts: number;
 
+  @Column({ default: 0 })
+  progress: number;
+
+  @Column({ nullable: true, type: 'text' })
+  statusMessage?: string;
+
   @Column({ nullable: true, type: 'text' })
   lastError?: string;
 

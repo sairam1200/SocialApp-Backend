@@ -34,6 +34,9 @@ class UploadResponseDto {
   @ApiProperty({ description: 'Internal video record ID' })
   videoId: string;
 
+  @ApiProperty({ description: 'Upload job ID for progress tracking' })
+  jobId: string;
+
   @ApiProperty({ required: false, description: 'YouTube watch URL (available after processing completes)' })
   youtubeUrl?: string;
 

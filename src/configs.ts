@@ -242,6 +242,11 @@ const envVarsSchema = Joi.object()
       .description('Cloudinary API key for media storage'),
     CLOUDINARY_API_SECRET: Joi.string()
       .description('Cloudinary API secret for media storage'),
+    YOUTUBE_MAX_VIDEO_SIZE_MB: Joi.number()
+      .default(100)
+      .description('Maximum YouTube video upload size in MB'),
+    YOUTUBE_TEMP_UPLOAD_DIR: Joi.string()
+      .description('Temporary directory for YouTube upload files'),
     TURNSTILE_SECRET_KEY: Joi.string()
       .description('Cloudflare Turnstile secret key'),
     FRONTEND_URL: Joi.string()
@@ -302,6 +307,8 @@ export default {
     callbackUrl: envVars.YOUTUBE_CALLBACK_URL,
     webhookUrl: envVars.YOUTUBE_WEBHOOK_URL,
     apiKey: envVars.YOUTUBE_API_KEY,
+    maxVideoSizeMB: envVars.YOUTUBE_MAX_VIDEO_SIZE_MB,
+    tempUploadDir: envVars.YOUTUBE_TEMP_UPLOAD_DIR,
   },
   
   app: {

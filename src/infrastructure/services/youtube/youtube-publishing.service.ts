@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import * as crypto from 'crypto';
 import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -20,10 +21,11 @@ import {
   YoutubeDownloadError,
 } from '../../../core/exceptions/youtube-publishing.exception';
 
-const MAX_VIDEO_SIZE_BYTES = 256 * 1024 * 1024; // 256 MB
+const MAX_VIDEO_SIZE_BYTES = (configs.youtube.maxVideoSizeMB || 100) * 1024 * 1024;
 const MAX_THUMBNAIL_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_VIDEO_MIME_PREFIXES = ['video/', 'application/octet-stream'];
 const ALLOWED_THUMBNAIL_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const TEMP_UPLOAD_DIR = configs.youtube.tempUploadDir || os.tmpdir();
 
 const UPLOAD_BASE_URL = 'https://www.googleapis.com/upload/youtube/v3/videos';
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
@@ -72,12 +74,13 @@ export class YoutubePublishingService {
     account: YoutubeAccount,
     video: YoutubeVideo,
     videoUrl: string,
+    onProgress?: (progress: number, message: string) => void,
   ): Promise<{ youtubeVideoId: string; youtubeUrl: string }> {
     const accessToken = await this.ensureValidAccessToken(account);
 
-    const tempDir = path.resolve('temp', 'youtube-uploads');
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
+    const youtubeUploadsDir = path.join(TEMP_UPLOAD_DIR, 'youtube-uploads');
+    if (!fs.existsSync(youtubeUploadsDir)) {
+      fs.mkdirSync(youtubeUploadsDir, { recursive: true });
     }
 
     let parsedUrl: URL;
@@ -92,10 +95,55 @@ export class YoutubePublishingService {
     }
 
     const fileExt = path.extname(parsedUrl.pathname) || '.mp4';
-    const tempFilePath = path.join(tempDir, `${crypto.randomUUID()}${fileExt}`);
+    const tempFilePath = path.join(youtubeUploadsDir, `${crypto.randomUUID()}${fileExt}`);
 
     try {
+      logger.info(`[YoutubePublishing] Validating video URL: ${videoUrl}`);
+
+      let headResponse;
+      try {
+        headResponse = await axios({
+          method: 'HEAD',
+          url: videoUrl,
+          timeout: 15000,
+          maxRedirects: 5,
+          validateStatus: (status) => status < 400,
+        });
+      } catch (err: any) {
+        if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
+          throw new YoutubeDownloadError(`Cannot reach storage provider at ${parsedUrl.hostname}`);
+        }
+        if (err.response?.status === 404) {
+          throw new YoutubeDownloadError(`Video URL returned 404 — file not found at storage provider`);
+        }
+        if (err.response?.status === 403) {
+          throw new YoutubeDownloadError(`Video URL returned 403 — access denied by storage provider`);
+        }
+        if (err.code === 'ECONNABORTED') {
+          throw new YoutubeDownloadError('Video URL validation timed out');
+        }
+        throw new YoutubeDownloadError(`Failed to validate video URL: ${err.message}`);
+      }
+
+      const headContentType = headResponse.headers['content-type'] || '';
+      const headContentLength = parseInt(headResponse.headers['content-length'] || '0', 10);
+
+      const isVideoMime = ALLOWED_VIDEO_MIME_PREFIXES.some((p) => headContentType.startsWith(p));
+      if (headContentType && !isVideoMime) {
+        throw new YoutubeDownloadError(
+          `Unsupported video content type "${headContentType}". Expected video/* or application/octet-stream`,
+        );
+      }
+
+      if (headContentLength > MAX_VIDEO_SIZE_BYTES) {
+        throw new YoutubeDownloadError(
+          `Video file too large (${(headContentLength / 1024 / 1024).toFixed(1)} MB). Maximum: ${MAX_VIDEO_SIZE_BYTES / 1024 / 1024} MB`,
+        );
+      }
+
+      logger.info(`[YoutubePublishing] Video validated: ${(headContentLength / 1024 / 1024).toFixed(1)} MB, type: ${headContentType}`);
       logger.info(`[YoutubePublishing] Downloading video from ${videoUrl}`);
+      onProgress?.(10, 'Downloading video...');
 
       let downloadResponse;
       try {
@@ -135,8 +183,8 @@ export class YoutubePublishingService {
         );
       }
 
-      const isVideoMime = ALLOWED_VIDEO_MIME_PREFIXES.some((p) => contentType.startsWith(p));
-      if (contentType && !isVideoMime) {
+      const isVideoMimeDownload = ALLOWED_VIDEO_MIME_PREFIXES.some((p) => contentType.startsWith(p));
+      if (contentType && !isVideoMimeDownload) {
         throw new YoutubeDownloadError(
           `Unsupported video content type "${contentType}". Expected video/* or application/octet-stream`,
         );
@@ -151,6 +199,7 @@ export class YoutubePublishingService {
 
       const fileSize = fs.statSync(tempFilePath).size;
       logger.info(`[YoutubePublishing] Downloaded ${fileSize} bytes to ${tempFilePath}`);
+      onProgress?.(50, 'Uploading to YouTube...');
 
       const videoMetadata = {
         snippet: {
@@ -191,6 +240,7 @@ export class YoutubePublishingService {
       const youtubeUrl = `https://youtube.com/watch?v=${youtubeVideoId}`;
 
       logger.info(`[YoutubePublishing] Video uploaded successfully: ${youtubeUrl}`);
+      onProgress?.(80, 'Finalizing...');
 
       return { youtubeVideoId, youtubeUrl };
     } catch (error: any) {
@@ -213,9 +263,9 @@ export class YoutubePublishingService {
   async uploadThumbnail(account: YoutubeAccount, youtubeVideoId: string, thumbnailUrl: string): Promise<void> {
     const accessToken = await this.ensureValidAccessToken(account);
 
-    const tempDir = path.resolve('temp', 'youtube-thumbnails');
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
+    const thumbDir = path.join(TEMP_UPLOAD_DIR, 'youtube-thumbnails');
+    if (!fs.existsSync(thumbDir)) {
+      fs.mkdirSync(thumbDir, { recursive: true });
     }
 
     let parsedUrl: URL;
@@ -230,7 +280,7 @@ export class YoutubePublishingService {
     }
 
     const fileExt = path.extname(parsedUrl.pathname) || '.jpg';
-    const tempFilePath = path.join(tempDir, `${crypto.randomUUID()}${fileExt}`);
+    const tempFilePath = path.join(thumbDir, `${crypto.randomUUID()}${fileExt}`);
 
     try {
       let downloadResponse;

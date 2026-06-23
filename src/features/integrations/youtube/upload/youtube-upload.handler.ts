@@ -63,6 +63,7 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
 
   public async execute(command: YoutubeUploadCommand): Promise<{
     videoId: string;
+    jobId: string;
     youtubeUrl?: string;
     publishAt?: string;
     status: string;
@@ -137,6 +138,7 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
     if (publishAt) {
       return {
         videoId: savedVideo.id,
+        jobId: uploadJob.id,
         publishAt: publishAt.toISOString(),
         status: 'scheduled',
       };
@@ -144,6 +146,7 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
 
     return {
       videoId: savedVideo.id,
+      jobId: uploadJob.id,
       status: 'queued',
     };
   }

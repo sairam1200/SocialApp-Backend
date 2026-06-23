@@ -16,7 +16,7 @@ interface YoutubeUploadJobData {
   thumbnailUrl?: string;
 }
 
-@Processor(_const.BULL_QUEUES.YOUTUBE_UPLOAD, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.YOUTUBE_UPLOAD, 3))
+@Processor(_const.BULL_QUEUES.YOUTUBE_UPLOAD, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.YOUTUBE_UPLOAD, 1))
 export class YoutubeUploadProcessor extends WorkerHost {
   constructor(
     @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
@@ -46,6 +46,12 @@ export class YoutubeUploadProcessor extends WorkerHost {
     logger.error(`[YoutubeUploadProcessor] Job ${job.id} failed:`, error);
   }
 
+  private async updateProgress(uploadJob: any, progress: number, statusMessage: string): Promise<void> {
+    uploadJob.progress = progress;
+    uploadJob.statusMessage = statusMessage;
+    await this.uploadJobRepo.updateAsync(uploadJob);
+  }
+
   public async process(job: Job<YoutubeUploadJobData>): Promise<void> {
     const { videoId, accountId, videoUrl, thumbnailUrl } = job.data;
 
@@ -72,16 +78,24 @@ export class YoutubeUploadProcessor extends WorkerHost {
       uploadJob.attempts = (uploadJob.attempts || 0) + 1;
       await this.uploadJobRepo.updateAsync(uploadJob);
 
+      await this.updateProgress(uploadJob, 5, 'Validating video file...');
+
       const { youtubeVideoId, youtubeUrl } = await this.publishingService.uploadVideo(
         account,
         video,
         videoUrl,
+        (progress: number, message: string) => {
+          this.updateProgress(uploadJob, progress, message).catch((err) =>
+            logger.warn('[YoutubeUploadProcessor] Failed to update progress', err),
+          );
+        },
       );
 
       video.youtubeVideoId = youtubeVideoId;
       video.youtubeUrl = youtubeUrl;
 
       if (thumbnailUrl) {
+        await this.updateProgress(uploadJob, 85, 'Uploading thumbnail...');
         try {
           await this.publishingService.uploadThumbnail(account, youtubeVideoId, thumbnailUrl);
           video.thumbnailUrl = thumbnailUrl;
@@ -89,6 +103,8 @@ export class YoutubeUploadProcessor extends WorkerHost {
           logger.warn(`[YoutubeUploadProcessor] Thumbnail upload failed for video ${videoId}, proceeding without thumbnail`);
         }
       }
+
+      await this.updateProgress(uploadJob, 95, 'Finalizing...');
 
       if (video.publishAt) {
         video.status = 'scheduled';
@@ -100,6 +116,8 @@ export class YoutubeUploadProcessor extends WorkerHost {
       await this.videoRepo.updateAsync(video);
 
       uploadJob.status = 'completed';
+      uploadJob.progress = 100;
+      uploadJob.statusMessage = 'Upload complete';
       uploadJob.lastError = undefined;
       uploadJob.nextRetryAt = undefined;
       await this.uploadJobRepo.updateAsync(uploadJob);
@@ -115,6 +133,8 @@ export class YoutubeUploadProcessor extends WorkerHost {
       const nextRetry = new Date(Date.now() + delays[delayIndex]);
 
       uploadJob.status = 'failed';
+      uploadJob.progress = 0;
+      uploadJob.statusMessage = 'Upload failed';
       uploadJob.attempts = attemptCount;
       uploadJob.lastError = error.message;
       uploadJob.nextRetryAt = attemptCount >= 10 ? undefined : nextRetry;
