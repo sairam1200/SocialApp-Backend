@@ -1,8 +1,8 @@
 import _const from "../core/utils/const";
-import { AnalyticsRepository, ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, PremiumRollupRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, TopicRepository, UserContentRepository, UserFollowRepository, UserLoginRepository, UserPreferenceRepository, UserRepository, UserRoleRepository } from "./repositories";
+import { AnalyticsRepository, ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, PremiumRollupRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, TopicRepository, UserContentRepository, UserFollowRepository, UserLoginRepository, UserPreferenceRepository, UserRepository, UserRoleRepository, YoutubeChannelAnalyticsRepository, YoutubeVideoAnalyticsRepository } from "./repositories";
 import { GeneralRepository } from "./repositories/general.repository";
 import { ManualProfileRepository } from "./repositories/manualProfile.repository";
-import { AnalyticsService, EmailService, NotificationService, SearchService, SearchCacheService, TokenService, YoutubeWebhookService, QueueService, PlatformDisconnectService } from "./services";
+import { AnalyticsService, EmailService, NotificationService, SearchService, SearchCacheService, TokenService, YoutubeWebhookService, QueueService, PlatformDisconnectService, YoutubeAnalyticsService } from "./services";
 
 /* This is the dependency object that holds all the repositories & services
  * used in the application. It is used to provide the dependencies to the
@@ -126,5 +126,17 @@ export const dependency = {
   AnalyticsService: {
     provide: _const.IANALYTICS_SERVICE,
     useClass: AnalyticsService,
+  },
+  YoutubeChannelAnalyticsRepository: {
+    provide: _const.IYOUTUBECHANNELANALYTICS_REPOSITORY,
+    useClass: YoutubeChannelAnalyticsRepository,
+  },
+  YoutubeVideoAnalyticsRepository: {
+    provide: _const.IYOUTUBEVIDEOANALYTICS_REPOSITORY,
+    useClass: YoutubeVideoAnalyticsRepository,
+  },
+  YoutubeAnalyticsService: {
+    provide: _const.IYOUTUBEANALYTICS_SERVICE,
+    useClass: YoutubeAnalyticsService,
   },
 };

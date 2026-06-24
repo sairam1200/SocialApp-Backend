@@ -76,6 +76,15 @@ import { YoutubeSyncController } from "./youtube/sync/youtube-sync.endpoint";
 import { EnableYoutubeSyncCommandHandler } from "./youtube/sync/enable-youtube-sync.handler";
 import { DisableYoutubeSyncCommandHandler } from "./youtube/sync/disable-youtube-sync.handler";
 import { YoutubeWebhookController } from "./youtube/webhook/youtube-webhook.endpoint";
+import { YoutubeAnalyticsController } from "./youtube/analytics/youtube-analytics.endpoint";
+import {
+  SyncYoutubeAnalyticsCommandHandler,
+  GetYoutubeChannelAnalyticsQueryHandler,
+  GetYoutubeVideoAnalyticsQueryHandler,
+  GetYoutubeAnalyticsTrendsQueryHandler,
+  GetYoutubeTopVideosQueryHandler
+} from "./youtube/analytics/youtube-analytics.handler";
+
 import { TiktokConnectController } from "./tiktok/connect/tiktok-connect.endpoint";
 import { TiktokConnectCallbackQueryHandler, TiktokConnectQueryHandler } from "./tiktok/connect/tiktok-connect.handler";
 import { TikTokProfileController } from "./tiktok/get-profile/get-profile.endpoint";
@@ -470,6 +479,7 @@ const controllers = [
   YoutubeSyncController,
   YoutubeWebhookController,
   YoutubeDisconnectController,
+  YoutubeAnalyticsController,
   TiktokConnectController,
   TikTokProfileController,
   TiktokContentsController,
@@ -571,6 +581,11 @@ const handlers = [
   YoutubeDisconnectCommandHandler,
   EnableYoutubeSyncCommandHandler,
   DisableYoutubeSyncCommandHandler,
+  SyncYoutubeAnalyticsCommandHandler,
+  GetYoutubeChannelAnalyticsQueryHandler,
+  GetYoutubeVideoAnalyticsQueryHandler,
+  GetYoutubeAnalyticsTrendsQueryHandler,
+  GetYoutubeTopVideosQueryHandler,
   TiktokConnectCallbackQueryHandler,
   TiktokConnectQueryHandler,
   TiktokProfileQueryHandler,

@@ -12,7 +12,8 @@ import { AnalyticsModule } from "./analytics.module";
 import { SearchCacheService, YoutubeWebhookService } from "infrastructure/services";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
 import { PlatformRollbackListener } from "../infrastructure/background/listeners/platform-rollback.listener";
-import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserBiometric, UserClaim, UserContent, UserLogin, UserRole } from "../domain/entities";
+import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserBiometric, UserClaim, UserContent, UserLogin, UserRole, YoutubeChannelAnalytics, YoutubeVideoAnalytics } from "../domain/entities";
+import { YoutubeAnalyticsCron } from "../infrastructure/background/cron/jobs/youtube-analytics.cron";
 
 @Module({
   imports: [
@@ -31,7 +32,9 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
       LinkedAccount,
       SearchHistory,
       DataProtectionKey,
-      ContentStream
+      ContentStream,
+      YoutubeChannelAnalytics,
+      YoutubeVideoAnalytics
     ])
   ],
   controllers: [
@@ -42,6 +45,7 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     JwtService,
     SearchCacheService,
     PlatformRollbackListener,
+    YoutubeAnalyticsCron,
     ...integrations.addHandlers(),
     ...search.addHandlers(),
 
@@ -58,6 +62,9 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     dependency.SearchHistoryRepository,
     dependency.YoubeWebHookService,
     dependency.PlatformDisconnectService,
+    dependency.YoutubeChannelAnalyticsRepository,
+    dependency.YoutubeVideoAnalyticsRepository,
+    dependency.YoutubeAnalyticsService,
   ],
   exports: [],
 })

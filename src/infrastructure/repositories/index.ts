@@ -16,4 +16,6 @@ export { TopicRepository } from './topic.repository';
 export { UserPreferenceRepository } from './userPreference.repository';
 export { AnalyticsRepository } from './analytics.repository';
 export { PremiumRollupRepository } from './premiumRollup.repository';
+export { YoutubeChannelAnalyticsRepository } from './youtubeChannelAnalytics.repository';
+export { YoutubeVideoAnalyticsRepository } from './youtubeVideoAnalytics.repository';
 

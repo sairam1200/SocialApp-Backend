@@ -32,6 +32,9 @@ export default {
   IANALYTICS_REPOSITORY: 'IAnalyticsRepository',
   IPREMIUMROLLUP_REPOSITORY: 'IPremiumRollupRepository',
   IANALYTICS_SERVICE: 'IAnalyticsService',
+  IYOUTUBECHANNELANALYTICS_REPOSITORY: 'IYoutubeChannelAnalyticsRepository',
+  IYOUTUBEVIDEOANALYTICS_REPOSITORY: 'IYoutubeVideoAnalyticsRepository',
+  IYOUTUBEANALYTICS_SERVICE: 'IYoutubeAnalyticsService',
 
   BULL_QUEUES: {
     FACEBOOK_IMPORT: 'facebook-import',

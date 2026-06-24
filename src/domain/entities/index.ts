@@ -24,3 +24,6 @@ export { Topic } from './topic.entity';
 export { UserTopic } from './userTopic.entity';
 export { AnalyticsEvent } from './analyticsEvent.entity';
 export { PremiumRollup } from './premiumRollup.entity';
+export { YoutubeChannelAnalytics } from './youtubeChannelAnalytics.entity';
+export { YoutubeVideoAnalytics } from './youtubeVideoAnalytics.entity';
+
