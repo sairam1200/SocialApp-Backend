@@ -68,15 +68,27 @@ export class YoutubeUploadProcessor extends WorkerHost {
     });
 
     const linkedAccount = await this.linkedAccountRepo.getByIdAsync(accountId);
-    if (!linkedAccount || linkedAccount.platform !== _const.PLATFORMS.YOUTUBE) {
-      logger.error('[YoutubeUploadProcessor] Linked account not found', { accountId, platform: 'youtube', found: !!linkedAccount });
-      throw new Error('YouTube account not found');
+    if (!linkedAccount) {
+      logger.error('[YoutubeUploadProcessor] No YouTube integration record found for user', { accountId, found: false });
+      throw new Error('YouTube integration account not found');
+    }
+    if (linkedAccount.platform !== _const.PLATFORMS.YOUTUBE) {
+      logger.error('[YoutubeUploadProcessor] Linked account platform mismatch', { accountId, expected: 'youtube', actual: linkedAccount.platform });
+      throw new Error('YouTube integration account not found');
     }
 
     const account = await this.accountRepo.getByUserIdAsync(linkedAccount.userId);
-    if (!account || !account.connected) {
-      logger.error('[YoutubeUploadProcessor] YouTube token account not found', { userId: linkedAccount.userId, found: !!account });
-      throw new Error('YouTube account not found or disconnected');
+    if (!account) {
+      logger.error('[YoutubeUploadProcessor] No YouTube integration record found for user', { userId: linkedAccount.userId, linkedAccountId: linkedAccount.id, found: false });
+      throw new Error('YouTube integration account not found');
+    }
+    if (!account.connected) {
+      logger.error('[YoutubeUploadProcessor] YouTube integration exists but disconnected', { userId: linkedAccount.userId, youtubeAccountId: account.id, connected: account.connected });
+      throw new Error('YouTube account is disconnected');
+    }
+    if (!account.refreshToken) {
+      logger.error('[YoutubeUploadProcessor] YouTube integration exists but refresh token missing', { userId: linkedAccount.userId, youtubeAccountId: account.id });
+      throw new Error('YouTube account token missing');
     }
 
     logger.debug('[YoutubeUploadProcessor] Account resolved', {

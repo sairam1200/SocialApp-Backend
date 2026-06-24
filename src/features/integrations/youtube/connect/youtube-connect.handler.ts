@@ -113,10 +113,9 @@ export class YoutubeConnectCallbackQueryHandler
     const userData = await this.fetchUserData(access_token);
     console.log(userData);
 
-    const user = configs.env !== "production" ? await this.userRepository.getUserByIdAsync(dataProtectionKey.userId) : await this.userRepository.getUserByEmailAsync(userData.profile.email);
-
-    if (!user || user.id !== dataProtectionKey.userId) {
-      throw new UserNotFoundException(userData.profile.email, 'email');
+    const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
+    if (!user) {
+      throw new UserNotFoundException('User not found from connect state');
     }
     
     let linkedAccount =
@@ -226,6 +225,7 @@ export class YoutubeConnectCallbackQueryHandler
     let youtubeAccount = await this.youtubeAccountRepository.getByChannelIdAsync(channelId);
 
     if (youtubeAccount) {
+      youtubeAccount.userId = user.id;
       youtubeAccount.accessToken = cryptoUtils.encrypt(access_token);
       youtubeAccount.refreshToken = cryptoUtils.encrypt(refresh_token);
       youtubeAccount.tokenExpiry = new Date(Date.now() + expires_in * 1000);
