@@ -209,6 +209,8 @@ import { TwitchDisconnectController } from "./twitch/disconnect/twitch-disconnec
 import { TwitchDisconnectCommandHandler } from "./twitch/disconnect/twitch-disconnect.handler";
 import { UploadMediaController } from "./upload/upload.endpoint";
 import { UploadMediaCommandHandler } from "./upload/upload.handler";
+import { LinkedAccountsController } from "./linked-accounts/linked-accounts.endpoint";
+import { GetUserLinkedAccountsQueryHandler } from "./linked-accounts/linked-accounts.handler";
 
 export { FacebookConnectController } from "./facebook/connect/facebook-connect.endpoint"
 export { FacebookConnectCallbackQueryHandler, FacebookConnectQueryHandler } from "./facebook/connect/facebook-connect.handler";
@@ -445,6 +447,8 @@ export { TwitchDisconnectController } from "./twitch/disconnect/twitch-disconnec
 export { TwitchDisconnectCommandHandler } from "./twitch/disconnect/twitch-disconnect.handler";
 export { UploadMediaController } from "./upload/upload.endpoint";
 export { UploadMediaCommandHandler } from "./upload/upload.handler";
+export { LinkedAccountsController } from "./linked-accounts/linked-accounts.endpoint";
+export { GetUserLinkedAccountsQueryHandler } from "./linked-accounts/linked-accounts.handler";
 
 const controllers = [
   FacebookConnectController,
@@ -541,6 +545,7 @@ const controllers = [
   TwitchConnectController,
   TwitchDisconnectController,
   UploadMediaController,
+  LinkedAccountsController,
 ];
 
 const handlers = [
@@ -669,6 +674,7 @@ const handlers = [
   TwitchConnectCallbackQueryHandler,
   TwitchDisconnectCommandHandler,
   UploadMediaCommandHandler,
+  GetUserLinkedAccountsQueryHandler,
 ];
 
 const integrations = {
