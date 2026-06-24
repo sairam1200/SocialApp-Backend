@@ -54,6 +54,8 @@ const cookieParser = require('cookie-parser');
     'x-turnstile-token',
     'x-client-origin',
     'x-redirect-url',
+    'x-chunk-index',
+    'x-total-chunks',
   ],
 });
 
