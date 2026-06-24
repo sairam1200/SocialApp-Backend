@@ -103,6 +103,11 @@ export class GoogleConnectQueryHandler
     // expires in 15 minutes
     const expiresIn =
       Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
+    console.log('[OAuth-Debug-Store] storedState:', model.state);
+    console.log('[OAuth-Debug-Store] storedValue:', value);
+    console.log('[OAuth-Debug-Store] expiresIn (epoch seconds):', expiresIn);
+    console.log('[OAuth-Debug-Store] expiresIn (date):', new Date(expiresIn * 1000).toISOString());
+    console.log('[OAuth-Debug-Store] tokenExpirationTime used:', configs.Token.expirationTime);
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       value,
@@ -134,6 +139,7 @@ export class GoogleConnectCallbackQueryHandler
   public async execute(query: GoogleConnectCallbackQuery): Promise<any> {
     const { model } = query;
     await googleConnectCallbackValidations.validateAsync(model);
+    console.log('[OAuth-Debug-Validate] receivedState:', model.state);
     const dataProtectionKey = await this.validateState(model.state);
     const parsedDataProtectionKeyValue = JSON.parse(dataProtectionKey.value);
 
@@ -343,8 +349,16 @@ export class GoogleConnectCallbackQueryHandler
   }
 
   private async validateState(state: string): Promise<DataProtectionKey> {
+    console.log('[OAuth-Debug-Validate] querying state:', state);
     const dataProtectionKey =
       await this.dataProtectionKeyRepository.getByKeyAsync(state);
+    console.log('[OAuth-Debug-Validate] dataProtectionKey found:', !!dataProtectionKey);
+    if (dataProtectionKey) {
+      console.log('[OAuth-Debug-Validate] stored key:', dataProtectionKey.key);
+      console.log('[OAuth-Debug-Validate] stored expiresIn:', dataProtectionKey.expiresIn);
+      console.log('[OAuth-Debug-Validate] current epoch:', Math.floor(Date.now() / 1000));
+      console.log('[OAuth-Debug-Validate] expired?:', dataProtectionKey.expiresIn < Math.floor(Date.now() / 1000));
+    }
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
     }
