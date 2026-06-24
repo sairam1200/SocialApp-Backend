@@ -40,17 +40,12 @@ export class FacebookAuthenticationController {
     @Query('ipAddress') ipAddress: string,
   ): Promise<Response | void> {
     const scopes = [
+       'public_profile',
       'email',
-      'public_profile',
-      'user_friends',
-      'user_birthday',
-      'user_gender',
-      'user_hometown',
-      'user_link',
-      'user_location',
-      'user_photos',
-      'user_posts',
-      'user_videos'
+      'pages_show_list',
+      'pages_read_engagement',
+      'pages_read_user_content',
+      'read_insights',
     ].join(',');
 
     const state = stringUtil.generateRandomString(16);

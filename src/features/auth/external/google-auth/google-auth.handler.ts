@@ -144,9 +144,24 @@ export class GoogleConnectCallbackQueryHandler
 
     const userData = await this.fetchUserData(access_token);
 
-    let user = await this.userRepository.getUserByEmailAsync(
-      userData.profile.email,
+    // 1. Search by provider account ID
+    const linkedAccountByProvider = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(
+      _const.PLATFORMS.YOUTUBE,
+      userData.profile.id,
     );
+
+    let user: User | null = linkedAccountByProvider
+      ? await this.userRepository.getUserByIdAsync(linkedAccountByProvider.userId)
+      : null;
+
+    // 2. Search by email if not found by provider ID
+    if (!user) {
+      user = await this.userRepository.getUserByEmailAsync(
+        userData.profile.email,
+      );
+    }
+
+    // 3. Create new user only if neither lookup matched
     if (!user) {
       const initials = stringUtil.extractInitialsFromName(`${userData.profile.given_name} ${userData.profile.family_name}`);
       const base64Image = generateInitialImage(initials);
@@ -162,21 +177,13 @@ export class GoogleConnectCallbackQueryHandler
       });
 
       user = await this.userRepository.createAsync(entry, '');
-      this.userRepository.upsertUserBiometricAsync(user.id, new UserBiometric({
+      await this.userRepository.upsertUserBiometricAsync(user.id, new UserBiometric({
         profileImageUrl: userData?.profile?.picture || null,
         defaultProfileImageUrl: defaultProfileImageUrl,
         privacy: ProfileImagePrivacy.Everyone,
       }))
 
-
       await this.sendWelcomeEmail(user);
-      await this.commandBus.execute(new SendVerificationEmailCommand({
-        model: {
-          userAgent: parsedDataProtectionKeyValue.userAgent,
-          ipAddress: parsedDataProtectionKeyValue.ipAddress,
-          email: user.email,
-        }
-      }));
     }
 
     if (this.isAccountLockedOrInactive(user)) {

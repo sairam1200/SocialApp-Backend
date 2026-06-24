@@ -125,7 +125,23 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     const { access_token, expires_in } = await this.fetchLongLivedToken(shortLivedToken);
 
     const userData = await this.fetchUserData(access_token);
-    let user = await this.userRepository.getUserByEmailAsync(userData.email);
+
+    // 1. Search by provider account ID
+    const linkedAccountByProvider = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(
+      _const.PLATFORMS.FACEBOOK,
+      userData.id,
+    );
+
+    let user: User | null = linkedAccountByProvider
+      ? await this.userRepository.getUserByIdAsync(linkedAccountByProvider.userId)
+      : null;
+
+    // 2. Search by email if not found by provider ID
+    if (!user) {
+      user = await this.userRepository.getUserByEmailAsync(userData.email);
+    }
+
+    // 3. Create new user only if neither lookup matched
     if (!user) {
       const firstName = userData.name?.split(' ')[0] || 'Facebook';
       const lastName = userData.name?.split(' ').slice(1).join(' ') || 'User';
@@ -151,13 +167,6 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       }))
 
       await this.sendWelcomeEmail(user);
-      await this.commandBus.execute(new SendVerificationEmailCommand({
-        model: {
-          userAgent: parsedDataProtectionKeyValue.userAgent,
-          ipAddress: parsedDataProtectionKeyValue.ipAddress,
-          email: user.email,
-        }
-      }));
     }
 
     if (this.isAccountLockedOrInactive(user)) {
@@ -284,7 +293,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       const response = await axios.get<FacebookUserDataType>(`${GRAPH_BASE}/me`, {
         params: {
           access_token: accessToken,
-          fields: 'id,name,email,picture,link,birthday,gender,hometown,location,friends'
+          fields: 'id,name,email,picture,friends'
         },
       });
 
