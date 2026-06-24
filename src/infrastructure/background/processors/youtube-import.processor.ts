@@ -32,6 +32,74 @@ interface ProgressReports {
   [type: string]: ProgressReport;
 }
 
+interface YoutubeVideoStatistics {
+  viewCount?: string;
+  likeCount?: string;
+  commentCount?: string;
+}
+
+interface YoutubeVideoContentDetails {
+  duration?: string;
+}
+
+interface YoutubeVideoStats {
+  statistics?: YoutubeVideoStatistics;
+  duration?: string;
+}
+
+interface YoutubeApiVideoItem {
+  id: string;
+  statistics?: YoutubeVideoStatistics;
+  contentDetails?: YoutubeVideoContentDetails;
+}
+
+interface YoutubeVideosListResponse {
+  items?: YoutubeApiVideoItem[];
+  pageInfo?: {
+    totalResults?: number;
+    resultsPerPage?: number;
+  };
+}
+
+interface YoutubePlaylistItemSnippet {
+  title?: string;
+  description?: string;
+  publishedAt?: string;
+  thumbnails?: Record<string, { url: string }>;
+  channelId?: string;
+  channelTitle?: string;
+}
+
+interface YoutubePlaylistItemContentDetails {
+  videoId?: string;
+}
+
+interface YoutubePlaylistItem {
+  id: string;
+  snippet?: YoutubePlaylistItemSnippet;
+  contentDetails?: YoutubePlaylistItemContentDetails;
+  _stats?: {
+    viewCount: number;
+    likeCount: number;
+    commentCount: number;
+    duration: string;
+  };
+}
+
+interface YoutubeApiListResponse {
+  items?: Record<string, unknown>[];
+  nextPageToken?: string;
+  pageInfo?: {
+    totalResults?: number;
+    resultsPerPage?: number;
+  };
+}
+
+interface YoutubePlaylistItemsPage {
+  items: YoutubePlaylistItem[];
+  nextPageToken: string | null;
+}
+
 interface YoutubeImportJobData {
   account: any;
   accessToken: string;
@@ -703,28 +771,34 @@ export class YoutubeImportProcessor extends WorkerHost {
     return hours * 3600 + minutes * 60 + seconds;
   }
 
-  private async fetchPlaylistVideos(accessToken: string, playlistId: string): Promise<any[]> {
-    let videos: any[] = [];
+  private async fetchPlaylistVideos(accessToken: string, playlistId: string): Promise<YoutubePlaylistItem[]> {
+    const videos: YoutubePlaylistItem[] = [];
     let nextPageToken: string | null = null;
 
     logger.debug(`[YoutubeImport] Fetching all videos for playlist ID: ${playlistId}`);
 
     do {
       const pageResult = await this.fetchPlaylistVideosPage(accessToken, playlistId, nextPageToken);
-      videos = videos.concat(pageResult.items);
+      for (const item of pageResult.items) {
+        videos.push(item);
+      }
       nextPageToken = pageResult.nextPageToken;
     } while (nextPageToken);
 
     logger.debug(`[YoutubeImport] Retrieved ${videos.length} total videos for playlist ${playlistId}`);
 
     if (videos.length > 0) {
-      const videoIds = videos
-        .map((v: any) => v.contentDetails?.videoId)
-        .filter(Boolean);
+      const videoIds: string[] = [];
+      for (const video of videos) {
+        const videoId = video.contentDetails?.videoId;
+        if (videoId) {
+          videoIds.push(videoId);
+        }
+      }
       if (videoIds.length > 0) {
         for (let i = 0; i < videoIds.length; i += 50) {
           const batchIds = videoIds.slice(i, i + 50);
-          const statsResult = await this.callWithRetry({
+          const statsResponse = await this.callWithRetry<YoutubeVideosListResponse>({
             method: 'GET',
             url: 'https://www.googleapis.com/youtube/v3/videos',
             headers: { Authorization: `Bearer ${accessToken}` },
@@ -733,25 +807,31 @@ export class YoutubeImportProcessor extends WorkerHost {
               id: batchIds.join(','),
             },
           });
-          const statsMap = new Map(
-            (statsResult.data.items || []).map((item: any) => [
-              item.id,
-              {
-                statistics: item.statistics,
-                duration: item.contentDetails?.duration,
-              },
-            ]),
-          );
+          const statsItems = statsResponse.data.items ?? [];
+          const statsMap = new Map<string, YoutubeVideoStats>();
+          for (const statsItem of statsItems) {
+            statsMap.set(statsItem.id, {
+              statistics: statsItem.statistics,
+              duration: statsItem.contentDetails?.duration,
+            });
+          }
           for (const video of videos) {
             const videoId = video.contentDetails?.videoId;
             if (!videoId) continue;
             const stats = statsMap.get(videoId);
             if (stats) {
-              if (!video._stats) video._stats = {};
+              if (!video._stats) {
+                video._stats = {
+                  viewCount: 0,
+                  likeCount: 0,
+                  commentCount: 0,
+                  duration: 'PT0S',
+                };
+              }
               video._stats.viewCount = Number(stats.statistics?.viewCount || 0);
               video._stats.likeCount = Number(stats.statistics?.likeCount || 0);
               video._stats.commentCount = Number(stats.statistics?.commentCount || 0);
-              video._stats.duration = stats.duration;
+              video._stats.duration = stats.duration || 'PT0S';
             }
           }
         }
@@ -765,8 +845,8 @@ export class YoutubeImportProcessor extends WorkerHost {
     accessToken: string,
     playlistId: string,
     pageToken: string | null = null,
-  ): Promise<{ items: any[]; nextPageToken: string | null }> {
-    const result = await this.callWithRetry({
+  ): Promise<YoutubePlaylistItemsPage> {
+    const result = await this.callWithRetry<YoutubeApiListResponse>({
       method: 'GET',
       url: 'https://www.googleapis.com/youtube/v3/playlistItems',
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -778,9 +858,32 @@ export class YoutubeImportProcessor extends WorkerHost {
       },
     });
 
+    const rawItems = result.data.items ?? [];
+    const items: YoutubePlaylistItem[] = [];
+    for (const raw of rawItems) {
+      const snippet = raw['snippet'] as Record<string, unknown> | undefined;
+      const contentDetails = raw['contentDetails'] as Record<string, unknown> | undefined;
+      items.push({
+        id: typeof raw['id'] === 'string' ? raw['id'] : '',
+        snippet: snippet ? {
+          title: typeof snippet['title'] === 'string' ? snippet['title'] : undefined,
+          description: typeof snippet['description'] === 'string' ? snippet['description'] : undefined,
+          publishedAt: typeof snippet['publishedAt'] === 'string' ? snippet['publishedAt'] : undefined,
+          thumbnails: typeof snippet['thumbnails'] === 'object' && snippet['thumbnails'] !== null
+            ? snippet['thumbnails'] as Record<string, { url: string }>
+            : undefined,
+          channelId: typeof snippet['channelId'] === 'string' ? snippet['channelId'] : undefined,
+          channelTitle: typeof snippet['channelTitle'] === 'string' ? snippet['channelTitle'] : undefined,
+        } : undefined,
+        contentDetails: contentDetails ? {
+          videoId: typeof contentDetails['videoId'] === 'string' ? contentDetails['videoId'] : undefined,
+        } : undefined,
+      });
+    }
+
     return {
-      items: result.data.items || [],
-      nextPageToken: result.data.nextPageToken || null,
+      items,
+      nextPageToken: typeof result.data.nextPageToken === 'string' ? result.data.nextPageToken : null,
     };
   }
 }
