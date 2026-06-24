@@ -14,7 +14,6 @@ import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin
 import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IYoutubeWebhookService } from "../../../../domain/services/webhooks/iyoutube-webhook.service";
-import { IYoutubeImportService } from "../../../../domain/services/youtube/iyoutube-import.services";
 
 export class YoutubeImportRequestModel {
   @ApiProperty()
@@ -42,8 +41,6 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     private readonly queueService: IQueueService,
     @Inject(_const.IYOUTUBEWEBHOOK_SERVICE)
     private readonly youtubeWebhookService: IYoutubeWebhookService,
-    @Inject(_const.IYOUTUBE_IMPORT_SERVICE)
-    private readonly youtubeImportService: IYoutubeImportService,
   ) { }
 
   public async execute(command: YoutubeImportCommand)
@@ -102,40 +99,6 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
       throw new NotFoundException(
         "No matching Youtube profile was found!",
       );
-    }
-
-    try {
-
-      const subscriptionCount =
-        await this.youtubeImportService.importSubscriptionsAsync(
-          userId,
-          accessToken,
-        );
-
-      logger.info(`[YoutubeImport] Imported ${subscriptionCount} subscription videos`, { userId });
-
-    } catch (error) {
-      logger.error('[YoutubeImport] Failed importing subscriptions', {
-        error: error?.message,
-        stack: error?.stack,
-      });
-    }
-
-    try {
-
-      const uploadCount =
-        await this.youtubeImportService.importUploadsAsync(
-          userId,
-          accessToken,
-        );
-
-      logger.info(`[YoutubeImport] Imported ${uploadCount} channel videos`, { userId });
-
-    } catch (error) {
-      logger.error('[YoutubeImport] Failed importing channel uploads', {
-        error: error?.message,
-        stack: error?.stack,
-      });
     }
 
     const channelId = account.metaData?.channel?.id;

@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import { Inject } from "@nestjs/common";
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
@@ -144,20 +144,19 @@ export class YoutubeImportProcessor extends WorkerHost {
           }
 
           logger.debug(`[YoutubeImport] Requesting page for ${type}`);
-          const response = await axios.get(
-            `https://www.googleapis.com/youtube/v3/${endpoint}`,
-            {
-              params: {
-                ...params,
-                pageToken: nextPageToken ?? undefined,
-                access_token: accessToken,
-              },
+          const result = await this.callWithRetry({
+            method: 'GET',
+            url: `https://www.googleapis.com/youtube/v3/${endpoint}`,
+            params: {
+              ...params,
+              pageToken: nextPageToken ?? undefined,
+              access_token: accessToken,
             },
-          );
+          });
 
-          const items = response.data.items ?? [];
-          const pageInfo = response.data.pageInfo ?? {};
-          nextPageToken = response.data.nextPageToken ?? null;
+          const items = result.data.items ?? [];
+          const pageInfo = result.data.pageInfo ?? {};
+          nextPageToken = result.data.nextPageToken ?? null;
 
           logger.debug(`[YoutubeImport] Retrieved ${items.length} items of ${type}`);
 
@@ -281,6 +280,9 @@ export class YoutubeImportProcessor extends WorkerHost {
           for (const item of videos.items) {
             logger.debug(`[YoutubeImport] Processing uploaded video: ${item.snippet?.title || item.id}`);
 
+            const duration = item._stats?.duration || 'PT0S';
+            const durationSeconds = this.parseDurationToSeconds(duration);
+            const isShort = durationSeconds <= 180;
             const content = new UserContent({
               userId: account.userId,
               platform: _const.PLATFORMS.YOUTUBE,
@@ -292,6 +294,11 @@ export class YoutubeImportProcessor extends WorkerHost {
                 publishedAt: item.snippet.publishedAt,
                 description: item.snippet.description,
                 thumbnails: item.snippet.thumbnails,
+                viewCount: item._stats?.viewCount || 0,
+                likeCount: item._stats?.likeCount || 0,
+                commentCount: item._stats?.commentCount || 0,
+                duration,
+                isShort,
               },
             });
 
@@ -609,6 +616,93 @@ export class YoutubeImportProcessor extends WorkerHost {
     }
   }
 
+  private async callWithRetry<T>(
+    config: AxiosRequestConfig,
+    retries: number = 5,
+  ): Promise<{ data: any; headers: any }> {
+    let lastError: Error | undefined;
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const url = config.url || '';
+        const method = config.method || 'GET';
+        logger.info(`[YoutubeImport] API call attempt ${attempt}/${retries}: ${method} ${url}`);
+
+        const response = await axios({
+          ...config,
+          validateStatus: () => true,
+        });
+
+        const quotaHeaders = {
+          quotaCost: response.headers['x-quota-cost'] || 'N/A',
+          quotaUsage: response.headers['x-ratelimit-remaining'] || 'N/A',
+          retryAfter: response.headers['retry-after'] || 'N/A',
+        };
+
+        logger.info(
+          `[YoutubeImport] API response ${attempt}/${retries}: ${response.status} ` +
+          `quotaCost=${quotaHeaders.quotaCost} quotaRemaining=${quotaHeaders.quotaUsage}`
+        );
+
+        if (response.status === 429) {
+          const retryAfter = parseInt(response.headers['retry-after'] || '0', 10);
+          const delay = Math.max(retryAfter * 1000, Math.pow(2, attempt) * 1000);
+          logger.warn(
+            `[YoutubeImport] HTTP 429 on ${url} attempt ${attempt}/${retries}. ` +
+            `Retrying in ${delay}ms. ` +
+            `quotaCost=${quotaHeaders.quotaCost} quotaRemaining=${quotaHeaders.quotaUsage}`
+          );
+          await new Promise(resolve => setTimeout(resolve, delay));
+          lastError = new Error(`HTTP 429: rate limited`);
+          continue;
+        }
+
+        if (response.status >= 500) {
+          const delay = Math.pow(2, attempt) * 1000;
+          logger.warn(
+            `[YoutubeImport] HTTP ${response.status} on ${url} attempt ${attempt}/${retries}. ` +
+            `Retrying in ${delay}ms`
+          );
+          await new Promise(resolve => setTimeout(resolve, delay));
+          lastError = new Error(`HTTP ${response.status}`);
+          continue;
+        }
+
+        if (response.status >= 400) {
+          const body = JSON.stringify(response.data).substring(0, 500);
+          throw new Error(`HTTP ${response.status}: ${body}`);
+        }
+
+        return { data: response.data, headers: response.headers };
+      } catch (err) {
+        if (err instanceof AxiosError && err.code === 'ECONNRESET') {
+          const delay = Math.pow(2, attempt) * 1000;
+          logger.warn(`[YoutubeImport] Connection reset on attempt ${attempt}/${retries}. Retrying in ${delay}ms`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          lastError = err;
+          continue;
+        }
+        if (err instanceof AxiosError && err.code === 'ETIMEDOUT') {
+          const delay = Math.pow(2, attempt) * 1000;
+          logger.warn(`[YoutubeImport] Timeout on attempt ${attempt}/${retries}. Retrying in ${delay}ms`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          lastError = err;
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastError || new Error(`Request failed after ${retries} retries`);
+  }
+
+  private parseDurationToSeconds(duration: string): number {
+    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return 0;
+    const hours = Number(match[1] || 0);
+    const minutes = Number(match[2] || 0);
+    const seconds = Number(match[3] || 0);
+    return hours * 3600 + minutes * 60 + seconds;
+  }
+
   private async fetchPlaylistVideos(accessToken: string, playlistId: string): Promise<any[]> {
     let videos: any[] = [];
     let nextPageToken: string | null = null;
@@ -622,6 +716,48 @@ export class YoutubeImportProcessor extends WorkerHost {
     } while (nextPageToken);
 
     logger.debug(`[YoutubeImport] Retrieved ${videos.length} total videos for playlist ${playlistId}`);
+
+    if (videos.length > 0) {
+      const videoIds = videos
+        .map((v: any) => v.contentDetails?.videoId)
+        .filter(Boolean);
+      if (videoIds.length > 0) {
+        for (let i = 0; i < videoIds.length; i += 50) {
+          const batchIds = videoIds.slice(i, i + 50);
+          const statsResult = await this.callWithRetry({
+            method: 'GET',
+            url: 'https://www.googleapis.com/youtube/v3/videos',
+            headers: { Authorization: `Bearer ${accessToken}` },
+            params: {
+              part: 'statistics,contentDetails',
+              id: batchIds.join(','),
+            },
+          });
+          const statsMap = new Map(
+            (statsResult.data.items || []).map((item: any) => [
+              item.id,
+              {
+                statistics: item.statistics,
+                duration: item.contentDetails?.duration,
+              },
+            ]),
+          );
+          for (const video of videos) {
+            const videoId = video.contentDetails?.videoId;
+            if (!videoId) continue;
+            const stats = statsMap.get(videoId);
+            if (stats) {
+              if (!video._stats) video._stats = {};
+              video._stats.viewCount = Number(stats.statistics?.viewCount || 0);
+              video._stats.likeCount = Number(stats.statistics?.likeCount || 0);
+              video._stats.commentCount = Number(stats.statistics?.commentCount || 0);
+              video._stats.duration = stats.duration;
+            }
+          }
+        }
+      }
+    }
+
     return videos;
   }
 
@@ -630,27 +766,22 @@ export class YoutubeImportProcessor extends WorkerHost {
     playlistId: string,
     pageToken: string | null = null,
   ): Promise<{ items: any[]; nextPageToken: string | null }> {
-    try {
-      const response = await axios.get('https://www.googleapis.com/youtube/v3/playlistItems', {
-        params: {
-          part: 'snippet,contentDetails',
-          playlistId,
-          maxResults: 50,
-          pageToken: pageToken ?? undefined,
-        },
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+    const result = await this.callWithRetry({
+      method: 'GET',
+      url: 'https://www.googleapis.com/youtube/v3/playlistItems',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      params: {
+        part: 'snippet,contentDetails',
+        playlistId,
+        maxResults: 50,
+        pageToken: pageToken ?? undefined,
+      },
+    });
 
-      return {
-        items: response.data.items || [],
-        nextPageToken: response.data.nextPageToken || null,
-      };
-    } catch (err) {
-      logger.error(`[YoutubeImport] Error fetching videos for playlist ${playlistId}:`, err);
-      throw new ApplicationException(`Failed to fetch videos for playlist ${playlistId}`);
-    }
+    return {
+      items: result.data.items || [],
+      nextPageToken: result.data.nextPageToken || null,
+    };
   }
 }
 
