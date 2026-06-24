@@ -38,6 +38,9 @@ export class User extends BaseEntity {
   bio?: string;
 
   @Column({ nullable: true })
+  googleId?: string;
+
+  @Column({ nullable: true })
   newEmail?: string;
 
   @Column({ type: 'timestamp', nullable: true })

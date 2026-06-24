@@ -109,6 +109,10 @@ export class UserRepository implements IUserRepository {
     return await this.userContext.findOne({ where: { id }, relations: { biometrics: true } });
   }
 
+  public async getUserByGoogleIdAsync(googleId: string): Promise<User | null> {
+    return await this.userContext.findOne({ where: { googleId }, relations: { biometrics: true } });
+  }
+
   public async getUserByEmailAsync(email: string, includeNewEmail?: boolean): Promise<User | null> {
     const normalizedEmail = email?.toUpperCase();
     const user = await this.userContext.findOne({ where: { normalizedEmail }, relations: { biometrics: true } });

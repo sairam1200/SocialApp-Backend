@@ -8,7 +8,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthGuardsModule } from './authGuard.module';
 import { dependency } from '../infrastructure/dependency';
 import { NotificationModule } from './notification.module';
-import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, DataProtectionKey, UserBiometric, YoutubeAccount } from '../domain/entities';
+import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, DataProtectionKey, UserBiometric } from '../domain/entities';
 
 @Module({
   imports: [
@@ -26,7 +26,6 @@ import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, D
       DataProtectionKey,
       LinkedAccount,
       UserBiometric,
-      YoutubeAccount,
     ]),
   ],
   providers: [
@@ -41,7 +40,6 @@ import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, D
     dependency.UserLoginRepository,
     dependency.LinkedAccountRepository,
     dependency.DataProtectionKeyRepository,
-    dependency.YoutubeAccountRepository,
   ],
   controllers: [
     ...authentication.addControllers()

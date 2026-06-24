@@ -7,32 +7,22 @@ import _const from '../../../../core/utils/const';
 import { User } from '../../../../domain/entities';
 import logger from '../../../../core/utils/winston.util';
 import { getRedirectUrl } from '../../../../core/utils/redirectUrl.util';
-import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { ITokenService } from '../../../../domain/services/itoken.service';
 import { IEmailService } from '../../../../domain/services/iemail.service';
-import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
-import { YoutubeAccount } from '../../../../domain/entities/youtubeAccount.entity';
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
-import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
-import { IYoutubeAccountRepository } from '../../../../domain/repositories/iyoutubeAccount.repository';
-import {
-  GoogleUserDataType,
-  YoutubeChannelDataType,
-} from '../../../../domain/contracts/youtube.model';
+import { GoogleUserDataType } from '../../../../domain/contracts/youtube.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
 import { UserBiometric } from '../../../../domain/entities/identity/userBiometric.entity';
 import { ProfileImagePrivacy } from '../../../../domain/enums';
-import { SendVerificationEmailCommand } from '../../../user/email/send-verification/send-verification.handler';
 import { stringUtil } from 'core/utils/string.util';
 import { generateInitialImage } from 'core/utils/canvas.util';
 import { uploadBase64ToCloudinaryAsync } from 'core/utils/cloudinary.util';
 import { UserType } from 'domain/enums';
 import { TokenResponseModel } from 'domain/contracts/tokenResponse.model';
-import { serializeObject } from 'core/utils/serialization.util';
-import { cryptoUtils } from '../../../../core/utils/crypto.util';
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
 
@@ -128,15 +118,10 @@ export class GoogleConnectCallbackQueryHandler
     private readonly tokenService: ITokenService,
     @Inject(_const.IEMAIL_SERVICE)
     private readonly emailService: IEmailService,
-    private readonly commandBus: CommandBus,
-    @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
-    private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
-    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
   ) { }
@@ -148,33 +133,27 @@ export class GoogleConnectCallbackQueryHandler
     const dataProtectionKey = await this.validateState(model.state);
     const parsedDataProtectionKeyValue = JSON.parse(dataProtectionKey.value);
 
-    const { access_token, refresh_token, expires_in } = await this.fetchToken(
+    const { access_token, expires_in } = await this.fetchToken(
       model.code,
     );
-    const tokenValue = serializeObject({ access_token, refresh_token, expires_in });
 
-    const userData = await this.fetchUserData(access_token);
+    const profile = await this.fetchUserData(access_token);
 
-    // 1. Search by provider account ID
-    const linkedAccountByProvider = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(
-      _const.PLATFORMS.YOUTUBE,
-      userData.profile.id,
-    );
+    // 1. Find by Google ID
+    let user = await this.userRepository.getUserByGoogleIdAsync(profile.id);
 
-    let user: User | null = linkedAccountByProvider
-      ? await this.userRepository.getUserByIdAsync(linkedAccountByProvider.userId)
-      : null;
-
-    // 2. Search by email if not found by provider ID
+    // 2. Find by email if not found by Google ID
     if (!user) {
-      user = await this.userRepository.getUserByEmailAsync(
-        userData.profile.email,
-      );
+      user = await this.userRepository.getUserByEmailAsync(profile.email);
+      if (user && !user.googleId) {
+        user.googleId = profile.id;
+        await this.userRepository.updateAsync(user);
+      }
     }
 
-    // 3. Create new user only if neither lookup matched
+    // 3. Create user only if neither lookup matched
     if (!user) {
-      const initials = stringUtil.extractInitialsFromName(`${userData.profile.given_name} ${userData.profile.family_name}`);
+      const initials = stringUtil.extractInitialsFromName(`${profile.given_name} ${profile.family_name}`);
       const base64Image = generateInitialImage(initials);
       const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
       const defaultProfileImageUrl = avatar.secure_url;
@@ -182,14 +161,16 @@ export class GoogleConnectCallbackQueryHandler
       const entry = new User({
         phoneNumber: "",
         type: UserType.User,
-        email: userData.profile.email,
-        firstName: userData.profile.given_name,
-        lastName: userData.profile.family_name
+        email: profile.email,
+        firstName: profile.given_name,
+        lastName: profile.family_name,
+        googleId: profile.id,
+        emailConfirmed: true,
       });
 
-      user = await this.userRepository.createAsync(entry, '');
+      user = await this.userRepository.createAsync(entry, crypto.randomUUID());
       await this.userRepository.upsertUserBiometricAsync(user.id, new UserBiometric({
-        profileImageUrl: userData?.profile?.picture || null,
+        profileImageUrl: profile?.picture || null,
         defaultProfileImageUrl: defaultProfileImageUrl,
         privacy: ProfileImagePrivacy.Everyone,
       }))
@@ -207,117 +188,6 @@ export class GoogleConnectCallbackQueryHandler
     );
     result.googleAccessToken = access_token;
     result.googleAccessTokenExpiresIn = expires_in;
-
-    // TODO: Send email notification of login with new ipAddress and deviceInfo
-
-    // TODO: Save user login
-    let linkedAccount =
-      await this.linkedAccountRepository.getByPlatformAndEmailAsync(
-        _const.PLATFORMS.YOUTUBE,
-        user.email,
-      );
-    if (linkedAccount) {
-      linkedAccount.userName = '';
-      linkedAccount.profileImage = userData.profile.picture;
-      (linkedAccount.followersCount = Number.parseInt(
-        userData.channel.items[0].statistics.subscriberCount,
-      )),
-        (linkedAccount.followingCount = 0); // TODO : retreive this
-      linkedAccount.metaData = {
-        hd: userData.profile.hd,
-        locale: userData.profile.locale,
-        name: userData.profile.name,
-        channel: {
-          id: userData.channel.items[0].id,
-          title: userData.channel.items[0].snippet.title,
-          desciption: userData.channel.items[0].snippet.description,
-          viewCount: userData.channel.items[0].statistics.viewCount,
-          videoCount: userData.channel.items[0].statistics.videoCount,
-          thumbthumbnail:
-            userData.channel.items[0].snippet.thumbnails.default.url,
-        },
-      };
-      await this.linkedAccountRepository.updateAsync(linkedAccount);
-    } else {
-      linkedAccount = await this.linkedAccountRepository.createAsync(
-        new LinkedAccount({
-          platform: _const.PLATFORMS.YOUTUBE,
-          userId: user.id,
-          email: userData.profile.email,
-          externalId: userData.profile.id,
-          userName: '',
-          profileImage: userData.profile.picture,
-          followersCount: Number.parseInt(
-            userData.channel.items[0].statistics.subscriberCount,
-          ),
-          followingCount: 0, // TODO : retreive this
-          metaData: {
-            hd: userData.profile.hd,
-            locale: userData.profile.locale,
-            name: userData.profile.name,
-            channel: {
-              id: userData.channel.items[0].id,
-              title: userData.channel.items[0].snippet.title,
-              desciption: userData.channel.items[0].snippet.description,
-              viewCount: userData.channel.items[0].statistics.viewCount,
-              videoCount: userData.channel.items[0].statistics.videoCount,
-              thumbnail:
-                userData.channel.items[0].snippet.thumbnails.default.url,
-            },
-          },
-        }),
-      );
-    }
-
-    const channelId = userData.channel.items[0].id;
-    const channelTitle = userData.channel.items[0].snippet.title;
-    let youtubeAccount = await this.youtubeAccountRepository.getByChannelIdAsync(channelId);
-
-    if (youtubeAccount) {
-      youtubeAccount.accessToken = cryptoUtils.encrypt(access_token);
-      youtubeAccount.refreshToken = cryptoUtils.encrypt(refresh_token);
-      youtubeAccount.tokenExpiry = new Date(Date.now() + expires_in * 1000);
-      youtubeAccount.channelTitle = channelTitle;
-      youtubeAccount.connected = true;
-      youtubeAccount.disconnectedAt = undefined;
-      await this.youtubeAccountRepository.updateAsync(youtubeAccount);
-    } else {
-      youtubeAccount = await this.youtubeAccountRepository.createAsync(
-        new YoutubeAccount({
-          userId: user.id,
-          channelId,
-          channelTitle,
-          accessToken: cryptoUtils.encrypt(access_token),
-          refreshToken: cryptoUtils.encrypt(refresh_token),
-          tokenExpiry: new Date(Date.now() + expires_in * 1000),
-          connected: true,
-        }),
-      );
-    }
-
-    let existingAccountLogin =
-      await this.userLoginRepository.getByUserIdAndProviderAsync(
-        user.id,
-        _const.PLATFORMS.YOUTUBE,
-      );
-    if (existingAccountLogin) {
-      existingAccountLogin.tokenValue = tokenValue;
-      existingAccountLogin.addedDateUtc = new Date();
-      existingAccountLogin.expiryDateUtc = new Date(
-        Date.now() + 100 * 24 * 60 * 60 * 1000,
-      );
-      await this.userLoginRepository.updateAsync(existingAccountLogin);
-    } else {
-      existingAccountLogin = await this.userLoginRepository.createAysnc(
-        _const.PLATFORMS.YOUTUBE,
-        user.id,
-        '',
-        '',
-        '',
-        tokenValue,
-        new Date(Date.now() + 100 * 24 * 60 * 60 * 1000),
-      );
-    }
 
     return result;
   }
@@ -344,10 +214,7 @@ export class GoogleConnectCallbackQueryHandler
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<{
-    profile: GoogleUserDataType;
-    channel: YoutubeChannelDataType;
-  }> {
+  private async fetchUserData(accessToken: string): Promise<GoogleUserDataType> {
     try {
       const response = await axios.get<GoogleUserDataType>(
         `${BASE_URL}/userinfo`,
@@ -356,23 +223,7 @@ export class GoogleConnectCallbackQueryHandler
         },
       );
 
-      const channelResponse = await axios.get<YoutubeChannelDataType>(
-        'https://www.googleapis.com/youtube/v3/channels',
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          params: {
-            part: 'snippet,contentDetails,statistics,brandingSettings',
-            mine: 'true',
-          },
-        },
-      );
-
-      return {
-        profile: response.data,
-        channel: channelResponse.data,
-      };
+      return response.data;
     } catch (error) {
       logger.error('Error fetching user data from Google', error);
       throw new ApplicationException('Unexpected error during authentication with Google');
