@@ -44,6 +44,8 @@ import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, D
   controllers: [
     ...authentication.addControllers()
   ],
-  exports: [],
+  exports: [
+    dependency.TokenService,
+  ],
 })
 export class AuthModule { }
