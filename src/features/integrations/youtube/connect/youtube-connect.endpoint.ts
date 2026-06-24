@@ -46,7 +46,8 @@ export class YoutubeConnectController {
       'https://www.googleapis.com/auth/youtube.readonly',
       'https://www.googleapis.com/auth/userinfo.email',
       'https://www.googleapis.com/auth/youtube.force-ssl',
-      'https://www.googleapis.com/auth/yt-analytics.readonly'
+      'https://www.googleapis.com/auth/yt-analytics.readonly',
+      'https://www.googleapis.com/auth/youtube.upload'
     ].join(' ');
 
     const state = stringUtil.generateRandomString(16);
