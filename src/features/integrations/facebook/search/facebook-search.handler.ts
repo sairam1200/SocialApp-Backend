@@ -17,7 +17,7 @@ export class FacebookSearchRequestModel {
   @ApiProperty()
   searchTerm: string;
   @ApiProperty({ required: false })
-  filter?: Record<string, any>;
+  filter?: Record<string, string | number | boolean | string[]>;
   @ApiProperty({ required: false })
   facebookAccessToken?: string;
   @ApiProperty({ required: false, default: false })

@@ -41,7 +41,7 @@ const verify2FAValidations = Joi.object({
 });
 
 @CommandHandler(Verify2FACommand)
-export class Verify2FACommandHandler implements ICommandHandler<Verify2FACommand, any> {
+export class Verify2FACommandHandler implements ICommandHandler<Verify2FACommand, TokenResponseModel> {
 
   constructor(
     @Inject(_const.ITOKEN_SERVICE) private readonly tokenService: ITokenService,
@@ -49,7 +49,7 @@ export class Verify2FACommandHandler implements ICommandHandler<Verify2FACommand
     @Inject(_const.IUSERLOGIN_REPOSITORY) private readonly userLoginRepository: IUserLoginRepository
   ) { }
 
-  public async execute(command: Verify2FACommand): Promise<any> {
+  public async execute(command: Verify2FACommand): Promise<TokenResponseModel> {
 
     const { model } = command;
     await verify2FAValidations.validateAsync(model);

@@ -124,18 +124,29 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
     });
     await this.uploadJobRepo.createAsync(uploadJob);
 
-    await this.uploadQueue.add('youtube-upload-job',
-      {
-        videoId: savedVideo.id,
-        accountId: linkedAccount.id,
-        r2Key: model.r2Key,
-      },
-      {
-        jobId: `youtube-upload-${savedVideo.id}`,
-        attempts: 5,
-        backoff: { type: 'exponential', delay: 60000 },
-      },
-    );
+    try {
+      await this.uploadQueue.add('youtube-upload-job',
+        {
+          videoId: savedVideo.id,
+          accountId: linkedAccount.id,
+          r2Key: model.r2Key,
+        },
+        {
+          jobId: `youtube-upload-${savedVideo.id}`,
+          attempts: 5,
+          backoff: { type: 'exponential', delay: 60000 },
+        },
+      );
+    } catch (queueError: unknown) {
+      const message = queueError instanceof Error ? queueError.message : 'Unknown queue error';
+      logger.error(`[YoutubeUpload] Failed to enqueue job for video ${savedVideo.id}: ${message}`);
+      savedVideo.status = 'failed';
+      await this.videoRepo.updateAsync(savedVideo);
+      uploadJob.status = 'failed';
+      uploadJob.lastError = `Failed to enqueue: ${message}`;
+      await this.uploadJobRepo.updateAsync(uploadJob);
+      throw new YoutubeValidationError(`Upload queuing failed: ${message}`);
+    }
 
     logger.info(`[YoutubeUpload] Upload job queued for video ${savedVideo.id}, r2Key: ${model.r2Key}`);
 

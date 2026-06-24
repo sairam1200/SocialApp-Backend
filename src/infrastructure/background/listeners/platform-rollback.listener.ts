@@ -3,6 +3,8 @@ import { OnEvent } from "@nestjs/event-emitter";
 import _const from "../../../core/utils/const";
 import logger from "../../../core/utils/winston.util";
 import { ContentStream } from "../../../domain/entities/contentStream.entity";
+import { LinkedAccount } from "../../../domain/entities/linkedAccount.entity";
+import { UserContent } from "../../../domain/entities/userContent.entity";
 import { INotificationService } from "../../../domain/services/inotification.service";
 import { IGeneralRepository } from "../../../domain/repositories/igeneral.repository";
 import { PlatformRollbackEvent } from "../../../domain/events/platform-rollback.event";
@@ -40,7 +42,7 @@ export class PlatformRollbackListener {
     await this.cleanupUserContent(account, false);
   }
 
-  private async cleanupUserContent(account: any, updateNotifications: boolean): Promise<void> {
+  private async cleanupUserContent(account: LinkedAccount, updateNotifications: boolean): Promise<void> {
     const userId = account.userId;
     const platform = account.platform;
 
@@ -127,8 +129,8 @@ export class PlatformRollbackListener {
     }
   }
 
-  private async getUserContentsByPlatform(userId: string, platform: string): Promise<any[]> {
-    const allContents: any[] = [];
+  private async getUserContentsByPlatform(userId: string, platform: string): Promise<UserContent[]> {
+    const allContents: UserContent[] = [];
     let cursor = '';
     let hasMore = true;
 
@@ -151,7 +153,7 @@ export class PlatformRollbackListener {
     return allContents;
   }
 
-  private mapUserContentToContentStream(userContent: any): ContentStream {
+  private mapUserContentToContentStream(userContent: UserContent): ContentStream {
     let type: StreamEntityType = StreamEntityType.Content;
     let subType = userContent.type;
 

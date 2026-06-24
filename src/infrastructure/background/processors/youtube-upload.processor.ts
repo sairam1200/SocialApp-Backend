@@ -9,6 +9,7 @@ import { IYoutubeVideoRepository } from '../../../domain/repositories/iyoutubeVi
 import { IUploadJobRepository } from '../../../domain/repositories/iuploadJob.repository';
 import { YoutubePublishingService } from '../../services/youtube/youtube-publishing.service';
 import { R2StorageService } from '../../../shared/storage/r2/r2-storage.service';
+import { UploadJob } from '../../../domain/entities/uploadJob.entity';
 import BullMQConfig from '../../../core/config/bullmq.config';
 
 interface YoutubeUploadJobData {
@@ -51,7 +52,7 @@ export class YoutubeUploadProcessor extends WorkerHost {
     logger.error(`[YoutubeUploadProcessor] Job ${job.id} failed:`, error);
   }
 
-  private async updateProgress(uploadJob: any, progress: number, statusMessage: string): Promise<void> {
+  private async updateProgress(uploadJob: UploadJob, progress: number, statusMessage: string): Promise<void> {
     uploadJob.progress = progress;
     uploadJob.statusMessage = statusMessage;
     await this.uploadJobRepo.updateAsync(uploadJob);
@@ -153,7 +154,7 @@ export class YoutubeUploadProcessor extends WorkerHost {
 
       // Cleanup R2 only on success — file is now on YouTube
       await this.cleanupR2(r2Key, videoId, job.id!);
-    } catch (error: any) {
+    } catch (error: unknown) {
       video.status = 'failed';
       await this.videoRepo.updateAsync(video);
 
@@ -166,11 +167,11 @@ export class YoutubeUploadProcessor extends WorkerHost {
       uploadJob.progress = 0;
       uploadJob.statusMessage = 'Upload failed';
       uploadJob.attempts = attemptCount;
-      uploadJob.lastError = error.message;
+      uploadJob.lastError = error instanceof Error ? error.message : 'Unknown error';
       uploadJob.nextRetryAt = attemptCount >= 10 ? undefined : nextRetry;
       await this.uploadJobRepo.updateAsync(uploadJob);
 
-      logger.error(`[UPLOAD JOB FAILED] videoId=${videoId} attempt=${attemptCount} error=${error.message} stack=${error.stack}`);
+      logger.error(`[UPLOAD JOB FAILED] videoId=${videoId} attempt=${attemptCount} error=${error instanceof Error ? error.message : String(error)}`);
 
       throw error;
     }

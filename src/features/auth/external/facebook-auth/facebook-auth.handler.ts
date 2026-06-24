@@ -298,9 +298,11 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       });
 
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching user data from Facebook', error);
-      const facebookError = error.response?.data || error.message;
+      const facebookError = error instanceof Error && 'response' in error
+        ? (error as { response: { data: unknown } }).response?.data || error.message
+        : error instanceof Error ? error.message : String(error);
       logger.error('Facebook API Error Details:', facebookError);
       throw new ApplicationException(`Facebook API Error: ${JSON.stringify(facebookError)}`);
     }

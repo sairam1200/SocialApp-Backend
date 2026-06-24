@@ -236,13 +236,15 @@ await this.facebookImportService.importPagePostsAsync(
   account.externalId,
 );
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const axiosData = error && typeof error === 'object' && 'response' in error
+      ? (error as { response: { data: unknown } }).response?.data
+      : undefined;
+    const errorMsg = error instanceof Error ? error.message : String(error);
 
     console.error(
       "FACEBOOK IMPORT ERROR:",
-      error.response?.data ||
-      error.message ||
-      error,
+      axiosData || errorMsg || error,
     );
 
     logger.error(
@@ -373,7 +375,7 @@ private async getPageAccessTokenAsync(
     );
 
     const page = response.data.data.find(
-      (p: any) => p.id === pageId,
+      (p: { id: string; access_token?: string; name?: string }) => p.id === pageId,
     );
 
     if (!page?.access_token) {

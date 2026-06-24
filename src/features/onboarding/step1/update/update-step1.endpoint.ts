@@ -47,7 +47,7 @@ export class UpdateOnboardingStep1Controller {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 200, description: 'OK', type: OnboardingStatusModel })
   public async UpdateStep1(
-    @UploadedFile() file: any,
+    @UploadedFile() file: Express.Multer.File,
     @Body() request: OnboardingStep1Model,
     @Res() res: Response
   ): Promise<Response> {

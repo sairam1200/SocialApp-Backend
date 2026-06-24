@@ -14,6 +14,15 @@ import { R2StorageService } from '../../../../shared/storage/r2/r2-storage.servi
 import logger from '../../../../core/utils/winston.util';
 import { YoutubeValidationError } from '../../../../core/exceptions/youtube-publishing.exception';
 
+class UploadFormFields {
+  accountId: string;
+  title: string;
+  description?: string;
+  tags?: string | string[];
+  visibility?: 'public' | 'private' | 'unlisted';
+  publishAt?: string;
+}
+
 class UploadResponseDto {
   @ApiProperty({ description: 'Internal video record ID' })
   videoId: string;
@@ -69,7 +78,7 @@ export class YoutubeUploadController {
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Upload(
     @UploadedFile() video: Express.Multer.File,
-    @Body() fields: Record<string, any>,
+    @Body() fields: UploadFormFields,
   ): Promise<UploadResponseDto> {
     if (!video) {
       throw new BadRequestException('Video file is required');
@@ -99,9 +108,10 @@ export class YoutubeUploadController {
           },
         }),
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown upload error';
       this.r2Storage.deleteFile(r2Key).catch(() => {});
-      throw new YoutubeValidationError(`Upload failed: ${err.message}`);
+      throw new YoutubeValidationError(`Upload failed: ${message}`);
     } finally {
       try { if (fs.existsSync(video.path)) fs.unlinkSync(video.path); } catch {}
     }

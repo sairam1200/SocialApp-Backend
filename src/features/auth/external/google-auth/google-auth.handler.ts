@@ -136,7 +136,7 @@ export class GoogleConnectCallbackQueryHandler
     private readonly userRepository: IUserRepository,
   ) { }
 
-  public async execute(query: GoogleConnectCallbackQuery): Promise<any> {
+  public async execute(query: GoogleConnectCallbackQuery): Promise<GoogleCallbaclTokenResponseModel> {
     const { model } = query;
     await googleConnectCallbackValidations.validateAsync(model);
     console.log('[OAuth-Debug-Validate] receivedState:', model.state);

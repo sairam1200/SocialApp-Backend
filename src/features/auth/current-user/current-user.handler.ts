@@ -6,6 +6,17 @@ import {
   QueryHandler
 } from "@nestjs/cqrs";
 
+interface CurrentUserSuccessResponse {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  onboardingStep: string;
+}
+
+type CurrentUserResponse = CurrentUserSuccessResponse | { succeeded: false; message: string };
+
 export class CurrentUserQuery {
   constructor(
     request: Partial<CurrentUserQuery> = {}
@@ -16,9 +27,9 @@ export class CurrentUserQuery {
 
 @QueryHandler(CurrentUserQuery)
 export class CurrentUserQueryHandler
-  implements IQueryHandler<CurrentUserQuery>
+  implements IQueryHandler<CurrentUserQuery, CurrentUserResponse>
 {
-  async execute(): Promise<any> {
+  async execute(): Promise<CurrentUserResponse> {
     const user = HttpContext.user;
 
     if (!user) {

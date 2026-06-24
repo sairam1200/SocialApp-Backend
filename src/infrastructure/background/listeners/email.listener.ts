@@ -8,6 +8,12 @@ import fileUtil from "../../../core/utils/file.util";
 import { SendEmailEvent } from "../../../domain/events";
 import { TransactionalEmailsApi, SendSmtpEmail, TransactionalEmailsApiApiKeys } from '@getbrevo/brevo';
 
+interface EmailAttachment {
+  filename: string;
+  path?: string;
+  content?: string;
+}
+
 @Injectable()
 export class EmailListener {
 
@@ -60,7 +66,7 @@ export class EmailListener {
     to: string,
     subject: string,
     html: string,
-    attachments: any[] | undefined,
+    attachments: EmailAttachment[] | undefined,
   ): Promise<void> {
     await this.transporter.sendMail({
       from: from ?? Globals.Email.DefaultFrom,
@@ -75,7 +81,7 @@ export class EmailListener {
     to: string,
     subject: string,
     html: string,
-    attachments: any[] | undefined,
+    attachments: EmailAttachment[] | undefined,
   ): Promise<void> {
     if (!this.apiInstance) {
       logger.error('Brevo API key not configured, cannot use fallback');
@@ -103,7 +109,7 @@ export class EmailListener {
   }
 
   private async processAttachments(
-    attachments: any[],
+    attachments: EmailAttachment[],
   ): Promise<Array<{ name: string; content: string }>> {
     const attachmentPromises = attachments.map(async (att) => {
       let content: string;

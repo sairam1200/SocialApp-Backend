@@ -19,7 +19,24 @@ import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinke
 import { FacebookProfileModel, FacebookUserDataType } from '../../../../domain/contracts/facebook.model';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
 import { IContentStreamRepository } from '../../../../domain/repositories/icontentStream.repository';
+import { UserLogin } from '../../../../domain/entities';
 import { Globals } from "../../../../core/globals";
+
+interface FacebookGranularScope {
+  scope: string;
+  target_ids?: string[];
+}
+
+interface FacebookLongLivedTokenResponse {
+  access_token: string;
+  expires_in: number;
+}
+
+interface FacebookPageResponse {
+  id: string;
+  name: string;
+  access_token: string;
+}
 
 const GRAPH_BASE = 'https://graph.facebook.com/v23.0';
 
@@ -153,7 +170,7 @@ const debugToken = await axios.get(
 const pageId =
   debugToken.data.data.granular_scopes
     ?.find(
-      (s: any) =>
+      (s: FacebookGranularScope) =>
         s.scope === 'pages_show_list',
     )
     ?.target_ids?.[0];
@@ -243,7 +260,7 @@ const page = pageResponse.data;
 
   private async fetchLongLivedToken(
     shortLivedAccessToken: string
-  ): Promise<any> {
+  ): Promise<FacebookLongLivedTokenResponse> {
 
     const response = await axios.get(
       `${GRAPH_BASE}/oauth/access_token`,
@@ -275,9 +292,11 @@ const page = pageResponse.data;
       });
 
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching user data from Facebook', error);
-      const facebookError = error.response?.data || error.message;
+      const facebookError = error instanceof Error && 'response' in error
+        ? (error as any).response?.data || error.message
+        : String(error);
       logger.error('Facebook API Error Details:', facebookError);
       throw new ApplicationException(`Facebook API Error: ${JSON.stringify(facebookError)}`);
     }
@@ -300,7 +319,7 @@ const page = pageResponse.data;
     return dataProtectionKey;
   }
 
-  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: FacebookUserDataType ,  page: any): Promise<LinkedAccount> {
+  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: FacebookUserDataType ,  page: FacebookPageResponse): Promise<LinkedAccount> {
     
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       _const.PLATFORMS.FACEBOOK,
@@ -320,7 +339,7 @@ const page = pageResponse.data;
     return linkedAccount;
   }
 
-  private async createLinkedAccount(userId: string, email: string, userData: FacebookUserDataType ,  page: any,): Promise<LinkedAccount> {
+  private async createLinkedAccount(userId: string, email: string, userData: FacebookUserDataType ,  page: FacebookPageResponse,): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       _const.PLATFORMS.FACEBOOK,
       page.id,
@@ -346,7 +365,7 @@ const page = pageResponse.data;
   }
 
   private async updateUserLogin(
-    userLogin: any,
+    userLogin: UserLogin,
     accessToken: string,
     expiresIn: number
   ): Promise<void> {

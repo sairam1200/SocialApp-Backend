@@ -78,6 +78,8 @@ import { DisableYoutubeSyncCommandHandler } from "./youtube/sync/disable-youtube
 import { YoutubeWebhookController } from "./youtube/webhook/youtube-webhook.endpoint";
 import { YoutubeUploadController } from "./youtube/upload/youtube-upload.endpoint";
 import { YoutubeUploadCommandHandler } from "./youtube/upload/youtube-upload.handler";
+import { YoutubeChunkUploadController } from "./youtube/upload/youtube-chunk-upload.endpoint";
+import { InitChunkUploadCommandHandler, AppendChunkCommandHandler, CompleteChunkUploadCommandHandler, AbortChunkUploadCommandHandler } from "./youtube/upload/youtube-chunk-upload.handler";
 import { YoutubeUploadStatusController } from "./youtube/upload-status/upload-status.endpoint";
 import { YoutubeRetryUploadController } from "./youtube/retry-upload/retry-upload.endpoint";
 import { R2StorageService } from "../../shared/storage/r2/r2-storage.service";
@@ -493,6 +495,7 @@ const controllers = [
   YoutubeWebhookController,
   YoutubeDisconnectController,
   YoutubeUploadController,
+  YoutubeChunkUploadController,
   YoutubeUploadStatusController,
   YoutubeRetryUploadController,
   YoutubeStatsController,
@@ -599,6 +602,10 @@ const handlers = [
   EnableYoutubeSyncCommandHandler,
   DisableYoutubeSyncCommandHandler,
   YoutubeUploadCommandHandler,
+  InitChunkUploadCommandHandler,
+  AppendChunkCommandHandler,
+  CompleteChunkUploadCommandHandler,
+  AbortChunkUploadCommandHandler,
   YoutubeStatsQueryHandler,
   YoutubeDataSyncCommandHandler,
   YoutubeDataSyncCommandHandler,
