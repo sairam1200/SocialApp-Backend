@@ -402,6 +402,7 @@ export class GoogleConnectCallbackQueryHandler
       succeeded: true,
       isLockedOut: false,
       refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
+      onboardingCompleted: String(user.onboardingStep) === 'Completed',
     });
   }
 

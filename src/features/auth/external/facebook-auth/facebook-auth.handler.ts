@@ -349,6 +349,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       succeeded: true,
       isLockedOut: false,
       refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
+      onboardingCompleted: String(user.onboardingStep) === 'Completed',
     });
   }
 

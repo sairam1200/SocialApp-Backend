@@ -122,6 +122,7 @@ console.log(
         refresh_token: userToken.tokenValue,
         succeeded: true,
         refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
+        onboardingCompleted: String(user.onboardingStep) === 'Completed',
       });
     }
   }

@@ -22,6 +22,9 @@ export class TokenResponseModel {
   @ApiProperty()
   refreshTokenExpiryTime: number;
 
+  @ApiProperty({ required: false })
+  onboardingCompleted?: boolean;
+
   constructor(request: Partial<TokenResponseModel> = {}) {
     Object.assign(this, request);
   }
