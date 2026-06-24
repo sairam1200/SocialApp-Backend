@@ -32,6 +32,7 @@ interface ChunkMetadata {
   userId: string;
   totalChunks: number;
   receivedChunks: number;
+  cancelled?: boolean;
 }
 
 export class InitChunkUploadCommand {
@@ -115,6 +116,11 @@ export class AppendChunkCommandHandler implements ICommandHandler<AppendChunkCom
 
     const metadataPath = path.join(sessionDir, 'metadata.json');
     const metadata: ChunkMetadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+
+    if (metadata.cancelled) {
+      throw new YoutubeValidationError('Upload session was cancelled');
+    }
+
     metadata.receivedChunks = Math.max(metadata.receivedChunks, chunkIndex + 1);
     metadata.totalChunks = totalChunks;
     fs.writeFileSync(metadataPath, JSON.stringify(metadata));
@@ -157,6 +163,10 @@ export class CompleteChunkUploadCommandHandler implements ICommandHandler<Comple
     }
 
     const metadata: ChunkMetadata = JSON.parse(fs.readFileSync(path.join(sessionDir, 'metadata.json'), 'utf-8'));
+
+    if (metadata.cancelled) {
+      throw new YoutubeValidationError('Upload session was cancelled');
+    }
 
     if (!metadata.userId) {
       throw new YoutubeValidationError('Upload owner missing from metadata');
@@ -269,6 +279,14 @@ export class AbortChunkUploadCommandHandler implements ICommandHandler<AbortChun
   async execute(command: AbortChunkUploadCommand): Promise<void> {
     const sessionDir = path.join(CHUNK_TEMP_DIR, command.uploadId);
     if (fs.existsSync(sessionDir)) {
+      const metadataPath = path.join(sessionDir, 'metadata.json');
+      if (fs.existsSync(metadataPath)) {
+        try {
+          const metadata: ChunkMetadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+          metadata.cancelled = true;
+          fs.writeFileSync(metadataPath, JSON.stringify(metadata));
+        } catch {}
+      }
       fs.rmSync(sessionDir, { recursive: true, force: true });
       logger.info(`[ChunkUpload] Aborted session: ${command.uploadId}`);
     }

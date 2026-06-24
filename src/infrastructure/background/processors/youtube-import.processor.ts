@@ -100,7 +100,7 @@ export class YoutubeImportProcessor extends WorkerHost {
       subscriptions: {
         endpoint: 'subscriptions',
         type: 'Subscriptions',
-        params: { mine: true, part: 'snippet,contentDetails' }
+        params: { mine: true, part: 'snippet,contentDetails', maxResults: 50 }
       },
       playlists: {
         endpoint: 'playlists',
