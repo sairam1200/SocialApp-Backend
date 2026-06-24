@@ -32,6 +32,9 @@ export class OnboardingStatusModel {
   @ApiProperty()
   isCompleted: boolean;
 
+  @ApiProperty({ required: false })
+  accessToken?: string;
+
   constructor(request: Partial<OnboardingStatusModel> = {}) {
     Object.assign(this, request);
   }

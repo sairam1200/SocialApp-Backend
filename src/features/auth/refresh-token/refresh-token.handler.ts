@@ -88,12 +88,8 @@ export class RefreshTokenCommandHandler implements ICommandHandler<RefreshTokenC
       throw new UnauthorizedException("Invalid security stamp. Please log in again.");
     }
 
-    let accessToken: string;
-    if (user.concurrencyStamp === HttpContext.user[Globals.ClaimTypes.ConcurrencyStamp]) {
-      accessToken = this.tokenService.generateEncryptedToken(HttpContext.user);
-    } else {
-      accessToken = await this.tokenService.generateJwtAsync(user);
-    }
+    // Always generate fresh JWT to include latest claims (e.g. onboardingStep)
+    const accessToken = await this.tokenService.generateJwtAsync(user);
 
     userLogin.tokenValue = cryptoUtils.generateEncryptionKey(32);
     userLogin.expiryDateUtc = addDurationToNow(configs.jwt.refreshTokenExpiration);
@@ -110,6 +106,7 @@ export class RefreshTokenCommandHandler implements ICommandHandler<RefreshTokenC
       access_token: accessToken,
       refresh_token: userLogin.tokenValue,
       succeeded: true,
+      onboardingCompleted: String(user.onboardingStep) === 'Completed',
       refreshTokenExpiryTime: Math.floor(userLogin.expiryDateUtc.getTime() / 1000),
     });
   }

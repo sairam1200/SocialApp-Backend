@@ -15,6 +15,7 @@ export class CompleteOnboardingResponse {
   succeeded: boolean;
    data?: {
     onboardingCompleted: boolean;
+    accessToken?: string;
   };
   error?: string;
 }
@@ -63,7 +64,8 @@ export class CompleteOnboardingCommandHandler
   constructor(
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-
+    @Inject(_const.ITOKEN_SERVICE)
+    private readonly tokenService: ITokenService,
   ) {}
 
   public async execute(
@@ -95,26 +97,15 @@ export class CompleteOnboardingCommandHandler
       OnboardingStep.Completed;
 
     await this.userRepository.updateAsync(user);
-    
-    const updatedUser =
-  await this.userRepository.getUserByIdAsync(
-    user.id
-  );
 
-console.log(
-  "UPDATED USER:",
-  JSON.stringify(
-    updatedUser,
-    null,
-    2
-  )
-);
-
+    // Generate new JWT with updated onboardingStep claim
+    const accessToken = await this.tokenService.generateJwtAsync(user);
 
     return {
       succeeded: true,
       data: {
         onboardingCompleted: true,
+        accessToken,
       },
     };
   }
