@@ -11,11 +11,13 @@ import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { ITokenService } from '../../../../domain/services/itoken.service';
 import { IEmailService } from '../../../../domain/services/iemail.service';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
+import { YoutubeAccount } from '../../../../domain/entities/youtubeAccount.entity';
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
+import { IYoutubeAccountRepository } from '../../../../domain/repositories/iyoutubeAccount.repository';
 import {
   GoogleUserDataType,
   YoutubeChannelDataType,
@@ -30,6 +32,7 @@ import { uploadBase64ToCloudinaryAsync } from 'core/utils/cloudinary.util';
 import { UserType } from 'domain/enums';
 import { TokenResponseModel } from 'domain/contracts/tokenResponse.model';
 import { serializeObject } from 'core/utils/serialization.util';
+import { cryptoUtils } from '../../../../core/utils/crypto.util';
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
 
@@ -132,6 +135,8 @@ export class GoogleConnectCallbackQueryHandler
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
   ) { }
@@ -260,6 +265,32 @@ export class GoogleConnectCallbackQueryHandler
                 userData.channel.items[0].snippet.thumbnails.default.url,
             },
           },
+        }),
+      );
+    }
+
+    const channelId = userData.channel.items[0].id;
+    const channelTitle = userData.channel.items[0].snippet.title;
+    let youtubeAccount = await this.youtubeAccountRepository.getByChannelIdAsync(channelId);
+
+    if (youtubeAccount) {
+      youtubeAccount.accessToken = cryptoUtils.encrypt(access_token);
+      youtubeAccount.refreshToken = cryptoUtils.encrypt(refresh_token);
+      youtubeAccount.tokenExpiry = new Date(Date.now() + expires_in * 1000);
+      youtubeAccount.channelTitle = channelTitle;
+      youtubeAccount.connected = true;
+      youtubeAccount.disconnectedAt = undefined;
+      await this.youtubeAccountRepository.updateAsync(youtubeAccount);
+    } else {
+      youtubeAccount = await this.youtubeAccountRepository.createAsync(
+        new YoutubeAccount({
+          userId: user.id,
+          channelId,
+          channelTitle,
+          accessToken: cryptoUtils.encrypt(access_token),
+          refreshToken: cryptoUtils.encrypt(refresh_token),
+          tokenExpiry: new Date(Date.now() + expires_in * 1000),
+          connected: true,
         }),
       );
     }
