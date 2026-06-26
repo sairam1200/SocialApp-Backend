@@ -16,3 +16,7 @@ export { ITopicRepository } from './itopic.repository';
 export { IUserPreferenceRepository } from './iuserPreference.repository';
 export { IYoutubeChannelAnalyticsRepository } from './iyoutubeChannelAnalytics.repository';
 export { IYoutubeVideoAnalyticsRepository } from './iyoutubeVideoAnalytics.repository';
+export { IFacebookPageAnalyticsRepository } from './ifacebookPageAnalytics.repository';
+export { IFacebookPostAnalyticsRepository } from './ifacebookPostAnalytics.repository';
+export { IFacebookVideoAnalyticsRepository } from './ifacebookVideoAnalytics.repository';
+

@@ -84,6 +84,18 @@ import {
   GetYoutubeAnalyticsTrendsQueryHandler,
   GetYoutubeTopVideosQueryHandler
 } from "./youtube/analytics/youtube-analytics.handler";
+import { FacebookAnalyticsController } from "./facebook/analytics/facebook-analytics.endpoint";
+import {
+  SyncFacebookAnalyticsCommandHandler,
+  GetFacebookPageAnalyticsQueryHandler,
+  GetFacebookPostAnalyticsQueryHandler,
+  GetFacebookVideoAnalyticsQueryHandler,
+  GetFacebookAnalyticsTrendsQueryHandler,
+  GetFacebookTopPostsQueryHandler,
+  GetFacebookTopVideosQueryHandler,
+  GetFacebookCompareQueryHandler,
+  GetFacebookGrowthQueryHandler,
+} from "./facebook/analytics/facebook-analytics.handler";
 
 import { TiktokConnectController } from "./tiktok/connect/tiktok-connect.endpoint";
 import { TiktokConnectCallbackQueryHandler, TiktokConnectQueryHandler } from "./tiktok/connect/tiktok-connect.handler";
@@ -219,6 +231,18 @@ export { FacebookSearchController } from "./facebook/search/facebook-search.endp
 export { FacebookSearchQueryHandler } from "./facebook/search/facebook-search.handler";
 export { FacebookDisconnectController } from "./facebook/disconnect/facebook-disconnect.endpoint";
 export { FacebookDisconnectCommandHandler } from "./facebook/disconnect/facebook-disconnect.handler";
+export { FacebookAnalyticsController } from "./facebook/analytics/facebook-analytics.endpoint";
+export {
+  SyncFacebookAnalyticsCommandHandler,
+  GetFacebookPageAnalyticsQueryHandler,
+  GetFacebookPostAnalyticsQueryHandler,
+  GetFacebookVideoAnalyticsQueryHandler,
+  GetFacebookAnalyticsTrendsQueryHandler,
+  GetFacebookTopPostsQueryHandler,
+  GetFacebookTopVideosQueryHandler,
+  GetFacebookCompareQueryHandler,
+  GetFacebookGrowthQueryHandler,
+} from "./facebook/analytics/facebook-analytics.handler";
 export { InstagramSearchController } from "./instagram/search/instagram-search.endpoint";
 export { InstagramSearchQueryHandler } from "./instagram/search/instagram-search.handler";
 export { TwitterSearchController } from "./twitter/search/twitter-search.endpoint";
@@ -480,6 +504,7 @@ const controllers = [
   YoutubeWebhookController,
   YoutubeDisconnectController,
   YoutubeAnalyticsController,
+  FacebookAnalyticsController,
   TiktokConnectController,
   TikTokProfileController,
   TiktokContentsController,
@@ -586,6 +611,15 @@ const handlers = [
   GetYoutubeVideoAnalyticsQueryHandler,
   GetYoutubeAnalyticsTrendsQueryHandler,
   GetYoutubeTopVideosQueryHandler,
+  SyncFacebookAnalyticsCommandHandler,
+  GetFacebookPageAnalyticsQueryHandler,
+  GetFacebookPostAnalyticsQueryHandler,
+  GetFacebookVideoAnalyticsQueryHandler,
+  GetFacebookAnalyticsTrendsQueryHandler,
+  GetFacebookTopPostsQueryHandler,
+  GetFacebookTopVideosQueryHandler,
+  GetFacebookCompareQueryHandler,
+  GetFacebookGrowthQueryHandler,
   TiktokConnectCallbackQueryHandler,
   TiktokConnectQueryHandler,
   TiktokProfileQueryHandler,

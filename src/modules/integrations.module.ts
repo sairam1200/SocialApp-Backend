@@ -12,8 +12,9 @@ import { AnalyticsModule } from "./analytics.module";
 import { SearchCacheService, YoutubeWebhookService } from "infrastructure/services";
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
 import { PlatformRollbackListener } from "../infrastructure/background/listeners/platform-rollback.listener";
-import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserBiometric, UserClaim, UserContent, UserLogin, UserRole, YoutubeChannelAnalytics, YoutubeVideoAnalytics } from "../domain/entities";
+import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserBiometric, UserClaim, UserContent, UserLogin, UserRole, YoutubeChannelAnalytics, YoutubeVideoAnalytics, FacebookPageAnalytics, FacebookPostAnalytics, FacebookVideoAnalytics } from "../domain/entities";
 import { YoutubeAnalyticsCron } from "../infrastructure/background/cron/jobs/youtube-analytics.cron";
+import { FacebookAnalyticsCron } from "../infrastructure/background/cron/jobs/facebook-analytics.cron";
 
 @Module({
   imports: [
@@ -34,7 +35,10 @@ import { YoutubeAnalyticsCron } from "../infrastructure/background/cron/jobs/you
       DataProtectionKey,
       ContentStream,
       YoutubeChannelAnalytics,
-      YoutubeVideoAnalytics
+      YoutubeVideoAnalytics,
+      FacebookPageAnalytics,
+      FacebookPostAnalytics,
+      FacebookVideoAnalytics
     ])
   ],
   controllers: [
@@ -65,6 +69,11 @@ import { YoutubeAnalyticsCron } from "../infrastructure/background/cron/jobs/you
     dependency.YoutubeChannelAnalyticsRepository,
     dependency.YoutubeVideoAnalyticsRepository,
     dependency.YoutubeAnalyticsService,
+    dependency.FacebookPageAnalyticsRepository,
+    dependency.FacebookPostAnalyticsRepository,
+    dependency.FacebookVideoAnalyticsRepository,
+    dependency.FacebookAnalyticsService,
+    FacebookAnalyticsCron,
   ],
   exports: [],
 })

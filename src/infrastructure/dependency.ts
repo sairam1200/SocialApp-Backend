@@ -1,8 +1,8 @@
 import _const from "../core/utils/const";
-import { AnalyticsRepository, ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, PremiumRollupRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, TopicRepository, UserContentRepository, UserFollowRepository, UserLoginRepository, UserPreferenceRepository, UserRepository, UserRoleRepository, YoutubeChannelAnalyticsRepository, YoutubeVideoAnalyticsRepository } from "./repositories";
+import { AnalyticsRepository, ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, PremiumRollupRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, TopicRepository, UserContentRepository, UserFollowRepository, UserLoginRepository, UserPreferenceRepository, UserRepository, UserRoleRepository, YoutubeChannelAnalyticsRepository, YoutubeVideoAnalyticsRepository, FacebookPageAnalyticsRepository, FacebookPostAnalyticsRepository, FacebookVideoAnalyticsRepository } from "./repositories";
 import { GeneralRepository } from "./repositories/general.repository";
 import { ManualProfileRepository } from "./repositories/manualProfile.repository";
-import { AnalyticsService, EmailService, NotificationService, SearchService, SearchCacheService, TokenService, YoutubeWebhookService, QueueService, PlatformDisconnectService, YoutubeAnalyticsService } from "./services";
+import { AnalyticsService, EmailService, NotificationService, SearchService, SearchCacheService, TokenService, YoutubeWebhookService, QueueService, PlatformDisconnectService, YoutubeAnalyticsService, FacebookAnalyticsService } from "./services";
 
 /* This is the dependency object that holds all the repositories & services
  * used in the application. It is used to provide the dependencies to the
@@ -138,5 +138,21 @@ export const dependency = {
   YoutubeAnalyticsService: {
     provide: _const.IYOUTUBEANALYTICS_SERVICE,
     useClass: YoutubeAnalyticsService,
+  },
+  FacebookPageAnalyticsRepository: {
+    provide: _const.IFACEBOOKPAGEANALYTICS_REPOSITORY,
+    useClass: FacebookPageAnalyticsRepository,
+  },
+  FacebookPostAnalyticsRepository: {
+    provide: _const.IFACEBOOKPOSTANALYTICS_REPOSITORY,
+    useClass: FacebookPostAnalyticsRepository,
+  },
+  FacebookVideoAnalyticsRepository: {
+    provide: _const.IFACEBOOKVIDEOANALYTICS_REPOSITORY,
+    useClass: FacebookVideoAnalyticsRepository,
+  },
+  FacebookAnalyticsService: {
+    provide: _const.IFACEBOOKANALYTICS_SERVICE,
+    useClass: FacebookAnalyticsService,
   },
 };

@@ -35,6 +35,10 @@ export default {
   IYOUTUBECHANNELANALYTICS_REPOSITORY: 'IYoutubeChannelAnalyticsRepository',
   IYOUTUBEVIDEOANALYTICS_REPOSITORY: 'IYoutubeVideoAnalyticsRepository',
   IYOUTUBEANALYTICS_SERVICE: 'IYoutubeAnalyticsService',
+  IFACEBOOKPAGEANALYTICS_REPOSITORY: 'IFacebookPageAnalyticsRepository',
+  IFACEBOOKPOSTANALYTICS_REPOSITORY: 'IFacebookPostAnalyticsRepository',
+  IFACEBOOKVIDEOANALYTICS_REPOSITORY: 'IFacebookVideoAnalyticsRepository',
+  IFACEBOOKANALYTICS_SERVICE: 'IFacebookAnalyticsService',
 
   BULL_QUEUES: {
     FACEBOOK_IMPORT: 'facebook-import',

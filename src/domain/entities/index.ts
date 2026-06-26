@@ -26,4 +26,8 @@ export { AnalyticsEvent } from './analyticsEvent.entity';
 export { PremiumRollup } from './premiumRollup.entity';
 export { YoutubeChannelAnalytics } from './youtubeChannelAnalytics.entity';
 export { YoutubeVideoAnalytics } from './youtubeVideoAnalytics.entity';
+export { FacebookPageAnalytics } from './facebookPageAnalytics.entity';
+export { FacebookPostAnalytics } from './facebookPostAnalytics.entity';
+export { FacebookVideoAnalytics } from './facebookVideoAnalytics.entity';
+
 
