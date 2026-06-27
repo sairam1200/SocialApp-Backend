@@ -51,6 +51,8 @@ export interface IUserRepository {
     searchTerm?: string
   ): Promise<[User[], number]>;
 
+  getDiscoverCreatorsAsync(page: number, pageSize: number): Promise<[User[], number]>;
+
   getUserBiometricAsync(userId: string): Promise<UserBiometric | null>;
   upsertUserBiometricAsync(userId: string, biometrics: UserBiometric): Promise<UserBiometric>;
   updateUserBiometricPrivacyAsync(userId: string, privacy: ProfileImagePrivacy): Promise<boolean>;

@@ -5,6 +5,7 @@ import { CqrsModule } from "@nestjs/cqrs";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
+import { ProfileCacheService } from "../infrastructure/services/profileCache.service";
 import { User, Role, UserRole, LinkedAccount, ManualProfile, RoleClaim, UserClaim, PlaylistMember, UserBiometric, UserFollow } from "../domain/entities";
 
 @Module({
@@ -28,6 +29,7 @@ import { User, Role, UserRole, LinkedAccount, ManualProfile, RoleClaim, UserClai
   providers: [
     JwtService,
 
+    ProfileCacheService,
     ...profile.addHandlers(),
     dependency.UserRepository,
     dependency.RoleRepository,
@@ -36,6 +38,8 @@ import { User, Role, UserRole, LinkedAccount, ManualProfile, RoleClaim, UserClai
     dependency.ManualProfileRepository,
     dependency.UserFollowRepository,
   ],
-  exports: [],
+  exports: [
+    ProfileCacheService,
+  ],
 })
 export class ProfileModule { }

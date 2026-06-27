@@ -38,12 +38,19 @@ export class ApproveFollowRequestCommandHandler implements ICommandHandler<Appro
     }
 
     await this.follows.updateStatusAsync(existing.id, FollowStatus.Accepted);
-    await this.invalidateFollowCounts(command.followedUserId);
-    await this.invalidateFollowCounts(command.followerId);
+    await this.invalidateCaches(command.followedUserId, command.followerId);
   }
 
-  private async invalidateFollowCounts(userId: string): Promise<void> {
-    const key = redis.getRedisKey('follow:counts', userId);
-    await redis.removeFromRedisAsync(key);
+  private async invalidateCaches(followedUserId: string, followerId: string): Promise<void> {
+    const followedKey = redis.getRedisKey('follow:counts', followedUserId);
+    const followerKey = redis.getRedisKey('follow:counts', followerId);
+    const followedProfileKey = redis.getRedisKey('profile', `public:${followedUserId}`);
+    const followerProfileKey = redis.getRedisKey('profile', `public:${followerId}`);
+    await Promise.all([
+      redis.removeFromRedisAsync(followedKey),
+      redis.removeFromRedisAsync(followerKey),
+      redis.removeFromRedisAsync(followedProfileKey),
+      redis.removeFromRedisAsync(followerProfileKey),
+    ]);
   }
 }

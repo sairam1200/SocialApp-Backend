@@ -3,7 +3,7 @@ import { Repository, SelectQueryBuilder } from "typeorm";
 import { Injectable } from "@nestjs/common";
 import { FollowStatus } from "../../domain/enums";
 import { UserFollow } from "../../domain/entities/userFollow.entity";
-import { IUserFollowRepository } from "../../domain/repositories/iuserFollow.repository";
+import { IUserFollowRepository, PaginatedResult } from "../../domain/repositories/iuserFollow.repository";
 import { User } from "../../domain/entities";
 
 @Injectable()
@@ -59,6 +59,36 @@ export class UserFollowRepository implements IUserFollowRepository {
     return qb.getMany();
   }
 
+  public async getFollowersPaginatedAsync(userId: string, page: number, limit: number, status?: FollowStatus | null): Promise<PaginatedResult<UserFollow>> {
+    const skip = (page - 1) * limit;
+    const qb = this.buildFollowQuery('follow');
+    qb.where('follow.followedId = :userId', { userId });
+    if (status) {
+      qb.andWhere('follow.status = :status', { status });
+    }
+    qb.orderBy('follow.createdOn', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total, page, limit, hasMore: skip + items.length < total };
+  }
+
+  public async getFollowingPaginatedAsync(userId: string, page: number, limit: number, status?: FollowStatus | null): Promise<PaginatedResult<UserFollow>> {
+    const skip = (page - 1) * limit;
+    const qb = this.buildFollowQuery('follow');
+    qb.where('follow.followerId = :userId', { userId });
+    if (status) {
+      qb.andWhere('follow.status = :status', { status });
+    }
+    qb.orderBy('follow.createdOn', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total, page, limit, hasMore: skip + items.length < total };
+  }
+
   public async countFollowersAsync(userId: string, status?: FollowStatus): Promise<number> {
     const qb = this.followContext.createQueryBuilder('follow')
       .where('follow.followedId = :userId', { userId });
@@ -112,6 +142,8 @@ export class UserFollowRepository implements IUserFollowRepository {
     return this.followContext.createQueryBuilder(alias)
       .leftJoinAndSelect(`${alias}.follower`, 'follower')
       .leftJoinAndSelect(`${alias}.followed`, 'followed')
+      .leftJoinAndSelect('follower.biometrics', 'followerBiometrics')
+      .leftJoinAndSelect('followed.biometrics', 'followedBiometrics')
       .select([
         `${alias}.id`,
         `${alias}.status`,
@@ -122,12 +154,12 @@ export class UserFollowRepository implements IUserFollowRepository {
         'follower.userName',
         'follower.firstName',
         'follower.lastName',
-        'follower.profileImage',
+        'followerBiometrics.profileImageUrl',
         'followed.id',
         'followed.userName',
         'followed.firstName',
         'followed.lastName',
-        'followed.profileImage',
+        'followedBiometrics.profileImageUrl',
       ]);
   }
 }

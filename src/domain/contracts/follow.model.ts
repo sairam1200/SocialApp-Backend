@@ -9,7 +9,10 @@ export class FollowUserSummaryModel {
   userName: string;
 
   @ApiProperty()
-  displayName: string;
+  firstName: string;
+
+  @ApiProperty()
+  lastName: string;
 
   @ApiProperty({ required: false })
   profileImage?: string;

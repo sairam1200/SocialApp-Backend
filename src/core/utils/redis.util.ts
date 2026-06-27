@@ -159,6 +159,14 @@ async function getFromRedisAsync<T = any>(key: string): Promise<T | null> {
   return null;
 }
 
+async function incrementInRedisAsync(key: string, ttl?: number): Promise<number> {
+  const count = await instance.incr(key);
+  if (count === 1 && ttl) {
+    await instance.expire(key, ttl);
+  }
+  return count;
+}
+
 async function removeFromRedisAsync(key: string) {
   await instance.del(key);
   clearMemoryCache(key);
@@ -179,6 +187,7 @@ const redis: {
   storeInRedisAsync: (key: string, value: object, ttl?: number) => Promise<boolean>;
   getFromRedisAsync: <T = any>(key: string) => Promise<T | null>;
   removeFromRedisAsync: (key: string) => Promise<void>;
+  incrementInRedisAsync: (key: string, ttl?: number) => Promise<number>;
   clearMemoryCache: () => void;
 } = {
   instance,
@@ -189,6 +198,7 @@ const redis: {
   storeInRedisAsync,
   getFromRedisAsync,
   removeFromRedisAsync,
+  incrementInRedisAsync,
   clearMemoryCache,
 };
 

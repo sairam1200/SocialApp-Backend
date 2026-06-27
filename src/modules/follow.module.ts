@@ -4,12 +4,14 @@ import { JwtService } from '@nestjs/jwt';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { dependency } from '../infrastructure/dependency';
+import { ProfileModule } from './profile.module';
 import { Role, RoleClaim, User, UserBiometric, UserClaim, UserFollow, UserRole } from '../domain/entities';
 
 @Module({
   imports: [
     CqrsModule,
     TypeOrmModule.forFeature([UserFollow, User, UserBiometric, UserClaim, Role, RoleClaim, UserRole]),
+    ProfileModule,
   ],
   controllers: [
     ...follows.addControllers(),

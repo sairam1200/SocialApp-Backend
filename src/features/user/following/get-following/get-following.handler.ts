@@ -4,12 +4,14 @@ import _const from "../../../../core/utils/const";
 import { FollowModel } from "../../../../domain/contracts/follow.model";
 import { FollowStatus } from "../../../../domain/enums";
 import { mapToFollowModel } from "../../../../domain/mappers/follow.mapper";
-import { IUserFollowRepository } from "../../../../domain/repositories/iuserFollow.repository";
+import { IUserFollowRepository, PaginatedResult } from "../../../../domain/repositories/iuserFollow.repository";
 
 export class GetFollowingQuery {
   constructor(
     public userId: string,
     public status?: FollowStatus,
+    public page: number = 1,
+    public limit: number = 20,
   ) { }
 }
 
@@ -19,10 +21,13 @@ export class GetFollowingQueryHandler implements IQueryHandler<GetFollowingQuery
     @Inject(_const.IUSERFOLLOW_REPOSITORY) private readonly follows: IUserFollowRepository,
   ) { }
 
-  public async execute(query: GetFollowingQuery): Promise<FollowModel[]> {
+  public async execute(query: GetFollowingQuery): Promise<PaginatedResult<FollowModel>> {
     const statusFilter = query.status ?? FollowStatus.Accepted;
-    const items = await this.follows.getFollowingAsync(query.userId, statusFilter);
+    const result = await this.follows.getFollowingPaginatedAsync(query.userId, query.page, query.limit, statusFilter);
 
-    return items.map(mapToFollowModel);
+    return {
+      ...result,
+      items: result.items.map(mapToFollowModel),
+    };
   }
 }

@@ -1,15 +1,16 @@
 import _const from "../core/utils/const";
 import { JwtService } from "@nestjs/jwt";
-import { BullModule } from '@nestjs/bullmq';
+import { BullModule, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { createBullBoard } from '@bull-board/api';
 import { ExpressAdapter } from '@bull-board/express';
+import { DiscoveryModule, DiscoveryService } from "@nestjs/core";
 import { UserContent } from "../domain/entities/userContent.entity";
 import { LinkedAccount } from "../domain/entities/linkedAccount.entity";
 import { YoutubeAccount, YoutubeVideo, YoutubeAnalytic, UploadJob } from "../domain/entities";
 import { BullBoardAuthMiddleware } from "../core/middlewares/bullBoardAuth.middleware";
-import { DynamicModule, MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
+import { DynamicModule, MiddlewareConsumer, Module, NestModule, OnApplicationShutdown } from "@nestjs/common";
 import BullMQConfig from "../core/config/bullmq.config";
 import { YoutubeImportProcessor } from "../infrastructure/background/processors/youtube-import.processor";
 import { YoutubeUploadProcessor } from "../infrastructure/background/processors/youtube-upload.processor";
@@ -50,7 +51,7 @@ const registeredQueues = BullModule.registerQueue(
 );
 
 @Module({})
-export class QueuesModule implements NestModule {
+export class QueuesModule implements NestModule, OnApplicationShutdown {
   static register(): DynamicModule {
     // Processors / Workers — only register when DISABLE_WORKERS is NOT set.
     // This allows web-only instances to skip worker creation.
@@ -64,6 +65,7 @@ export class QueuesModule implements NestModule {
       global: true,
       module: QueuesModule,
       imports: [
+        DiscoveryModule,
         TypeOrmModule.forFeature([
           User,
           UserRole,
@@ -131,7 +133,26 @@ export class QueuesModule implements NestModule {
     };
   }
 
-  constructor() { }
+  constructor(
+    private readonly discoveryService: DiscoveryService,
+  ) { }
+
+  async onApplicationShutdown(signal?: string): Promise<void> {
+    const providers = this.discoveryService.getProviders();
+    const workerHosts = providers
+      .map(p => p.instance)
+      .filter((instance): instance is WorkerHost => instance instanceof WorkerHost);
+
+    await Promise.all(
+      workerHosts.map(async (host) => {
+        try {
+          await host.worker.close();
+        } catch (error) {
+          logger.warn(`[QueuesModule] Failed to close worker ${host.constructor.name}: ${(error as Error).message}`);
+        }
+      })
+    );
+  }
 
   configure(consumer: MiddlewareConsumer) {
     const serverAdapter = new ExpressAdapter();

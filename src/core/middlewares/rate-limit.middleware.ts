@@ -6,27 +6,44 @@ import { TooManyRequestsException } from '../../core/exceptions/tooManyRequest.e
 
 @Injectable()
 export class RateLimitMiddleware implements NestMiddleware {
-
   constructor(
     @Inject(_const.IRATELIMIT_REPOSITORY)
     private readonly rateLimitRepository: IRateLimitRepository,
-  ) { }
+  ) {}
 
-  private readonly limit = 20; // requests
-  private readonly windowMs = 60 * 60 * 1000; // 1 hour
+  private readonly limit =
+    process.env.NODE_ENV === 'production' ? 120 : 100000;
+
+  private readonly windowMs = 60 * 1000; // 1 minute
+
+  private readonly protectedRoutes = [
+    '/api/v1/auth/login',
+    '/api/v1/auth/register',
+    '/api/v1/auth/forgot-password',
+    '/api/v1/auth/verify-otp',
+  ];
 
   async use(req: Request, res: Response, next: NextFunction) {
-    const ip = req.ip || req.connection.remoteAddress;
-    const route = req.route?.path || req.originalUrl;
+    // Apply rate limiting only to auth routes
+    if (!this.protectedRoutes.some(route => req.path.startsWith(route))) {
+      return next();
+    }
+
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const route = req.path;
 
     const now = new Date();
     const record = await this.rateLimitRepository.getAsync(ip, route);
 
     if (!record) {
-      await this.rateLimitRepository.createAsync(ip, route, new Date(now.getTime() + this.windowMs));
+      await this.rateLimitRepository.createAsync(
+        ip,
+        route,
+        new Date(now.getTime() + this.windowMs),
+      );
     } else {
       if (record.expiresAt < now) {
-        // Log the old window to RateLimitLog
+        // Archive previous window
         await this.rateLimitRepository.createRateLimitLog(record);
 
         record.count = 1;
@@ -34,12 +51,16 @@ export class RateLimitMiddleware implements NestMiddleware {
         await this.rateLimitRepository.updateAsync(record);
       } else {
         if (record.count >= this.limit) {
-          throw new TooManyRequestsException('Too many requests. Please try again later.');
+          throw new TooManyRequestsException(
+            'Too many requests. Please try again later.',
+          );
         }
+
         record.count++;
         await this.rateLimitRepository.updateAsync(record);
       }
     }
+
     next();
   }
 }

@@ -6,7 +6,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Like, Repository, SelectQueryBuilder } from "typeorm";
 import { cryptoUtils } from '../../core/utils/crypto.util';
 import { User, UserClaim, UserRole, UserBiometric } from '../../domain/entities';
-import { ProfileImagePrivacy } from '../../domain/enums';
+import { ProfileImagePrivacy, UserType } from '../../domain/enums';
 import { generateTimestampUUID } from '../../core/utils/time.util';
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { BadRequestException, forwardRef, Inject, Injectable } from "@nestjs/common";
@@ -158,6 +158,19 @@ export class UserRepository implements IUserRepository {
 
     return await queryBuilder.getManyAndCount();
 
+  }
+
+  public async getDiscoverCreatorsAsync(page: number, pageSize: number): Promise<[User[], number]> {
+    const skip = (page - 1) * pageSize;
+    const queryBuilder = this.userContext
+      .createQueryBuilder("user")
+      .leftJoinAndSelect("user.biometrics", "biometrics")
+      .where("user.type = :type", { type: UserType.User })
+      .orderBy("user.registeredOn", "DESC")
+      .skip(skip)
+      .take(pageSize);
+
+    return queryBuilder.getManyAndCount();
   }
 
   public async checkPasswordAsync(user: User, password: string): Promise<boolean> {

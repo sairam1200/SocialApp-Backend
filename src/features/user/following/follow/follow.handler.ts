@@ -6,6 +6,9 @@ import { UserFollow } from "../../../../domain/entities/userFollow.entity";
 import { mapToFollowModel } from "../../../../domain/mappers/follow.mapper";
 import _const from "../../../../core/utils/const";
 import { IUserRepository, IUserFollowRepository } from "../../../../domain/repositories";
+import { ProfileCacheService } from "../../../../infrastructure/services/profileCache.service";
+import configs from "../../../../configs";
+import { TooManyRequestsException } from "../../../../core/exceptions/tooManyRequest.exception";
 import redis from "../../../../core/utils/redis.util";
 
 export class FollowUserCommand {
@@ -20,7 +23,32 @@ export class FollowUserCommandHandler implements ICommandHandler<FollowUserComma
   constructor(
     @Inject(_const.IUSER_REPOSITORY) private readonly users: IUserRepository,
     @Inject(_const.IUSERFOLLOW_REPOSITORY) private readonly follows: IUserFollowRepository,
+    private readonly profileCache: ProfileCacheService,
   ) { }
+
+  private getDailyFollowLimitKey(userId: string): string {
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return redis.getRedisKey('follow', `daily:limit:${userId}:${dateStr}`);
+  }
+
+  private async checkDailyFollowLimit(userId: string): Promise<void> {
+    const limit = configs.user.dailyFollowLimit;
+    const key = this.getDailyFollowLimitKey(userId);
+    try {
+      const count = await redis.incrementInRedisAsync(key, 25 * 60 * 60);
+      if (count > limit) {
+        throw new TooManyRequestsException('Daily follow limit reached. Please try again later.');
+      }
+    } catch (error) {
+      if (error instanceof TooManyRequestsException) {
+        throw error;
+      }
+      if (error instanceof Error && error.message.includes('READONLY')) {
+        throw new TooManyRequestsException('Daily follow limit reached. Please try again later.');
+      }
+    }
+  }
 
   public async execute(command: FollowUserCommand): Promise<FollowModel> {
     if (command.followerId === command.targetUserId) {
@@ -31,6 +59,8 @@ export class FollowUserCommandHandler implements ICommandHandler<FollowUserComma
     if (!targetUser || !targetUser.isActive) {
       throw new NotFoundException('User not found.');
     }
+
+    await this.checkDailyFollowLimit(command.followerId);
 
     const existing = await this.follows.getWithUsersAsync(command.followerId, command.targetUserId);
     if (existing) {
@@ -44,24 +74,30 @@ export class FollowUserCommandHandler implements ICommandHandler<FollowUserComma
       new UserFollow({
         followerId: command.followerId,
         followedId: command.targetUserId,
-        status: FollowStatus.Accepted, // hook here if/when private profiles are added
-      })
+        status: FollowStatus.Accepted,
+      }),
     );
 
-    // Invalidate follow count caches for both users
-    await this.invalidateFollowCounts(command.targetUserId);
-    await this.invalidateFollowCounts(command.followerId);
+    await this.invalidateCaches(command.targetUserId, command.followerId);
 
     const hydrated = await this.follows.getWithUsersAsync(command.followerId, command.targetUserId);
     return mapToFollowModel(hydrated ?? new UserFollow({
       followerId: command.followerId,
       followedId: command.targetUserId,
-      status: FollowStatus.Accepted
+      status: FollowStatus.Accepted,
     }));
   }
 
-  private async invalidateFollowCounts(userId: string): Promise<void> {
-    const key = redis.getRedisKey('follow:counts', userId);
-    await redis.removeFromRedisAsync(key);
+  private async invalidateCaches(targetUserId: string, followerId: string): Promise<void> {
+    const targetKey = redis.getRedisKey('follow:counts', targetUserId);
+    const followerKey = redis.getRedisKey('follow:counts', followerId);
+    const targetProfileKey = redis.getRedisKey('profile', `public:${targetUserId}`);
+    const followerProfileKey = redis.getRedisKey('profile', `public:${followerId}`);
+    await Promise.all([
+      redis.removeFromRedisAsync(targetKey),
+      redis.removeFromRedisAsync(followerKey),
+      redis.removeFromRedisAsync(targetProfileKey),
+      redis.removeFromRedisAsync(followerProfileKey),
+    ]);
   }
 }

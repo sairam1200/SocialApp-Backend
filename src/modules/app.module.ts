@@ -19,6 +19,9 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DataSeeder } from '../infrastructure/services/data.seeder';
 import { postgresOptions } from '../infrastructure/persistence/data.source';
 import { HttpContextMiddleware } from '../core/middlewares/httpContext.middleware';
+import { RateLimitMiddleware } from '../core/middlewares/rate-limit.middleware';
+import { RateLimit, RateLimitLog } from '../domain/entities';
+import { dependency } from '../infrastructure/dependency';
 import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
 
 @Module({
@@ -31,6 +34,7 @@ import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap, OnAppli
       signOptions: { expiresIn: configs.jwt.accessTokenExpiration },
     }),
     TypeOrmModule.forRoot(postgresOptions),
+    TypeOrmModule.forFeature([RateLimit, RateLimitLog]),
     UserModule,
     RoleModule,
     AuthModule,
@@ -41,6 +45,10 @@ import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap, OnAppli
     IntegrationsModule,
     FollowModule,
   ],
+  providers: [
+    dependency.RateLimitRepository,
+    RateLimitMiddleware,
+  ],
 })
 export class AppModule implements OnApplicationBootstrap, OnApplicationShutdown, NestModule {
   constructor(
@@ -50,6 +58,10 @@ export class AppModule implements OnApplicationBootstrap, OnApplicationShutdown,
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(HttpContextMiddleware)
+      .forRoutes('*');
+
+    consumer
+      .apply(RateLimitMiddleware)
       .forRoutes('*');
   }
 

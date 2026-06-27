@@ -14,6 +14,10 @@ import { SearchManualProfileController } from "./manual/search-manual-profile/se
 import { SearchManualProfileQueryHandler } from "./manual/search-manual-profile/search-manual-profile.handler";
 import { UpdateManualProfileController } from "./manual/update-manual-profile/update-manual-profile.endpoint";
 import { UpdateManualProfileCommandHandler } from "./manual/update-manual-profile/update-manual-profile.handler";
+import { GetPublicProfileController } from "./public-profile/get-public-profile.endpoint";
+import { GetPublicProfileQueryHandler } from "./public-profile/get-public-profile.handler";
+import { DiscoverCreatorsController } from "./discover/discover-creators.endpoint";
+import { DiscoverCreatorsQueryHandler } from "./discover/discover-creators.handler";
 
 export { GetUserLinkedAccountsController } from "./get-linked-accounts/get-linked-accounts.endpoint";
 export { GetUserLinkedAccountsQueryHandler } from "./get-linked-accounts/get-linked-accounts.handler";
@@ -29,6 +33,10 @@ export { SearchManualProfileController } from "./manual/search-manual-profile/se
 export { SearchManualProfileQuery, SearchManualProfileQueryHandler } from "./manual/search-manual-profile/search-manual-profile.handler";
 export { GetProfileController } from "./get/get-profile.endpoint";
 export { GetProfileQuery, GetProfileQueryHandler } from "./get/get-profile.handler";
+export { GetPublicProfileController } from "./public-profile/get-public-profile.endpoint";
+export { GetPublicProfileQuery, GetPublicProfileQueryHandler } from "./public-profile/get-public-profile.handler";
+export { DiscoverCreatorsController } from "./discover/discover-creators.endpoint";
+export { DiscoverCreatorsQuery, DiscoverCreatorsQueryHandler } from "./discover/discover-creators.handler";
 
 const controllers = [
   GetUserLinkedAccountsController,
@@ -39,6 +47,8 @@ const controllers = [
   ReorderManualProfileController,
   SearchManualProfileController,
   GetProfileController,
+  GetPublicProfileController,
+  DiscoverCreatorsController,
 ];
 
 const handlers = [
@@ -50,6 +60,8 @@ const handlers = [
   ReorderManualProfileCommandHandler,
   SearchManualProfileQueryHandler,
   GetProfileQueryHandler,
+  GetPublicProfileQueryHandler,
+  DiscoverCreatorsQueryHandler,
 ];
 
 const profile = {

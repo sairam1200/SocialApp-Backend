@@ -200,6 +200,9 @@ const envVarsSchema = Joi.object()
     USER_PROFILE_CHANGE_COOLDOWN_DAYS: Joi.number()
       .default(60)
       .description('Cooldown period in days before user can change email or username again'),
+    DAILY_FOLLOW_LIMIT: Joi.number()
+      .default(100)
+      .description('Maximum number of follows a user can perform per day'),
     GOOGLE_REDIRECT_URI: Joi.string()
       .description('Google OAuth redirect URI'),
     SMTP_HOST: Joi.string()
@@ -401,7 +404,8 @@ export default {
     expirationTime: envVars.TOKEN_EXPIRATION_TIME
   },
   user: {
-    profileChangeCooldownDays: envVars.USER_PROFILE_CHANGE_COOLDOWN_DAYS
+    profileChangeCooldownDays: envVars.USER_PROFILE_CHANGE_COOLDOWN_DAYS,
+    dailyFollowLimit: envVars.DAILY_FOLLOW_LIMIT,
   },
   smtp: {
     host: envVars.SMTP_HOST,

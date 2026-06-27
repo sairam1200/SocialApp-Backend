@@ -12,6 +12,8 @@ import { FollowCountsController } from "./count/count.endpoint";
 import { GetFollowCountsQueryHandler } from "./count/count.handler";
 import { CommonFollowersController } from "./common-followers/common-followers.endpoint";
 import { GetCommonFollowersQueryHandler } from "./common-followers/common-followers.handler";
+import { FollowStatusController } from "./follow-status/follow-status.endpoint";
+import { GetFollowStatusQueryHandler } from "./follow-status/follow-status.handler";
 
 const controllers = [
   FollowController,
@@ -21,6 +23,7 @@ const controllers = [
   FollowingController,
   FollowCountsController,
   CommonFollowersController,
+  FollowStatusController,
 ];
 
 const handlers = [
@@ -31,6 +34,7 @@ const handlers = [
   GetFollowingQueryHandler,
   GetFollowCountsQueryHandler,
   GetCommonFollowersQueryHandler,
+  GetFollowStatusQueryHandler,
 ];
 
 const follows = {
