@@ -55,12 +55,11 @@ export class BullMQConfig {
 
   /**
    * Returns worker options.
-   * Uses the shared Redis instance so the main client (this.connection)
-   * reuses the existing connection (shared=true → 0 new connections).
-   * BullMQ still creates a duplicate for the blocking client via
-   * instance.duplicate() (1 connection per worker).
+   * Uses the shared Redis instance so the main client reuses the existing connection.
+   * BullMQ creates a duplicate for the blocking client via instance.duplicate()
+   * (1 connection per worker).
    *
-   * Total for 14 workers: 1 (shared) + 14 (blocking) = 15 connections.
+   * Total for 13 workers: 1 (shared) + 13 (blocking) = 14 connections.
    */
   static getWorkerOptions(
     queueName: string,
@@ -68,15 +67,13 @@ export class BullMQConfig {
     options?: Partial<WorkerOptions>
   ): Partial<WorkerOptions> {
     return {
-      // Shared instance — QueueBase sets shared=true, no new client created.
-      // The blocking connection is duplicated automatically (1 per worker).
       connection: redis.getBullMQConnection(),
       prefix: 'gaddr-backend',
-      concurrency: Math.max(1, Math.min(concurrency, 2)), // Max 2: prevent OOM on 512 MB
-      lockDuration: 60000, // 60 seconds (was 30): prevents premature timeout on slow uploads
-      lockRenewTime: 30000, // 30 seconds (was 15): renew lock every 30s
-      stalledInterval: 60000, // 60 seconds (was 30): check stalled less often
-      maxStalledCount: 3, // (was 1): allow 2 retries after stall before failing
+      concurrency: Math.max(1, Math.min(concurrency, 2)),
+      lockDuration: 60000,
+      lockRenewTime: 30000,
+      stalledInterval: 60000,
+      maxStalledCount: 3,
       removeOnComplete: {
         age: FIFTEEN_MINUTES,
         count: 50,
@@ -86,7 +83,7 @@ export class BullMQConfig {
         count: 200,
       },
       metrics: {
-        maxDataPoints: 10, // Reduced from 100: saves memory
+        maxDataPoints: 10,
       },
       skipLockRenewal: false,
       ...options,

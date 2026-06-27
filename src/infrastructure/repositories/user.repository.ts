@@ -505,4 +505,32 @@ console.log('profileImageUrl:', biometrics.profileImageUrl);
       return null;
     }
   }
+
+  // Referral Methods
+  public async getUserByReferralCodeAsync(referralCode: string): Promise<User | null> {
+    return await this.userContext.findOne({ where: { referralCode }, relations: { biometrics: true } });
+  }
+
+  public async generateReferralCodeAsync(user: User): Promise<string> {
+    const { nanoid } = await import('nanoid');
+    const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // No 0/O, 1/I/L to avoid confusion
+    const maxRetries = 5;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const code = nanoid(8);
+      // Build the code using the custom alphabet
+      const referralCode = Array.from({ length: 8 }, () =>
+        alphabet[Math.floor(Math.random() * alphabet.length)]
+      ).join('');
+
+      const existing = await this.getUserByReferralCodeAsync(referralCode);
+      if (!existing) {
+        user.referralCode = referralCode;
+        await this.userContext.save(user);
+        return referralCode;
+      }
+    }
+
+    throw new ApplicationException('Unable to generate a unique referral code. Please try again.');
+  }
 }

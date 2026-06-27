@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { CommandBus } from "@nestjs/cqrs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiHeader, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserModel } from "../../../domain/contracts/user.model";
 import { RegisterCommand, RegisterModel } from "./register.handler";
 import { Body, Controller, HttpStatus, Post, Res } from "@nestjs/common";
@@ -17,6 +17,7 @@ export class RegisterController {
 
   @RequireTurnstile()
   @Post('register')
+  @ApiHeader({ name: 'x-turnstile-token', required: true, description: 'Turnstile CAPTCHA token (use "test-token" in local dev)' })
   @ApiResponse({ status: 200, description: 'OK', type: UserModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })

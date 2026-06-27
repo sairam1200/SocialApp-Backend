@@ -56,6 +56,8 @@ from "./onboarding/complete/complete-onboarding.endpoint";
 
 import { CompleteOnboardingCommandHandler }
 from "./onboarding/complete/complete-onboarding.handler";
+import { GetReferralCodeController } from "./referral/get-referral-code/get-referral-code.endpoint";
+import { GetReferralCodeQueryHandler } from "./referral/get-referral-code/get-referral-code.handler";
 
 // EXPORTS
 export { ChangePasswordController } from "./change-password/change-password.endpoint";
@@ -114,6 +116,8 @@ export { GetNotificationSettingController } from "./settings/notification/get/ge
 export { GetNotificationSettingQuery } from "./settings/notification/get/get-notification-setting.handler";
 export { UpdateNotificationSettingController } from "./settings/notification/update/update-notification-setting.endpoint";
 export { UpdateNotificationSettingCommand } from "./settings/notification/update/update-notification-setting.handler";
+export { GetReferralCodeController } from "./referral/get-referral-code/get-referral-code.endpoint";
+export { GetReferralCodeQuery } from "./referral/get-referral-code/get-referral-code.handler";
 
 const controllers = [
   GetUsersController,
@@ -143,7 +147,11 @@ const controllers = [
   UpdateThemeController,
   GetNotificationSettingController,
   UpdateNotificationSettingController,
+
   CompleteOnboardingController,
+
+  GetReferralCodeController,
+
 ];
 
 const handlers = [
@@ -173,7 +181,11 @@ const handlers = [
   UpdateThemeCommandHandler,
   GetNotificationSettingQueryHandler,
   UpdateNotificationSettingCommandHandler,
+
   CompleteOnboardingCommandHandler,
+
+  GetReferralCodeQueryHandler,
+
 ];
 
 const users = {

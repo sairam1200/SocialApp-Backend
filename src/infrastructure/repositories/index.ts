@@ -16,5 +16,13 @@ export { TopicRepository } from './topic.repository';
 export { UserPreferenceRepository } from './userPreference.repository';
 export { YoutubeAccountRepository } from './youtubeAccount.repository';
 export { YoutubeVideoRepository } from './youtubeVideo.repository';
-export { YoutubeAnalyticRepository } from './youtubeAnalytic.repository';
 export { UploadJobRepository } from './uploadJob.repository';
+export { AnalyticsRepository } from './analytics.repository';
+export { PremiumRollupRepository } from './premiumRollup.repository';
+export { YoutubeChannelAnalyticsRepository } from './youtubeChannelAnalytics.repository';
+export { YoutubeVideoAnalyticsRepository } from './youtubeVideoAnalytics.repository';
+export { FacebookPageAnalyticsRepository } from './facebookPageAnalytics.repository';
+export { FacebookPostAnalyticsRepository } from './facebookPostAnalytics.repository';
+export { FacebookVideoAnalyticsRepository } from './facebookVideoAnalytics.repository';
+
+

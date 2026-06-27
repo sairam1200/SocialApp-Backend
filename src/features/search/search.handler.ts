@@ -7,6 +7,7 @@ import { Inject } from "@nestjs/common";
 import { ISearchService } from "../../domain/services/isearch.service";
 import { deserializeObject } from "../../core/utils/serialization.util";
 import { HttpContext } from "../../core/middlewares/httpContext.middleware";
+import { IAnalyticsService } from "../../domain/services/ianalytics.service";
 import { ISearchHistoryRepository, IUserLoginRepository, ILinkedAccountRepository } from "../../domain/repositories";
 
 export class GlobalSearchRequestModel {
@@ -95,11 +96,23 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
+    @Inject(_const.IANALYTICS_SERVICE)
+    private readonly analyticsService: IAnalyticsService,
   ) { }
 
   public async execute(command: GlobalSearchQuery): Promise<GlobalSearchResponseModel> {
     const { searchTerm, platforms, filter, page = 1, limit = 25, paginationTokens = {}, forceRefresh } = command.model;
     const userId = HttpContext.getCurrentUserId;
+
+    await this.analyticsService.trackEvent(
+      _const.ANALYTICS_EVENTS.SEARCH.PERFORMED,
+      {
+        searchTerm,
+        platforms: platforms || [],
+        page,
+        limit,
+      }
+    );
 
     const allPlatforms = Object.values(_const.PLATFORMS);
 

@@ -10,7 +10,7 @@ import { IQueueService } from '../../../../domain/services/iqueue.service';
 import { IYoutubeWebhookService } from '../../../../domain/services/webhooks/iyoutube-webhook.service';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
-import { YoutubeAccount, YoutubeVideo, YoutubeAnalytic, UploadJob } from '../../../../domain/entities';
+import { YoutubeAccount, YoutubeVideo, UploadJob } from '../../../../domain/entities';
 
 export class YoutubeDisconnectCommand {
   constructor(request: Partial<YoutubeDisconnectCommand> = {}) {
@@ -99,7 +99,6 @@ export class YoutubeDisconnectCommandHandler
       if (acct) {
         if (videoIds.length > 0) {
           await Promise.all([
-            entityManager.getRepository(YoutubeAnalytic).delete({ videoId: In(videoIds) }),
             entityManager.getRepository(UploadJob).delete({ videoId: In(videoIds) }),
             entityManager.getRepository(YoutubeVideo).delete({ accountId: acct.id }),
           ]);

@@ -26,15 +26,16 @@ export function mapToInstagramContentModel(data: UserContent): InstagramContentM
     title: data.title,
     type: data.type,
     externalId: data.externalId,
-    caption: data.metaData?.caption,
-    mediaType: data.metaData?.mediaType,
-    mediaUrl: data.metaData?.mediaUrl,
-    permalink: data.metaData?.permalink,
-    thumbnailUrl: data.metaData?.thumbnailUrl,
-    timestamp: data.metaData?.timestamp,
+    caption: data.text || data.metaData?.caption,
+    mediaType: data.media?.[0]?.type || data.metaData?.mediaType,
+    mediaUrl: data.media?.[0]?.url || data.metaData?.mediaUrl,
+    permalink: data.sourceUrl || data.metaData?.permalink,
+    thumbnailUrl: data.media?.[0]?.thumbnail || data.metaData?.thumbnailUrl,
+    timestamp: data.publishedAt || data.metaData?.timestamp,
     username: data.metaData?.username,
     likeCount: data.metaData?.likeCount,
     commentsCount: data.metaData?.commentsCount,
     reach: data.metaData?.reach,
+
   } as InstagramContentModel;
 }

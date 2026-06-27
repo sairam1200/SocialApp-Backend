@@ -3,6 +3,7 @@ import _const from "../../../core/utils/const";
 import { Inject, NotFoundException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { IPlaylistRepository } from "../../../domain/repositories/iplaylist.repository";
+import { IAnalyticsService } from "../../../domain/services/ianalytics.service";
 
 export class RemovePlaylistContentCommand {
   model: {
@@ -24,6 +25,7 @@ const removePlaylistContentValidation = Joi.object({
 export class RemovePlaylistContentCommandHandler implements ICommandHandler<RemovePlaylistContentCommand, void> {
   constructor(
     @Inject(_const.IPLAYLIST_REPOSITORY) private readonly playlistRepository: IPlaylistRepository,
+    @Inject(_const.IANALYTICS_SERVICE) private readonly analyticsService: IAnalyticsService,
   ) { }
 
   public async execute(command: RemovePlaylistContentCommand): Promise<void> {
@@ -37,5 +39,13 @@ export class RemovePlaylistContentCommandHandler implements ICommandHandler<Remo
     }
 
     await this.playlistRepository.removeContentAsync(model.playlistReferenceId, content);
+
+    await this.analyticsService.trackEvent(
+      _const.ANALYTICS_EVENTS.PLAYLIST.CONTENT_REMOVED,
+      {
+        playlistId: model.playlistReferenceId,
+        contentId: model.contentId,
+      }
+    );
   }
 }

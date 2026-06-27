@@ -130,6 +130,9 @@ export class TwitterImportProcessor extends WorkerHost {
           const params = {
             max_results: 100,
             pagination_token: cursor || undefined,
+            'tweet.fields': 'public_metrics,created_at,entities,attachments,referenced_tweets',
+            'expansions': 'attachments.media_keys',
+            'media.fields': 'url,preview_image_url,type'
           };
 
           const response = await this.fetchDataWithRateLimit(url, headers, params);
@@ -162,9 +165,43 @@ export class TwitterImportProcessor extends WorkerHost {
 
             content.type = key;
             content.title = stringUtil.trimWithEllipsis(item.text || item.title || "Twitter Content", 100);
+            
+            // Normalized fields
+            content.text = item.text;
+            content.publishedAt = item.created_at ? new Date(item.created_at) : undefined;
+            content.sourceUrl = `https://twitter.com/anyuser/status/${item.id}`;
+            
+            if (item.public_metrics) {
+              content.engagement = {
+                likes: item.public_metrics.like_count,
+                shares: item.public_metrics.retweet_count,
+                comments: item.public_metrics.reply_count,
+                quotes: item.public_metrics.quote_count,
+              };
+            }
+
+            if (item.entities?.hashtags) {
+              content.tags = item.entities.hashtags.map((h: any) => h.tag);
+            }
+
+            // Media mapping
+            if (item.attachments?.media_keys && response.includes?.media) {
+              content.media = item.attachments.media_keys.map((key: string) => {
+                const mediaItem = response.includes.media.find((m: any) => m.media_key === key);
+                return mediaItem ? {
+                  url: mediaItem.url || mediaItem.preview_image_url,
+                  type: mediaItem.type,
+                  thumbnail: mediaItem.preview_image_url || mediaItem.url
+                } : null;
+              }).filter((m: any) => m !== null);
+            }
+
             content.metaData = {
               text: item.text,
               edit_history_tweet_ids: item.edit_history_tweet_ids,
+              entities: item.entities,
+              public_metrics: item.public_metrics,
+              attachments: item.attachments
             };
 
             try {

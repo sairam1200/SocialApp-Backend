@@ -72,10 +72,10 @@ import { YoutubeContentsQueryHandler } from "./youtube/get-contents/get-contents
 import { YoutubeImportController } from "./youtube/import/youtube-import.endpoint";
 import { YoutubeImportCommandHandler } from "./youtube/import/youtube-import.handler";
 import { CancelYoutubeImportCommandHandler } from "./youtube/import/cancel-youtube-import.handler";
-import { YoutubeSyncController } from "./youtube/sync/youtube-sync.endpoint";
 import { EnableYoutubeSyncCommandHandler } from "./youtube/sync/enable-youtube-sync.handler";
 import { DisableYoutubeSyncCommandHandler } from "./youtube/sync/disable-youtube-sync.handler";
 import { YoutubeWebhookController } from "./youtube/webhook/youtube-webhook.endpoint";
+
 import { YoutubeUploadController } from "./youtube/upload/youtube-upload.endpoint";
 import { YoutubeUploadCommandHandler } from "./youtube/upload/youtube-upload.handler";
 import { YoutubeChunkUploadController } from "./youtube/upload/youtube-chunk-upload.endpoint";
@@ -83,9 +83,28 @@ import { InitChunkUploadCommandHandler, AppendChunkCommandHandler, CompleteChunk
 import { YoutubeUploadStatusController } from "./youtube/upload-status/upload-status.endpoint";
 import { YoutubeRetryUploadController } from "./youtube/retry-upload/retry-upload.endpoint";
 import { R2StorageService } from "../../shared/storage/r2/r2-storage.service";
-import { YoutubeStatsController } from "./youtube/get-stats/youtube-stats.endpoint";
-import { YoutubeStatsQueryHandler } from "./youtube/get-stats/youtube-stats.handler";
-import { YoutubeDataSyncCommandHandler } from "./youtube/sync/youtube-data-sync.handler";
+
+import { YoutubeAnalyticsController } from "./youtube/analytics/youtube-analytics.endpoint";
+import {
+  SyncYoutubeAnalyticsCommandHandler,
+  GetYoutubeChannelAnalyticsQueryHandler,
+  GetYoutubeVideoAnalyticsQueryHandler,
+  GetYoutubeAnalyticsTrendsQueryHandler,
+  GetYoutubeTopVideosQueryHandler
+} from "./youtube/analytics/youtube-analytics.handler";
+import { FacebookAnalyticsController } from "./facebook/analytics/facebook-analytics.endpoint";
+import {
+  SyncFacebookAnalyticsCommandHandler,
+  GetFacebookPageAnalyticsQueryHandler,
+  GetFacebookPostAnalyticsQueryHandler,
+  GetFacebookVideoAnalyticsQueryHandler,
+  GetFacebookAnalyticsTrendsQueryHandler,
+  GetFacebookTopPostsQueryHandler,
+  GetFacebookTopVideosQueryHandler,
+  GetFacebookCompareQueryHandler,
+  GetFacebookGrowthQueryHandler,
+} from "./facebook/analytics/facebook-analytics.handler";
+
 import { TiktokConnectController } from "./tiktok/connect/tiktok-connect.endpoint";
 import { TiktokConnectCallbackQueryHandler, TiktokConnectQueryHandler } from "./tiktok/connect/tiktok-connect.handler";
 import { TikTokProfileController } from "./tiktok/get-profile/get-profile.endpoint";
@@ -227,6 +246,18 @@ export { FacebookSearchController } from "./facebook/search/facebook-search.endp
 export { FacebookSearchQueryHandler } from "./facebook/search/facebook-search.handler";
 export { FacebookDisconnectController } from "./facebook/disconnect/facebook-disconnect.endpoint";
 export { FacebookDisconnectCommandHandler } from "./facebook/disconnect/facebook-disconnect.handler";
+export { FacebookAnalyticsController } from "./facebook/analytics/facebook-analytics.endpoint";
+export {
+  SyncFacebookAnalyticsCommandHandler,
+  GetFacebookPageAnalyticsQueryHandler,
+  GetFacebookPostAnalyticsQueryHandler,
+  GetFacebookVideoAnalyticsQueryHandler,
+  GetFacebookAnalyticsTrendsQueryHandler,
+  GetFacebookTopPostsQueryHandler,
+  GetFacebookTopVideosQueryHandler,
+  GetFacebookCompareQueryHandler,
+  GetFacebookGrowthQueryHandler,
+} from "./facebook/analytics/facebook-analytics.handler";
 export { InstagramSearchController } from "./instagram/search/instagram-search.endpoint";
 export { InstagramSearchQueryHandler } from "./instagram/search/instagram-search.handler";
 export { TwitterSearchController } from "./twitter/search/twitter-search.endpoint";
@@ -337,7 +368,6 @@ export { YoutubeContentsQueryHandler } from "./youtube/get-contents/get-contents
 export { YoutubeImportController } from "./youtube/import/youtube-import.endpoint";
 export { YoutubeImportCommandHandler } from "./youtube/import/youtube-import.handler";
 export { CancelYoutubeImportCommandHandler } from "./youtube/import/cancel-youtube-import.handler";
-export { YoutubeSyncController } from "./youtube/sync/youtube-sync.endpoint";
 export { EnableYoutubeSyncCommandHandler } from "./youtube/sync/enable-youtube-sync.handler";
 export { DisableYoutubeSyncCommandHandler } from "./youtube/sync/disable-youtube-sync.handler";
 export { YoutubeWebhookController } from "./youtube/webhook/youtube-webhook.endpoint";
@@ -347,9 +377,6 @@ export { YoutubeUploadController } from "./youtube/upload/youtube-upload.endpoin
 export { YoutubeUploadCommandHandler } from "./youtube/upload/youtube-upload.handler";
 export { YoutubeUploadStatusController } from "./youtube/upload-status/upload-status.endpoint";
 export { YoutubeRetryUploadController } from "./youtube/retry-upload/retry-upload.endpoint";
-export { YoutubeStatsController } from "./youtube/get-stats/youtube-stats.endpoint";
-export { YoutubeStatsQueryHandler } from "./youtube/get-stats/youtube-stats.handler";
-export { YoutubeDataSyncCommandHandler } from "./youtube/sync/youtube-data-sync.handler";
 
 export { TiktokConnectController as TikTokConnectController } from "./tiktok/connect/tiktok-connect.endpoint";
 export { TiktokConnectCallbackQueryHandler, TiktokConnectQueryHandler } from "./tiktok/connect/tiktok-connect.handler";
@@ -495,14 +522,16 @@ const controllers = [
   YoutubeProfileController,
   YoutubeContentsController,
   YoutubeImportController,
-  YoutubeSyncController,
   YoutubeWebhookController,
   YoutubeDisconnectController,
   YoutubeUploadController,
   YoutubeChunkUploadController,
   YoutubeUploadStatusController,
   YoutubeRetryUploadController,
-  YoutubeStatsController,
+
+  YoutubeAnalyticsController,
+  FacebookAnalyticsController,
+
   TiktokConnectController,
   TikTokProfileController,
   TiktokContentsController,
@@ -606,14 +635,28 @@ const handlers = [
   YoutubeDisconnectCommandHandler,
   EnableYoutubeSyncCommandHandler,
   DisableYoutubeSyncCommandHandler,
+
   YoutubeUploadCommandHandler,
   InitChunkUploadCommandHandler,
   AppendChunkCommandHandler,
   CompleteChunkUploadCommandHandler,
   AbortChunkUploadCommandHandler,
-  YoutubeStatsQueryHandler,
-  YoutubeDataSyncCommandHandler,
-  YoutubeDataSyncCommandHandler,
+
+  SyncYoutubeAnalyticsCommandHandler,
+  GetYoutubeChannelAnalyticsQueryHandler,
+  GetYoutubeVideoAnalyticsQueryHandler,
+  GetYoutubeAnalyticsTrendsQueryHandler,
+  GetYoutubeTopVideosQueryHandler,
+  SyncFacebookAnalyticsCommandHandler,
+  GetFacebookPageAnalyticsQueryHandler,
+  GetFacebookPostAnalyticsQueryHandler,
+  GetFacebookVideoAnalyticsQueryHandler,
+  GetFacebookAnalyticsTrendsQueryHandler,
+  GetFacebookTopPostsQueryHandler,
+  GetFacebookTopVideosQueryHandler,
+  GetFacebookCompareQueryHandler,
+  GetFacebookGrowthQueryHandler,
+
   TiktokConnectCallbackQueryHandler,
   TiktokConnectQueryHandler,
   TiktokProfileQueryHandler,

@@ -15,6 +15,7 @@ import { PlaylistModule } from './playlist.module';
 import { IntegrationsModule } from './integrations.module';
 import { NotificationModule } from './notification.module';
 import { FollowModule } from './follow.module';
+import { AnalyticsModule } from './analytics.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DataSeeder } from '../infrastructure/services/data.seeder';
 import { postgresOptions } from '../infrastructure/persistence/data.source';
@@ -44,6 +45,7 @@ import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap, OnAppli
     NotificationModule,
     IntegrationsModule,
     FollowModule,
+    AnalyticsModule,
   ],
   providers: [
     dependency.RateLimitRepository,

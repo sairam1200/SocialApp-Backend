@@ -5,6 +5,7 @@ import _const from "../../../core/utils/const";
 import logger from "../../../core/utils/winston.util";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
+import { IAnalyticsService } from "../../../domain/services/ianalytics.service";
 import { IUserLoginRepository } from "../../../domain/repositories/iuserLogin.repository";
 
 export class LogoutRequestModel {
@@ -29,6 +30,7 @@ export class LogoutCommandHandler implements ICommandHandler<LogoutCommand> {
 
   constructor(
     @Inject(_const.IUSERLOGIN_REPOSITORY) private readonly userLoginRepository: IUserLoginRepository,
+    @Inject(_const.IANALYTICS_SERVICE) private readonly analyticsService: IAnalyticsService,
   ) { }
 
   public async execute(command: LogoutCommand): Promise<void> {
@@ -48,6 +50,12 @@ export class LogoutCommandHandler implements ICommandHandler<LogoutCommand> {
       userLogin.isValid = false;
       userLogin.expiryDateUtc = currentDate;
       await this.userLoginRepository.updateAsync(userLogin);
+
+      await this.analyticsService.trackEvent(
+        _const.ANALYTICS_EVENTS.AUTH.LOGOUT,
+        { deviceId: model.deviceId }
+      );
+
       logger.info(`User ${userId} logged out from device: ${model.deviceId}`);
     }
   }

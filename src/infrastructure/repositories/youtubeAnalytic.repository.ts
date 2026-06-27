@@ -1,8 +1,7 @@
-import { Repository, Between } from "typeorm";
+/* import { Repository, Between } from "typeorm";
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { YoutubeAnalytic } from "../../domain/entities";
-import { IYoutubeAnalyticRepository } from "../../domain/repositories/iyoutubeAnalytic.repository";
+
 
 @Injectable()
 export class YoutubeAnalyticRepository implements IYoutubeAnalyticRepository {
@@ -39,3 +38,4 @@ export class YoutubeAnalyticRepository implements IYoutubeAnalyticRepository {
     await this.repo.delete(videoIds.map(id => ({ videoId: id })));
   }
 }
+ */

@@ -8,13 +8,12 @@ import { ExpressAdapter } from '@bull-board/express';
 import { DiscoveryModule, DiscoveryService } from "@nestjs/core";
 import { UserContent } from "../domain/entities/userContent.entity";
 import { LinkedAccount } from "../domain/entities/linkedAccount.entity";
-import { YoutubeAccount, YoutubeVideo, YoutubeAnalytic, UploadJob } from "../domain/entities";
+import { YoutubeAccount, YoutubeVideo, UploadJob } from "../domain/entities";
 import { BullBoardAuthMiddleware } from "../core/middlewares/bullBoardAuth.middleware";
-import { DynamicModule, MiddlewareConsumer, Module, NestModule, OnApplicationShutdown } from "@nestjs/common";
+import { DynamicModule, MiddlewareConsumer, Module, NestModule, OnApplicationShutdown, Global } from "@nestjs/common";
 import BullMQConfig from "../core/config/bullmq.config";
 import { YoutubeImportProcessor } from "../infrastructure/background/processors/youtube-import.processor";
 import { YoutubeUploadProcessor } from "../infrastructure/background/processors/youtube-upload.processor";
-import { YoutubeAnalyticsSyncProcessor } from "../infrastructure/background/processors/youtube-analytics-sync.processor";
 import { SpotifyImportProcessor } from "../infrastructure/background/processors/spotify-import.processor";
 import { PinterestImportProcessor } from "../infrastructure/background/processors/pinterest-import.processor";
 import { RedditImportProcessor } from "../infrastructure/background/processors/reddit-import.processor";
@@ -39,7 +38,6 @@ const registeredQueues = BullModule.registerQueue(
   { name: _const.BULL_QUEUES.YOUTUBE_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_IMPORT) },
   { name: _const.BULL_QUEUES.SPOTIFY_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.SPOTIFY_IMPORT) },
   { name: _const.BULL_QUEUES.YOUTUBE_UPLOAD, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_UPLOAD) },
-  { name: _const.BULL_QUEUES.YOUTUBE_ANALYTICS_SYNC, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_ANALYTICS_SYNC) },
   { name: _const.BULL_QUEUES.PINTEREST_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.PINTEREST_IMPORT) },
   { name: _const.BULL_QUEUES.REDDIT_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.REDDIT_IMPORT) },
   { name: _const.BULL_QUEUES.TWITTER_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.TWITTER_IMPORT) },
@@ -50,6 +48,7 @@ const registeredQueues = BullModule.registerQueue(
   { name: _const.BULL_QUEUES.BEHANCE_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.BEHANCE_IMPORT) },
 );
 
+@Global()
 @Module({})
 export class QueuesModule implements NestModule, OnApplicationShutdown {
   static register(): DynamicModule {
@@ -79,7 +78,6 @@ export class QueuesModule implements NestModule, OnApplicationShutdown {
           ContentStream,
           YoutubeAccount,
           YoutubeVideo,
-          YoutubeAnalytic,
           UploadJob,
         ]),
         BullModule.forRoot({
@@ -99,12 +97,10 @@ export class QueuesModule implements NestModule, OnApplicationShutdown {
 
         dependency.YoutubeAccountRepository,
         dependency.YoutubeVideoRepository,
-        dependency.YoutubeAnalyticRepository,
         dependency.UploadJobRepository,
         dependency.YoutubePublishingService,
-        dependency.YoutubeAnalyticsService,
         dependency.R2StorageService,
-
+        
         // Conditionally register workers (processors decorated with @Processor)
         // When DISABLE_WORKERS=true, consumers use this module but no workers run.
         ...(enableWorkers
@@ -122,7 +118,6 @@ export class QueuesModule implements NestModule, OnApplicationShutdown {
               ThreadsImportProcessor,
               BehanceImportProcessor,
               YoutubeUploadProcessor,
-              YoutubeAnalyticsSyncProcessor,
             ]
           : []),
       ],

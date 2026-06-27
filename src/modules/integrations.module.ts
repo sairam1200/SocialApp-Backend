@@ -9,16 +9,20 @@ import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
 
 import { AuthGuardsModule } from "./authGuard.module";
+import { AnalyticsModule } from "./analytics.module";
 import { SearchCacheService, YoutubeWebhookService } from "infrastructure/services";
 
 import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
 import { PlatformRollbackListener } from "../infrastructure/background/listeners/platform-rollback.listener";
-import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserBiometric, UserClaim, UserContent, UserLogin, UserRole, YoutubeAccount, YoutubeVideo, YoutubeAnalytic, UploadJob } from "../domain/entities";
+import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserBiometric, UserClaim, UserContent, UserLogin, UserRole,  YoutubeAccount, YoutubeVideo, UploadJob,YoutubeChannelAnalytics, YoutubeVideoAnalytics, FacebookPageAnalytics, FacebookPostAnalytics, FacebookVideoAnalytics } from "../domain/entities";
+import { YoutubeAnalyticsCron } from "../infrastructure/background/cron/jobs/youtube-analytics.cron";
+import { FacebookAnalyticsCron } from "../infrastructure/background/cron/jobs/facebook-analytics.cron";
 @Module({
   imports: [
     CqrsModule,
     AuthGuardsModule,
     NotificationModule,
+    AnalyticsModule,
     TypeOrmModule.forFeature([
       User,
       UserRole,
@@ -33,8 +37,12 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
       ContentStream,
       YoutubeAccount,
       YoutubeVideo,
-      YoutubeAnalytic,
       UploadJob,
+      YoutubeChannelAnalytics,
+      YoutubeVideoAnalytics,
+      FacebookPageAnalytics,
+      FacebookPostAnalytics,
+      FacebookVideoAnalytics
     ])
   ],
   controllers: [
@@ -45,6 +53,7 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     JwtService,
     SearchCacheService,
     PlatformRollbackListener,
+    YoutubeAnalyticsCron,
     ...integrations.addHandlers(),
     ...search.addHandlers(),
 
@@ -69,11 +78,17 @@ import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, U
     dependency.LinkedInImportService,
     dependency.YoutubeAccountRepository,
     dependency.YoutubeVideoRepository,
-    dependency.YoutubeAnalyticRepository,
     dependency.UploadJobRepository,
     dependency.YoutubePublishingService,
-    dependency.YoutubeAnalyticsService,
     dependency.R2StorageService,
+    dependency.YoutubeChannelAnalyticsRepository,
+    dependency.YoutubeVideoAnalyticsRepository,
+    dependency.YoutubeAnalyticsService,
+    dependency.FacebookPageAnalyticsRepository,
+    dependency.FacebookPostAnalyticsRepository,
+    dependency.FacebookVideoAnalyticsRepository,
+    dependency.FacebookAnalyticsService,
+    FacebookAnalyticsCron,
   ],
   exports: [],
 })

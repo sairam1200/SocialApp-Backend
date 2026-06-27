@@ -58,4 +58,7 @@ export interface IUserRepository {
   updateUserBiometricPrivacyAsync(userId: string, privacy: ProfileImagePrivacy): Promise<boolean>;
 
   cacheUserAccountAsync(user: User, ttl?: number): Promise<void>;
+
+  getUserByReferralCodeAsync(referralCode: string): Promise<User | null>;
+  generateReferralCodeAsync(user: User): Promise<string>;
 }

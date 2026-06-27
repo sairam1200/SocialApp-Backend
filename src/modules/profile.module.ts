@@ -7,11 +7,13 @@ import { dependency } from "../infrastructure/dependency";
 import { NotificationModule } from "./notification.module";
 import { ProfileCacheService } from "../infrastructure/services/profileCache.service";
 import { User, Role, UserRole, LinkedAccount, ManualProfile, RoleClaim, UserClaim, PlaylistMember, UserBiometric, UserFollow } from "../domain/entities";
+import { AnalyticsModule } from "./analytics.module";
 
 @Module({
   imports: [
     CqrsModule,
     NotificationModule,
+    AnalyticsModule,
     TypeOrmModule.forFeature([
       User,
       Role,

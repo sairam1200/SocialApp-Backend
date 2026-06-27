@@ -22,7 +22,17 @@ export { UserPreference } from './identity/userPreference.entity';
 export { UserFollow } from './userFollow.entity';
 export { Topic } from './topic.entity';
 export { UserTopic } from './userTopic.entity';
+
 export { YoutubeAccount } from './youtubeAccount.entity';
 export { YoutubeVideo } from './youtubeVideo.entity';
-export { YoutubeAnalytic } from './youtubeAnalytic.entity';
+
 export { UploadJob } from './uploadJob.entity';
+
+export { AnalyticsEvent } from './analyticsEvent.entity';
+export { PremiumRollup } from './premiumRollup.entity';
+export { YoutubeChannelAnalytics } from './youtubeChannelAnalytics.entity';
+export { YoutubeVideoAnalytics } from './youtubeVideoAnalytics.entity';
+export { FacebookPageAnalytics } from './facebookPageAnalytics.entity';
+export { FacebookPostAnalytics } from './facebookPostAnalytics.entity';
+export { FacebookVideoAnalytics } from './facebookVideoAnalytics.entity';
+

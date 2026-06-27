@@ -43,21 +43,32 @@ export default {
   IYOUTUBEANALYTIC_REPOSITORY: 'IYoutubeAnalyticRepository',
   IUPLOADJOB_REPOSITORY: 'IUploadJobRepository',
 
+  // Analytics
+  IANALYTICS_REPOSITORY: 'IAnalyticsRepository',
+  IPREMIUMROLLUP_REPOSITORY: 'IPremiumRollupRepository',
+  IANALYTICS_SERVICE: 'IAnalyticsService',
+  IYOUTUBECHANNELANALYTICS_REPOSITORY: 'IYoutubeChannelAnalyticsRepository',
+  IYOUTUBEVIDEOANALYTICS_REPOSITORY: 'IYoutubeVideoAnalyticsRepository',
+  IYOUTUBEANALYTICS_SERVICE: 'IYoutubeAnalyticsService',
+  IFACEBOOKPAGEANALYTICS_REPOSITORY: 'IFacebookPageAnalyticsRepository',
+  IFACEBOOKPOSTANALYTICS_REPOSITORY: 'IFacebookPostAnalyticsRepository',
+  IFACEBOOKVIDEOANALYTICS_REPOSITORY: 'IFacebookVideoAnalyticsRepository',
+  IFACEBOOKANALYTICS_SERVICE: 'IFacebookAnalyticsService',
+
   BULL_QUEUES: {
     FACEBOOK_IMPORT: 'facebook-import',
     INSTAGRAM_IMPORT: 'instagram-import',
+    YOUTUBE_IMPORT: 'youtube-import',
+    SPOTIFY_IMPORT: 'spotify-import',
+    YOUTUBE_UPLOAD: 'youtube-upload',
+    PINTEREST_IMPORT: 'pinterest-import',
+    REDDIT_IMPORT: 'reddit-import',
     TWITTER_IMPORT: 'twitter-import',
     TIKTOK_IMPORT: 'tiktok-import',
     LINKEDIN_IMPORT: 'linkedin-import',
-    YOUTUBE_IMPORT: 'youtube-import',
-    SPOTIFY_IMPORT: 'spotify-import',
-    PINTEREST_IMPORT: 'pinterest-import',
-    REDDIT_IMPORT: 'reddit-import',
     SNAPCHAT_IMPORT: 'snapchat-import',
     THREADS_IMPORT: 'threads-import',
     BEHANCE_IMPORT: 'behance-import',
-    YOUTUBE_UPLOAD: 'youtube-upload',
-    YOUTUBE_ANALYTICS_SYNC: 'youtube-analytics-sync',
   },
 
   EMAILTEMPLATES: {
@@ -83,9 +94,9 @@ export default {
     SNAPCHAT: 'snapchat',
     THREADS: 'threads',
     BEHANCE: 'behance',
+    TWITCH: 'twitch',
     GITHUB: 'github',
     DISCORD: 'discord',
-    TWITCH: 'twitch',
   },
 
   KNOWN_PLATFORMS_URIS: [
@@ -94,7 +105,6 @@ export default {
     'instagram.com',
     'tiktok.com',
     'linkedin.com',
-    'snapchat.com',
     'youtube.com',
     'pinterest.com',
     'reddit.com',
@@ -113,7 +123,6 @@ export default {
     'bilibili.com',
     'ok.ru',
     'vk.com',
-    'github.com',
   ],
 
   TOKEN: {
@@ -125,16 +134,16 @@ export default {
   },
 
   SEARCH_CACHE: {
-    RESULT_FRESHNESS_WINDOW_MS: 60 * 60 * 1000, // 1 hour
-    QUERY_CACHE_TTL_SEC: 5 * 60, // 5 minutes
-    QUERY_LOCK_TTL_SEC: 30, // 30 seconds
+    RESULT_FRESHNESS_WINDOW_MS: 60 * 60 * 1000,
+    QUERY_CACHE_TTL_SEC: 5 * 60,
+    QUERY_LOCK_TTL_SEC: 30,
   },
 
   REDIS: {
     USER: {
       ACCOUNT: '_user_account',
       PREFERENCES: 'preferences',
-      ACCOUNT_SESSION_TTL_SEC: 604800, // 7 days
+      ACCOUNT_SESSION_TTL_SEC: 604800,
     }
   },
 
@@ -143,5 +152,26 @@ export default {
       NAME: 'bookmark',
       DESCRIPTION: ''
     }
-  }
+  },
+
+  ANALYTICS_EVENTS: {
+    AUTH: {
+      LOGIN: 'auth.login',
+      LOGOUT: 'auth.logout',
+      REGISTER: 'auth.register',
+    },
+    PLAYLIST: {
+      CREATED: 'playlist.created',
+      DELETED: 'playlist.deleted',
+      CONTENT_ADDED: 'playlist.content_added',
+      CONTENT_REMOVED: 'playlist.content_removed',
+      BOOKMARKED: 'playlist.bookmarked',
+    },
+    SEARCH: {
+      PERFORMED: 'search.performed',
+    },
+    PROFILE: {
+      UPDATED: 'profile.updated',
+    },
+  },
 }

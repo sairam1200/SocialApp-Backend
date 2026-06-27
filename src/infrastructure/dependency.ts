@@ -1,17 +1,20 @@
 import _const from "../core/utils/const";
-import { ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, TopicRepository, UserContentRepository, UserFollowRepository, UserLoginRepository, UserPreferenceRepository, UserRepository, UserRoleRepository, YoutubeAccountRepository, YoutubeVideoRepository, YoutubeAnalyticRepository, UploadJobRepository } from "./repositories";
+
 import { GeneralRepository } from "./repositories/general.repository";
 import { ManualProfileRepository } from "./repositories/manualProfile.repository";
-import { EmailService, NotificationService, SearchService, SearchCacheService, TokenService, YoutubeWebhookService, QueueService, PlatformDisconnectService } from "./services";
 import {YoutubeImportService} from "../infrastructure/services/youtube/youtube-imports.service";
 import {YoutubePublishingService} from "../infrastructure/services/youtube/youtube-publishing.service";
-import {YoutubeAnalyticsService} from "../infrastructure/services/youtube/youtube-analytics.service";
 import {FacebookImportService} from "../infrastructure/services/facebook/facebook-imports.service";
 import { InstagramImportService } from "../infrastructure/services/instagram/instagram-import.service";
 import { TwitterImportService } from "../infrastructure/services/Twitter/x-import.service";
 import { LinkedInImportService} from "../infrastructure/services/linkedin/linkedin-import.service";
 import { PinterestImportService } from "./services/pinterest/pinterest-import.service";
 import { R2StorageService } from "../shared/storage/r2/r2-storage.service";
+
+import { AnalyticsRepository, ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, PremiumRollupRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, TopicRepository, UserContentRepository, UserFollowRepository, UserLoginRepository, UserPreferenceRepository, UserRepository, UserRoleRepository, YoutubeChannelAnalyticsRepository, YoutubeVideoAnalyticsRepository, FacebookPageAnalyticsRepository, FacebookPostAnalyticsRepository, FacebookVideoAnalyticsRepository,YoutubeAccountRepository, YoutubeVideoRepository, UploadJobRepository } from "./repositories";
+import { AnalyticsService, EmailService, NotificationService, SearchService, SearchCacheService, TokenService, YoutubeWebhookService, QueueService, PlatformDisconnectService, YoutubeAnalyticsService, FacebookAnalyticsService } from "./services";
+
+
 /* This is the dependency object that holds all the repositories & services
  * used in the application. It is used to provide the dependencies to the
  * modules in the application. This is a good practice to keep the
@@ -121,6 +124,7 @@ export const dependency = {
     provide: _const.IGENERAL_REPOSITORY,
     useClass: GeneralRepository,
   },
+
   YoutubeImportService: {
   provide: _const.IYOUTUBE_IMPORT_SERVICE,
   useClass: YoutubeImportService,
@@ -153,10 +157,7 @@ YoutubeVideoRepository: {
   provide: _const.IYOUTUBEVIDEO_REPOSITORY,
   useClass: YoutubeVideoRepository,
 },
-YoutubeAnalyticRepository: {
-  provide: _const.IYOUTUBEANALYTIC_REPOSITORY,
-  useClass: YoutubeAnalyticRepository,
-},
+
 UploadJobRepository: {
   provide: _const.IUPLOADJOB_REPOSITORY,
   useClass: UploadJobRepository,
@@ -165,12 +166,53 @@ YoutubePublishingService: {
   provide: _const.IYOUTUBE_PUBLISHING_SERVICE,
   useClass: YoutubePublishingService,
 },
-YoutubeAnalyticsService: {
-  provide: _const.IYOUTUBE_ANALYTICS_SERVICE,
-  useClass: YoutubeAnalyticsService,
-},
 R2StorageService: {
   provide: _const.IR2_STORAGE_SERVICE,
   useClass: R2StorageService,
 },
+
+
+
+  // Analytics
+  AnalyticsRepository: {
+    provide: _const.IANALYTICS_REPOSITORY,
+    useClass: AnalyticsRepository,
+  },
+  PremiumRollupRepository: {
+    provide: _const.IPREMIUMROLLUP_REPOSITORY,
+    useClass: PremiumRollupRepository,
+  },
+  AnalyticsService: {
+    provide: _const.IANALYTICS_SERVICE,
+    useClass: AnalyticsService,
+  },
+  YoutubeChannelAnalyticsRepository: {
+    provide: _const.IYOUTUBECHANNELANALYTICS_REPOSITORY,
+    useClass: YoutubeChannelAnalyticsRepository,
+  },
+  YoutubeVideoAnalyticsRepository: {
+    provide: _const.IYOUTUBEVIDEOANALYTICS_REPOSITORY,
+    useClass: YoutubeVideoAnalyticsRepository,
+  },
+  YoutubeAnalyticsService: {
+    provide: _const.IYOUTUBEANALYTICS_SERVICE,
+    useClass: YoutubeAnalyticsService,
+  },
+  FacebookPageAnalyticsRepository: {
+    provide: _const.IFACEBOOKPAGEANALYTICS_REPOSITORY,
+    useClass: FacebookPageAnalyticsRepository,
+  },
+  FacebookPostAnalyticsRepository: {
+    provide: _const.IFACEBOOKPOSTANALYTICS_REPOSITORY,
+    useClass: FacebookPostAnalyticsRepository,
+  },
+  FacebookVideoAnalyticsRepository: {
+    provide: _const.IFACEBOOKVIDEOANALYTICS_REPOSITORY,
+    useClass: FacebookVideoAnalyticsRepository,
+  },
+  FacebookAnalyticsService: {
+    provide: _const.IFACEBOOKANALYTICS_SERVICE,
+    useClass: FacebookAnalyticsService,
+  },
 };
+

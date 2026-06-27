@@ -5,6 +5,7 @@ import { UserType } from "../../../../domain/enums";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
 import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
 import { ApplicationException, UserNotFoundException } from "../../../../core/exceptions";
+import { IAnalyticsService } from "../../../../domain/services/ianalytics.service";
 import { IManualProfileRepository, IUserRepository } from "../../../../domain/repositories";
 import { UpdateManualProfileModel } from "../../../../domain/contracts/manualProfile.model";
 
@@ -30,6 +31,8 @@ export class UpdateManualProfileCommandHandler implements ICommandHandler<Update
     private readonly userRepository: IUserRepository,
     @Inject(_const.IMANUALPROFILE_REPOSITORY)
     private readonly manualProfileRepository: IManualProfileRepository,
+    @Inject(_const.IANALYTICS_SERVICE)
+    private readonly analyticsService: IAnalyticsService,
   ) { }
 
   public async execute(command: UpdateManualProfileCommand): Promise<void> {
@@ -52,5 +55,13 @@ export class UpdateManualProfileCommandHandler implements ICommandHandler<Update
     manualProfile.platform = model.platform;
 
     await this.manualProfileRepository.updateAsync(manualProfile);
+
+    await this.analyticsService.trackEvent(
+      _const.ANALYTICS_EVENTS.PROFILE.UPDATED,
+      {
+        profileId: manualProfile.id,
+        platform: manualProfile.platform,
+      }
+    );
   }
-} 
+}
