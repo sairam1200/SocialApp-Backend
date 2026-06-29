@@ -42,20 +42,42 @@ export class UserContentRepository implements IUserContentRepository {
   public async deleteAsync(content: UserContent): Promise<void> {
     await this.userContentContext.remove(content);
   }
+  public async getByUserIdAsync(
+    userId: string,
+    platform: string,
+    cursor: string,
+  ): Promise<[UserContent[], string]> {
 
-  public async getByUserIdAsync(userId: string, platform: string, cursor: string): Promise<[UserContent[], string]> {
     const take = 20;
-    const where: any = { userId, platform };
+
+    const qb = this.userContentContext
+      .createQueryBuilder("content")
+      .where("content.userId = :userId", { userId })
+      .andWhere("content.platform = :platform", { platform })
+      .orderBy("content.createdOn", "DESC")
+      .addOrderBy("content.id", "DESC")
+      .take(take + 1);
+
     if (cursor) {
-      where.id = MoreThan(cursor);
+      qb.andWhere("content.createdOn < :cursor", {
+        cursor: new Date(cursor),
+      });
     }
-    const [result, count] = await this.userContentContext.findAndCount({
-      where,
-      order: { id: "ASC" },
-      take,
-    });
-    const nextCursor = result.length > 0 ? result[result.length - 1].id : "";
-    return [result, nextCursor];
+
+    const items = await qb.getMany();
+
+    const hasMore = items.length > take;
+
+    if (hasMore) {
+      items.pop();
+    }
+
+    const nextCursor =
+      hasMore
+        ? items[items.length - 1].createdOn.toISOString()
+        : "";
+
+    return [items, nextCursor];
   }
 
   async getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]> {
@@ -112,7 +134,7 @@ export class UserContentRepository implements IUserContentRepository {
         .setParameter("exactSearch", `%${exactSearch}%`)
         .setParameter("searchQuery", parameters.searchQuery);
     } else {
-      queryBuilder.orderBy(`cs.${orderBy}`, order);
+      queryBuilder.orderBy(`uc.${orderBy}`, order);
     }
 
     queryBuilder.skip((page - 1) * pageSize)
