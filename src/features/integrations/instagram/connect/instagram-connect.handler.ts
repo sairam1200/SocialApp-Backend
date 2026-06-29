@@ -21,7 +21,7 @@ import { IDataProtectionKeyRepository } from "../../../../domain/repositories/id
 import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
 
 const PLATFORM = 'instagram';
-const GRAPH_BASE = 'https://graph.instagram.com/';
+const GRAPH_BASE = 'https://graph.instagram.com';
 
 export class InstagramConnectQuery {
   model: {
@@ -212,7 +212,7 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
       const response = await axios.get<InstagramUserDataType>(`${GRAPH_BASE}/me`, {
         params: {
           access_token: accessToken,
-          fields: "id,username,name,profile_picture_url,biography,website,media_count,followers_count,follows_count",
+          fields: "id,username,name,profile_picture_url,media_count,followers_count,follows_count",
         },
       });
       console.log(

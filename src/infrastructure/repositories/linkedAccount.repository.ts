@@ -89,7 +89,26 @@ export class LinkedAccountRepository implements ILinkedAccountRepository {
 
   public async createAsync(linkedAccount: LinkedAccount): Promise<LinkedAccount> {
 
-    const existingAccount = await this.getByPlatformAndEmailAsync(linkedAccount.platform, linkedAccount.email);
+    let existingAccount: LinkedAccount | null = null;
+
+if (linkedAccount.email) {
+    existingAccount = await this.getByPlatformAndEmailAsync(
+        linkedAccount.platform,
+        linkedAccount.email
+    );
+} else {
+    existingAccount = await this.getByPlatformAndExternalIdAsync(
+        linkedAccount.platform,
+        linkedAccount.externalId
+    );
+}
+
+if (existingAccount) {
+    throw new LinkedAccountAlreadyExistsException(
+        linkedAccount.platform,
+        linkedAccount.email ?? linkedAccount.userName
+    );
+}
     if (existingAccount) {
       throw new LinkedAccountAlreadyExistsException(linkedAccount.platform, linkedAccount.email);
     }
