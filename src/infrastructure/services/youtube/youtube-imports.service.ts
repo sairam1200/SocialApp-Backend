@@ -140,7 +140,7 @@ console.info(
               viewCount: Number(details?.statistics?.viewCount ?? 0),
               likeCount: Number(details?.statistics?.likeCount ?? 0),
               commentCount: Number(details?.statistics?.commentCount ?? 0),
-              thumbnail:
+              thumbnails:
                 item.snippet?.thumbnails?.high?.url ??
                 item.snippet?.thumbnails?.medium?.url ??
                 item.snippet?.thumbnails?.default?.url,
