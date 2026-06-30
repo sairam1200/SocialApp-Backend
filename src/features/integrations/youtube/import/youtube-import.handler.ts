@@ -63,12 +63,14 @@ if (!account) {
 }
 
 const channelId = account.metaData?.channel?.id;
-
+console.log("check",channelId
+);
 if (!channelId) {
   throw new NotFoundException(
     "No YouTube channel ID found for this account.",
   );
 }
+
     if (youtubeAccessToken) {
       const isTokenValid = await this.verifyAccessTokenAsync(youtubeAccessToken, channelId);
       if (!isTokenValid) {
