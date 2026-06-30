@@ -50,9 +50,27 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     const { youtubeAccessToken } = command.model;
     let accessToken: string | undefined;
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
+    const account =
+  await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+    _const.PLATFORMS.YOUTUBE,
+    userId,
+  );
 
+if (!account) {
+  throw new NotFoundException(
+    "No matching Youtube profile was found!",
+  );
+}
+
+const channelId = account.metaData?.channel?.id;
+
+if (!channelId) {
+  throw new NotFoundException(
+    "No YouTube channel ID found for this account.",
+  );
+}
     if (youtubeAccessToken) {
-      const isTokenValid = await this.verifyAccessTokenAsync(youtubeAccessToken);
+      const isTokenValid = await this.verifyAccessTokenAsync(youtubeAccessToken, channelId);
       if (!isTokenValid) {
         const userLogin = await this.getUserLoginAsync(userId);
         const tokenValue = deserializeObject<{ access_token: string, refresh_token: string }>(userLogin.tokenValue);
@@ -73,10 +91,10 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     } else {
       const userLogin = await this.getUserLoginAsync(userId);
       const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
-      const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
+      const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token ,channelId);
       if (!isTokenValid) {
         const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
-        userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
+        userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token ,expires_in});
         userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
         await this.userLoginRepository.updateAsync(userLogin);
 
@@ -88,20 +106,12 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
       }
     }
 
-    const account =
-      await this.linkedAccountRepository
-        .getByPlatformAndUserIdAsync(
-          _const.PLATFORMS.YOUTUBE,
-          userId,
-        );
-
+    
     if (!account) {
       throw new NotFoundException(
         "No matching Youtube profile was found!",
       );
     }
-
-    const channelId = account.metaData?.channel?.id;
     if (channelId && !account.syncEnabled && configs.youtube.webhookUrl) {
       try {
         await this.youtubeWebhookService.subscribeAsync(channelId, configs.youtube.webhookUrl);
@@ -168,23 +178,35 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     }
   }
 
-  private async verifyAccessTokenAsync(accessToken: string): Promise<boolean> {
-    try {
-      const response = await axios.get(`https://oauth2.googleapis.com/tokeninfo`, {
-        params: {
-          access_token: accessToken,
+  private async verifyAccessTokenAsync(
+  accessToken: string,
+  expectedChannelId: string,
+): Promise<boolean> {
+  try {
+    const response = await axios.get(
+      "https://www.googleapis.com/youtube/v3/channels",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
         },
-      });
+        params: {
+          part: "id",
+          mine: true,
+        },
+      },
+    );
 
-      // If token is valid, response.data will contain info like expiry, user_id, scopes, etc.
-      // If invalid, Google returns an error and axios will throw.
+    const channel = response.data.items?.[0];
 
-      return true;
-    } catch (error) {
-
+    if (!channel) {
       return false;
     }
+
+    return channel.id === expectedChannelId;
+  } catch (error) {
+    return false;
   }
+}
 
   private async getUserLoginAsync(userId: string): Promise<UserLogin> {
 
