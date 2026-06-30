@@ -124,9 +124,9 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
           accessToken,
         );
 
-        await this.youtubeWebhookService.subscribeAsync(channelId, configs.youtube.webhookUrl);
+        /* await this.youtubeWebhookService.subscribeAsync(channelId, configs.youtube.webhookUrl);
         console.log(`[YoutubeImport] Webhook subscription successful for channel ${channelId}`);
-
+ */
         account.syncEnabled = true;
         await this.linkedAccountRepository.updateAsync(account);
         console.log(`[YoutubeImport] Sync enabled for user ${userId}`);
