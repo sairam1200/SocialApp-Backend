@@ -109,7 +109,11 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
         expiresIn = tokenValue.expires_in;
       }
     }
-
+     logger.info("[YoutubeImport] Importing uploads...");
+         await this.youtubeImportService.importUploadsAsync(
+          account.userId,
+          accessToken,
+        );
 
     if (!account) {
       throw new NotFoundException(
@@ -118,11 +122,7 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     }
     if (channelId && !account.syncEnabled && configs.youtube.webhookUrl) {
       try {
-        logger.info("[YoutubeImport] Importing uploads...");
-         await this.youtubeImportService.importUploadsAsync(
-          account.userId,
-          accessToken,
-        );
+       
 
         await this.youtubeWebhookService.subscribeAsync(channelId, configs.youtube.webhookUrl);
         console.log(`[YoutubeImport] Webhook subscription successful for channel ${channelId}`);
