@@ -9,6 +9,7 @@ export interface IUserContentRepository {
   deleteAsync(content: UserContent): Promise<void>;
   getByIdAsync(id: string): Promise<UserContent>;
   getByPlatformAndContentIdAsync(
+    userId: string,
     platform: string,
     contentId: string
   ): Promise<UserContent>;
