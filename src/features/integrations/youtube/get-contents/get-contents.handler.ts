@@ -44,7 +44,6 @@ export class YoutubeContentsQueryHandler implements ICommandHandler<YoutubeConte
       PLATFORM,
       cursor,
     );
-    
     const mappedContents = contents.map((content: UserContent) =>
       mapToYouTubeContentModel(content)
     );

@@ -46,7 +46,13 @@ export class YoutubeImportService
         },
       },
     );
+    console.info(
+  `[YoutubeImport] Importing subscriptions for channel: ${channelResponse.data.items?.[0]?.id}`
+);
 
+console.info(
+  `[YoutubeImport] Channel title: ${channelResponse.data.items?.[0]?.snippet?.title}`
+);
     const channel = channelResponse.data?.items?.[0];
     if (!channel) return 0;
 

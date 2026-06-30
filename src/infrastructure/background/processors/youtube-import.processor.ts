@@ -78,7 +78,7 @@ interface YoutubePlaylistItem {
   id: string;
   snippet?: YoutubePlaylistItemSnippet;
   contentDetails?: YoutubePlaylistItemContentDetails;
-   statistics?: YoutubeVideoStatistics;
+  statistics?: YoutubeVideoStatistics;
   _stats?: {
     viewCount: number;
     likeCount: number;
@@ -222,7 +222,7 @@ export class YoutubeImportProcessor extends WorkerHost {
               access_token: accessToken,
             },
           });
-
+          
           const items = result.data.items ?? [];
           const pageInfo = result.data.pageInfo ?? {};
           nextPageToken = result.data.nextPageToken ?? null;
@@ -248,7 +248,7 @@ export class YoutubeImportProcessor extends WorkerHost {
                 logger.debug(`[YoutubeImport] Found uploads playlist ID: ${uploadsPlaylistId}`);
               }
             }
-
+            logger.info(`[YoutubeImport] Uploads playlist ID = ${uploadsPlaylistId}`);
             const content = this.mapContentByType(type, item, account.userId);
             if (content) {
               try {
@@ -324,6 +324,8 @@ export class YoutubeImportProcessor extends WorkerHost {
 
     if (uploadsPlaylistId) {
       const type = "UploadedVideos";
+      logger.info(`[YoutubeImport] Entering uploaded videos import`);
+      logger.info(`[YoutubeImport] Playlist ID: ${uploadsPlaylistId}`);
       logger.debug(`[YoutubeImport] Processing uploaded videos from playlist ${uploadsPlaylistId}`);
 
       let nextPageToken: string | null = lastCursors[type] || null;
@@ -337,7 +339,24 @@ export class YoutubeImportProcessor extends WorkerHost {
 
       try {
         do {
-          const videos = await this.fetchPlaylistVideosPage(accessToken, uploadsPlaylistId, nextPageToken);
+          const videos = await this.fetchPlaylistVideosPage(
+            accessToken,
+            uploadsPlaylistId,
+            nextPageToken
+          );
+
+          logger.info(
+            `[YoutubeImport] Playlist ${uploadsPlaylistId} returned ${videos.items.length} videos`
+          );
+
+          logger.info(
+            JSON.stringify(videos.items.map(v => ({
+              id: v.id,
+              videoId: v.contentDetails?.videoId,
+              title: v.snippet?.title,
+            })), null, 2)
+          );
+
           nextPageToken = videos.nextPageToken;
 
           if (videos.items.length === 0 && !nextPageToken) {
@@ -930,7 +949,11 @@ export class YoutubeImportProcessor extends WorkerHost {
         pageToken: pageToken ?? undefined,
       },
     });
-
+    logger.info(
+      `[YoutubeImport] playlistItems API returned ${result.data.items?.length ?? 0} items`
+    );
+   
+    logger.info(JSON.stringify(result.data, null, 2));
     const rawItems = result.data.items ?? [];
     const items: YoutubePlaylistItem[] = [];
     for (const raw of rawItems) {

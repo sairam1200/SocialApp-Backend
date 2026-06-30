@@ -14,7 +14,7 @@ import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin
 import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IYoutubeWebhookService } from "../../../../domain/services/webhooks/iyoutube-webhook.service";
-
+import { IYoutubeImportService } from "domain/services/youtube/iyoutube-import.services";
 export class YoutubeImportRequestModel {
   @ApiProperty()
   youtubeAccessToken: string;
@@ -41,6 +41,8 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     private readonly queueService: IQueueService,
     @Inject(_const.IYOUTUBEWEBHOOK_SERVICE)
     private readonly youtubeWebhookService: IYoutubeWebhookService,
+    @Inject(_const.IYOUTUBE_IMPORT_SERVICE)
+    private readonly youtubeImportService: IYoutubeImportService,
   ) { }
 
   public async execute(command: YoutubeImportCommand)
@@ -51,25 +53,25 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     let accessToken: string | undefined;
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
     const account =
-  await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-    _const.PLATFORMS.YOUTUBE,
-    userId,
-  );
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.YOUTUBE,
+        userId,
+      );
 
-if (!account) {
-  throw new NotFoundException(
-    "No matching Youtube profile was found!",
-  );
-}
+    if (!account) {
+      throw new NotFoundException(
+        "No matching Youtube profile was found!",
+      );
+    }
 
-const channelId = account.metaData?.channel?.id;
-console.log("check",channelId
-);
-if (!channelId) {
-  throw new NotFoundException(
-    "No YouTube channel ID found for this account.",
-  );
-}
+    const channelId = account.metaData?.channel?.id;
+    console.log("check", channelId
+    );
+    if (!channelId) {
+      throw new NotFoundException(
+        "No YouTube channel ID found for this account.",
+      );
+    }
 
     if (youtubeAccessToken) {
       const isTokenValid = await this.verifyAccessTokenAsync(youtubeAccessToken, channelId);
@@ -93,10 +95,10 @@ if (!channelId) {
     } else {
       const userLogin = await this.getUserLoginAsync(userId);
       const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
-      const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token ,channelId);
+      const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token, channelId);
       if (!isTokenValid) {
         const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
-        userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token ,expires_in});
+        userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token, expires_in });
         userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
         await this.userLoginRepository.updateAsync(userLogin);
 
@@ -108,7 +110,7 @@ if (!channelId) {
       }
     }
 
-    
+
     if (!account) {
       throw new NotFoundException(
         "No matching Youtube profile was found!",
@@ -116,6 +118,12 @@ if (!channelId) {
     }
     if (channelId && !account.syncEnabled && configs.youtube.webhookUrl) {
       try {
+        logger.info("[YoutubeImport] Importing uploads...");
+         await this.youtubeImportService.importUploadsAsync(
+          account.userId,
+          accessToken,
+        );
+
         await this.youtubeWebhookService.subscribeAsync(channelId, configs.youtube.webhookUrl);
         console.log(`[YoutubeImport] Webhook subscription successful for channel ${channelId}`);
 
@@ -128,8 +136,11 @@ if (!channelId) {
     }
 
     try {
+      logger.info("[YoutubeImport] Before enqueue");
+
       await this.queueService.enqueueYoutubeImport(account, accessToken);
-      logger.info(`[YoutubeImport] Import job enqueued for user ${userId}`);
+
+      logger.info("[YoutubeImport] After enqueue");
     } catch (error) {
       logger.error('[YoutubeImport] Failed to enqueue import job', {
         error: error?.message,
@@ -181,34 +192,34 @@ if (!channelId) {
   }
 
   private async verifyAccessTokenAsync(
-  accessToken: string,
-  expectedChannelId: string,
-): Promise<boolean> {
-  try {
-    const response = await axios.get(
-      "https://www.googleapis.com/youtube/v3/channels",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
+    accessToken: string,
+    expectedChannelId: string,
+  ): Promise<boolean> {
+    try {
+      const response = await axios.get(
+        "https://www.googleapis.com/youtube/v3/channels",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          params: {
+            part: "id",
+            mine: true,
+          },
         },
-        params: {
-          part: "id",
-          mine: true,
-        },
-      },
-    );
+      );
 
-    const channel = response.data.items?.[0];
+      const channel = response.data.items?.[0];
 
-    if (!channel) {
+      if (!channel) {
+        return false;
+      }
+
+      return channel.id === expectedChannelId;
+    } catch (error) {
       return false;
     }
-
-    return channel.id === expectedChannelId;
-  } catch (error) {
-    return false;
   }
-}
 
   private async getUserLoginAsync(userId: string): Promise<UserLogin> {
 
