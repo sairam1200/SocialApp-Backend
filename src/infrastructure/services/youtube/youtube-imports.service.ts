@@ -129,7 +129,7 @@ console.info(
             userId,
             platform: _const.PLATFORMS.YOUTUBE,
             type: "uploaded_video",
-            externalId: videoId,
+            externalId: channel.id,
             title: item.snippet?.title ?? "Untitled Video",
             metaData: {
               videoId,
@@ -140,7 +140,7 @@ console.info(
               viewCount: Number(details?.statistics?.viewCount ?? 0),
               likeCount: Number(details?.statistics?.likeCount ?? 0),
               commentCount: Number(details?.statistics?.commentCount ?? 0),
-              thumbnails:
+              thumbnailUrl:
                 item.snippet?.thumbnails?.high?.url ??
                 item.snippet?.thumbnails?.medium?.url ??
                 item.snippet?.thumbnails?.default?.url,
