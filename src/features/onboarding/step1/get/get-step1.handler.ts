@@ -31,7 +31,7 @@ export class GetOnboardingStep1QueryHandler implements IQueryHandler<GetOnboardi
 
     return new OnboardingStep1Model({
       profileImage: profileImageUrl,
-      username: user.userName || null,
+      username: user.firstName+user.lastName || null,
       bio: user.bio || null,
     });
   }
