@@ -154,6 +154,14 @@ if (existingAccount) {
     return await this.linkedAccountContext.findOne({ where: { platform, externalId } });
   }
 
+  public async getByPlatformAndMetaDataValueAsync(platform: string, metaKey: string, metaValue: string): Promise<LinkedAccount | null> {
+    return await this.linkedAccountContext
+      .createQueryBuilder('account')
+      .where('account.platform = :platform', { platform })
+      .andWhere(`account.metaData->>'${metaKey}' = :metaValue`, { metaValue })
+      .getOne();
+  }
+
   public async getByEmailAsync(email: string): Promise<LinkedAccount | null> {
     const normalizedEmail = email?.toUpperCase();
     return await this.linkedAccountContext.findOne({ where: { email: normalizedEmail } });

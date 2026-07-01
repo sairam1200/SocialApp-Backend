@@ -150,6 +150,8 @@ import { LinkedInSearchQueryHandler } from "./linkedin/search/linkedin-search.ha
 import { InstagramSearchController } from "./instagram/search/instagram-search.endpoint";
 import { FacebookDisconnectController } from "./facebook/disconnect/facebook-disconnect.endpoint";
 import { FacebookDisconnectCommandHandler } from "./facebook/disconnect/facebook-disconnect.handler";
+import { FacebookDataDeletionController } from "./facebook/data-deletion/facebook-data-deletion.endpoint";
+import { FacebookDataDeletionCommandHandler } from "./facebook/data-deletion/facebook-data-deletion.handler";
 import { InstagramDisconnectController } from "./instagram/disconnect/instagram-disconnect.endpoint";
 import { InstagramDisconnectCommandHandler } from "./instagram/disconnect/instagram-disconnect.handler";
 import { TwitterDisconnectController } from "./twitter/disconnect/twitter-disconnect.endpoint";
@@ -484,6 +486,7 @@ const controllers = [
   FacebookContentsController,
   FacebookSearchController,
   FacebookDisconnectController,
+  FacebookDataDeletionController,
   InstagramConnectController,
   InstagramProfileController,
   InstagramContentsController,
@@ -584,6 +587,7 @@ const handlers = [
   FacebookContentsQueryHandler,
   FacebookSearchQueryHandler,
   FacebookDisconnectCommandHandler,
+  FacebookDataDeletionCommandHandler,
   InstagramConnectCallbackQueryHandler, InstagramConnectQueryHandler,
   InstagramProfileQueryHandler,
   InstagramContentsQueryHandler,

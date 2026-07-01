@@ -13,4 +13,5 @@ export interface ILinkedAccountRepository {
   getByPlatformAndUserNameAsync(platform: string, username: string): Promise<LinkedAccount | null>;
   getByPlatformAndExternalIdAsync(platform: string, externalId: string): Promise<LinkedAccount | null>;
   getByPlatformAndEmailAsync(platform: string, email: string): Promise<LinkedAccount | null>;
+  getByPlatformAndMetaDataValueAsync(platform: string, metaKey: string, metaValue: string): Promise<LinkedAccount | null>;
 }
