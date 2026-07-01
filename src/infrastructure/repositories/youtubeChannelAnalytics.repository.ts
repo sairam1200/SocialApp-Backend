@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { YoutubeChannelAnalytics } from '../../domain/entities/youtubeChannelAnalytics.entity';
-import { IYoutubeChannelAnalyticsRepository } from '../../domain/repositories/iyoutubeChannelAnalytics.repository';
+import { ChannelMetricsAggregate, IYoutubeChannelAnalyticsRepository } from '../../domain/repositories/iyoutubeChannelAnalytics.repository';
 
 @Injectable()
 export class YoutubeChannelAnalyticsRepository implements IYoutubeChannelAnalyticsRepository {
@@ -50,5 +50,46 @@ export class YoutubeChannelAnalyticsRepository implements IYoutubeChannelAnalyti
       },
       order: { snapshotDate: 'ASC' },
     });
+  }
+
+  async getLatestSnapshotDateByUserIdAsync(userId: string): Promise<Date | null> {
+    const result = await this.channelAnalyticsContext.findOne({
+      where: { userId },
+      order: { snapshotDate: 'DESC' },
+      select: ['snapshotDate'],
+    });
+    return result?.snapshotDate || null;
+  }
+
+  async getAggregatedMetricsAsync(userId: string, startDate: Date, endDate: Date): Promise<ChannelMetricsAggregate> {
+    const raw = await this.channelAnalyticsContext
+      .createQueryBuilder('ca')
+      .select('COALESCE(SUM(ca.estimatedMinutesWatched), 0)', 'estimatedMinutesWatched')
+      .addSelect('COALESCE(AVG(ca.averageViewDurationSeconds), 0)', 'averageViewDurationSeconds')
+      .addSelect('COALESCE(SUM(ca.subscribersGained), 0)', 'subscribersGained')
+      .addSelect('COALESCE(SUM(ca.subscribersLost), 0)', 'subscribersLost')
+      .addSelect('COALESCE(SUM(ca.likes), 0)', 'likes')
+      .addSelect('COALESCE(SUM(ca.comments), 0)', 'comments')
+      .addSelect('COALESCE(SUM(ca.shares), 0)', 'shares')
+      .addSelect('COALESCE(SUM(ca.estimatedRevenueUsd), 0)', 'estimatedRevenueUsd')
+      .addSelect('COALESCE(SUM(ca.estimatedAdRevenueUsd), 0)', 'estimatedAdRevenueUsd')
+      .addSelect('COUNT(ca.id)', 'snapshotCount')
+      .where('ca.userId = :userId', { userId })
+      .andWhere('ca.snapshotDate >= :startDate', { startDate })
+      .andWhere('ca.snapshotDate <= :endDate', { endDate })
+      .getRawOne();
+
+    return {
+      estimatedMinutesWatched: Number(raw?.estimatedMinutesWatched) || 0,
+      averageViewDurationSeconds: Number(raw?.averageViewDurationSeconds) || 0,
+      subscribersGained: Number(raw?.subscribersGained) || 0,
+      subscribersLost: Number(raw?.subscribersLost) || 0,
+      likes: Number(raw?.likes) || 0,
+      comments: Number(raw?.comments) || 0,
+      shares: Number(raw?.shares) || 0,
+      estimatedRevenueUsd: Number(raw?.estimatedRevenueUsd) || 0,
+      estimatedAdRevenueUsd: Number(raw?.estimatedAdRevenueUsd) || 0,
+      snapshotCount: Number(raw?.snapshotCount) || 0,
+    };
   }
 }

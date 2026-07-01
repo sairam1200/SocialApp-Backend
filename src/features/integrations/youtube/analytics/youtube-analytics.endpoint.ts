@@ -9,6 +9,16 @@ import {
   GetYoutubeVideoAnalyticsQuery,
   GetYoutubeAnalyticsTrendsQuery,
   GetYoutubeTopVideosQuery,
+  GetYoutubeOverviewQuery,
+  GetYoutubeDailyViewsQuery,
+  GetYoutubeWatchTimeQuery,
+  GetYoutubeSubscriberGrowthQuery,
+  GetYoutubeTrafficSourcesQuery,
+  GetYoutubeAudienceQuery,
+  GetYoutubeGeographyQuery,
+  GetYoutubeDevicesQuery,
+  GetYoutubePlaybackLocationsQuery,
+  GetYoutubeRevenueQuery,
 } from './youtube-analytics.handler';
 
 @ApiTags('Integrations')
@@ -75,6 +85,125 @@ export class YoutubeAnalyticsController {
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   public async getTopVideos(@Query('limit') limit: number, @Res() res: Response): Promise<Response> {
     const result = await this.queryBus.execute(new GetYoutubeTopVideosQuery({ limit }));
+    return res.status(HttpStatus.OK).json(result);
+  }
+
+  @Get('overview')
+  @ApiQuery({ name: 'startDate', required: false, type: String, description: 'Format YYYY-MM-DD' })
+  @ApiQuery({ name: 'endDate', required: false, type: String, description: 'Format YYYY-MM-DD' })
+  @ApiResponse({ status: 200, description: 'Dashboard overview with current vs previous period comparison' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  public async getOverview(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Res() res: Response,
+  ): Promise<Response> {
+    const result = await this.queryBus.execute(new GetYoutubeOverviewQuery({ startDate, endDate }));
+    return res.status(HttpStatus.OK).json(result);
+  }
+
+  @Get('daily-views')
+  @ApiQuery({ name: 'startDate', required: false, type: String, description: 'Format YYYY-MM-DD' })
+  @ApiQuery({ name: 'endDate', required: false, type: String, description: 'Format YYYY-MM-DD' })
+  @ApiResponse({ status: 200, description: 'Daily view count time series' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND' })
+  public async getDailyViews(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Res() res: Response,
+  ): Promise<Response> {
+    const result = await this.queryBus.execute(new GetYoutubeDailyViewsQuery({ startDate, endDate }));
+    return res.status(HttpStatus.OK).json(result);
+  }
+
+  @Get('watch-time')
+  @ApiQuery({ name: 'startDate', required: false, type: String, description: 'Format YYYY-MM-DD' })
+  @ApiQuery({ name: 'endDate', required: false, type: String, description: 'Format YYYY-MM-DD' })
+  @ApiResponse({ status: 200, description: 'Watch time time series' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND' })
+  public async getWatchTime(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Res() res: Response,
+  ): Promise<Response> {
+    const result = await this.queryBus.execute(new GetYoutubeWatchTimeQuery({ startDate, endDate }));
+    return res.status(HttpStatus.OK).json(result);
+  }
+
+  @Get('subscriber-growth')
+  @ApiQuery({ name: 'startDate', required: false, type: String, description: 'Format YYYY-MM-DD' })
+  @ApiQuery({ name: 'endDate', required: false, type: String, description: 'Format YYYY-MM-DD' })
+  @ApiResponse({ status: 200, description: 'Subscriber growth time series' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND' })
+  public async getSubscriberGrowth(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Res() res: Response,
+  ): Promise<Response> {
+    const result = await this.queryBus.execute(new GetYoutubeSubscriberGrowthQuery({ startDate, endDate }));
+    return res.status(HttpStatus.OK).json(result);
+  }
+
+  @Get('traffic-sources')
+  @ApiResponse({ status: 200, description: 'Traffic sources from latest snapshot' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND' })
+  public async getTrafficSources(@Res() res: Response): Promise<Response> {
+    const result = await this.queryBus.execute(new GetYoutubeTrafficSourcesQuery());
+    return res.status(HttpStatus.OK).json(result);
+  }
+
+  @Get('audience')
+  @ApiResponse({ status: 200, description: 'Audience demographics from latest snapshot' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND' })
+  public async getAudience(@Res() res: Response): Promise<Response> {
+    const result = await this.queryBus.execute(new GetYoutubeAudienceQuery());
+    return res.status(HttpStatus.OK).json(result);
+  }
+
+  @Get('geography')
+  @ApiResponse({ status: 200, description: 'Geography breakdown from latest snapshot' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND' })
+  public async getGeography(@Res() res: Response): Promise<Response> {
+    const result = await this.queryBus.execute(new GetYoutubeGeographyQuery());
+    return res.status(HttpStatus.OK).json(result);
+  }
+
+  @Get('devices')
+  @ApiResponse({ status: 200, description: 'Device breakdown from latest snapshot' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND' })
+  public async getDevices(@Res() res: Response): Promise<Response> {
+    const result = await this.queryBus.execute(new GetYoutubeDevicesQuery());
+    return res.status(HttpStatus.OK).json(result);
+  }
+
+  @Get('playback-locations')
+  @ApiResponse({ status: 200, description: 'Playback location breakdown from latest snapshot' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND' })
+  public async getPlaybackLocations(@Res() res: Response): Promise<Response> {
+    const result = await this.queryBus.execute(new GetYoutubePlaybackLocationsQuery());
+    return res.status(HttpStatus.OK).json(result);
+  }
+
+  @Get('revenue')
+  @ApiQuery({ name: 'startDate', required: false, type: String, description: 'Format YYYY-MM-DD' })
+  @ApiQuery({ name: 'endDate', required: false, type: String, description: 'Format YYYY-MM-DD' })
+  @ApiResponse({ status: 200, description: 'Revenue time series' })
+  @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND' })
+  public async getRevenue(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Res() res: Response,
+  ): Promise<Response> {
+    const result = await this.queryBus.execute(new GetYoutubeRevenueQuery({ startDate, endDate }));
     return res.status(HttpStatus.OK).json(result);
   }
 }

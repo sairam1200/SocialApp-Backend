@@ -15,6 +15,17 @@ import { IUserLoginRepository } from '../../domain/repositories/iuserLogin.repos
 import { IYoutubeAnalyticsService } from '../../domain/services/iyoutubeAnalytics.service';
 import { deserializeObject, serializeObject } from '../../core/utils/serialization.util';
 
+const CHANNEL_METRICS = 'views,estimatedMinutesWatched,averageViewDuration,subscribersGained,subscribersLost,likes,comments,shares,estimatedRevenue,estimatedAdRevenue';
+const DIMENSION_MAP: Record<number, { dimension: string; metrics: string; targetField: string }> = {
+  1: { dimension: 'insightTrafficSourceType', metrics: 'views,estimatedMinutesWatched', targetField: 'trafficSources' },
+  2: { dimension: 'country', metrics: 'views,estimatedMinutesWatched', targetField: 'geography' },
+  3: { dimension: 'deviceType', metrics: 'views,estimatedMinutesWatched', targetField: 'devices' },
+  4: { dimension: 'subscribedStatus', metrics: 'views,estimatedMinutesWatched,viewerPercentage', targetField: 'audience' },
+  5: { dimension: 'playbackLocationType', metrics: 'views,estimatedMinutesWatched', targetField: 'playbackLocations' },
+};
+const INITIAL_SYNC_DAYS = 30;
+const MAX_CATCHUP_DAYS = 7;
+
 @Injectable()
 export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
   constructor(
@@ -37,140 +48,43 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
   public async syncAccountAnalyticsAsync(userId: string): Promise<void> {
     logger.info(`[YoutubeAnalyticsService] Starting analytics sync for user ${userId}`);
 
-    let credentialsAvailable = false;
-    let accessToken = '';
+    const accessToken = await this.resolveTokenAsync(userId);
+    if (!accessToken) {
+      logger.warn(`[YoutubeAnalyticsService] No valid YouTube token for user ${userId}. Sync skipped.`);
+      return;
+    }
 
     try {
-      const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.YOUTUBE);
-      if (userLogin && userLogin.tokenValue) {
-        const tokenValue = deserializeObject<{ access_token: string; refresh_token: string }>(userLogin.tokenValue);
-        if (tokenValue.access_token) {
-          const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
-          if (!isTokenValid && tokenValue.refresh_token) {
-            const refreshed = await this.refreshTokenAsync(tokenValue.refresh_token);
-            if (refreshed.access_token) {
-              accessToken = refreshed.access_token;
-              userLogin.tokenValue = serializeObject({
-                access_token: refreshed.access_token,
-                refresh_token: tokenValue.refresh_token,
-                expires_in: refreshed.expires_in,
-              });
-              await this.userLoginRepository.updateAsync(userLogin);
-              credentialsAvailable = true;
-            }
-          } else if (isTokenValid) {
-            accessToken = tokenValue.access_token;
-            credentialsAvailable = true;
-          }
-        }
-      }
-    } catch (err) {
-      logger.warn(
-        `[YoutubeAnalyticsService] Could not refresh/retrieve YouTube token for user ${userId}. Falling back to mock: ${err.message}`,
-      );
-    }
-
-    if (credentialsAvailable && accessToken) {
-      try {
-        // 1. Fetch Channel statistics from YouTube Data API
-        const channelResponse = await axios.get('https://www.googleapis.com/youtube/v3/channels', {
-          params: {
-            mine: true,
-            part: 'snippet,contentDetails,statistics',
-          },
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-
-        const channels = channelResponse.data.items || [];
-        const today = new Date();
-        today.setUTCHours(0, 0, 0, 0);
-
-        for (const channel of channels) {
-          const channelId = channel.id;
-          const stats = channel.statistics || {};
-
-          const channelAnalytics = new YoutubeChannelAnalytics({
-            channelId,
-            userId,
-            subscriberCount: parseInt(stats.subscriberCount || '0', 10),
-            viewCount: parseInt(stats.viewCount || '0', 10),
-            videoCount: parseInt(stats.videoCount || '0', 10),
-            engagementMetrics: {
-              hiddenSubscriberCount: stats.hiddenSubscriberCount,
-            },
-            snapshotDate: today,
-          });
-
-          await this.channelAnalyticsRepository.createOrUpdateAsync(channelAnalytics);
-
-          // 2. Fetch imported videos for this user from our own DB
-          const importedVideos = await this.userContentContext.find({
-            where: {
-              userId,
-              platform: _const.PLATFORMS.YOUTUBE,
-              type: In(['uploaded_video', 'playlist_video']),
-            },
-          });
-
-          const videoIds = [
-            ...new Set(
-              importedVideos
-                .map((v) => v.metaData?.videoId || v.externalId)
-                .filter((id): id is string => typeof id === 'string' && id.length > 0),
-            ),
-          ];
-
-          // 3. Fetch detailed statistics for each imported video in batches of 50
-          for (let i = 0; i < videoIds.length; i += 50) {
-            const chunk = videoIds.slice(i, i + 50);
-            const videosResponse = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
-              params: {
-                id: chunk.join(','),
-                part: 'snippet,statistics,contentDetails',
-              },
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            });
-
-            const videosList = videosResponse.data.items || [];
-            for (const video of videosList) {
-              const videoId = video.id;
-              const vStats = video.statistics || {};
-              const duration = video.contentDetails?.duration;
-              const publishedAtStr = video.snippet?.publishedAt;
-
-              const videoAnalytics = new YoutubeVideoAnalytics({
-                videoId,
-                userId,
-                viewCount: parseInt(vStats.viewCount || '0', 10),
-                likeCount: parseInt(vStats.likeCount || '0', 10),
-                commentCount: parseInt(vStats.commentCount || '0', 10),
-                favoriteCount: parseInt(vStats.favoriteCount || '0', 10),
-                duration,
-                publishedAt: publishedAtStr ? new Date(publishedAtStr) : undefined,
-                snapshotDate: today,
-              });
-
-              await this.videoAnalyticsRepository.createOrUpdateAsync(videoAnalytics);
-            }
-          }
-        }
-
-        logger.info(`[YoutubeAnalyticsService] Successfully synced real YouTube Analytics for user ${userId}`);
+      const missingDates = await this.getMissingDatesAsync(userId);
+      if (missingDates.length === 0) {
+        logger.info(`[YoutubeAnalyticsService] All dates already synced for user ${userId}. Skipping.`);
         return;
-      } catch (apiErr) {
-        logger.error(
-          `[YoutubeAnalyticsService] YouTube API call failed during sync for user ${userId}. Falling back to mock data.`,
-          apiErr,
-        );
       }
-    }
 
-    // Trigger Mock Fallback if real credentials/API failed
-    await this.syncMockAnalyticsAsync(userId);
+      const startDateStr = this.formatDate(missingDates[0]);
+      const endDateStr = this.formatDate(missingDates[missingDates.length - 1]);
+
+      const channelInfo = await this.fetchChannelInfoAsync(accessToken);
+      if (!channelInfo) {
+        logger.warn(`[YoutubeAnalyticsService] No channel found for user ${userId}. Sync skipped.`);
+        return;
+      }
+
+      const { channelId, subscriberCount, viewCount, videoCount } = channelInfo;
+
+      // Fetch channel daily metrics from Analytics API
+      await this.syncChannelDailyMetricsAsync(accessToken, userId, channelId, subscriberCount, viewCount, videoCount, startDateStr, endDateStr, missingDates);
+
+      // Fetch dimension data if scheduled
+      await this.syncDimensionDataAsync(accessToken, userId, channelId, startDateStr, endDateStr, missingDates);
+
+      // Fetch video daily metrics from Analytics API
+      await this.syncVideoMetricsAsync(accessToken, userId, channelId, startDateStr, endDateStr, missingDates);
+
+      logger.info(`[YoutubeAnalyticsService] Successfully synced YouTube Analytics for user ${userId}`);
+    } catch (error: any) {
+      logger.error(`[YoutubeAnalyticsService] Sync failed for user ${userId}: ${error.message}`);
+    }
   }
 
   public async syncAllAccountsAnalyticsAsync(): Promise<void> {
@@ -198,13 +112,301 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     }
   }
 
-  private async syncMockAnalyticsAsync(userId: string): Promise<void> {
-    logger.info(`[YoutubeAnalyticsService] Generating mock analytics data for user ${userId}`);
+  public async queryReportsAsync(
+    accessToken: string,
+    metrics: string,
+    dimensions?: string,
+    filters?: string,
+    startDate?: string,
+    endDate?: string,
+    sort?: string,
+    maxResults?: number,
+    startIndex?: number,
+  ): Promise<{ columnHeaders: Array<{ name: string; columnType: string; dataType: string }>; rows: string[][] }> {
+    const params: Record<string, string | number> = {
+      ids: 'channel==MINE',
+      metrics,
+      ...(dimensions && { dimensions }),
+      ...(filters && { filters }),
+      ...(sort && { sort }),
+      ...(maxResults && { maxResults }),
+      ...(startIndex && { startIndex }),
+    };
 
-    const channelId = 'UC_MOCK_CHANNEL_' + userId.substring(0, 8);
-    const mockVideoIds = ['dQw4w9WgXcQ', 'gOMhN-qkPrY', 'y6120QOlsfU'];
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
 
-    // See if we have imported videos.
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const response = await axios.get('https://youtubeanalytics.googleapis.com/v2/reports', {
+          params,
+          headers: { Authorization: `Bearer ${accessToken}` },
+          timeout: 30000,
+        });
+
+        const data = response.data;
+        return {
+          columnHeaders: data.columnHeaders || [],
+          rows: data.rows || [],
+        };
+      } catch (error: any) {
+        lastError = error;
+        const status = error.response?.status;
+        if ((status === 429 || status === 500 || status === 503) && attempt < 2) {
+          const delay = Math.pow(2, attempt) * 1000;
+          logger.warn(`[YoutubeAnalyticsService] reports.query transient error (${status}). Retrying in ${delay}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        logger.error(`[YoutubeAnalyticsService] reports.query non-transient error: ${error.message}`);
+        throw error;
+      }
+    }
+    throw lastError || new Error('reports.query failed after retries');
+  }
+
+  private async resolveTokenAsync(userId: string): Promise<string | null> {
+    try {
+      const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.YOUTUBE);
+      if (!userLogin || !userLogin.tokenValue) return null;
+
+      const tokenValue = deserializeObject<{ access_token: string; refresh_token: string }>(userLogin.tokenValue);
+      if (!tokenValue.access_token) return null;
+
+      const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
+      if (!isTokenValid && tokenValue.refresh_token) {
+        const refreshed = await this.refreshTokenAsync(tokenValue.refresh_token);
+        if (!refreshed.access_token) return null;
+
+        userLogin.tokenValue = serializeObject({
+          access_token: refreshed.access_token,
+          refresh_token: tokenValue.refresh_token,
+          expires_in: refreshed.expires_in,
+        });
+        await this.userLoginRepository.updateAsync(userLogin);
+        return refreshed.access_token;
+      }
+
+      return isTokenValid ? tokenValue.access_token : null;
+    } catch (err) {
+      logger.warn(`[YoutubeAnalyticsService] Token resolution failed for user ${userId}: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
+  private async getMissingDatesAsync(userId: string): Promise<Date[]> {
+    const lastSnapshotDate = await this.channelAnalyticsRepository.getLatestSnapshotDateByUserIdAsync(userId);
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    if (!lastSnapshotDate) {
+      const dates: Date[] = [];
+      for (let i = INITIAL_SYNC_DAYS; i >= 0; i--) {
+        const d = new Date(today);
+        d.setUTCDate(today.getUTCDate() - i);
+        dates.push(d);
+      }
+      return dates;
+    }
+
+    const diffMs = today.getTime() - lastSnapshotDate.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 0) return [];
+
+    const catchupDays = Math.min(diffDays, MAX_CATCHUP_DAYS);
+    const dates: Date[] = [];
+    for (let i = catchupDays; i >= 1; i--) {
+      const d = new Date(today);
+      d.setUTCDate(today.getUTCDate() - i);
+      if (d > lastSnapshotDate) {
+        dates.push(d);
+      }
+    }
+    dates.push(new Date(today));
+    return dates;
+  }
+
+  private async fetchChannelInfoAsync(accessToken: string): Promise<{ channelId: string; subscriberCount: number; viewCount: number; videoCount: number } | null> {
+    try {
+      const response = await axios.get('https://www.googleapis.com/youtube/v3/channels', {
+        params: { mine: true, part: 'snippet,statistics' },
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      const channel = response.data.items?.[0];
+      if (!channel) return null;
+
+      const stats = channel.statistics || {};
+      return {
+        channelId: channel.id,
+        subscriberCount: parseInt(stats.subscriberCount || '0', 10),
+        viewCount: parseInt(stats.viewCount || '0', 10),
+        videoCount: parseInt(stats.videoCount || '0', 10),
+      };
+    } catch (error: any) {
+      logger.error(`[YoutubeAnalyticsService] Failed to fetch channel info: ${error.message}`);
+      return null;
+    }
+  }
+
+  private async syncChannelDailyMetricsAsync(
+    accessToken: string, userId: string, channelId: string,
+    subscriberCount: number, viewCount: number, videoCount: number,
+    startDateStr: string, endDateStr: string, missingDates: Date[],
+  ): Promise<void> {
+    try {
+      const result = await this.queryReportsAsync(
+        accessToken, CHANNEL_METRICS, 'day', undefined, startDateStr, endDateStr, 'day',
+      );
+
+      if (!result.rows || result.rows.length === 0) {
+        // Save empty snapshots for missing dates even if API returns no data
+        for (const date of missingDates) {
+          await this.saveChannelSnapshot(userId, channelId, subscriberCount, viewCount, videoCount, date, null);
+        }
+        return;
+      }
+
+      const colIndex = this.buildColumnIndex(result.columnHeaders);
+      const rowsByDate = this.indexRowsByDate(result.rows, colIndex);
+
+      for (const date of missingDates) {
+        const dateKey = this.formatDate(date);
+        const row = rowsByDate[dateKey];
+        await this.saveChannelSnapshot(userId, channelId, subscriberCount, viewCount, videoCount, date, row ? { colIndex, row } : null);
+      }
+    } catch (error: any) {
+      logger.error(`[YoutubeAnalyticsService] Channel metrics sync failed: ${error.message}`);
+    }
+  }
+
+  private async saveChannelSnapshot(
+    userId: string, channelId: string,
+    subscriberCount: number, viewCount: number, videoCount: number,
+    snapshotDate: Date, apiData: { colIndex: Record<string, number>; row: string[] } | null,
+  ): Promise<void> {
+    const snapshot = new YoutubeChannelAnalytics({
+      channelId, userId,
+      subscriberCount,
+      viewCount,
+      videoCount,
+      engagementMetrics: {},
+      snapshotDate,
+    });
+
+    if (apiData) {
+      snapshot.estimatedMinutesWatched = this.intVal(apiData, 'estimatedMinutesWatched');
+      snapshot.averageViewDurationSeconds = this.floatVal(apiData, 'averageViewDuration');
+      snapshot.subscribersGained = this.intVal(apiData, 'subscribersGained');
+      snapshot.subscribersLost = this.intVal(apiData, 'subscribersLost');
+      snapshot.likes = this.intVal(apiData, 'likes');
+      snapshot.comments = this.intVal(apiData, 'comments');
+      snapshot.shares = this.intVal(apiData, 'shares');
+      snapshot.estimatedRevenueUsd = this.floatVal(apiData, 'estimatedRevenue');
+      snapshot.estimatedAdRevenueUsd = this.floatVal(apiData, 'estimatedAdRevenue');
+    }
+
+    await this.channelAnalyticsRepository.createOrUpdateAsync(snapshot);
+  }
+
+  private async syncDimensionDataAsync(
+    accessToken: string, userId: string, channelId: string,
+    startDateStr: string, endDateStr: string, missingDates: Date[],
+  ): Promise<void> {
+    const dayOfWeek = new Date().getUTCDay();
+    const dimensionConfig = DIMENSION_MAP[dayOfWeek];
+    if (!dimensionConfig) return;
+
+    const today = this.formatDate(new Date());
+    const exists = await this.hasDimensionSnapshotAsync(userId, dimensionConfig.targetField, today);
+
+    // Only sync dimension data on the first missing date that matches today
+    const shouldSync = missingDates.some((d) => this.formatDate(d) === today);
+    if (!shouldSync || exists) return;
+
+    try {
+      const result = await this.queryReportsAsync(
+        accessToken, dimensionConfig.metrics, `day,${dimensionConfig.dimension}`,
+        undefined, startDateStr, endDateStr, undefined, 5000,
+      );
+
+      if (!result.rows || result.rows.length === 0) return;
+
+      const dimColIndex = this.buildColumnIndex(result.columnHeaders);
+      const rowsByDate = this.groupDimensionRowsByDate(result.rows, dimColIndex, dimensionConfig.dimension);
+
+      for (const date of missingDates) {
+        const dateKey = this.formatDate(date);
+        const dimRows = rowsByDate[dateKey];
+        if (!dimRows || dimRows.length === 0) continue;
+
+        const existing = await this.channelAnalyticsRepository.getLatestByChannelIdAsync(channelId);
+        const updateData: Record<string, any> = { snapshotDate: date };
+
+        if (dimensionConfig.targetField === 'trafficSources') {
+          updateData.trafficSources = dimRows.map((r) => ({
+            source: r.dimensionValue,
+            views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
+            watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
+          }));
+        } else if (dimensionConfig.targetField === 'geography') {
+          updateData.geography = dimRows.map((r) => ({
+            countryCode: r.dimensionValue,
+            views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
+            watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
+          }));
+        } else if (dimensionConfig.targetField === 'devices') {
+          updateData.devices = dimRows.map((r) => ({
+            deviceType: r.dimensionValue,
+            views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
+            watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
+          }));
+        } else if (dimensionConfig.targetField === 'audience') {
+          const subscribed = dimRows.find((r) => r.dimensionValue === 'SUBSCRIBED');
+          const unsubscribed = dimRows.find((r) => r.dimensionValue === 'UNSUBSCRIBED');
+          updateData.audience = {
+            subscribedViewerPercentage: subscribed ? this.floatVal({ colIndex: dimColIndex, row: subscribed.row }, 'viewerPercentage') : 0,
+            returnViewerPercentage: 0,
+            newViewerPercentage: 0,
+          };
+        } else if (dimensionConfig.targetField === 'playbackLocations') {
+          updateData.playbackLocations = dimRows.map((r) => ({
+            location: r.dimensionValue,
+            views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
+            watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
+          }));
+        }
+
+        if (existing) {
+          Object.assign(existing, updateData);
+          await this.channelAnalyticsRepository.createOrUpdateAsync(existing);
+        }
+      }
+    } catch (error: any) {
+      logger.error(`[YoutubeAnalyticsService] Dimension sync failed for ${dimensionConfig.targetField}: ${error.message}`);
+    }
+  }
+
+  private async hasDimensionSnapshotAsync(userId: string, field: string, dateStr: string): Promise<boolean> {
+    const latest = await this.channelAnalyticsRepository.getLatestByUserIdAsync(userId);
+    if (!latest) return false;
+    if (this.formatDate(latest.snapshotDate) !== dateStr) return false;
+
+    const val = (latest as any)[field];
+    if (!val) return false;
+    if (Array.isArray(val) && val.length === 0) return false;
+    if (typeof val === 'object' && Object.keys(val).length === 0) return false;
+    return true;
+  }
+
+  private async syncVideoMetricsAsync(
+    accessToken: string, userId: string, channelId: string,
+    startDateStr: string, endDateStr: string, missingDates: Date[],
+  ): Promise<void> {
     const importedVideos = await this.userContentContext.find({
       where: {
         userId,
@@ -213,75 +415,116 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
       },
     });
 
-    const videoIds =
-      importedVideos.length > 0
-        ? importedVideos
-            .map((v) => v.metaData?.videoId || v.externalId)
-            .filter((id): id is string => typeof id === 'string' && id.length > 0)
-        : mockVideoIds;
+    const videoIds = [
+      ...new Set(
+        importedVideos
+          .map((v) => v.metaData?.videoId || v.externalId)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0),
+      ),
+    ];
 
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
+    if (videoIds.length === 0) return;
 
-    // Generate 30 days of daily historical snapshot data to show nice trendlines
-    for (let dayOffset = 30; dayOffset >= 0; dayOffset--) {
-      const date = new Date(today);
-      date.setUTCDate(today.getUTCDate() - dayOffset);
+    try {
+      const result = await this.queryReportsAsync(
+        accessToken, 'views,estimatedMinutesWatched,averageViewDuration,likes,comments,shares',
+        'day,video', undefined, startDateStr, endDateStr, undefined, 5000,
+      );
 
-      const subBase = 12500 + (30 - dayOffset) * 25 + Math.floor(Math.random() * 10);
-      const viewsBase = 150000 + (30 - dayOffset) * 1200 + Math.floor(Math.random() * 200);
-      const videosCount = 45;
+      if (!result.rows || result.rows.length === 0) {
+        // Save empty video snapshots even if API returns no data
+        for (const date of missingDates) {
+          for (const videoId of videoIds) {
+            await this.saveVideoSnapshot(userId, videoId, date, null);
+          }
+        }
+        return;
+      }
 
-      const channelAnalytics = new YoutubeChannelAnalytics({
-        channelId,
-        userId,
-        subscriberCount: subBase,
-        viewCount: viewsBase,
-        videoCount: videosCount,
-        engagementMetrics: {
-          averageWatchTimeSec: 180 + Math.floor(Math.random() * 20),
-          estimatedRevenueUSD: 350 + (30 - dayOffset) * 5 + Math.floor(Math.random() * 2),
-        },
-        snapshotDate: date,
-      });
+      const colIndex = this.buildColumnIndex(result.columnHeaders);
+      const ROWS_BY_DATE_VIDEO = this.indexRowsByDateAndVideo(result.rows, colIndex);
 
-      await this.channelAnalyticsRepository.createOrUpdateAsync(channelAnalytics);
+      for (const date of missingDates) {
+        const dateKey = this.formatDate(date);
+        for (const videoId of videoIds) {
+          const row = ROWS_BY_DATE_VIDEO[dateKey]?.[videoId];
+          await this.saveVideoSnapshot(userId, videoId, date, row ? { colIndex, row } : null);
+        }
+      }
 
-      // Video analytics
-      for (let vIdx = 0; vIdx < videoIds.length; vIdx++) {
-        const videoId = videoIds[vIdx];
-
-        const vFactor = (vIdx + 1) * 1.5;
-        const vViews = Math.floor(1000 * vFactor + (30 - dayOffset) * 150 * vFactor + Math.floor(Math.random() * 30));
-        const vLikes = Math.floor(vViews * 0.08);
-        const vComments = Math.floor(vViews * 0.015);
-        const vFavorites = Math.floor(vViews * 0.002);
-
-        const videoAnalytics = new YoutubeVideoAnalytics({
-          videoId,
-          userId,
-          viewCount: vViews,
-          likeCount: vLikes,
-          commentCount: vComments,
-          favoriteCount: vFavorites,
-          duration: 'PT5M30S',
-          publishedAt: new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000),
-          snapshotDate: date,
-        });
-
-        await this.videoAnalyticsRepository.createOrUpdateAsync(videoAnalytics);
+      // Fetch video metadata (snippet only, not statistics) after snapshots exist
+      await this.fetchAndStoreVideoMetadataAsync(accessToken, userId, videoIds);
+    } catch (error: any) {
+      logger.error(`[YoutubeAnalyticsService] Video metrics sync failed: ${error.message}`);
+      // Fallback: save empty video snapshots
+      for (const date of missingDates) {
+        for (const videoId of videoIds) {
+          await this.saveVideoSnapshot(userId, videoId, date, null);
+        }
       }
     }
+  }
 
-    logger.info(`[YoutubeAnalyticsService] Successfully generated 30 days of mock YouTube Analytics for user ${userId}`);
+  private async saveVideoSnapshot(
+    userId: string, videoId: string,
+    snapshotDate: Date, apiData: { colIndex: Record<string, number>; row: string[] } | null,
+  ): Promise<void> {
+    const snapshot = new YoutubeVideoAnalytics({
+      videoId, userId, snapshotDate,
+    });
+
+    if (apiData) {
+      snapshot.viewCount = this.intVal(apiData, 'views');
+      snapshot.estimatedMinutesWatched = this.intVal(apiData, 'estimatedMinutesWatched');
+      snapshot.averageViewDurationSeconds = this.floatVal(apiData, 'averageViewDuration');
+      snapshot.likeCount = this.intVal(apiData, 'likes');
+      snapshot.commentCount = this.intVal(apiData, 'comments');
+      snapshot.shares = this.intVal(apiData, 'shares');
+    }
+
+    await this.videoAnalyticsRepository.createOrUpdateAsync(snapshot);
+  }
+
+  private async fetchAndStoreVideoMetadataAsync(accessToken: string, userId: string, videoIds: string[]): Promise<void> {
+    for (let i = 0; i < videoIds.length; i += 50) {
+      const chunk = videoIds.slice(i, i + 50);
+      try {
+        const response = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
+          params: { id: chunk.join(','), part: 'snippet,contentDetails' },
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        const videosList = response.data.items || [];
+        for (const video of videosList) {
+          const existing = await this.videoAnalyticsRepository.getLatestByVideoIdAsync(video.id);
+          const duration = video.contentDetails?.duration;
+          const publishedAt = video.snippet?.publishedAt ? new Date(video.snippet.publishedAt) : undefined;
+
+          if (existing && existing.duration && existing.publishedAt) continue;
+
+          if (existing) {
+            existing.duration = duration || existing.duration;
+            existing.publishedAt = publishedAt || existing.publishedAt;
+            await this.videoAnalyticsRepository.createOrUpdateAsync(existing);
+          } else if (duration || publishedAt) {
+            const metaEntity = new YoutubeVideoAnalytics({
+              videoId: video.id, userId,
+              duration, publishedAt,
+              snapshotDate: new Date(),
+            });
+            await this.videoAnalyticsRepository.createOrUpdateAsync(metaEntity);
+          }
+        }
+      } catch (error: any) {
+        logger.warn(`[YoutubeAnalyticsService] Failed to fetch video metadata batch: ${error.message}`);
+      }
+    }
   }
 
   private async verifyAccessTokenAsync(accessToken: string): Promise<boolean> {
     try {
       await axios.get(`https://oauth2.googleapis.com/tokeninfo`, {
-        params: {
-          access_token: accessToken,
-        },
+        params: { access_token: accessToken },
       });
       return true;
     } catch {
@@ -299,11 +542,7 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
           refresh_token: refreshToken,
           grant_type: 'refresh_token',
         }).toString(),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        },
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
       );
 
       const { access_token, expires_in } = response.data;
@@ -311,13 +550,81 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
         throw new Error('Your Youtube session has expired. Access token is missing.');
       }
 
-      return {
-        access_token,
-        expires_in,
-      };
+      return { access_token, expires_in };
     } catch (error) {
       logger.error('Failed to refresh YouTube access token:', error);
       throw error;
     }
+  }
+
+  private buildColumnIndex(columnHeaders: Array<{ name: string }>): Record<string, number> {
+    const index: Record<string, number> = {};
+    for (let i = 0; i < columnHeaders.length; i++) {
+      index[columnHeaders[i].name] = i;
+    }
+    return index;
+  }
+
+  private indexRowsByDate(rows: string[][], colIndex: Record<string, number>): Record<string, string[]> {
+    const dateIdx = colIndex['day'];
+    if (dateIdx === undefined) return {};
+    const map: Record<string, string[]> = {};
+    for (const row of rows) {
+      map[row[dateIdx]] = row;
+    }
+    return map;
+  }
+
+  private indexRowsByDateAndVideo(rows: string[][], colIndex: Record<string, number>): Record<string, Record<string, string[]>> {
+    const dateIdx = colIndex['day'];
+    const videoIdx = colIndex['video'];
+    if (dateIdx === undefined || videoIdx === undefined) return {};
+    const map: Record<string, Record<string, string[]>> = {};
+    for (const row of rows) {
+      const dateKey = row[dateIdx];
+      const videoKey = row[videoIdx];
+      if (!map[dateKey]) map[dateKey] = {};
+      map[dateKey][videoKey] = row;
+    }
+    return map;
+  }
+
+  private groupDimensionRowsByDate(
+    rows: string[][], colIndex: Record<string, number>, dimensionName: string,
+  ): Record<string, Array<{ dimensionValue: string; row: string[] }>> {
+    const dateIdx = colIndex['day'];
+    const dimIdx = colIndex[dimensionName];
+    if (dateIdx === undefined || dimIdx === undefined) return {};
+    const map: Record<string, Array<{ dimensionValue: string; row: string[] }>> = {};
+    for (const row of rows) {
+      const dateKey = row[dateIdx];
+      const dimValue = row[dimIdx];
+      if (!map[dateKey]) map[dateKey] = [];
+      map[dateKey].push({ dimensionValue: dimValue, row });
+    }
+    return map;
+  }
+
+  private intVal(apiData: { colIndex: Record<string, number>; row: string[] }, field: string): number {
+    const idx = apiData.colIndex[field];
+    if (idx === undefined) return 0;
+    const val = apiData.row[idx];
+    if (val === undefined || val === null || val === '') return 0;
+    return parseInt(val, 10) || 0;
+  }
+
+  private floatVal(apiData: { colIndex: Record<string, number>; row: string[] }, field: string): number {
+    const idx = apiData.colIndex[field];
+    if (idx === undefined) return 0;
+    const val = apiData.row[idx];
+    if (val === undefined || val === null || val === '') return 0;
+    return parseFloat(val) || 0;
+  }
+
+  private formatDate(date: Date): string {
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 }

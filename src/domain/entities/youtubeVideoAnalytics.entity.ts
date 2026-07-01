@@ -3,6 +3,7 @@ import { BaseEntity } from '../baseEntity';
 
 @Entity({ name: 'youtubeVideoAnalytics', schema: 'analytics' })
 @Index(['videoId', 'snapshotDate'], { unique: true })
+@Index(['userId', 'snapshotDate'])
 export class YoutubeVideoAnalytics extends BaseEntity {
 
   @Column({ nullable: false })
@@ -22,6 +23,15 @@ export class YoutubeVideoAnalytics extends BaseEntity {
 
   @Column({ type: 'integer', default: 0 })
   favoriteCount: number;
+
+  @Column({ type: 'bigint', default: 0 })
+  estimatedMinutesWatched: number;
+
+  @Column({ type: 'double precision', default: 0 })
+  averageViewDurationSeconds: number;
+
+  @Column({ type: 'integer', default: 0 })
+  shares: number;
 
   @Column({ type: 'timestamp', nullable: true })
   publishedAt?: Date;

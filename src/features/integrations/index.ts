@@ -90,7 +90,17 @@ import {
   GetYoutubeChannelAnalyticsQueryHandler,
   GetYoutubeVideoAnalyticsQueryHandler,
   GetYoutubeAnalyticsTrendsQueryHandler,
-  GetYoutubeTopVideosQueryHandler
+  GetYoutubeTopVideosQueryHandler,
+  GetYoutubeOverviewQueryHandler,
+  GetYoutubeDailyViewsQueryHandler,
+  GetYoutubeWatchTimeQueryHandler,
+  GetYoutubeSubscriberGrowthQueryHandler,
+  GetYoutubeTrafficSourcesQueryHandler,
+  GetYoutubeAudienceQueryHandler,
+  GetYoutubeGeographyQueryHandler,
+  GetYoutubeDevicesQueryHandler,
+  GetYoutubePlaybackLocationsQueryHandler,
+  GetYoutubeRevenueQueryHandler
 } from "./youtube/analytics/youtube-analytics.handler";
 import { FacebookAnalyticsController } from "./facebook/analytics/facebook-analytics.endpoint";
 import {
@@ -651,6 +661,16 @@ const handlers = [
   GetYoutubeVideoAnalyticsQueryHandler,
   GetYoutubeAnalyticsTrendsQueryHandler,
   GetYoutubeTopVideosQueryHandler,
+  GetYoutubeOverviewQueryHandler,
+  GetYoutubeDailyViewsQueryHandler,
+  GetYoutubeWatchTimeQueryHandler,
+  GetYoutubeSubscriberGrowthQueryHandler,
+  GetYoutubeTrafficSourcesQueryHandler,
+  GetYoutubeAudienceQueryHandler,
+  GetYoutubeGeographyQueryHandler,
+  GetYoutubeDevicesQueryHandler,
+  GetYoutubePlaybackLocationsQueryHandler,
+  GetYoutubeRevenueQueryHandler,
   SyncFacebookAnalyticsCommandHandler,
   GetFacebookPageAnalyticsQueryHandler,
   GetFacebookPostAnalyticsQueryHandler,
