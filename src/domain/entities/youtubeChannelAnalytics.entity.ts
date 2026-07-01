@@ -51,20 +51,20 @@ export class YoutubeChannelAnalytics extends BaseEntity {
   @Column({ type: 'double precision', default: 0 })
   estimatedAdRevenueUsd: number;
 
-  @Column('jsonb', { default: {} })
-  trafficSources: Record<string, any>;
+  @Column('jsonb', { default: [] })
+  trafficSources: any[];
 
-  @Column('jsonb', { default: {} })
-  geography: Record<string, any>;
+  @Column('jsonb', { default: [] })
+  geography: any[];
 
-  @Column('jsonb', { default: {} })
-  devices: Record<string, any>;
+  @Column('jsonb', { default: [] })
+  devices: any[];
 
   @Column('jsonb', { default: {} })
   audience: Record<string, any>;
 
-  @Column('jsonb', { default: {} })
-  playbackLocations: Record<string, any>;
+  @Column('jsonb', { default: [] })
+  playbackLocations: any[];
 
   @Column({ type: 'date', nullable: false })
   snapshotDate: Date;

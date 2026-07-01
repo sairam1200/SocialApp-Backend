@@ -352,7 +352,7 @@ export class GetYoutubeTrafficSourcesQueryHandler implements IQueryHandler<GetYo
     if (!latest) {
       throw new NotFoundException('No channel analytics found for this account.');
     }
-    return Array.isArray(latest.trafficSources) ? latest.trafficSources : [];
+    return latest.trafficSources;
   }
 }
 
@@ -386,7 +386,7 @@ export class GetYoutubeGeographyQueryHandler implements IQueryHandler<GetYoutube
     if (!latest) {
       throw new NotFoundException('No channel analytics found for this account.');
     }
-    return Array.isArray(latest.geography) ? latest.geography : [];
+    return latest.geography;
   }
 }
 
@@ -403,7 +403,7 @@ export class GetYoutubeDevicesQueryHandler implements IQueryHandler<GetYoutubeDe
     if (!latest) {
       throw new NotFoundException('No channel analytics found for this account.');
     }
-    return Array.isArray(latest.devices) ? latest.devices : [];
+    return latest.devices;
   }
 }
 
@@ -420,7 +420,7 @@ export class GetYoutubePlaybackLocationsQueryHandler implements IQueryHandler<Ge
     if (!latest) {
       throw new NotFoundException('No channel analytics found for this account.');
     }
-    return Array.isArray(latest.playbackLocations) ? latest.playbackLocations : [];
+    return latest.playbackLocations;
   }
 }
 
