@@ -19,5 +19,5 @@ export interface IYoutubeChannelAnalyticsRepository {
   getLatestByUserIdAsync(userId: string): Promise<YoutubeChannelAnalytics | null>;
   getTrendsAsync(channelId: string, startDate: Date, endDate: Date): Promise<YoutubeChannelAnalytics[]>;
   getLatestSnapshotDateByUserIdAsync(userId: string): Promise<Date | null>;
-  getAggregatedMetricsAsync(userId: string, startDate: Date, endDate: Date): Promise<ChannelMetricsAggregate>;
+  getAggregatedMetricsAsync(channelId: string, startDate: Date, endDate: Date): Promise<ChannelMetricsAggregate>;
 }

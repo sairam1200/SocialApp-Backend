@@ -61,7 +61,7 @@ export class YoutubeChannelAnalyticsRepository implements IYoutubeChannelAnalyti
     return result?.snapshotDate || null;
   }
 
-  async getAggregatedMetricsAsync(userId: string, startDate: Date, endDate: Date): Promise<ChannelMetricsAggregate> {
+  async getAggregatedMetricsAsync(channelId: string, startDate: Date, endDate: Date): Promise<ChannelMetricsAggregate> {
     const raw = await this.channelAnalyticsContext
       .createQueryBuilder('ca')
       .select('COALESCE(SUM(ca.estimatedMinutesWatched), 0)', 'estimatedMinutesWatched')
@@ -74,7 +74,7 @@ export class YoutubeChannelAnalyticsRepository implements IYoutubeChannelAnalyti
       .addSelect('COALESCE(SUM(ca.estimatedRevenueUsd), 0)', 'estimatedRevenueUsd')
       .addSelect('COALESCE(SUM(ca.estimatedAdRevenueUsd), 0)', 'estimatedAdRevenueUsd')
       .addSelect('COUNT(ca.id)', 'snapshotCount')
-      .where('ca.userId = :userId', { userId })
+      .where('ca.channelId = :channelId', { channelId })
       .andWhere('ca.snapshotDate >= :startDate', { startDate })
       .andWhere('ca.snapshotDate <= :endDate', { endDate })
       .getRawOne();
