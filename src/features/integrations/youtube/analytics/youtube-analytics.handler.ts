@@ -7,8 +7,29 @@ import { NotFoundException } from '@nestjs/common';
 import { IYoutubeAnalyticsService } from '../../../../domain/services/iyoutubeAnalytics.service';
 import { IYoutubeChannelAnalyticsRepository, ChannelMetricsAggregate } from '../../../../domain/repositories/iyoutubeChannelAnalytics.repository';
 import { IYoutubeVideoAnalyticsRepository } from '../../../../domain/repositories/iyoutubeVideoAnalytics.repository';
+import { IYoutubeAccountRepository } from '../../../../domain/repositories/iyoutubeAccount.repository';
+import { IUserContentRepository } from '../../../../domain/repositories';
 import { YoutubeChannelAnalytics } from '../../../../domain/entities/youtubeChannelAnalytics.entity';
 import { YoutubeVideoAnalytics } from '../../../../domain/entities/youtubeVideoAnalytics.entity';
+
+const YOUTUBE_VIDEO_CONTENT_TYPES = ['uploaded_video', 'playlist_video'];
+
+async function resolveActiveYoutubeChannelIdAsync(userId: string, youtubeAccountRepository: IYoutubeAccountRepository): Promise<string> {
+  const activeAccount = await youtubeAccountRepository.getConnectedByUserIdAsync(userId);
+  if (!activeAccount) {
+    throw new NotFoundException('No connected YouTube account found.');
+  }
+  return activeAccount.channelId;
+}
+
+async function resolveCurrentYoutubeVideoIdsAsync(
+  userId: string,
+  youtubeAccountRepository: IYoutubeAccountRepository,
+  userContentRepository: IUserContentRepository,
+): Promise<string[]> {
+  await resolveActiveYoutubeChannelIdAsync(userId, youtubeAccountRepository);
+  return await userContentRepository.getVideoIdsByUserIdAndPlatformAsync(userId, _const.PLATFORMS.YOUTUBE, YOUTUBE_VIDEO_CONTENT_TYPES);
+}
 
 // --- Commands & Queries Definitions ---
 
@@ -138,11 +159,14 @@ export class GetYoutubeChannelAnalyticsQueryHandler implements IQueryHandler<Get
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
   ) {}
 
   async execute(): Promise<YoutubeChannelAnalytics> {
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-    const latest = await this.channelAnalyticsRepository.getLatestByUserIdAsync(userId);
+    const channelId = await resolveActiveYoutubeChannelIdAsync(userId, this.youtubeAccountRepository);
+    const latest = await this.channelAnalyticsRepository.getLatestByChannelIdAsync(channelId);
     if (!latest) {
       throw new NotFoundException('No channel analytics record found for this account.');
     }
@@ -155,10 +179,20 @@ export class GetYoutubeVideoAnalyticsQueryHandler implements IQueryHandler<GetYo
   constructor(
     @Inject(_const.IYOUTUBEVIDEOANALYTICS_REPOSITORY)
     private readonly videoAnalyticsRepository: IYoutubeVideoAnalyticsRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
+    @Inject(_const.IUSERCONTENT_REPOSITORY)
+    private readonly userContentRepository: IUserContentRepository,
   ) {}
 
   async execute(query: GetYoutubeVideoAnalyticsQuery): Promise<YoutubeVideoAnalytics> {
-    const latest = await this.videoAnalyticsRepository.getLatestByVideoIdAsync(query.videoId);
+    const userId = HttpContext.user[Globals.ClaimTypes.UserId];
+    const videoIds = await resolveCurrentYoutubeVideoIdsAsync(userId, this.youtubeAccountRepository, this.userContentRepository);
+    if (!videoIds.includes(query.videoId)) {
+      throw new NotFoundException(`No analytics record found for video: ${query.videoId}`);
+    }
+
+    const latest = await this.videoAnalyticsRepository.getLatestByUserIdAndVideoIdAsync(userId, query.videoId);
     if (!latest) {
       throw new NotFoundException(`No analytics record found for video: ${query.videoId}`);
     }
@@ -173,6 +207,10 @@ export class GetYoutubeAnalyticsTrendsQueryHandler implements IQueryHandler<GetY
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
     @Inject(_const.IYOUTUBEVIDEOANALYTICS_REPOSITORY)
     private readonly videoAnalyticsRepository: IYoutubeVideoAnalyticsRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
+    @Inject(_const.IUSERCONTENT_REPOSITORY)
+    private readonly userContentRepository: IUserContentRepository,
   ) {}
 
   async execute(query: GetYoutubeAnalyticsTrendsQuery): Promise<YoutubeChannelAnalytics[] | YoutubeVideoAnalytics[]> {
@@ -188,16 +226,15 @@ export class GetYoutubeAnalyticsTrendsQueryHandler implements IQueryHandler<GetY
     const end = query.endDate ? new Date(query.endDate) : today;
 
     if (query.videoId) {
-      return await this.videoAnalyticsRepository.getTrendsAsync(query.videoId, start, end);
+      const videoIds = await resolveCurrentYoutubeVideoIdsAsync(userId, this.youtubeAccountRepository, this.userContentRepository);
+      if (!videoIds.includes(query.videoId)) {
+        throw new NotFoundException(`No analytics record found for video: ${query.videoId}`);
+      }
+      return await this.videoAnalyticsRepository.getTrendsByUserIdAndVideoIdAsync(userId, query.videoId, start, end);
     }
 
-    // Default to Channel trends: find the channel first
-    const channelRecord = await this.channelAnalyticsRepository.getLatestByUserIdAsync(userId);
-    if (!channelRecord) {
-      throw new NotFoundException('No channel analytics records found to fetch trends.');
-    }
-
-    return await this.channelAnalyticsRepository.getTrendsAsync(channelRecord.channelId, start, end);
+    const channelId = await resolveActiveYoutubeChannelIdAsync(userId, this.youtubeAccountRepository);
+    return await this.channelAnalyticsRepository.getTrendsAsync(channelId, start, end);
   }
 }
 
@@ -206,12 +243,17 @@ export class GetYoutubeTopVideosQueryHandler implements IQueryHandler<GetYoutube
   constructor(
     @Inject(_const.IYOUTUBEVIDEOANALYTICS_REPOSITORY)
     private readonly videoAnalyticsRepository: IYoutubeVideoAnalyticsRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
+    @Inject(_const.IUSERCONTENT_REPOSITORY)
+    private readonly userContentRepository: IUserContentRepository,
   ) {}
 
   async execute(query: GetYoutubeTopVideosQuery): Promise<YoutubeVideoAnalytics[]> {
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
     const limit = query.limit || 5;
-    return await this.videoAnalyticsRepository.getTopVideosAsync(userId, limit);
+    const videoIds = await resolveCurrentYoutubeVideoIdsAsync(userId, this.youtubeAccountRepository, this.userContentRepository);
+    return await this.videoAnalyticsRepository.getTopVideosByVideoIdsAsync(userId, videoIds, limit);
   }
 }
 
@@ -220,6 +262,8 @@ export class GetYoutubeOverviewQueryHandler implements IQueryHandler<GetYoutubeO
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
   ) {}
 
   async execute(query: GetYoutubeOverviewQuery): Promise<{ current: ChannelMetricsAggregate & { startDate: string; endDate: string }; previous: ChannelMetricsAggregate & { startDate: string; endDate: string } }> {
@@ -241,8 +285,9 @@ export class GetYoutubeOverviewQueryHandler implements IQueryHandler<GetYoutubeO
     const prevEnd = new Date(startDate.getTime() - 86400000);
     const prevStart = new Date(prevEnd.getTime() - periodMs);
 
-    const current = await this.channelAnalyticsRepository.getAggregatedMetricsAsync(userId, startDate, endDate);
-    const previous = await this.channelAnalyticsRepository.getAggregatedMetricsAsync(userId, prevStart, prevEnd);
+    const channelId = await resolveActiveYoutubeChannelIdAsync(userId, this.youtubeAccountRepository);
+    const current = await this.channelAnalyticsRepository.getAggregatedMetricsAsync(channelId, startDate, endDate);
+    const previous = await this.channelAnalyticsRepository.getAggregatedMetricsAsync(channelId, prevStart, prevEnd);
 
     return {
       current: { ...current, startDate: this.toDateStr(startDate), endDate: this.toDateStr(endDate) },
@@ -260,6 +305,8 @@ export class GetYoutubeDailyViewsQueryHandler implements IQueryHandler<GetYoutub
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
   ) {}
 
   async execute(query: GetYoutubeDailyViewsQuery): Promise<YoutubeChannelAnalytics[]> {
@@ -274,12 +321,8 @@ export class GetYoutubeDailyViewsQueryHandler implements IQueryHandler<GetYoutub
     const start = query.startDate ? new Date(query.startDate) : thirtyDaysAgo;
     const end = query.endDate ? new Date(query.endDate) : today;
 
-    const channelRecord = await this.channelAnalyticsRepository.getLatestByUserIdAsync(userId);
-    if (!channelRecord) {
-      throw new NotFoundException('No channel analytics records found.');
-    }
-
-    return await this.channelAnalyticsRepository.getTrendsAsync(channelRecord.channelId, start, end);
+    const channelId = await resolveActiveYoutubeChannelIdAsync(userId, this.youtubeAccountRepository);
+    return await this.channelAnalyticsRepository.getTrendsAsync(channelId, start, end);
   }
 }
 
@@ -288,6 +331,8 @@ export class GetYoutubeWatchTimeQueryHandler implements IQueryHandler<GetYoutube
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
   ) {}
 
   async execute(query: GetYoutubeWatchTimeQuery): Promise<YoutubeChannelAnalytics[]> {
@@ -302,12 +347,8 @@ export class GetYoutubeWatchTimeQueryHandler implements IQueryHandler<GetYoutube
     const start = query.startDate ? new Date(query.startDate) : thirtyDaysAgo;
     const end = query.endDate ? new Date(query.endDate) : today;
 
-    const channelRecord = await this.channelAnalyticsRepository.getLatestByUserIdAsync(userId);
-    if (!channelRecord) {
-      throw new NotFoundException('No channel analytics records found.');
-    }
-
-    return await this.channelAnalyticsRepository.getTrendsAsync(channelRecord.channelId, start, end);
+    const channelId = await resolveActiveYoutubeChannelIdAsync(userId, this.youtubeAccountRepository);
+    return await this.channelAnalyticsRepository.getTrendsAsync(channelId, start, end);
   }
 }
 
@@ -316,6 +357,8 @@ export class GetYoutubeSubscriberGrowthQueryHandler implements IQueryHandler<Get
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
   ) {}
 
   async execute(query: GetYoutubeSubscriberGrowthQuery): Promise<YoutubeChannelAnalytics[]> {
@@ -330,12 +373,8 @@ export class GetYoutubeSubscriberGrowthQueryHandler implements IQueryHandler<Get
     const start = query.startDate ? new Date(query.startDate) : thirtyDaysAgo;
     const end = query.endDate ? new Date(query.endDate) : today;
 
-    const channelRecord = await this.channelAnalyticsRepository.getLatestByUserIdAsync(userId);
-    if (!channelRecord) {
-      throw new NotFoundException('No channel analytics records found.');
-    }
-
-    return await this.channelAnalyticsRepository.getTrendsAsync(channelRecord.channelId, start, end);
+    const channelId = await resolveActiveYoutubeChannelIdAsync(userId, this.youtubeAccountRepository);
+    return await this.channelAnalyticsRepository.getTrendsAsync(channelId, start, end);
   }
 }
 
@@ -344,11 +383,14 @@ export class GetYoutubeTrafficSourcesQueryHandler implements IQueryHandler<GetYo
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
   ) {}
 
   async execute(): Promise<Record<string, any>> {
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-    const latest = await this.channelAnalyticsRepository.getLatestByUserIdAsync(userId);
+    const channelId = await resolveActiveYoutubeChannelIdAsync(userId, this.youtubeAccountRepository);
+    const latest = await this.channelAnalyticsRepository.getLatestByChannelIdAsync(channelId);
     if (!latest) {
       throw new NotFoundException('No channel analytics found for this account.');
     }
@@ -361,11 +403,14 @@ export class GetYoutubeAudienceQueryHandler implements IQueryHandler<GetYoutubeA
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
   ) {}
 
   async execute(): Promise<Record<string, any>> {
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-    const latest = await this.channelAnalyticsRepository.getLatestByUserIdAsync(userId);
+    const channelId = await resolveActiveYoutubeChannelIdAsync(userId, this.youtubeAccountRepository);
+    const latest = await this.channelAnalyticsRepository.getLatestByChannelIdAsync(channelId);
     if (!latest) {
       throw new NotFoundException('No channel analytics found for this account.');
     }
@@ -378,11 +423,14 @@ export class GetYoutubeGeographyQueryHandler implements IQueryHandler<GetYoutube
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
   ) {}
 
   async execute(): Promise<Record<string, any>> {
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-    const latest = await this.channelAnalyticsRepository.getLatestByUserIdAsync(userId);
+    const channelId = await resolveActiveYoutubeChannelIdAsync(userId, this.youtubeAccountRepository);
+    const latest = await this.channelAnalyticsRepository.getLatestByChannelIdAsync(channelId);
     if (!latest) {
       throw new NotFoundException('No channel analytics found for this account.');
     }
@@ -395,11 +443,14 @@ export class GetYoutubeDevicesQueryHandler implements IQueryHandler<GetYoutubeDe
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
   ) {}
 
   async execute(): Promise<Record<string, any>> {
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-    const latest = await this.channelAnalyticsRepository.getLatestByUserIdAsync(userId);
+    const channelId = await resolveActiveYoutubeChannelIdAsync(userId, this.youtubeAccountRepository);
+    const latest = await this.channelAnalyticsRepository.getLatestByChannelIdAsync(channelId);
     if (!latest) {
       throw new NotFoundException('No channel analytics found for this account.');
     }
@@ -412,11 +463,14 @@ export class GetYoutubePlaybackLocationsQueryHandler implements IQueryHandler<Ge
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
   ) {}
 
   async execute(): Promise<Record<string, any>> {
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-    const latest = await this.channelAnalyticsRepository.getLatestByUserIdAsync(userId);
+    const channelId = await resolveActiveYoutubeChannelIdAsync(userId, this.youtubeAccountRepository);
+    const latest = await this.channelAnalyticsRepository.getLatestByChannelIdAsync(channelId);
     if (!latest) {
       throw new NotFoundException('No channel analytics found for this account.');
     }
@@ -429,6 +483,8 @@ export class GetYoutubeRevenueQueryHandler implements IQueryHandler<GetYoutubeRe
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
   ) {}
 
   async execute(query: GetYoutubeRevenueQuery): Promise<YoutubeChannelAnalytics[]> {
@@ -443,11 +499,7 @@ export class GetYoutubeRevenueQueryHandler implements IQueryHandler<GetYoutubeRe
     const start = query.startDate ? new Date(query.startDate) : thirtyDaysAgo;
     const end = query.endDate ? new Date(query.endDate) : today;
 
-    const channelRecord = await this.channelAnalyticsRepository.getLatestByUserIdAsync(userId);
-    if (!channelRecord) {
-      throw new NotFoundException('No channel analytics records found.');
-    }
-
-    return await this.channelAnalyticsRepository.getTrendsAsync(channelRecord.channelId, start, end);
+    const channelId = await resolveActiveYoutubeChannelIdAsync(userId, this.youtubeAccountRepository);
+    return await this.channelAnalyticsRepository.getTrendsAsync(channelId, start, end);
   }
 }

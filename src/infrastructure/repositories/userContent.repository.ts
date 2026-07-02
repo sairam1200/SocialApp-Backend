@@ -144,6 +144,29 @@ export class UserContentRepository implements IUserContentRepository {
     return result
   }
 
+  public async getVideoIdsByUserIdAndPlatformAsync(userId: string, platform: string, types: string[]): Promise<string[]> {
+    if (types.length === 0) {
+      return [];
+    }
+
+    const rows = await this.userContentContext.find({
+      where: {
+        userId,
+        platform,
+        type: In(types),
+      },
+      select: ['externalId', 'metaData'],
+    });
+
+    return [
+      ...new Set(
+        rows
+          .map((row) => row.metaData?.videoId || row.externalId)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0),
+      ),
+    ];
+  }
+
   public async deleteByUserIdAndPlatformAsync(userId: string, platform: string): Promise<void> {
     await this.userContentContext.delete({ userId, platform });
   }

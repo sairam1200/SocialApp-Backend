@@ -21,6 +21,7 @@ export interface IUserContentRepository {
   ): Promise<[UserContent[], string]>;
 
   getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]>;
+  getVideoIdsByUserIdAndPlatformAsync(userId: string, platform: string, types: string[]): Promise<string[]>;
 
   deleteByUserIdAndPlatformAsync(userId: string, platform: string): Promise<void>;
   deleteByExternalIdsAsync(userId: string, platform: string, externalIds: string[]): Promise<void>;

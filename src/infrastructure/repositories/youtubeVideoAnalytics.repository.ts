@@ -35,6 +35,13 @@ export class YoutubeVideoAnalyticsRepository implements IYoutubeVideoAnalyticsRe
     });
   }
 
+  async getLatestByUserIdAndVideoIdAsync(userId: string, videoId: string): Promise<YoutubeVideoAnalytics | null> {
+    return await this.videoAnalyticsContext.findOne({
+      where: { userId, videoId },
+      order: { snapshotDate: 'DESC' },
+    });
+  }
+
   async getLatestByUserIdAsync(userId: string): Promise<YoutubeVideoAnalytics[]> {
     const subQuery = this.videoAnalyticsContext
       .createQueryBuilder('sub')
@@ -62,12 +69,46 @@ export class YoutubeVideoAnalyticsRepository implements IYoutubeVideoAnalyticsRe
     });
   }
 
+  async getTrendsByUserIdAndVideoIdAsync(userId: string, videoId: string, startDate: Date, endDate: Date): Promise<YoutubeVideoAnalytics[]> {
+    return await this.videoAnalyticsContext.find({
+      where: {
+        userId,
+        videoId,
+        snapshotDate: Between(startDate, endDate),
+      },
+      order: { snapshotDate: 'ASC' },
+    });
+  }
+
   async getTopVideosAsync(userId: string, limit: number): Promise<YoutubeVideoAnalytics[]> {
     const subQuery = this.videoAnalyticsContext
       .createQueryBuilder('sub')
       .select('sub.id')
       .distinctOn(['sub.videoId'])
       .where('sub.userId = :userId', { userId })
+      .orderBy('sub.videoId', 'ASC')
+      .addOrderBy('sub.snapshotDate', 'DESC');
+
+    return await this.videoAnalyticsContext
+      .createQueryBuilder('va')
+      .where(`va.id IN (${subQuery.getQuery()})`)
+      .setParameters(subQuery.getParameters())
+      .orderBy('va.viewCount', 'DESC')
+      .limit(limit)
+      .getMany();
+  }
+
+  async getTopVideosByVideoIdsAsync(userId: string, videoIds: string[], limit: number): Promise<YoutubeVideoAnalytics[]> {
+    if (videoIds.length === 0) {
+      return [];
+    }
+
+    const subQuery = this.videoAnalyticsContext
+      .createQueryBuilder('sub')
+      .select('sub.id')
+      .distinctOn(['sub.videoId'])
+      .where('sub.userId = :userId', { userId })
+      .andWhere('sub.videoId IN (:...videoIds)', { videoIds })
       .orderBy('sub.videoId', 'ASC')
       .addOrderBy('sub.snapshotDate', 'DESC');
 
