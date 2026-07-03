@@ -77,7 +77,9 @@ console.info(
 
       const items = playlistResponse.data?.items ?? [];
       nextPageToken = playlistResponse.data?.nextPageToken ?? null;
-
+      console.log(
+  `Playlist returned ${items.length} videos for channel ${channel.id}`
+);
       const videoIds = items
         .map((v: any) => v.contentDetails?.videoId)
         .filter(Boolean);
