@@ -129,7 +129,7 @@ console.info(
             userId,
             platform: _const.PLATFORMS.YOUTUBE,
             type: "uploaded_video",
-            externalId: channel.id,
+            externalId: videoId,
             title: item.snippet?.title ?? "Untitled Video",
             metaData: {
               videoId,
