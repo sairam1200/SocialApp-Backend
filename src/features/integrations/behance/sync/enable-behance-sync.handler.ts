@@ -46,7 +46,7 @@ export class EnableBehanceSyncCommandHandler implements ICommandHandler<EnableBe
     const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.BEHANCE);
     if (userLogin) {
       const tokenValue = deserializeObject<{ access_token: string }>(userLogin.tokenValue);
-      await this.queueService.enqueueBehanceImport(account, tokenValue.access_token || userLogin.tokenValue);
+     /*  await this.queueService.enqueueBehanceImport(account, tokenValue.access_token || userLogin.tokenValue); */
       logger.info(`[BehanceSync] Import job enqueued for user ${userId}`);
     } else {
       logger.warn(`[BehanceSync] UserLogin not found for user ${userId}. Cannot trigger import after sync enable.`);

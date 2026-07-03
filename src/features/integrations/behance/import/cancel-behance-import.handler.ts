@@ -56,7 +56,7 @@ export class CancelBehanceImportCommandHandler implements ICommandHandler<Cancel
 
     logger.info(`[BehanceImport] Cancellation requested for user ${userId}`);
 
-    await this.queueService.cancelBehanceImport(userId);
+  /*   await this.queueService.cancelBehanceImport(userId); */
 
     const notifications = await this.notificationRepository.getAllAsync(userId);
     const importNotification = notifications.find(

@@ -60,7 +60,7 @@ export class CancelSpotifyImportCommandHandler implements ICommandHandler<Cancel
     logger.info(`[SpotifyImport] Cancellation requested for user ${userId}`);
 
     try {
-      await this.queueService.cancelSpotifyImport(userId);
+      /* await this.queueService.cancelSpotifyImport(userId); */
       logger.info(`[SpotifyImport] Job cancellation requested for user ${userId}`);
     } catch (error) {
       logger.error(`[SpotifyImport] Error cancelling job: 

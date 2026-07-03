@@ -69,7 +69,7 @@ export class BehanceImportCommandHandler implements ICommandHandler<BehanceImpor
     }
 
     try {
-      await this.queueService.enqueueBehanceImport(account, accessToken);
+     /*  await this.queueService.enqueueBehanceImport(account, accessToken); */
       logger.info(`[BehanceImport] Import job enqueued for user ${userId}`);
     } catch (error) {
       logger.error(`An error occurred while enqueueing the Behance import job: 

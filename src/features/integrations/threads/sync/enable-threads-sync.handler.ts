@@ -46,7 +46,7 @@ export class EnableThreadsSyncCommandHandler implements ICommandHandler<EnableTh
     const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.THREADS);
     if (userLogin) {
       const tokenValue = deserializeObject<{ access_token: string }>(userLogin.tokenValue);
-      await this.queueService.enqueueThreadsImport(account, tokenValue.access_token || userLogin.tokenValue);
+     /*  await this.queueService.enqueueThreadsImport(account, tokenValue.access_token || userLogin.tokenValue); */
       logger.info(`[ThreadsSync] Import job enqueued for user ${userId}`);
     } else {
       logger.warn(`[ThreadsSync] UserLogin not found for user ${userId}. Cannot trigger import after sync enable.`);

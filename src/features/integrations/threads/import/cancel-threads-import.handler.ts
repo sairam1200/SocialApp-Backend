@@ -56,7 +56,7 @@ export class CancelThreadsImportCommandHandler implements ICommandHandler<Cancel
 
     logger.info(`[ThreadsImport] Cancellation requested for user ${userId}`);
 
-    await this.queueService.cancelThreadsImport(userId);
+  /*   await this.queueService.cancelThreadsImport(userId); */
 
     const notifications = await this.notificationRepository.getAllAsync(userId);
     const importNotification = notifications.find(

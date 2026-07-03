@@ -46,7 +46,7 @@ export class EnableSpotifySyncCommandHandler implements ICommandHandler<EnableSp
     const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.SPOTIFY);
     if (userLogin) {
       const tokenValue = deserializeObject<{ access_token: string }>(userLogin.tokenValue);
-      await this.queueService.enqueueSpotifyImport(account, tokenValue.access_token);
+     /*  await this.queueService.enqueueSpotifyImport(account, tokenValue.access_token); */
       logger.info(`[SpotifySync] Import job enqueued for user ${userId}`);
     } else {
       logger.warn(`[SpotifySync] UserLogin not found for user ${userId}. Cannot trigger import after sync enable.`);

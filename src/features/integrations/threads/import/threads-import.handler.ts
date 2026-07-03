@@ -74,7 +74,7 @@ export class ThreadsImportCommandHandler implements ICommandHandler<ThreadsImpor
     }
 
     try {
-      await this.queueService.enqueueThreadsImport(account, accessToken);
+      /* await this.queueService.enqueueThreadsImport(account, accessToken); */
       logger.info(`[ThreadsImport] Import job enqueued for user ${userId}`);
     } catch (error) {
       logger.error(`An error occurred while enqueueing the Threads import job: 

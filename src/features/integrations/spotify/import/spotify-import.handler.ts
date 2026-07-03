@@ -75,7 +75,7 @@ export class SpotifyImportCommandHandler implements ICommandHandler<SpotifyImpor
     }
 
     try {
-      await this.queueService.enqueueSpotifyImport(account, accessToken);
+      /* await this.queueService.enqueueSpotifyImport(account, accessToken); */
       logger.info(`[SpotifyImport] Import job enqueued for user ${userId}`);
     } catch (error) {
       logger.error(`An error occurred while enqueueing the Spotify import job: 
