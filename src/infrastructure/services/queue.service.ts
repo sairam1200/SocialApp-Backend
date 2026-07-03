@@ -13,8 +13,8 @@ export class QueueService implements IQueueService {
     private readonly youtubeImportQueue: Queue,
     @InjectQueue(_const.BULL_QUEUES.YOUTUBE_UPLOAD)
     private readonly youtubeUploadQueue: Queue,
-    @InjectQueue(_const.BULL_QUEUES.SPOTIFY_IMPORT)
-    private readonly spotifyImportQueue: Queue,
+   /*  @InjectQueue(_const.BULL_QUEUES.SPOTIFY_IMPORT)
+    private readonly spotifyImportQueue: Queue, */
     @InjectQueue(_const.BULL_QUEUES.PINTEREST_IMPORT)
     private readonly pinterestImportQueue: Queue,
     @InjectQueue(_const.BULL_QUEUES.REDDIT_IMPORT)
@@ -31,10 +31,10 @@ export class QueueService implements IQueueService {
     private readonly linkedinImportQueue: Queue,
     @InjectQueue(_const.BULL_QUEUES.SNAPCHAT_IMPORT)
     private readonly snapchatImportQueue: Queue,
-    @InjectQueue(_const.BULL_QUEUES.THREADS_IMPORT)
+    /* @InjectQueue(_const.BULL_QUEUES.THREADS_IMPORT)
     private readonly threadsImportQueue: Queue,
     @InjectQueue(_const.BULL_QUEUES.BEHANCE_IMPORT)
-    private readonly behanceImportQueue: Queue,
+    private readonly behanceImportQueue: Queue, */
   ) { }
 
   public async enqueueYoutubeImport(account: LinkedAccount, accessToken: string): Promise<string> {
@@ -49,7 +49,7 @@ export class QueueService implements IQueueService {
     return job.id!;
   }
 
-  public async enqueueSpotifyImport(account: LinkedAccount, accessToken: string): Promise<string> {
+  /* public async enqueueSpotifyImport(account: LinkedAccount, accessToken: string): Promise<string> {
     const job = await this.spotifyImportQueue.add('spotify-import-job', {
       account,
       accessToken,
@@ -60,7 +60,7 @@ export class QueueService implements IQueueService {
     logger.info(`[QueueService] Spotify import job enqueued: ${job.id} for user ${account.userId}`);
     return job.id!;
   }
-
+ */
   public async cancelYoutubeImport(userId: string): Promise<void> {
     const jobId = `youtube-import-${userId}`;
     const job = await this.youtubeImportQueue.getJob(jobId);
@@ -97,7 +97,7 @@ export class QueueService implements IQueueService {
     }
   }
 
-  public async cancelSpotifyImport(userId: string): Promise<void> {
+  /* public async cancelSpotifyImport(userId: string): Promise<void> {
     const jobId = `spotify-import-${userId}`;
     const job = await this.spotifyImportQueue.getJob(jobId);
 
@@ -114,7 +114,7 @@ export class QueueService implements IQueueService {
     } else {
       logger.warn(`[QueueService] Spotify import job ${jobId} not found for user ${userId}`);
     }
-  }
+  } */
 
   public async enqueuePinterestImport(account: LinkedAccount, accessToken: string): Promise<string> {
     const job = await this.pinterestImportQueue.add('pinterest-import-job', {
@@ -345,7 +345,7 @@ export class QueueService implements IQueueService {
     return job.id!;
   }
 
-  public async enqueueThreadsImport(account: LinkedAccount, accessToken: string): Promise<string> {
+  /* public async enqueueThreadsImport(account: LinkedAccount, accessToken: string): Promise<string> {
     const job = await this.threadsImportQueue.add('threads-import-job', {
       account,
       accessToken,
@@ -367,7 +367,7 @@ export class QueueService implements IQueueService {
 
     logger.info(`[QueueService] Behance import job enqueued: ${job.id} for user ${account.userId}`);
     return job.id!;
-  }
+  } */
 
   public async cancelSnapchatImport(userId: string): Promise<void> {
     const jobId = `snapchat-import-${userId}`;
@@ -388,7 +388,7 @@ export class QueueService implements IQueueService {
     }
   }
 
-  public async cancelThreadsImport(userId: string): Promise<void> {
+ /*  public async cancelThreadsImport(userId: string): Promise<void> {
     const jobId = `threads-import-${userId}`;
     const job = await this.threadsImportQueue.getJob(jobId);
 
@@ -424,5 +424,5 @@ export class QueueService implements IQueueService {
     } else {
       logger.warn(`[QueueService] Behance import job ${jobId} not found for user ${userId}`);
     }
-  }
+  } */
 }

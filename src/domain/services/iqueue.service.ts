@@ -2,7 +2,7 @@ import { LinkedAccount } from '../entities/linkedAccount.entity';
 
 export interface IQueueService {
   enqueueYoutubeImport(account: LinkedAccount, accessToken: string): Promise<string>;
-  enqueueSpotifyImport(account: LinkedAccount, accessToken: string): Promise<string>;
+  /* enqueueSpotifyImport(account: LinkedAccount, accessToken: string): Promise<string>; */
   enqueuePinterestImport(account: LinkedAccount, accessToken: string): Promise<string>;
   enqueueRedditImport(account: LinkedAccount, accessToken: string): Promise<string>;
   enqueueTwitterImport(account: LinkedAccount, accessToken: string): Promise<string>;
@@ -11,11 +11,11 @@ export interface IQueueService {
   enqueueFacebookImport(account: LinkedAccount, accessToken: string): Promise<string>;
   enqueueLinkedInImport(account: LinkedAccount, accessToken: string): Promise<string>;
   enqueueSnapchatImport(account: LinkedAccount, accessToken: string): Promise<string>;
-  enqueueThreadsImport(account: LinkedAccount, accessToken: string): Promise<string>;
-  enqueueBehanceImport(account: LinkedAccount, accessToken: string): Promise<string>;
+ /*  enqueueThreadsImport(account: LinkedAccount, accessToken: string): Promise<string>;
+  enqueueBehanceImport(account: LinkedAccount, accessToken: string): Promise<string>; */
   cancelYoutubeImport(userId: string): Promise<void>;
   cancelYoutubeUpload(videoIds: string[]): Promise<void>;
-  cancelSpotifyImport(userId: string): Promise<void>;
+  /* cancelSpotifyImport(userId: string): Promise<void>; */
   cancelPinterestImport(userId: string): Promise<void>;
   cancelRedditImport(userId: string): Promise<void>;
   cancelTwitterImport(userId: string): Promise<void>;
@@ -24,7 +24,7 @@ export interface IQueueService {
   cancelFacebookImport(userId: string): Promise<void>;
   cancelLinkedInImport(userId: string): Promise<void>;
   cancelSnapchatImport(userId: string): Promise<void>;
-  cancelThreadsImport(userId: string): Promise<void>;
-  cancelBehanceImport(userId: string): Promise<void>;
+  /* cancelThreadsImport(userId: string): Promise<void>;
+  cancelBehanceImport(userId: string): Promise<void>; */
 }
 
