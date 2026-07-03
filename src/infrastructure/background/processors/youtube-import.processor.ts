@@ -16,6 +16,7 @@ import { ApplicationException } from "../../../core/exceptions";
 import BullMQConfig from "../../../core/config/bullmq.config";
 import { mapToYouTubeContentModel } from "../../../domain/mappers/youtube.mapper";
 import { IContentStreamRepository } from "../../../domain/repositories/icontentStream.repository";
+import { IYoutubeAnalyticsService } from "../../../domain/services/iyoutubeAnalytics.service";
 
 interface CursorMap {
   [key: string]: string | null;
@@ -106,7 +107,7 @@ interface YoutubeImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.YOUTUBE_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.YOUTUBE_IMPORT, 2))
+@Processor(_const.BULL_QUEUES.YOUTUBE_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.YOUTUBE_IMPORT, 1))
 export class YoutubeImportProcessor extends WorkerHost {
   private readonly NOTIFICATION_UPDATE_INTERVAL = 10;
 
@@ -119,6 +120,8 @@ export class YoutubeImportProcessor extends WorkerHost {
     private readonly notificationService: INotificationService,
     @Inject(_const.ICONTENTSTREAM_REPOSITORY)
     private readonly contentStreamRepository: IContentStreamRepository,
+    @Inject(_const.IYOUTUBEANALYTICS_SERVICE)
+    private readonly youtubeAnalyticsService: IYoutubeAnalyticsService,
     private readonly gateway: ImportGateway,
   ) {
     super();
@@ -543,6 +546,13 @@ export class YoutubeImportProcessor extends WorkerHost {
       }
 
       logger.info(`[YoutubeImport] Import finished for user ${account.userId}`);
+
+      try {
+        await this.youtubeAnalyticsService.syncAccountAnalyticsAsync(account.userId, { forceRefresh: true });
+        logger.info(`[YoutubeImport] Analytics sync completed for user ${account.userId}`);
+      } catch (analyticsError: any) {
+        logger.warn(`[YoutubeImport] Analytics sync failed after import for user ${account.userId}: ${analyticsError.message}`);
+      }
     } else {
       await this.notificationService.notifyAsync(
         account.userId,

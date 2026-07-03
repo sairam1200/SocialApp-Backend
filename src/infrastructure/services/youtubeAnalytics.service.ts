@@ -12,17 +12,19 @@ import { IYoutubeChannelAnalyticsRepository } from '../../domain/repositories/iy
 import { IYoutubeVideoAnalyticsRepository } from '../../domain/repositories/iyoutubeVideoAnalytics.repository';
 import { ILinkedAccountRepository } from '../../domain/repositories/ilinkedAccount.repository';
 import { IUserLoginRepository } from '../../domain/repositories/iuserLogin.repository';
+import { IYoutubeAccountRepository } from '../../domain/repositories/iyoutubeAccount.repository';
 import { IYoutubeAnalyticsService } from '../../domain/services/iyoutubeAnalytics.service';
 import { deserializeObject, serializeObject } from '../../core/utils/serialization.util';
 
-const CHANNEL_METRICS = 'views,estimatedMinutesWatched,averageViewDuration,subscribersGained,subscribersLost,likes,comments,shares,estimatedRevenue,estimatedAdRevenue';
-const DIMENSION_MAP: Record<number, { dimension: string; metrics: string; targetField: string }> = {
-  1: { dimension: 'insightTrafficSourceType', metrics: 'views,estimatedMinutesWatched', targetField: 'trafficSources' },
-  2: { dimension: 'country', metrics: 'views,estimatedMinutesWatched', targetField: 'geography' },
-  3: { dimension: 'deviceType', metrics: 'views,estimatedMinutesWatched', targetField: 'devices' },
-  4: { dimension: 'subscribedStatus', metrics: 'views,estimatedMinutesWatched,viewerPercentage', targetField: 'audience' },
-  5: { dimension: 'playbackLocationType', metrics: 'views,estimatedMinutesWatched', targetField: 'playbackLocations' },
-};
+const CHANNEL_METRICS = 'views,estimatedMinutesWatched,averageViewDuration,subscribersGained,subscribersLost,likes,comments,shares';
+const REVENUE_METRICS = 'estimatedRevenue,estimatedAdRevenue';
+const DIMENSION_CONFIGS: Array<{ dimension: string; metrics: string; targetField: string }> = [
+  { dimension: 'insightTrafficSourceType', metrics: 'views,estimatedMinutesWatched', targetField: 'trafficSources' },
+  { dimension: 'country', metrics: 'views,estimatedMinutesWatched', targetField: 'geography' },
+  { dimension: 'deviceType', metrics: 'views,estimatedMinutesWatched', targetField: 'devices' },
+  { dimension: 'subscribedStatus', metrics: 'views,estimatedMinutesWatched,viewerPercentage', targetField: 'audience' },
+  { dimension: 'playbackLocationType', metrics: 'views,estimatedMinutesWatched', targetField: 'playbackLocations' },
+];
 const INITIAL_SYNC_DAYS = 30;
 const MAX_CATCHUP_DAYS = 7;
 
@@ -41,11 +43,14 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
 
+    @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
+    private readonly youtubeAccountRepository: IYoutubeAccountRepository,
+
     @InjectRepository(UserContent)
     private readonly userContentContext: Repository<UserContent>,
   ) {}
 
-  public async syncAccountAnalyticsAsync(userId: string): Promise<void> {
+  public async syncAccountAnalyticsAsync(userId: string, options: { forceRefresh?: boolean } = {}): Promise<void> {
     logger.info(`[YoutubeAnalyticsService] Starting analytics sync for user ${userId}`);
 
     const accessToken = await this.resolveTokenAsync(userId);
@@ -55,15 +60,6 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     }
 
     try {
-      const missingDates = await this.getMissingDatesAsync(userId);
-      if (missingDates.length === 0) {
-        logger.info(`[YoutubeAnalyticsService] All dates already synced for user ${userId}. Skipping.`);
-        return;
-      }
-
-      const startDateStr = this.formatDate(missingDates[0]);
-      const endDateStr = this.formatDate(missingDates[missingDates.length - 1]);
-
       const channelInfo = await this.fetchChannelInfoAsync(accessToken);
       if (!channelInfo) {
         logger.warn(`[YoutubeAnalyticsService] No channel found for user ${userId}. Sync skipped.`);
@@ -71,15 +67,35 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
       }
 
       const { channelId, subscriberCount, viewCount, videoCount } = channelInfo;
+      const activeAccount = await this.youtubeAccountRepository.getConnectedByUserIdAsync(userId);
+      if (!activeAccount || activeAccount.channelId !== channelId) {
+        logger.warn(`[YoutubeAnalyticsService] Active YouTube account mismatch for user ${userId}. active=${activeAccount?.channelId || 'none'} token=${channelId}`);
+        return;
+      }
+
+      const syncDates = options.forceRefresh
+        ? this.getInitialSyncDates()
+        : await this.getMissingDatesAsync(channelId);
+
+      if (syncDates.length === 0) {
+        logger.info(`[YoutubeAnalyticsService] All dates already synced for user ${userId}, channel ${channelId}. Skipping.`);
+        return;
+      }
+
+      const startDateStr = this.formatDate(syncDates[0]);
+      const endDateStr = this.formatDate(syncDates[syncDates.length - 1]);
 
       // Fetch channel daily metrics from Analytics API
-      await this.syncChannelDailyMetricsAsync(accessToken, userId, channelId, subscriberCount, viewCount, videoCount, startDateStr, endDateStr, missingDates);
+      await this.syncChannelDailyMetricsAsync(accessToken, userId, channelId, subscriberCount, viewCount, videoCount, startDateStr, endDateStr, syncDates);
 
-      // Fetch dimension data if scheduled
-      await this.syncDimensionDataAsync(accessToken, userId, channelId, startDateStr, endDateStr, missingDates);
+      // Fetch optional revenue metrics independently so unavailable revenue never blocks core analytics.
+      await this.syncRevenueMetricsAsync(accessToken, channelId, startDateStr, endDateStr, syncDates);
+
+      // Fetch all supported dimension breakdowns independently.
+      await this.syncDimensionDataAsync(accessToken, channelId, startDateStr, endDateStr, syncDates, Boolean(options.forceRefresh));
 
       // Fetch video daily metrics from Analytics API
-      await this.syncVideoMetricsAsync(accessToken, userId, channelId, startDateStr, endDateStr, missingDates);
+      await this.syncVideoMetricsAsync(accessToken, userId, channelId, startDateStr, endDateStr, syncDates);
 
       logger.info(`[YoutubeAnalyticsService] Successfully synced YouTube Analytics for user ${userId}`);
     } catch (error: any) {
@@ -196,20 +212,27 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     }
   }
 
-  private async getMissingDatesAsync(userId: string): Promise<Date[]> {
-    const lastSnapshotDate = await this.channelAnalyticsRepository.getLatestSnapshotDateByUserIdAsync(userId);
+  private getInitialSyncDates(): Date[] {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const dates: Date[] = [];
+    for (let i = INITIAL_SYNC_DAYS; i >= 0; i--) {
+      const d = new Date(today);
+      d.setUTCDate(today.getUTCDate() - i);
+      dates.push(d);
+    }
+    return dates;
+  }
+
+  private async getMissingDatesAsync(channelId: string): Promise<Date[]> {
+    const lastSnapshotDate = await this.channelAnalyticsRepository.getLatestSnapshotDateByChannelIdAsync(channelId);
 
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
     if (!lastSnapshotDate) {
-      const dates: Date[] = [];
-      for (let i = INITIAL_SYNC_DAYS; i >= 0; i--) {
-        const d = new Date(today);
-        d.setUTCDate(today.getUTCDate() - i);
-        dates.push(d);
-      }
-      return dates;
+      return this.getInitialSyncDates();
     }
 
     const diffMs = today.getTime() - lastSnapshotDate.getTime();
@@ -284,6 +307,39 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     }
   }
 
+  private async syncRevenueMetricsAsync(
+    accessToken: string, channelId: string,
+    startDateStr: string, endDateStr: string, syncDates: Date[],
+  ): Promise<void> {
+    try {
+      const result = await this.queryReportsAsync(
+        accessToken, REVENUE_METRICS, 'day', undefined, startDateStr, endDateStr, 'day',
+      );
+
+      if (!result.rows || result.rows.length === 0) {
+        logger.info(`[YoutubeAnalyticsService] Revenue metrics unavailable for channel ${channelId}.`);
+        return;
+      }
+
+      const colIndex = this.buildColumnIndex(result.columnHeaders);
+      const rowsByDate = this.indexRowsByDate(result.rows, colIndex);
+
+      for (const date of syncDates) {
+        const row = rowsByDate[this.formatDate(date)];
+        if (!row) continue;
+
+        const existing = await this.channelAnalyticsRepository.getByChannelIdAndDateAsync(channelId, date);
+        if (!existing) continue;
+
+        existing.estimatedRevenueUsd = this.floatVal({ colIndex, row }, 'estimatedRevenue');
+        existing.estimatedAdRevenueUsd = this.floatVal({ colIndex, row }, 'estimatedAdRevenue');
+        await this.channelAnalyticsRepository.createOrUpdateAsync(existing);
+      }
+    } catch (error: any) {
+      logger.warn(`[YoutubeAnalyticsService] Revenue metrics sync skipped for channel ${channelId}: ${error.message}`);
+    }
+  }
+
   private async saveChannelSnapshot(
     userId: string, channelId: string,
     subscriberCount: number, viewCount: number, videoCount: number,
@@ -314,85 +370,103 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
   }
 
   private async syncDimensionDataAsync(
-    accessToken: string, userId: string, channelId: string,
-    startDateStr: string, endDateStr: string, missingDates: Date[],
+    accessToken: string, channelId: string,
+    startDateStr: string, endDateStr: string, syncDates: Date[], forceRefresh: boolean,
   ): Promise<void> {
-    const dayOfWeek = new Date().getUTCDay();
-    const dimensionConfig = DIMENSION_MAP[dayOfWeek];
-    if (!dimensionConfig) return;
-
     const today = this.formatDate(new Date());
-    const exists = await this.hasDimensionSnapshotAsync(userId, dimensionConfig.targetField, today);
 
-    // Only sync dimension data on the first missing date that matches today
-    const shouldSync = missingDates.some((d) => this.formatDate(d) === today);
-    if (!shouldSync || exists) return;
+    for (const dimensionConfig of DIMENSION_CONFIGS) {
+      const exists = await this.hasDimensionSnapshotAsync(channelId, dimensionConfig.targetField, today);
+      if (!forceRefresh && exists) continue;
 
-    try {
-      const result = await this.queryReportsAsync(
-        accessToken, dimensionConfig.metrics, `day,${dimensionConfig.dimension}`,
-        undefined, startDateStr, endDateStr, undefined, 5000,
-      );
+      try {
+        const result = await this.queryReportsAsync(
+          accessToken, dimensionConfig.metrics, `day,${dimensionConfig.dimension}`,
+          undefined, startDateStr, endDateStr, undefined, 5000,
+        );
 
-      if (!result.rows || result.rows.length === 0) return;
-
-      const dimColIndex = this.buildColumnIndex(result.columnHeaders);
-      const rowsByDate = this.groupDimensionRowsByDate(result.rows, dimColIndex, dimensionConfig.dimension);
-
-      for (const date of missingDates) {
-        const dateKey = this.formatDate(date);
-        const dimRows = rowsByDate[dateKey];
-        if (!dimRows || dimRows.length === 0) continue;
-
-        const existing = await this.channelAnalyticsRepository.getLatestByChannelIdAsync(channelId);
-        const updateData: Record<string, any> = { snapshotDate: date };
-
-        if (dimensionConfig.targetField === 'trafficSources') {
-          updateData.trafficSources = dimRows.map((r) => ({
-            source: r.dimensionValue,
-            views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
-            watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
-          }));
-        } else if (dimensionConfig.targetField === 'geography') {
-          updateData.geography = dimRows.map((r) => ({
-            countryCode: r.dimensionValue,
-            views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
-            watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
-          }));
-        } else if (dimensionConfig.targetField === 'devices') {
-          updateData.devices = dimRows.map((r) => ({
-            deviceType: r.dimensionValue,
-            views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
-            watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
-          }));
-        } else if (dimensionConfig.targetField === 'audience') {
-          const subscribed = dimRows.find((r) => r.dimensionValue === 'SUBSCRIBED');
-          const unsubscribed = dimRows.find((r) => r.dimensionValue === 'UNSUBSCRIBED');
-          updateData.audience = {
-            subscribedViewerPercentage: subscribed ? this.floatVal({ colIndex: dimColIndex, row: subscribed.row }, 'viewerPercentage') : 0,
-            returnViewerPercentage: 0,
-            newViewerPercentage: 0,
-          };
-        } else if (dimensionConfig.targetField === 'playbackLocations') {
-          updateData.playbackLocations = dimRows.map((r) => ({
-            location: r.dimensionValue,
-            views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
-            watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
-          }));
+        if (!result.rows || result.rows.length === 0) {
+          logger.info(`[YoutubeAnalyticsService] No ${dimensionConfig.targetField} rows returned for channel ${channelId}.`);
+          continue;
         }
 
-        if (existing) {
-          Object.assign(existing, updateData);
+        const dimColIndex = this.buildColumnIndex(result.columnHeaders);
+        const rowsByDate = this.groupDimensionRowsByDate(result.rows, dimColIndex, dimensionConfig.dimension);
+
+        for (const date of syncDates) {
+          const dateKey = this.formatDate(date);
+          const dimRows = rowsByDate[dateKey];
+          if (!dimRows || dimRows.length === 0) continue;
+
+          const existing = await this.channelAnalyticsRepository.getByChannelIdAndDateAsync(channelId, date);
+          if (!existing) continue;
+
+          Object.assign(existing, this.mapDimensionRows(dimensionConfig.targetField, dimRows, dimColIndex));
           await this.channelAnalyticsRepository.createOrUpdateAsync(existing);
         }
+      } catch (error: any) {
+        logger.warn(`[YoutubeAnalyticsService] Dimension sync failed for ${dimensionConfig.targetField}: ${error.message}`);
       }
-    } catch (error: any) {
-      logger.error(`[YoutubeAnalyticsService] Dimension sync failed for ${dimensionConfig.targetField}: ${error.message}`);
     }
   }
 
-  private async hasDimensionSnapshotAsync(userId: string, field: string, dateStr: string): Promise<boolean> {
-    const latest = await this.channelAnalyticsRepository.getLatestByUserIdAsync(userId);
+  private mapDimensionRows(targetField: string, dimRows: Array<{ dimensionValue: string; row: string[] }>, dimColIndex: Record<string, number>): Record<string, any> {
+    if (targetField === 'trafficSources') {
+      return {
+        trafficSources: dimRows.map((r) => ({
+          source: r.dimensionValue,
+          views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
+          watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
+        })),
+      };
+    }
+
+    if (targetField === 'geography') {
+      return {
+        geography: dimRows.map((r) => ({
+          countryCode: r.dimensionValue,
+          views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
+          watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
+        })),
+      };
+    }
+
+    if (targetField === 'devices') {
+      return {
+        devices: dimRows.map((r) => ({
+          deviceType: r.dimensionValue,
+          views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
+          watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
+        })),
+      };
+    }
+
+    if (targetField === 'audience') {
+      const subscribed = dimRows.find((r) => r.dimensionValue === 'SUBSCRIBED');
+      return {
+        audience: {
+          subscribedViewerPercentage: subscribed ? this.floatVal({ colIndex: dimColIndex, row: subscribed.row }, 'viewerPercentage') : 0,
+          returnViewerPercentage: 0,
+          newViewerPercentage: 0,
+        },
+      };
+    }
+
+    if (targetField === 'playbackLocations') {
+      return {
+        playbackLocations: dimRows.map((r) => ({
+          location: r.dimensionValue,
+          views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
+          watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
+        })),
+      };
+    }
+
+    return {};
+  }
+
+  private async hasDimensionSnapshotAsync(channelId: string, field: string, dateStr: string): Promise<boolean> {
+    const latest = await this.channelAnalyticsRepository.getLatestByChannelIdAsync(channelId);
     if (!latest) return false;
     if (this.formatDate(latest.snapshotDate) !== dateStr) return false;
 
@@ -496,7 +570,7 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
 
         const videosList = response.data.items || [];
         for (const video of videosList) {
-          const existing = await this.videoAnalyticsRepository.getLatestByVideoIdAsync(video.id);
+          const existing = await this.videoAnalyticsRepository.getLatestByUserIdAndVideoIdAsync(userId, video.id);
           const duration = video.contentDetails?.duration;
           const publishedAt = video.snippet?.publishedAt ? new Date(video.snippet.publishedAt) : undefined;
 

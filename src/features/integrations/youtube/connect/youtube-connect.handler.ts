@@ -21,6 +21,7 @@ import { GoogleUserDataType, YoutubeChannelDataType, YoutubeProfileModel } from 
 import { IContentStreamRepository } from '../../../../domain/repositories/icontentStream.repository';
 import { YoutubeAccount } from '../../../../domain/entities/youtubeAccount.entity';
 import { IYoutubeAccountRepository } from '../../../../domain/repositories/iyoutubeAccount.repository';
+import { IYoutubeAnalyticsService } from '../../../../domain/services/iyoutubeAnalytics.service';
 import { cryptoUtils } from '../../../../core/utils/crypto.util';
 
 const BASE_URL = 'https://www.googleapis.com/oauth2/v2';
@@ -92,6 +93,8 @@ export class YoutubeConnectCallbackQueryHandler
     private readonly contentStreamRepository: IContentStreamRepository,
     @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
     private readonly youtubeAccountRepository: IYoutubeAccountRepository,
+    @Inject(_const.IYOUTUBEANALYTICS_SERVICE)
+    private readonly youtubeAnalyticsService: IYoutubeAnalyticsService,
     private readonly eventEmitter: EventEmitter2,
   ) { }
 
@@ -245,6 +248,14 @@ export class YoutubeConnectCallbackQueryHandler
           connected: true,
         }),
       );
+    }
+
+    await this.youtubeAccountRepository.disconnectOtherAccountsAsync(user.id, channelId);
+
+    try {
+      await this.youtubeAnalyticsService.syncAccountAnalyticsAsync(user.id, { forceRefresh: true });
+    } catch (error: any) {
+      logger.warn(`[YoutubeConnect] Initial analytics sync failed for user ${user.id}, channel ${channelId}: ${error.message}`);
     }
 
     return {

@@ -1,4 +1,4 @@
 export interface IYoutubeAnalyticsService {
-  syncAccountAnalyticsAsync(userId: string): Promise<void>;
+  syncAccountAnalyticsAsync(userId: string, options?: { forceRefresh?: boolean }): Promise<void>;
   syncAllAccountsAnalyticsAsync(): Promise<void>;
 }

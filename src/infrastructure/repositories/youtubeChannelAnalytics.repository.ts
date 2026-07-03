@@ -35,6 +35,12 @@ export class YoutubeChannelAnalyticsRepository implements IYoutubeChannelAnalyti
     });
   }
 
+  async getByChannelIdAndDateAsync(channelId: string, snapshotDate: Date): Promise<YoutubeChannelAnalytics | null> {
+    return await this.channelAnalyticsContext.findOne({
+      where: { channelId, snapshotDate },
+    });
+  }
+
   async getLatestByUserIdAsync(userId: string): Promise<YoutubeChannelAnalytics | null> {
     return await this.channelAnalyticsContext.findOne({
       where: { userId },
@@ -50,6 +56,15 @@ export class YoutubeChannelAnalyticsRepository implements IYoutubeChannelAnalyti
       },
       order: { snapshotDate: 'ASC' },
     });
+  }
+
+  async getLatestSnapshotDateByChannelIdAsync(channelId: string): Promise<Date | null> {
+    const result = await this.channelAnalyticsContext.findOne({
+      where: { channelId },
+      order: { snapshotDate: 'DESC' },
+      select: ['snapshotDate'],
+    });
+    return result?.snapshotDate || null;
   }
 
   async getLatestSnapshotDateByUserIdAsync(userId: string): Promise<Date | null> {
