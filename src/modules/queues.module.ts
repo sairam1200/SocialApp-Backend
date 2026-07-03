@@ -36,7 +36,6 @@ const registeredQueues = BullModule.registerQueue(
   { name: _const.BULL_QUEUES.FACEBOOK_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.FACEBOOK_IMPORT) },
   { name: _const.BULL_QUEUES.INSTAGRAM_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.INSTAGRAM_IMPORT) },
   { name: _const.BULL_QUEUES.YOUTUBE_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_IMPORT) },
-  { name: _const.BULL_QUEUES.SPOTIFY_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.SPOTIFY_IMPORT) },
   { name: _const.BULL_QUEUES.YOUTUBE_UPLOAD, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.YOUTUBE_UPLOAD) },
   { name: _const.BULL_QUEUES.PINTEREST_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.PINTEREST_IMPORT) },
   { name: _const.BULL_QUEUES.REDDIT_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.REDDIT_IMPORT) },
@@ -44,8 +43,7 @@ const registeredQueues = BullModule.registerQueue(
   { name: _const.BULL_QUEUES.TIKTOK_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.TIKTOK_IMPORT) },
   { name: _const.BULL_QUEUES.LINKEDIN_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.LINKEDIN_IMPORT) },
   { name: _const.BULL_QUEUES.SNAPCHAT_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.SNAPCHAT_IMPORT) },
-  { name: _const.BULL_QUEUES.THREADS_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.THREADS_IMPORT) },
-  { name: _const.BULL_QUEUES.BEHANCE_IMPORT, ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.BEHANCE_IMPORT) },
+ 
 );
 
 @Global()
@@ -112,7 +110,6 @@ export class QueuesModule implements NestModule, OnApplicationShutdown {
         ...(enableWorkers
           ? [
               YoutubeImportProcessor,
-              SpotifyImportProcessor,
               PinterestImportProcessor,
               RedditImportProcessor,
               TwitterImportProcessor,
@@ -121,8 +118,6 @@ export class QueuesModule implements NestModule, OnApplicationShutdown {
               FacebookImportProcessor,
               LinkedInImportProcessor,
               SnapchatImportProcessor,
-              ThreadsImportProcessor,
-              BehanceImportProcessor,
               YoutubeUploadProcessor,
             ]
           : []),
