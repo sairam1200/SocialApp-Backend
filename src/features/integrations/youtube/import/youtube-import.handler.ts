@@ -114,7 +114,7 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
           account.userId,
           accessToken,
         );
-
+   account.syncEnabled = true;
     if (!account) {
       throw new NotFoundException(
         "No matching Youtube profile was found!",
@@ -124,12 +124,12 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
       try {
        
 
-        await this.youtubeWebhookService.subscribeAsync(channelId, configs.youtube.webhookUrl);
+       /*  await this.youtubeWebhookService.subscribeAsync(channelId, configs.youtube.webhookUrl);
         console.log(`[YoutubeImport] Webhook subscription successful for channel ${channelId}`);
 
         account.syncEnabled = true;
         await this.linkedAccountRepository.updateAsync(account);
-        console.log(`[YoutubeImport] Sync enabled for user ${userId}`);
+        console.log(`[YoutubeImport] Sync enabled for user ${userId}`); */
       } catch (error) {
         logger.error(`[YoutubeImport] Error subscribing to webhook:`, error);
       }

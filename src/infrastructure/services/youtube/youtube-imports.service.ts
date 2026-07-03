@@ -74,19 +74,6 @@ console.info(
           },
         },
       );
-      throw new Error(
-  JSON.stringify({
-    uploadsPlaylistId,
-    itemCount: playlistResponse.data?.items?.length,
-    totalResults: playlistResponse.data?.pageInfo?.totalResults,
-    nextPageToken: playlistResponse.data?.nextPageToken,
-    videos: playlistResponse.data?.items?.map((i: any) => ({
-      playlistItemId: i.id,
-      videoId: i.contentDetails?.videoId,
-      title: i.snippet?.title,
-    })),
-  }, null, 2)
-);
       const items = playlistResponse.data?.items ?? [];
       nextPageToken = playlistResponse.data?.nextPageToken ?? null;
       console.log(

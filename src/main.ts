@@ -44,9 +44,7 @@ const cookieParser = require('cookie-parser');
     'https://socialapp-sg.onrender.com',
     'https://almost-backtrack-drapery.ngrok-free.dev',
     'https://social-app-zeta-three.vercel.app',
-    'https://social-app-gaddr.vercel.app',
     'https://gaddr.com',
-    'https://almost-backtrack-drapery.ngrok-free.dev'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
