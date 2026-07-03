@@ -177,11 +177,13 @@ export class UserRepository implements IUserRepository {
   public async searchGlobalAsync(keyword: string, viewerUserId: string, page: number, limit: number): Promise<[SearchUserProjection[], number]> {
     const escapedKeyword = keyword.replace(/[\\%_]/g, "\\$&");
     const pattern = `%${escapedKeyword}%`;
-    const visibility = `(user.profilePrivacy = 'Public' OR user.id = :viewerUserId OR EXISTS (
-      SELECT 1 FROM identity.user_follows follow
-      WHERE follow."followerId" = :viewerUserId
-        AND follow."followedId" = user.id
-        AND follow.status = 'accepted'
+    const visibility = `(user.profilePrivacy = 'Public'
+    OR user.id = CAST(:viewerUserId AS uuid)
+    OR EXISTS (
+        SELECT 1
+        FROM "identity"."user_follows" f
+        WHERE f."followerId" = CAST(:viewerUserId AS uuid)
+          AND f."followedId" = user.id AND f.status = 'accepted'
     ))`;
     const matches = `(user.firstName ILIKE :pattern ESCAPE '\\' OR user.lastName ILIKE :pattern ESCAPE '\\' OR user.userName ILIKE :pattern ESCAPE '\\')`;
     const qb = this.userContext.createQueryBuilder("user")
@@ -204,8 +206,23 @@ export class UserRepository implements IUserRepository {
         ELSE 2 END`, "ASC")
       .addOrderBy("user.userName", "ASC")
       .setParameters({ keyword, prefix: `${escapedKeyword}%` });
-
-    const count = await qb.clone().getCount();
+    const [countSql, countParams] = this.userContext
+      .createQueryBuilder("user")
+      .where("user.isActive = true")
+      .andWhere("user.type = :userType", { userType: UserType.User })
+      .andWhere(visibility, { viewerUserId })
+      .andWhere(matches, { pattern })
+      .getQueryAndParameters();
+    const wrappedSql = `SELECT COUNT(1) AS "cnt" FROM (${countSql}) AS "_sub"`;
+    console.log("=== DEBUG COUNT SQL ===");
+    console.log(wrappedSql);
+    console.log("=== DEBUG COUNT PARAMS ===");
+    console.log(JSON.stringify(countParams));
+    const countResult = await this.userContext.query(
+      wrappedSql,
+      countParams,
+    );
+    const count = parseInt(countResult[0].cnt, 10);
     const rows = await qb.offset((page - 1) * limit).limit(limit).getRawMany<SearchUserProjection>();
     return [rows, count];
   }
@@ -506,8 +523,8 @@ export class UserRepository implements IUserRepository {
       const currentUserId = HttpContext.getCurrentUserId;
       if (currentUserId) {
         existing.setCurrentUser(currentUserId);
-      }console.log('Incoming biometrics:', biometrics);
-console.log('profileImageUrl:', biometrics.profileImageUrl);
+      } console.log('Incoming biometrics:', biometrics);
+      console.log('profileImageUrl:', biometrics.profileImageUrl);
       return await this.userBiometricsContext.save(existing);
     } else {
       biometrics.userId = userId;

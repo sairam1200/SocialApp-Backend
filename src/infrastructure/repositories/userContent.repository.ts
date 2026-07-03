@@ -5,7 +5,7 @@ import { UserContent } from "../../domain/entities";
 import { IUserContentRepository } from "../../domain/repositories";
 import { QueryOptions } from "../../domain/types/queryOptions.type";
 import { SearchContentProjection } from "../../domain/repositories/iuserContent.repository";
-
+import { User } from "../../domain/entities/identity/user.entity";
 @Injectable()
 export class UserContentRepository implements IUserContentRepository {
 
@@ -155,8 +155,11 @@ export class UserContentRepository implements IUserContentRepository {
         ELSE 2 END`, "ASC")
       .addOrderBy("content.publishedAt", "DESC", "NULLS LAST")
       .setParameters({ keyword, prefix: `${escapedKeyword}%` });
-    const count = await qb.clone().getCount();
-    const rows = await qb.offset((page - 1) * limit).limit(limit).getRawMany();
+      //
+      console.log(qb.getQueryAndParameters());
+    const rows = await qb.clone().getRawMany();
+const count = rows.length;
+    
     return [rows.map(this.mapSearchRow), count];
   }
 
@@ -169,7 +172,7 @@ export class UserContentRepository implements IUserContentRepository {
 
   private createGlobalSearchQuery(viewerUserId: string) {
     return this.userContentContext.createQueryBuilder("content")
-      .innerJoin("identity.users", "creator", "creator.id = content.userId")
+      .innerJoin(User, "creator", "creator.id = content.userId")
       .select([
         "content.id AS id", "content.title AS title", "content.type AS type",
         "content.platform AS platform", "content.externalId AS \"externalId\"",

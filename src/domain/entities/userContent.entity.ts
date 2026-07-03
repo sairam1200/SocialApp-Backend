@@ -1,12 +1,13 @@
-import { Column, Entity, Index } from "typeorm";
+import { Column, Entity, Index, JoinColumn, ManyToOne } from "typeorm";
 import { BaseEntity } from "../baseEntity";
+import { User } from "./identity/user.entity";
 
 @Entity({ name: "userContents" })
 @Index(['userId', 'platform', 'externalId'], { unique: true })
 export class UserContent extends BaseEntity {
 
-  @Column({ nullable: false })
-  userId: string;
+@Column({ type: 'uuid', nullable: false })
+userId: string;
 
   @Column({ nullable: false })
   type: string;
@@ -41,6 +42,9 @@ export class UserContent extends BaseEntity {
   @Column({ type: 'json', nullable: true })
   metaData?: Record<string, any>;
 
+  @ManyToOne(() => User, { eager: false })
+  @JoinColumn({ name: "userId" })
+  user: User;
   constructor(request: Partial<UserContent> = {}) {
     super();
     Object.assign(this, request);

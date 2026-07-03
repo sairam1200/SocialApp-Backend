@@ -7,11 +7,11 @@ import { FollowStatus } from '../enums';
 @Unique(['followerId', 'followedId'])
 export class UserFollow extends BaseEntity {
 
-  @Column()
+  @Column({ type: 'uuid' })
   @Index('idx_user_follows_follower')
   followerId: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   @Index('idx_user_follows_followed')
   followedId: string;
 
