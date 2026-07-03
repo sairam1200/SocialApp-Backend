@@ -20,8 +20,8 @@ export class YoutubeChannelAnalyticsRepository implements IYoutubeChannelAnalyti
     });
 
     if (existing) {
-      Object.assign(existing, analytics);
-      return await this.channelAnalyticsContext.save(existing);
+      const merged = this.channelAnalyticsContext.merge(existing, analytics);
+      return await this.channelAnalyticsContext.save(merged);
     }
 
     const newEntity = this.channelAnalyticsContext.create(analytics);

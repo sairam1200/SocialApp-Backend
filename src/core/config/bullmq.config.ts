@@ -69,6 +69,7 @@ export class BullMQConfig {
     return {
       connection: redis.getBullMQConnection(),
       prefix: 'gaddr-backend',
+      skipVersionCheck: true,
       concurrency: Math.max(1, Math.min(concurrency, 2)),
       lockDuration: 60000,
       lockRenewTime: 30000,

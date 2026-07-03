@@ -15,6 +15,7 @@ import { deserializeObject, serializeObject } from "../../../../core/utils/seria
 import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
 import { IYoutubeWebhookService } from "../../../../domain/services/webhooks/iyoutube-webhook.service";
 import { IYoutubeImportService } from "domain/services/youtube/iyoutube-import.services";
+import { IYoutubeAnalyticsService } from "../../../../domain/services/iyoutubeAnalytics.service";
 export class YoutubeImportRequestModel {
   @ApiProperty()
   youtubeAccessToken: string;
@@ -43,6 +44,8 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     private readonly youtubeWebhookService: IYoutubeWebhookService,
     @Inject(_const.IYOUTUBE_IMPORT_SERVICE)
     private readonly youtubeImportService: IYoutubeImportService,
+    @Inject(_const.IYOUTUBEANALYTICS_SERVICE)
+    private readonly youtubeAnalyticsService: IYoutubeAnalyticsService,
   ) { }
 
   public async execute(command: YoutubeImportCommand)
@@ -109,44 +112,37 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
         expiresIn = tokenValue.expires_in;
       }
     }
-     logger.info("[YoutubeImport] Importing uploads...");
-         await this.youtubeImportService.importUploadsAsync(
-          account.userId,
-          accessToken,
-        );
-   account.syncEnabled = true;
-    if (!account) {
-      throw new NotFoundException(
-        "No matching Youtube profile was found!",
+    logger.info("[YoutubeImport] Importing uploads...");
+    let importCount = 0;
+    try {
+      importCount = await this.youtubeImportService.importUploadsAsync(
+        account.userId,
+        accessToken,
       );
+      logger.info(`[YoutubeImport] Imported ${importCount} videos for user ${account.userId}`);
+    } catch (importError: any) {
+      logger.error(`[YoutubeImport] Import failed: ${importError.message}`, { stack: importError.stack });
+      throw new ApplicationException('Youtube import failed. Please try again later.');
     }
-    if (channelId && !account.syncEnabled && configs.youtube.webhookUrl) {
+
+    if (!account.syncEnabled && configs.youtube.webhookUrl) {
       try {
-       
-
-       /*  await this.youtubeWebhookService.subscribeAsync(channelId, configs.youtube.webhookUrl);
-        console.log(`[YoutubeImport] Webhook subscription successful for channel ${channelId}`);
-
+        await this.youtubeWebhookService.subscribeAsync(channelId, configs.youtube.webhookUrl);
+        logger.info(`[YoutubeImport] Webhook subscription successful for channel ${channelId}`);
         account.syncEnabled = true;
-        await this.linkedAccountRepository.updateAsync(account);
-        console.log(`[YoutubeImport] Sync enabled for user ${userId}`); */
       } catch (error) {
-        logger.error(`[YoutubeImport] Error subscribing to webhook:`, error);
+        logger.warn(`[YoutubeImport] Webhook subscription failed:`, error);
+        account.syncEnabled = false;
       }
     }
+    account.allowImport = true;
+    await this.linkedAccountRepository.updateAsync(account);
 
     try {
-     /*  logger.info("[YoutubeImport] Before enqueue");
-
-      await this.queueService.enqueueYoutubeImport(account, accessToken);
-
-      logger.info("[YoutubeImport] After enqueue"); */
-    } catch (error) {
-      logger.error('[YoutubeImport] Failed to enqueue import job', {
-        error: error?.message,
-        stack: error?.stack,
-      });
-      throw new ApplicationException('Failed to initiate Youtube import. Please try again later.');
+      await this.youtubeAnalyticsService.syncAccountAnalyticsAsync(account.userId, { forceRefresh: true });
+      logger.info(`[YoutubeImport] Analytics sync completed for user ${account.userId}`);
+    } catch (analyticsError: any) {
+      logger.warn(`[YoutubeImport] Analytics sync failed after import: ${analyticsError.message}`);
     }
 
     return {

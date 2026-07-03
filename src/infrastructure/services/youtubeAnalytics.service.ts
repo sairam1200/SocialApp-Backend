@@ -350,7 +350,6 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
       subscriberCount,
       viewCount,
       videoCount,
-      engagementMetrics: {},
       snapshotDate,
     });
 
@@ -369,6 +368,37 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     await this.channelAnalyticsRepository.createOrUpdateAsync(snapshot);
   }
 
+  private async queryDimensionReportsPaginatedAsync(
+    accessToken: string, metrics: string, dimensions: string,
+    startDate: string, endDate: string,
+  ): Promise<{ columnHeaders: Array<{ name: string; columnType: string; dataType: string }>; rows: string[][] }> {
+    const MAX_RESULTS = 10000;
+    let startIndex = 1;
+    let allRows: string[][] = [];
+    let columnHeaders: Array<{ name: string; columnType: string; dataType: string }> = [];
+
+    for (let page = 0; page < 10; page++) {
+      const result = await this.queryReportsAsync(
+        accessToken, metrics, dimensions,
+        undefined, startDate, endDate, undefined, MAX_RESULTS, startIndex,
+      );
+
+      if (page === 0) {
+        columnHeaders = result.columnHeaders;
+      }
+
+      if (!result.rows || result.rows.length === 0) break;
+
+      allRows = allRows.concat(result.rows);
+
+      if (result.rows.length < MAX_RESULTS) break;
+
+      startIndex += MAX_RESULTS;
+    }
+
+    return { columnHeaders, rows: allRows };
+  }
+
   private async syncDimensionDataAsync(
     accessToken: string, channelId: string,
     startDateStr: string, endDateStr: string, syncDates: Date[], forceRefresh: boolean,
@@ -380,9 +410,9 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
       if (!forceRefresh && exists) continue;
 
       try {
-        const result = await this.queryReportsAsync(
+        const result = await this.queryDimensionReportsPaginatedAsync(
           accessToken, dimensionConfig.metrics, `day,${dimensionConfig.dimension}`,
-          undefined, startDateStr, endDateStr, undefined, 5000,
+          startDateStr, endDateStr,
         );
 
         if (!result.rows || result.rows.length === 0) {

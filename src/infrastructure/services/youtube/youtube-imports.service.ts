@@ -102,9 +102,9 @@ export class YoutubeImportService
           );
         } catch (err: any) {
           console.error(
-            `[YoutubeImport.DIAG] FAIL playlistItems page=${pageCount} pageToken=${nextPageToken ?? 'null'} error=${err.message} stack=${err.stack}`,
+            `[YoutubeImport.DIAG] FAIL playlistItems page=${pageCount} pageToken=${nextPageToken ?? 'null'} error=${err.message} stack=${err.stack} importedSoFar=${importedCount}`,
           );
-          throw err;
+          break;
         }
         const playlistDuration = Date.now() - playlistStartTime;
         console.log(
@@ -145,9 +145,9 @@ export class YoutubeImportService
           );
         } catch (err: any) {
           console.error(
-            `[YoutubeImport.DIAG] FAIL videos stats page=${pageCount} videoCount=${videoIds.length} error=${err.message} stack=${err.stack}`,
+            `[YoutubeImport.DIAG] FAIL videos stats page=${pageCount} videoCount=${videoIds.length} error=${err.message} stack=${err.stack} importedSoFar=${importedCount}`,
           );
-          throw err;
+          break;
         }
         const statsDuration = Date.now() - statsStartTime;
         console.log(
@@ -222,7 +222,8 @@ export class YoutubeImportService
             console.error(
               `[YoutubeImport.DIAG] FAIL save video videoId=${videoId} title="${item.snippet?.title ?? 'Untitled'}" page=${pageCount} error=${err.message} stack=${err.stack}`,
             );
-            throw err;
+            skippedOnPage++;
+            continue;
           }
           const saveDuration = Date.now() - saveStartTime;
           if (saveDuration > 1000) {
