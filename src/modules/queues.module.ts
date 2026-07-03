@@ -8,7 +8,7 @@ import { ExpressAdapter } from '@bull-board/express';
 import { DiscoveryModule, DiscoveryService } from "@nestjs/core";
 import { UserContent } from "../domain/entities/userContent.entity";
 import { LinkedAccount } from "../domain/entities/linkedAccount.entity";
-import { YoutubeAccount, YoutubeVideo, UploadJob } from "../domain/entities";
+import { YoutubeAccount, YoutubeVideo, UploadJob, YoutubeVideoAnalytics, YoutubeChannelAnalytics } from "../domain/entities";
 import { BullBoardAuthMiddleware } from "../core/middlewares/bullBoardAuth.middleware";
 import { DynamicModule, MiddlewareConsumer, Module, NestModule, OnApplicationShutdown, Global } from "@nestjs/common";
 import BullMQConfig from "../core/config/bullmq.config";
@@ -79,6 +79,8 @@ export class QueuesModule implements NestModule, OnApplicationShutdown {
           YoutubeAccount,
           YoutubeVideo,
           UploadJob,
+          YoutubeChannelAnalytics,
+          YoutubeVideoAnalytics,
         ]),
         BullModule.forRoot({
           ...BullMQConfig.getConnectionConfig(),
