@@ -43,6 +43,7 @@ export class BullMQConfig {
   static getQueueOptions(queueName: string): Partial<QueueOptions> {
     return {
       connection: redis.getBullMQConnection(),
+      skipVersionCheck: true,
       prefix: 'gaddr-backend',
       defaultJobOptions: this.getDefaultJobOptions(),
       streams: {

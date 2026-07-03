@@ -98,6 +98,8 @@ async function connectToRedis() {
     throw connectError;
   }
 
+  logRedisDiagnostics();
+
   // Start connection monitor — reads Redis INFO every 30s
   connectionMonitor = setInterval(async () => {
     try {
@@ -123,8 +125,8 @@ async function disconnectFromRedis() {
   }
   try {
     if (instance.status === 'ready' || instance.status === 'connecting') {
-      await instance.quit();
-      logger.info('Redis client disconnected gracefully');
+      instance.disconnect();
+      logger.info('Redis client disconnected');
     }
   } catch (error) {
     logger.error(`Redis disconnect error: ${error}`);
@@ -178,6 +180,29 @@ async function removeFromRedisAsync(key: string) {
 //   for the main client (reuses instance), and creates 1 duplicate for the blocking client
 const getBullMQConnection = () => instance;
 
+const ENABLE_WORKERS = process.env.DISABLE_WORKERS !== 'true';
+
+function logRedisDiagnostics() {
+  const workerCount = ENABLE_WORKERS ? 10 : 0;
+  const queueCount = 10;
+  const sharedClient = 1;
+  const workerBlocking = workerCount;
+  const queueEvents = 0;
+  const scheduler = 0;
+  const totalExpected = sharedClient + workerBlocking + queueEvents + scheduler;
+
+  logger.info(`[RedisDiagnostics] === Redis Connection Budget ===`);
+  logger.info(`[RedisDiagnostics] Shared client:            ${sharedClient}`);
+  logger.info(`[RedisDiagnostics] Worker blocking clients:   ${workerBlocking} (${workerCount} Workers × 1 duplicate)`);
+  logger.info(`[RedisDiagnostics] Queue clients:             ${queueCount} (all shared, 0 new connections)`);
+  logger.info(`[RedisDiagnostics] QueueEvents clients:       ${queueEvents}`);
+  logger.info(`[RedisDiagnostics] QueueScheduler clients:    ${scheduler}`);
+  logger.info(`[RedisDiagnostics] -------------------------`);
+  logger.info(`[RedisDiagnostics] Total expected clients:    ${totalExpected}`);
+  logger.info(`[RedisDiagnostics] === Plan limit: ~30 clients, headroom: ${30 - totalExpected} ===`);
+  logger.info(`[RedisDiagnostics] Workers enabled: ${ENABLE_WORKERS}`);
+}
+
 const redis: {
   instance: Redis;
   getBullMQConnection: () => Redis;
@@ -189,6 +214,7 @@ const redis: {
   removeFromRedisAsync: (key: string) => Promise<void>;
   incrementInRedisAsync: (key: string, ttl?: number) => Promise<number>;
   clearMemoryCache: () => void;
+  logRedisDiagnostics: () => void;
 } = {
   instance,
   getBullMQConnection,
@@ -200,6 +226,7 @@ const redis: {
   removeFromRedisAsync,
   incrementInRedisAsync,
   clearMemoryCache,
+  logRedisDiagnostics,
 };
 
 export default redis;
