@@ -4,6 +4,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { UserContent } from "../../domain/entities";
 import { IUserContentRepository } from "../../domain/repositories";
 import { QueryOptions } from "../../domain/types/queryOptions.type";
+import { SearchContentProjection } from "../../domain/repositories/iuserContent.repository";
 
 @Injectable()
 export class UserContentRepository implements IUserContentRepository {
@@ -142,6 +143,59 @@ export class UserContentRepository implements IUserContentRepository {
     const result = await queryBuilder.getManyAndCount();
     console.log('Query Result:', result);
     return result
+  }
+
+  public async searchGlobalAsync(keyword: string, viewerUserId: string, page: number, limit: number): Promise<[SearchContentProjection[], number]> {
+    const escapedKeyword = keyword.replace(/[\\%_]/g, "\\$&");
+    const qb = this.createGlobalSearchQuery(viewerUserId)
+      .andWhere("content.title ILIKE :pattern ESCAPE '\\'", { pattern: `%${escapedKeyword}%` })
+      .orderBy(`CASE
+        WHEN LOWER(content.title) = LOWER(:keyword) THEN 0
+        WHEN content.title ILIKE :prefix ESCAPE '\\' THEN 1
+        ELSE 2 END`, "ASC")
+      .addOrderBy("content.publishedAt", "DESC", "NULLS LAST")
+      .setParameters({ keyword, prefix: `${escapedKeyword}%` });
+    const count = await qb.clone().getCount();
+    const rows = await qb.offset((page - 1) * limit).limit(limit).getRawMany();
+    return [rows.map(this.mapSearchRow), count];
+  }
+
+  public async getGlobalSearchItemAsync(id: string, viewerUserId: string): Promise<SearchContentProjection | null> {
+    const row = await this.createGlobalSearchQuery(viewerUserId)
+      .andWhere("content.id = :id", { id })
+      .getRawOne();
+    return row ? this.mapSearchRow(row) : null;
+  }
+
+  private createGlobalSearchQuery(viewerUserId: string) {
+    return this.userContentContext.createQueryBuilder("content")
+      .innerJoin("identity.users", "creator", "creator.id = content.userId")
+      .select([
+        "content.id AS id", "content.title AS title", "content.type AS type",
+        "content.platform AS platform", "content.externalId AS \"externalId\"",
+        "content.sourceUrl AS \"sourceUrl\"", "content.publishedAt AS \"publishedAt\"",
+        "creator.id AS \"userId\"", "creator.firstName AS \"userFirstName\"",
+        "creator.lastName AS \"userLastName\"", "creator.userName AS \"userName\"",
+        "creator.bio AS \"userBio\"",
+      ])
+      .where("creator.isActive = true")
+      .andWhere(`(creator.profilePrivacy = 'Public' OR creator.id = :viewerUserId OR EXISTS (
+        SELECT 1 FROM identity.user_follows follow
+        WHERE follow."followerId" = :viewerUserId
+          AND follow."followedId" = creator.id
+          AND follow.status = 'accepted'
+      ))`, { viewerUserId });
+  }
+
+  private mapSearchRow(row: any): SearchContentProjection {
+    return {
+      id: row.id, title: row.title, type: row.type, platform: row.platform,
+      externalId: row.externalId, sourceUrl: row.sourceUrl, publishedAt: row.publishedAt,
+      user: {
+        id: row.userId, firstName: row.userFirstName, lastName: row.userLastName,
+        userName: row.userName, bio: row.userBio,
+      },
+    };
   }
 
   public async getVideoIdsByUserIdAndPlatformAsync(userId: string, platform: string, types: string[]): Promise<string[]> {

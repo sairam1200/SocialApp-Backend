@@ -11,6 +11,7 @@ import { generateTimestampUUID } from '../../core/utils/time.util';
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { BadRequestException, forwardRef, Inject, Injectable } from "@nestjs/common";
 import { IRoleRepository, IUserRepository, IUserRoleRepository } from '../../domain/repositories';
+import { SearchUserProjection } from '../../domain/repositories/iuser.repository';
 import { RoleNotFoundException, ClaimAlreadyExistsException, ApplicationException, UserAlreadyExistsException, UserAlreadyInRoleException, ClaimNotFoundException } from "../../core/exceptions";
 
 @Injectable()
@@ -171,6 +172,42 @@ export class UserRepository implements IUserRepository {
       .take(pageSize);
 
     return queryBuilder.getManyAndCount();
+  }
+
+  public async searchGlobalAsync(keyword: string, viewerUserId: string, page: number, limit: number): Promise<[SearchUserProjection[], number]> {
+    const escapedKeyword = keyword.replace(/[\\%_]/g, "\\$&");
+    const pattern = `%${escapedKeyword}%`;
+    const visibility = `(user.profilePrivacy = 'Public' OR user.id = :viewerUserId OR EXISTS (
+      SELECT 1 FROM identity.user_follows follow
+      WHERE follow."followerId" = :viewerUserId
+        AND follow."followedId" = user.id
+        AND follow.status = 'accepted'
+    ))`;
+    const matches = `(user.firstName ILIKE :pattern ESCAPE '\\' OR user.lastName ILIKE :pattern ESCAPE '\\' OR user.userName ILIKE :pattern ESCAPE '\\')`;
+    const qb = this.userContext.createQueryBuilder("user")
+      .select([
+        "user.id AS id",
+        "user.firstName AS \"firstName\"",
+        "user.lastName AS \"lastName\"",
+        "user.userName AS \"userName\"",
+        "user.bio AS bio",
+      ])
+      .where("user.isActive = true")
+      .andWhere("user.type = :userType", { userType: UserType.User })
+      .andWhere(visibility, { viewerUserId })
+      .andWhere(matches, { pattern })
+      .orderBy(`CASE
+        WHEN LOWER(user.userName) = LOWER(:keyword)
+          OR LOWER(CONCAT_WS(' ', user.firstName, user.lastName)) = LOWER(:keyword) THEN 0
+        WHEN user.userName ILIKE :prefix ESCAPE '\\'
+          OR user.firstName ILIKE :prefix ESCAPE '\\' OR user.lastName ILIKE :prefix ESCAPE '\\' THEN 1
+        ELSE 2 END`, "ASC")
+      .addOrderBy("user.userName", "ASC")
+      .setParameters({ keyword, prefix: `${escapedKeyword}%` });
+
+    const count = await qb.clone().getCount();
+    const rows = await qb.offset((page - 1) * limit).limit(limit).getRawMany<SearchUserProjection>();
+    return [rows, count];
   }
 
   public async checkPasswordAsync(user: User, password: string): Promise<boolean> {

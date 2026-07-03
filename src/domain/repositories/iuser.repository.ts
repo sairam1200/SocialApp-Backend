@@ -1,6 +1,8 @@
 import { User, UserClaim, UserRole, UserBiometric } from "../entities";
 import { ProfileImagePrivacy } from "../enums";
 
+export type SearchUserProjection = Pick<User, "id" | "firstName" | "lastName" | "userName" | "bio">;
+
 export interface IUserRepository {
 
   deleteAsync(user: User): Promise<void>;
@@ -52,6 +54,7 @@ export interface IUserRepository {
   ): Promise<[User[], number]>;
 
   getDiscoverCreatorsAsync(page: number, pageSize: number): Promise<[User[], number]>;
+  searchGlobalAsync(keyword: string, viewerUserId: string, page: number, limit: number): Promise<[SearchUserProjection[], number]>;
 
   getUserBiometricAsync(userId: string): Promise<UserBiometric | null>;
   upsertUserBiometricAsync(userId: string, biometrics: UserBiometric): Promise<UserBiometric>;

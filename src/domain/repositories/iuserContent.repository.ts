@@ -1,5 +1,10 @@
 import { QueryOptions } from "../types/queryOptions.type";
 import { UserContent } from "../entities/userContent.entity";
+import { SearchUserProjection } from "./iuser.repository";
+
+export type SearchContentProjection = Pick<UserContent, "id" | "title" | "type" | "platform" | "externalId" | "sourceUrl" | "publishedAt"> & {
+  user: SearchUserProjection;
+};
 
 export interface IUserContentRepository {
 
@@ -21,6 +26,8 @@ export interface IUserContentRepository {
   ): Promise<[UserContent[], string]>;
 
   getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]>;
+  searchGlobalAsync(keyword: string, viewerUserId: string, page: number, limit: number): Promise<[SearchContentProjection[], number]>;
+  getGlobalSearchItemAsync(id: string, viewerUserId: string): Promise<SearchContentProjection | null>;
   getVideoIdsByUserIdAndPlatformAsync(userId: string, platform: string, types: string[]): Promise<string[]>;
 
   deleteByUserIdAndPlatformAsync(userId: string, platform: string): Promise<void>;
