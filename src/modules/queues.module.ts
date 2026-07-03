@@ -14,7 +14,7 @@ import { DynamicModule, MiddlewareConsumer, Module, NestModule, OnApplicationShu
 import BullMQConfig from "../core/config/bullmq.config";
 import { YoutubeImportProcessor } from "../infrastructure/background/processors/youtube-import.processor";
 import { YoutubeUploadProcessor } from "../infrastructure/background/processors/youtube-upload.processor";
-import { SpotifyImportProcessor } from "../infrastructure/background/processors/spotify-import.processor";
+
 import { PinterestImportProcessor } from "../infrastructure/background/processors/pinterest-import.processor";
 import { RedditImportProcessor } from "../infrastructure/background/processors/reddit-import.processor";
 import { TwitterImportProcessor } from "../infrastructure/background/processors/twitter-import.processor";
@@ -23,8 +23,7 @@ import { InstagramImportProcessor } from "../infrastructure/background/processor
 import { FacebookImportProcessor } from "../infrastructure/background/processors/facebook-import.processor";
 import { LinkedInImportProcessor } from "../infrastructure/background/processors/linkedin-import.processor";
 import { SnapchatImportProcessor } from "../infrastructure/background/processors/snapchat-import.processor";
-import { ThreadsImportProcessor } from "../infrastructure/background/processors/threads-import.processor";
-import { BehanceImportProcessor } from "../infrastructure/background/processors/behance-import.processor";
+
 import { dependency } from "../infrastructure/dependency";
 import { ImportGateway } from "infrastructure/websocket/gateways/import.gateway";
 import { ContentStream, DataProtectionKey, Role, User, UserBiometric, UserClaim, UserLogin, UserRole } from "domain/entities";
