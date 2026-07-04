@@ -3,6 +3,10 @@ import { ProfileImagePrivacy } from "../enums";
 
 export type SearchUserProjection = Pick<User, "id" | "firstName" | "lastName" | "userName" | "bio"> & {
   profileImage?: string;
+  followersCount?: number;
+  followingCount?: number;
+  linkedAccounts?: { id: string; platform: string; verified?: boolean }[];
+  verified?: boolean;
 };
 
 export interface IUserRepository {

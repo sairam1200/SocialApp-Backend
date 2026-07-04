@@ -1,7 +1,7 @@
 import { Repository, In, MoreThan, Brackets } from "typeorm";
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { UserContent } from "../../domain/entities";
+import { UserContent, UserBiometric } from "../../domain/entities";
 import { IUserContentRepository } from "../../domain/repositories";
 import { QueryOptions } from "../../domain/types/queryOptions.type";
 import { SearchContentProjection } from "../../domain/repositories/iuserContent.repository";
@@ -171,6 +171,7 @@ export class UserContentRepository implements IUserContentRepository {
   private createGlobalSearchQuery(viewerUserId: string) {
     return this.userContentContext.createQueryBuilder("content")
       .innerJoin(User, "creator", "creator.id = content.userId")
+      .leftJoin(UserBiometric, "creatorBiometrics", "creatorBiometrics.\"userId\" = creator.id")
       .select([
         "content.id AS id", "content.title AS title", "content.type AS type",
         "content.platform AS platform", "content.externalId AS \"externalId\"",
@@ -179,6 +180,7 @@ export class UserContentRepository implements IUserContentRepository {
         "creator.id AS \"userId\"", "creator.firstName AS \"userFirstName\"",
         "creator.lastName AS \"userLastName\"", "creator.userName AS \"userName\"",
         "creator.bio AS \"userBio\"",
+        "creatorBiometrics.\"profileImageUrl\" AS \"userProfileImage\"",
       ])
       .where("creator.isActive = true")
       .andWhere(`(creator.profilePrivacy = 'Public' OR creator.id = CAST(:viewerUserId AS uuid) OR EXISTS (
@@ -197,6 +199,7 @@ export class UserContentRepository implements IUserContentRepository {
       user: {
         id: row.userId, firstName: row.userFirstName, lastName: row.userLastName,
         userName: row.userName, bio: row.userBio,
+        profileImage: row.userProfileImage ?? null,
       },
     };
   }
