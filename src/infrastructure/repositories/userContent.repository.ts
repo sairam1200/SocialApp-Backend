@@ -199,6 +199,16 @@ export class UserContentRepository implements IUserContentRepository {
     };
   }
 
+  public async getVideoMetaDataByUserIdAndPlatformAsync(userId: string, platform: string, types: string[]): Promise<Pick<UserContent, 'externalId' | 'metaData'>[]> {
+    if (types.length === 0) {
+      return [];
+    }
+    return await this.userContentContext.find({
+      where: { userId, platform, type: In(types) },
+      select: ['externalId', 'metaData'],
+    });
+  }
+
   public async getVideoIdsByUserIdAndPlatformAsync(userId: string, platform: string, types: string[]): Promise<string[]> {
     if (types.length === 0) {
       return [];

@@ -253,7 +253,29 @@ export class GetYoutubeTopVideosQueryHandler implements IQueryHandler<GetYoutube
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
     const limit = query.limit || 5;
     const videoIds = await resolveCurrentYoutubeVideoIdsAsync(userId, this.youtubeAccountRepository, this.userContentRepository);
-    return await this.videoAnalyticsRepository.getTopVideosByVideoIdsAsync(userId, videoIds, limit);
+    const results = await this.videoAnalyticsRepository.getTopVideosByVideoIdsAsync(userId, videoIds, videoIds.length || limit);
+
+    if (results.some((r) => r.viewCount === 0)) {
+      const userContents = await this.userContentRepository.getVideoMetaDataByUserIdAndPlatformAsync(
+        userId, _const.PLATFORMS.YOUTUBE, YOUTUBE_VIDEO_CONTENT_TYPES,
+      );
+      const dataViewCounts = new Map<string, number>();
+      for (const uc of userContents) {
+        const vid = uc.metaData?.videoId || uc.externalId;
+        const vc = uc.metaData?.viewCount;
+        if (vid && typeof vc === 'number') {
+          dataViewCounts.set(vid, vc);
+        }
+      }
+      for (const r of results) {
+        if (r.viewCount === 0 && dataViewCounts.has(r.videoId)) {
+          r.viewCount = dataViewCounts.get(r.videoId)!;
+        }
+      }
+      results.sort((a, b) => b.viewCount - a.viewCount);
+    }
+
+    return results.slice(0, limit);
   }
 }
 

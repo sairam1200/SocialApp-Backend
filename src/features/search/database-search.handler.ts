@@ -58,7 +58,7 @@ export class SearchSuggestionsQueryHandler implements IQueryHandler<SearchSugges
   async execute(query: SearchSuggestionsQuery): Promise<{ suggestions: SearchSuggestion[] }> {
     const value = await suggestionsSchema.validateAsync(query, { stripUnknown: true });
     const viewerId = HttpContext.getCurrentUserId!;
-    const [profiles, contents] = await Promise.all([
+    const [[profiles], [contents]] = await Promise.all([
       this.users.searchGlobalAsync(value.keyword, viewerId, 1, 5),
       this.contents.searchGlobalAsync(value.keyword, viewerId, 1, 5),
     ]);
