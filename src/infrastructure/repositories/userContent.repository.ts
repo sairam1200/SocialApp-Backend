@@ -182,9 +182,9 @@ const count = rows.length;
         "creator.bio AS \"userBio\"",
       ])
       .where("creator.isActive = true")
-      .andWhere(`(creator.profilePrivacy = 'Public' OR creator.id = :viewerUserId OR EXISTS (
+      .andWhere(`(creator.profilePrivacy = 'Public' OR creator.id = CAST(:viewerUserId AS uuid) OR EXISTS (
         SELECT 1 FROM identity.user_follows follow
-        WHERE follow."followerId" = :viewerUserId
+        WHERE follow."followerId" = CAST(:viewerUserId AS uuid)
           AND follow."followedId" = creator.id
           AND follow.status = 'accepted'
       ))`, { viewerUserId });
