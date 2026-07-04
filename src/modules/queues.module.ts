@@ -26,6 +26,7 @@ import { SnapchatImportProcessor } from "../infrastructure/background/processors
 
 import { dependency } from "../infrastructure/dependency";
 import { ImportGateway } from "infrastructure/websocket/gateways/import.gateway";
+import { ContentImportListener } from "infrastructure/background/listeners/content-import.listener";
 import { ContentStream, DataProtectionKey, Role, User, UserBiometric, UserClaim, UserLogin, UserRole } from "domain/entities";
 
 const logger = new Logger('QueuesModule');
@@ -85,8 +86,9 @@ export class QueuesModule implements NestModule, OnApplicationShutdown {
         registeredQueues,
       ],
       providers: [
-        JwtService,
+         JwtService,
         ImportGateway,
+        ContentImportListener,
 
         dependency.QueueService,
         dependency.UserLoginRepository,

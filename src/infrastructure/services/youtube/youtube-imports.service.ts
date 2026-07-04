@@ -1,6 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 import { Job } from "bullmq";
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { IYoutubeImportService, YoutubePlaylistItem } from "domain/services/youtube/iyoutube-import.services";
 import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
 import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
@@ -12,7 +13,6 @@ import { NotificationModel } from "../../../domain/contracts/notification.model"
 import { mapToNotificationModel } from "../../../domain/mappers/notification.mapper";
 import { mapToYouTubeContentModel } from "../../../domain/mappers/youtube.mapper";
 import { UserContent } from "../../../domain/entities/userContent.entity";
-import { ImportGateway } from "../../../infrastructure/websocket/gateways/import.gateway";
 import _const from "../../../core/utils/const";
 import logger from "../../../core/utils/winston.util";
 
@@ -63,7 +63,7 @@ export class YoutubeImportService implements IYoutubeImportService {
     private readonly notificationService: INotificationService,
     @Inject(_const.IYOUTUBEANALYTICS_SERVICE)
     private readonly youtubeAnalyticsService: IYoutubeAnalyticsService,
-    private readonly gateway: ImportGateway,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   parseDurationToSeconds(duration: string): number {
@@ -270,7 +270,7 @@ export class YoutubeImportService implements IYoutubeImportService {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(_const.PLATFORMS.YOUTUBE, content.externalId);
     const saved = await this.userContentRepository.createAsync(content);
     const mapped = mapToYouTubeContentModel(saved);
-    this.gateway.emitNewImportContent(userId, _const.PLATFORMS.YOUTUBE, mapped);
+    this.eventEmitter.emit("content.imported", { userId, platform: _const.PLATFORMS.YOUTUBE, data: mapped });
     return saved;
   }
 
