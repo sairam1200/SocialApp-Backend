@@ -109,9 +109,6 @@ if (existingAccount) {
         linkedAccount.email ?? linkedAccount.userName
     );
 }
-    if (existingAccount) {
-      throw new LinkedAccountAlreadyExistsException(linkedAccount.platform, linkedAccount.email);
-    }
 
     if (HttpContext.user) {
       const userId = HttpContext.user[Globals.ClaimTypes.UserId];

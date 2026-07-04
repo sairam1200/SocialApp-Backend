@@ -3,7 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export type FacebookUserDataType = {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   username?: string;
   picture?: {
     data: {

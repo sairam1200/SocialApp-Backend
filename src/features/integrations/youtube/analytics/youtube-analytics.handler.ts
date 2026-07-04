@@ -11,6 +11,7 @@ import { IYoutubeAccountRepository } from '../../../../domain/repositories/iyout
 import { IUserContentRepository } from '../../../../domain/repositories';
 import { YoutubeChannelAnalytics } from '../../../../domain/entities/youtubeChannelAnalytics.entity';
 import { YoutubeVideoAnalytics } from '../../../../domain/entities/youtubeVideoAnalytics.entity';
+import { TopVideoItemModel, YoutubeTopVideosModel } from '../../../../domain/contracts/youtube-analytics.model';
 
 const YOUTUBE_VIDEO_CONTENT_TYPES = ['uploaded_video', 'playlist_video'];
 
@@ -249,33 +250,99 @@ export class GetYoutubeTopVideosQueryHandler implements IQueryHandler<GetYoutube
     private readonly userContentRepository: IUserContentRepository,
   ) {}
 
-  async execute(query: GetYoutubeTopVideosQuery): Promise<YoutubeVideoAnalytics[]> {
+  async execute(_query: GetYoutubeTopVideosQuery): Promise<YoutubeTopVideosModel> {
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-    const limit = query.limit || 5;
-    const videoIds = await resolveCurrentYoutubeVideoIdsAsync(userId, this.youtubeAccountRepository, this.userContentRepository);
-    const results = await this.videoAnalyticsRepository.getTopVideosByVideoIdsAsync(userId, videoIds, videoIds.length || limit);
 
-    if (results.some((r) => r.viewCount === 0)) {
-      const userContents = await this.userContentRepository.getVideoMetaDataByUserIdAndPlatformAsync(
-        userId, _const.PLATFORMS.YOUTUBE, YOUTUBE_VIDEO_CONTENT_TYPES,
-      );
-      const dataViewCounts = new Map<string, number>();
-      for (const uc of userContents) {
-        const vid = uc.metaData?.videoId || uc.externalId;
-        const vc = uc.metaData?.viewCount;
-        if (vid && typeof vc === 'number') {
-          dataViewCounts.set(vid, vc);
-        }
-      }
-      for (const r of results) {
-        if (r.viewCount === 0 && dataViewCounts.has(r.videoId)) {
-          r.viewCount = dataViewCounts.get(r.videoId)!;
-        }
-      }
-      results.sort((a, b) => b.viewCount - a.viewCount);
+    const activeAccount = await this.youtubeAccountRepository.getConnectedByUserIdAsync(userId);
+    if (!activeAccount) {
+      return new YoutubeTopVideosModel({ topVideos: [] });
     }
 
-    return results.slice(0, limit);
+    const videoIds = await this.userContentRepository.getVideoIdsByUserIdAndPlatformAsync(
+      userId, _const.PLATFORMS.YOUTUBE, YOUTUBE_VIDEO_CONTENT_TYPES,
+    );
+
+    if (videoIds.length === 0) {
+      return new YoutubeTopVideosModel({ topVideos: [] });
+    }
+
+    const results = await this.videoAnalyticsRepository.getTopVideosByVideoIdsSortedAsync(
+      userId, videoIds, 3,
+    );
+
+    if (results.length === 0) {
+      return new YoutubeTopVideosModel({ topVideos: [] });
+    }
+
+    const userContents = await this.userContentRepository.getUserContentVideosAsync(
+      userId, _const.PLATFORMS.YOUTUBE, YOUTUBE_VIDEO_CONTENT_TYPES,
+    );
+
+    const userContentByVideoId = new Map<string, typeof userContents[0]>();
+    for (const uc of userContents) {
+      const vid = uc.metaData?.videoId || uc.externalId;
+      if (vid && !userContentByVideoId.has(vid)) {
+        userContentByVideoId.set(vid, uc);
+      }
+    }
+
+    const enrichmentMap = new Map<string, { viewCount: number; likeCount: number }>();
+    for (const uc of userContents) {
+      const vid = uc.metaData?.videoId || uc.externalId;
+      if (!vid) continue;
+      const existing = enrichmentMap.get(vid) || { viewCount: 0, likeCount: 0 };
+      enrichmentMap.set(vid, {
+        viewCount: existing.viewCount || Number(uc.metaData?.viewCount) || 0,
+        likeCount: existing.likeCount || Number(uc.metaData?.likeCount) || 0,
+      });
+    }
+
+    const needsEnrichment = results.some((r) => r.likeCount === 0 || r.viewCount === 0);
+    if (needsEnrichment) {
+      for (const r of results) {
+        const enriched = enrichmentMap.get(r.videoId);
+        if (enriched) {
+          if (r.viewCount === 0 && enriched.viewCount > 0) {
+            r.viewCount = enriched.viewCount;
+          }
+          if (r.likeCount === 0 && enriched.likeCount > 0) {
+            r.likeCount = enriched.likeCount;
+          }
+        }
+      }
+      results.sort((a, b) => {
+        if (b.likeCount !== a.likeCount) return b.likeCount - a.likeCount;
+        if (b.viewCount !== a.viewCount) return b.viewCount - a.viewCount;
+        if (b.estimatedMinutesWatched !== a.estimatedMinutesWatched) return Number(b.estimatedMinutesWatched) - Number(a.estimatedMinutesWatched);
+        const aDate = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+        const bDate = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+        return bDate - aDate;
+      });
+    }
+
+    const topVideos = results.slice(0, 3).map((r) => {
+      const uc = userContentByVideoId.get(r.videoId);
+      const thumbnail = uc?.media?.[0]?.thumbnail
+        || uc?.metaData?.thumbnailUrl
+        || uc?.metaData?.thumbnails?.default?.url;
+      const title = uc?.title || '';
+      const publishedAt = r.publishedAt || uc?.publishedAt || uc?.metaData?.publishedAt;
+      return new TopVideoItemModel({
+        id: r.videoId,
+        title,
+        thumbnail,
+        publishedAt,
+        duration: r.duration || undefined,
+        views: r.viewCount,
+        likes: r.likeCount,
+        comments: r.commentCount,
+        shares: r.shares,
+        estimatedMinutesWatched: r.estimatedMinutesWatched,
+        averageViewDurationSeconds: r.averageViewDurationSeconds,
+      });
+    });
+
+    return new YoutubeTopVideosModel({ topVideos });
   }
 }
 

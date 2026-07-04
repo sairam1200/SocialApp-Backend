@@ -97,6 +97,9 @@ const envVarsSchema = Joi.object()
       .description('Facebook OAuth callback URL'),
     FACEBOOK_AUTH_CALLBACK_URL: Joi.string()
       .description('Facebook OAuth auth callback URL for login'),
+    FACEBOOK_GRAPH_API_VERSION: Joi.string()
+      .default('v23.0')
+      .description('Facebook Graph API version'),
     INSTAGRAM_CLIENT_ID: Joi.string()
       .description('Instagram OAuth client ID'),
     INSTAGRAM_CLIENT_SECRET: Joi.string()
@@ -336,6 +339,7 @@ export default {
     appSecret: envVars.FACEBOOK_APP_SECRET,
     redirectUri: envVars.FACEBOOK_CALLBACK_URL,
     authCallbackUrl: envVars.FACEBOOK_AUTH_CALLBACK_URL,
+    graphApiVersion: envVars.FACEBOOK_GRAPH_API_VERSION,
   },
   Instagram: {
     clientId: envVars.INSTAGRAM_CLIENT_ID,

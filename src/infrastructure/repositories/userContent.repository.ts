@@ -232,6 +232,16 @@ export class UserContentRepository implements IUserContentRepository {
     ];
   }
 
+  public async getUserContentVideosAsync(userId: string, platform: string, types: string[]): Promise<Pick<UserContent, 'externalId' | 'metaData' | 'title' | 'media' | 'publishedAt'>[]> {
+    if (types.length === 0) {
+      return [];
+    }
+    return await this.userContentContext.find({
+      where: { userId, platform, type: In(types) },
+      select: ['externalId', 'metaData', 'title', 'media', 'publishedAt'],
+    });
+  }
+
   public async deleteByUserIdAndPlatformAsync(userId: string, platform: string): Promise<void> {
     await this.userContentContext.delete({ userId, platform });
   }

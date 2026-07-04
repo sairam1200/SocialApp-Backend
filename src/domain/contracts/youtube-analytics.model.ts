@@ -93,27 +93,29 @@ export class YoutubeSubscriberGrowthModel {
 
 // ─── Top Videos ─────────────────────────────────────────────────────────────
 
-export class TopVideoModel {
-  @ApiProperty() videoId: string;
+export class TopVideoItemModel {
+  @ApiProperty() id: string;
   @ApiProperty() title: string;
-  @ApiPropertyOptional() thumbnailUrl?: string;
+  @ApiPropertyOptional() thumbnail?: string;
+  @ApiPropertyOptional() publishedAt?: Date;
+  @ApiPropertyOptional() duration?: string;
   @ApiProperty() views: number;
-  @ApiProperty() estimatedMinutesWatched: number;
-  @ApiProperty() averageViewDurationSeconds: number;
   @ApiProperty() likes: number;
   @ApiProperty() comments: number;
-  @ApiProperty() subscribersGained: number;
   @ApiProperty() shares: number;
-  @ApiProperty() estimatedRevenueUsd: number;
+  @ApiProperty() estimatedMinutesWatched: number;
+  @ApiProperty() averageViewDurationSeconds: number;
+  @ApiPropertyOptional() estimatedRevenueUsd?: number;
+  @ApiPropertyOptional() estimatedAdRevenueUsd?: number;
 
-  constructor(partial?: Partial<TopVideoModel>) {
+  constructor(partial?: Partial<TopVideoItemModel>) {
     Object.assign(this, partial);
   }
 }
 
 export class YoutubeTopVideosModel {
-  @ApiProperty({ type: [TopVideoModel] })
-  videos: TopVideoModel[];
+  @ApiProperty({ type: [TopVideoItemModel] })
+  topVideos: TopVideoItemModel[];
 
   constructor(partial?: Partial<YoutubeTopVideosModel>) {
     Object.assign(this, partial);

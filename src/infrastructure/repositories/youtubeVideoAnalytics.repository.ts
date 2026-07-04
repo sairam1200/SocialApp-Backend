@@ -120,4 +120,30 @@ export class YoutubeVideoAnalyticsRepository implements IYoutubeVideoAnalyticsRe
       .limit(limit)
       .getMany();
   }
+
+  async getTopVideosByVideoIdsSortedAsync(userId: string, videoIds: string[], limit: number): Promise<YoutubeVideoAnalytics[]> {
+    if (videoIds.length === 0) {
+      return [];
+    }
+
+    const subQuery = this.videoAnalyticsContext
+      .createQueryBuilder('sub')
+      .select('sub.id')
+      .distinctOn(['sub.videoId'])
+      .where('sub.userId = :userId', { userId })
+      .andWhere('sub.videoId IN (:...videoIds)', { videoIds })
+      .orderBy('sub.videoId', 'ASC')
+      .addOrderBy('sub.snapshotDate', 'DESC');
+
+    return await this.videoAnalyticsContext
+      .createQueryBuilder('va')
+      .where(`va.id IN (${subQuery.getQuery()})`)
+      .setParameters(subQuery.getParameters())
+      .orderBy('va.likeCount', 'DESC')
+      .addOrderBy('va.viewCount', 'DESC')
+      .addOrderBy('va.estimatedMinutesWatched', 'DESC')
+      .addOrderBy('va.publishedAt', 'DESC', 'NULLS LAST')
+      .limit(limit)
+      .getMany();
+  }
 }

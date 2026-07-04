@@ -29,6 +29,7 @@ export interface IUserContentRepository {
   searchGlobalAsync(keyword: string, viewerUserId: string, page: number, limit: number): Promise<[SearchContentProjection[], number]>;
   getGlobalSearchItemAsync(id: string, viewerUserId: string): Promise<SearchContentProjection | null>;
   getVideoIdsByUserIdAndPlatformAsync(userId: string, platform: string, types: string[]): Promise<string[]>;
+  getUserContentVideosAsync(userId: string, platform: string, types: string[]): Promise<Pick<UserContent, 'externalId' | 'metaData' | 'title' | 'media' | 'publishedAt'>[]>;
   getVideoMetaDataByUserIdAndPlatformAsync(userId: string, platform: string, types: string[]): Promise<Pick<UserContent, 'externalId' | 'metaData'>[]>;
 
   deleteByUserIdAndPlatformAsync(userId: string, platform: string): Promise<void>;

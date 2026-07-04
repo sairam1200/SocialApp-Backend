@@ -26,7 +26,7 @@ import { TokenResponseModel } from 'domain/contracts/tokenResponse.model';
 import { IEmailService } from 'domain/services/iemail.service';
 import { SendVerificationEmailCommand } from 'features/user';
 
-const GRAPH_BASE = 'https://graph.facebook.com/v23.0';
+const GRAPH_BASE = `https://graph.facebook.com/${configs.facebook.graphApiVersion}`;
 
 export class FacebookConnectQuery {
   model: {
@@ -126,125 +126,154 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
 
     const userData = await this.fetchUserData(access_token);
 
-    // 1. Search by provider account ID
-    const linkedAccountByProvider = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(
-      _const.PLATFORMS.FACEBOOK,
-      userData.id,
-    );
-
-    let user: User | null = linkedAccountByProvider
-      ? await this.userRepository.getUserByIdAsync(linkedAccountByProvider.userId)
-      : null;
-
-    // 2. Search by email if not found by provider ID
-    if (!user) {
-      user = await this.userRepository.getUserByEmailAsync(userData.email);
-    }
-
-    // 3. Create new user only if neither lookup matched
-    if (!user) {
-      const firstName = userData.name?.split(' ')[0] || 'Facebook';
-      const lastName = userData.name?.split(' ').slice(1).join(' ') || 'User';
-
-      const initials = stringUtil.extractInitialsFromName(`${firstName} ${lastName}`);
-      const base64Image = generateInitialImage(initials);
-      const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
-      const defaultProfileImageUrl = avatar.secure_url;
-
-      const entry = new User({
-        email: userData.email,
-        firstName: firstName,
-        lastName: lastName,
-        emailConfirmed: true,
-        type: UserType.User,
-      });
-
-      user = await this.userRepository.createAsync(entry, '');
-      await this.userRepository.upsertUserBiometricAsync(user.id, new UserBiometric({
-        profileImageUrl: userData.picture?.data?.url || null,
-        defaultProfileImageUrl: defaultProfileImageUrl,
-        privacy: ProfileImagePrivacy.Everyone,
-      }))
-
-      await this.sendWelcomeEmail(user);
-    }
-
-    if (this.isAccountLockedOrInactive(user)) {
-      return this.handleLockedOrInactiveAccount(user);
-    }
-
-    const result = await this.handleSuccessfulLogin(
-      user,
-      parsedDataProtectionKeyValue,
-    );
-    result.facebookAccessToken = access_token;
-    result.facebookAccessTokenExpiresIn = expires_in;
-
-    // Create or update LinkedAccount
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndEmailAsync(
-      _const.PLATFORMS.FACEBOOK,
-      user.email,
-    );
-
-    if (linkedAccount) {
-      linkedAccount.userName = userData.name;
-      linkedAccount.profileImage = userData.picture?.data?.url;
-      linkedAccount.followingCount = userData.friends?.summary?.total_count || 0;
-      linkedAccount.metaData = {
-        name: userData.name,
-        birthday: userData.birthday,
-        gender: userData.gender,
-        hometown: userData.hometown?.name,
-        location: userData.location?.name,
-        link: userData.link,
-      };
-      console.log(linkedAccount, "linkedAccount")
-      await this.linkedAccountRepository.updateAsync(linkedAccount);
-    } else {
-      linkedAccount = await this.linkedAccountRepository.createAsync(
-        new LinkedAccount({
-          platform: _const.PLATFORMS.FACEBOOK,
-          userId: user.id,
-          email: userData.email,
-          externalId: userData.id,
-          userName: userData.name,
-          profileImage: userData.picture?.data?.url,
-          followingCount: userData.friends?.summary?.total_count || 0,
-          metaData: {
-            name: userData.name,
-            birthday: userData.birthday,
-            gender: userData.gender,
-            hometown: userData.hometown?.name,
-            location: userData.location?.name,
-            link: userData.link,
-          },
-        }),
+    if (!userData.email) {
+      throw new ApplicationException(
+        'Facebook did not return an email address. Please grant the email permission and try again.'
       );
     }
 
-    // Store Facebook tokens for future API access
-    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(
-      user.id,
-      _const.PLATFORMS.FACEBOOK,
-    );
-    if (existingAccountLogin) {
-      existingAccountLogin.tokenValue = access_token;
-      existingAccountLogin.addedDateUtc = new Date();
-      existingAccountLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
-      await this.userLoginRepository.updateAsync(existingAccountLogin);
-    } else {
-      await this.userLoginRepository.createAysnc(
+    let createdUser = false;
+    let createdLinkedAccount = false;
+    let user: User | null = null;
+
+    try {
+      // 1. Search by provider account ID
+      const linkedAccountByProvider = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(
         _const.PLATFORMS.FACEBOOK,
-        user.id,
-        '',
-        '',
-        '',
-        access_token,
-        new Date(Date.now() + expires_in * 1000),
+        userData.id,
       );
-    }
 
-    return result;
+      user = linkedAccountByProvider
+        ? await this.userRepository.getUserByIdAsync(linkedAccountByProvider.userId)
+        : null;
+
+      // 2. Search by email if not found by provider ID
+      if (!user) {
+        user = await this.userRepository.getUserByEmailAsync(userData.email);
+      }
+
+      // 3. Create new user only if neither lookup matched
+      if (!user) {
+        const firstName = userData.name?.split(' ')[0] || 'Facebook';
+        const lastName = userData.name?.split(' ').slice(1).join(' ') || 'User';
+
+        const initials = stringUtil.extractInitialsFromName(`${firstName} ${lastName}`);
+        const base64Image = generateInitialImage(initials);
+        const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
+        const defaultProfileImageUrl = avatar.secure_url;
+
+        const entry = new User({
+          email: userData.email,
+          firstName: firstName,
+          lastName: lastName,
+          emailConfirmed: true,
+          type: UserType.User,
+        });
+
+        user = await this.userRepository.createAsync(entry, '');
+        createdUser = true;
+
+        await this.userRepository.upsertUserBiometricAsync(user.id, new UserBiometric({
+          profileImageUrl: userData.picture?.data?.url || null,
+          defaultProfileImageUrl: defaultProfileImageUrl,
+          privacy: ProfileImagePrivacy.Everyone,
+        }))
+
+        await this.sendWelcomeEmail(user);
+      }
+
+      if (this.isAccountLockedOrInactive(user)) {
+        return this.handleLockedOrInactiveAccount(user);
+      }
+
+      const result = await this.handleSuccessfulLogin(
+        user,
+        parsedDataProtectionKeyValue,
+      );
+      result.facebookAccessToken = access_token;
+      result.facebookAccessTokenExpiresIn = expires_in;
+
+      // Create or update LinkedAccount
+      const linkedAccount = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(
+        _const.PLATFORMS.FACEBOOK,
+        userData.id,
+      );
+      const userName = userData.name || '';
+
+      if (linkedAccount) {
+        linkedAccount.userName = userName;
+        linkedAccount.profileImage = userData.picture?.data?.url;
+        linkedAccount.followingCount = userData.friends?.summary?.total_count || 0;
+        linkedAccount.metaData = {
+          name: userData.name,
+          birthday: userData.birthday,
+          gender: userData.gender,
+          hometown: userData.hometown?.name,
+          location: userData.location?.name,
+          link: userData.link,
+        };
+        await this.linkedAccountRepository.updateAsync(linkedAccount);
+      } else {
+        createdLinkedAccount = true;
+        await this.linkedAccountRepository.createAsync(
+          new LinkedAccount({
+            platform: _const.PLATFORMS.FACEBOOK,
+            userId: user.id,
+            email: userData.email,
+            externalId: userData.id,
+            userName: userName,
+            profileImage: userData.picture?.data?.url,
+            followingCount: userData.friends?.summary?.total_count || 0,
+            metaData: {
+              name: userData.name,
+              birthday: userData.birthday,
+              gender: userData.gender,
+              hometown: userData.hometown?.name,
+              location: userData.location?.name,
+              link: userData.link,
+            },
+          }),
+        );
+      }
+
+      // Store Facebook tokens for future API access
+      let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(
+        user.id,
+        _const.PLATFORMS.FACEBOOK,
+      );
+      if (existingAccountLogin) {
+        existingAccountLogin.tokenValue = access_token;
+        existingAccountLogin.addedDateUtc = new Date();
+        existingAccountLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
+        await this.userLoginRepository.updateAsync(existingAccountLogin);
+      } else {
+        await this.userLoginRepository.createAysnc(
+          _const.PLATFORMS.FACEBOOK,
+          user.id,
+          '',
+          '',
+          '',
+          access_token,
+          new Date(Date.now() + expires_in * 1000),
+        );
+      }
+
+      return result;
+
+    } catch (error) {
+      if (createdUser && user) {
+        try { await this.userRepository.deleteAsync(user); } catch { /* cleanup best-effort */ }
+      }
+      if (createdLinkedAccount) {
+        const toDelete = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(
+          _const.PLATFORMS.FACEBOOK, userData.id,
+        );
+        if (toDelete) {
+          try { await this.linkedAccountRepository.deleteAsync(toDelete); } catch { /* cleanup best-effort */ }
+        }
+      }
+      throw error;
+    }
   }
 
   private async fetchShortLivedToken(code: string): Promise<string> {
@@ -304,7 +333,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         ? (error as { response: { data: unknown } }).response?.data || error.message
         : error instanceof Error ? error.message : String(error);
       logger.error('Facebook API Error Details:', facebookError);
-      throw new ApplicationException(`Facebook API Error: ${JSON.stringify(facebookError)}`);
+      throw new ApplicationException('Unexpected error during authentication with Facebook');
     }
   }
 
@@ -350,6 +379,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       message: 'Login successful',
       succeeded: true,
       isLockedOut: false,
+      isTwoFARequired: false,
       refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
       onboardingCompleted: String(user.onboardingStep) === 'Completed',
     });

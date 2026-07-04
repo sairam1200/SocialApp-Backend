@@ -20,6 +20,7 @@ import {
   GetYoutubePlaybackLocationsQuery,
   GetYoutubeRevenueQuery,
 } from './youtube-analytics.handler';
+import { YoutubeTopVideosModel } from '../../../../domain/contracts/youtube-analytics.model';
 
 @ApiTags('Integrations')
 @ApiBearerAuth()
@@ -81,7 +82,7 @@ export class YoutubeAnalyticsController {
 
   @Get('top-videos')
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'Top performing videos ordered by views' })
+  @ApiResponse({ status: 200, description: 'Top performing videos ordered by likes, views, watch time, publish date', type: YoutubeTopVideosModel })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   public async getTopVideos(@Query('limit') limit: number, @Res() res: Response): Promise<Response> {
     const result = await this.queryBus.execute(new GetYoutubeTopVideosQuery({ limit }));

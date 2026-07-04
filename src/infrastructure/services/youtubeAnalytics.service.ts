@@ -714,7 +714,7 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     if (idx === undefined) return 0;
     const val = apiData.row[idx];
     if (val === undefined || val === null || val === '') return 0;
-    return parseInt(val, 10) || 0;
+    return Math.round(parseFloat(val)) || 0;
   }
 
   private floatVal(apiData: { colIndex: Record<string, number>; row: string[] }, field: string): number {
