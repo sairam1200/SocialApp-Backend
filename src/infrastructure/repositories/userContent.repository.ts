@@ -171,7 +171,7 @@ export class UserContentRepository implements IUserContentRepository {
   private createGlobalSearchQuery(viewerUserId: string) {
     return this.userContentContext.createQueryBuilder("content")
       .innerJoin(User, "creator", "creator.id = content.userId")
-      .leftJoin(UserBiometric, "creatorBiometrics", "creatorBiometrics.\"userId\" = creator.id")
+      .leftJoin(UserBiometric, "creatorbio", "creatorbio.\"userId\" = creator.id")
       .select([
         "content.id AS id", "content.title AS title", "content.type AS type",
         "content.platform AS platform", "content.externalId AS \"externalId\"",
@@ -180,7 +180,7 @@ export class UserContentRepository implements IUserContentRepository {
         "creator.id AS \"userId\"", "creator.firstName AS \"userFirstName\"",
         "creator.lastName AS \"userLastName\"", "creator.userName AS \"userName\"",
         "creator.bio AS \"userBio\"",
-        "creatorBiometrics.\"profileImageUrl\" AS \"userProfileImage\"",
+        "creatorbio.\"profileImageUrl\" AS \"userProfileImage\"",
       ])
       .where("creator.isActive = true")
       .andWhere(`(creator.profilePrivacy = 'Public' OR creator.id = CAST(:viewerUserId AS uuid) OR EXISTS (
