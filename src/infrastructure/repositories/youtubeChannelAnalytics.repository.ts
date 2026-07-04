@@ -79,7 +79,8 @@ export class YoutubeChannelAnalyticsRepository implements IYoutubeChannelAnalyti
   async getAggregatedMetricsAsync(channelId: string, startDate: Date, endDate: Date): Promise<ChannelMetricsAggregate> {
     const raw = await this.channelAnalyticsContext
       .createQueryBuilder('ca')
-      .select('COALESCE(SUM(ca.estimatedMinutesWatched), 0)', 'estimatedMinutesWatched')
+      .select('COALESCE(SUM(ca.viewCount), 0)', 'viewCount')
+      .addSelect('COALESCE(SUM(ca.estimatedMinutesWatched), 0)', 'estimatedMinutesWatched')
       .addSelect('COALESCE(AVG(ca.averageViewDurationSeconds), 0)', 'averageViewDurationSeconds')
       .addSelect('COALESCE(SUM(ca.subscribersGained), 0)', 'subscribersGained')
       .addSelect('COALESCE(SUM(ca.subscribersLost), 0)', 'subscribersLost')
@@ -95,6 +96,7 @@ export class YoutubeChannelAnalyticsRepository implements IYoutubeChannelAnalyti
       .getRawOne();
 
     return {
+      viewCount: Number(raw?.viewCount) || 0,
       estimatedMinutesWatched: Number(raw?.estimatedMinutesWatched) || 0,
       averageViewDurationSeconds: Number(raw?.averageViewDurationSeconds) || 0,
       subscribersGained: Number(raw?.subscribersGained) || 0,

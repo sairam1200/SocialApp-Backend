@@ -13,7 +13,7 @@ import { YoutubeChannelAnalytics } from '../../../../domain/entities/youtubeChan
 import { YoutubeVideoAnalytics } from '../../../../domain/entities/youtubeVideoAnalytics.entity';
 import { TopVideoItemModel, YoutubeTopVideosModel } from '../../../../domain/contracts/youtube-analytics.model';
 
-const YOUTUBE_VIDEO_CONTENT_TYPES = ['uploaded_video', 'playlist_video'];
+const YOUTUBE_VIDEO_CONTENT_TYPES = ['uploaded_video'];
 
 async function resolveActiveYoutubeChannelIdAsync(userId: string, youtubeAccountRepository: IYoutubeAccountRepository): Promise<string> {
   const activeAccount = await youtubeAccountRepository.getConnectedByUserIdAsync(userId);
@@ -351,6 +351,8 @@ export class GetYoutubeOverviewQueryHandler implements IQueryHandler<GetYoutubeO
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
+    @Inject(_const.IYOUTUBEVIDEOANALYTICS_REPOSITORY)
+    private readonly videoAnalyticsRepository: IYoutubeVideoAnalyticsRepository,
     @Inject(_const.IYOUTUBEACCOUNT_REPOSITORY)
     private readonly youtubeAccountRepository: IYoutubeAccountRepository,
   ) {}
@@ -375,12 +377,31 @@ export class GetYoutubeOverviewQueryHandler implements IQueryHandler<GetYoutubeO
     const prevStart = new Date(prevEnd.getTime() - periodMs);
 
     const channelId = await resolveActiveYoutubeChannelIdAsync(userId, this.youtubeAccountRepository);
-    const current = await this.channelAnalyticsRepository.getAggregatedMetricsAsync(channelId, startDate, endDate);
-    const previous = await this.channelAnalyticsRepository.getAggregatedMetricsAsync(channelId, prevStart, prevEnd);
+
+    const [currentChannel, previousChannel, currentVideo, previousVideo] = await Promise.all([
+      this.channelAnalyticsRepository.getAggregatedMetricsAsync(channelId, startDate, endDate),
+      this.channelAnalyticsRepository.getAggregatedMetricsAsync(channelId, prevStart, prevEnd),
+      this.videoAnalyticsRepository.getAggregatedVideoMetricsAsync(userId, startDate, endDate),
+      this.videoAnalyticsRepository.getAggregatedVideoMetricsAsync(userId, prevStart, prevEnd),
+    ]);
+
+    const merge = (channel: ChannelMetricsAggregate, video: { viewCount: number; estimatedMinutesWatched: number; averageViewDurationSeconds: number; likes: number; comments: number; shares: number }): ChannelMetricsAggregate => ({
+      viewCount: video.viewCount || channel.viewCount,
+      estimatedMinutesWatched: video.estimatedMinutesWatched || channel.estimatedMinutesWatched,
+      averageViewDurationSeconds: video.averageViewDurationSeconds || channel.averageViewDurationSeconds,
+      subscribersGained: channel.subscribersGained,
+      subscribersLost: channel.subscribersLost,
+      likes: video.likes || channel.likes,
+      comments: video.comments || channel.comments,
+      shares: video.shares || channel.shares,
+      estimatedRevenueUsd: channel.estimatedRevenueUsd,
+      estimatedAdRevenueUsd: channel.estimatedAdRevenueUsd,
+      snapshotCount: channel.snapshotCount,
+    });
 
     return {
-      current: { ...current, startDate: this.toDateStr(startDate), endDate: this.toDateStr(endDate) },
-      previous: { ...previous, startDate: this.toDateStr(prevStart), endDate: this.toDateStr(prevEnd) },
+      current: { ...merge(currentChannel, currentVideo), startDate: this.toDateStr(startDate), endDate: this.toDateStr(endDate) },
+      previous: { ...merge(previousChannel, previousVideo), startDate: this.toDateStr(prevStart), endDate: this.toDateStr(prevEnd) },
     };
   }
 

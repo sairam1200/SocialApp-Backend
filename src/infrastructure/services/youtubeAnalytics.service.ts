@@ -515,7 +515,7 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
       where: {
         userId,
         platform: _const.PLATFORMS.YOUTUBE,
-        type: In(['uploaded_video', 'playlist_video']),
+        type: In(['uploaded_video']),
       },
     });
 

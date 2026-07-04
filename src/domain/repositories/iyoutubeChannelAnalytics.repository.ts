@@ -1,6 +1,7 @@
 import { YoutubeChannelAnalytics } from '../entities/youtubeChannelAnalytics.entity';
 
 export interface ChannelMetricsAggregate {
+  viewCount: number;
   estimatedMinutesWatched: number;
   averageViewDurationSeconds: number;
   subscribersGained: number;

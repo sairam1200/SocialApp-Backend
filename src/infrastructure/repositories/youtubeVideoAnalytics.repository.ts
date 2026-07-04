@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { YoutubeVideoAnalytics } from '../../domain/entities/youtubeVideoAnalytics.entity';
-import { IYoutubeVideoAnalyticsRepository } from '../../domain/repositories/iyoutubeVideoAnalytics.repository';
+import { IYoutubeVideoAnalyticsRepository, VideoMetricsAggregate } from '../../domain/repositories/iyoutubeVideoAnalytics.repository';
 
 @Injectable()
 export class YoutubeVideoAnalyticsRepository implements IYoutubeVideoAnalyticsRepository {
@@ -119,6 +119,32 @@ export class YoutubeVideoAnalyticsRepository implements IYoutubeVideoAnalyticsRe
       .orderBy('va.viewCount', 'DESC')
       .limit(limit)
       .getMany();
+  }
+
+  async getAggregatedVideoMetricsAsync(userId: string, startDate: Date, endDate: Date): Promise<VideoMetricsAggregate> {
+    const raw = await this.videoAnalyticsContext
+      .createQueryBuilder('va')
+      .select('COALESCE(SUM(va.viewCount), 0)', 'viewCount')
+      .addSelect('COALESCE(SUM(va.estimatedMinutesWatched), 0)', 'estimatedMinutesWatched')
+      .addSelect('COALESCE(AVG(va.averageViewDurationSeconds), 0)', 'averageViewDurationSeconds')
+      .addSelect('COALESCE(SUM(va.likeCount), 0)', 'likes')
+      .addSelect('COALESCE(SUM(va.commentCount), 0)', 'comments')
+      .addSelect('COALESCE(SUM(va.shares), 0)', 'shares')
+      .addSelect('COUNT(DISTINCT va.videoId)', 'videoCount')
+      .where('va.userId = :userId', { userId })
+      .andWhere('va.snapshotDate >= :startDate', { startDate })
+      .andWhere('va.snapshotDate <= :endDate', { endDate })
+      .getRawOne();
+
+    return {
+      viewCount: Number(raw?.viewCount) || 0,
+      estimatedMinutesWatched: Number(raw?.estimatedMinutesWatched) || 0,
+      averageViewDurationSeconds: Number(raw?.averageViewDurationSeconds) || 0,
+      likes: Number(raw?.likes) || 0,
+      comments: Number(raw?.comments) || 0,
+      shares: Number(raw?.shares) || 0,
+      videoCount: Number(raw?.videoCount) || 0,
+    };
   }
 
   async getTopVideosByVideoIdsSortedAsync(userId: string, videoIds: string[], limit: number): Promise<YoutubeVideoAnalytics[]> {
