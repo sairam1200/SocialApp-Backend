@@ -155,10 +155,8 @@ export class UserContentRepository implements IUserContentRepository {
         ELSE 2 END`, "ASC")
       .addOrderBy("content.publishedAt", "DESC", "NULLS LAST")
       .setParameters({ keyword, prefix: `${escapedKeyword}%` });
-      //
-      console.log(qb.getQueryAndParameters());
     const rows = await qb.clone().getRawMany();
-const count = rows.length;
+    const count = rows.length;
     
     return [rows.map(this.mapSearchRow), count];
   }
