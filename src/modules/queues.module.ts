@@ -101,8 +101,9 @@ export class QueuesModule implements NestModule, OnApplicationShutdown {
         dependency.R2StorageService,
 
          dependency.YoutubeChannelAnalyticsRepository,
-  dependency.YoutubeVideoAnalyticsRepository,
-  dependency.YoutubeAnalyticsService,
+   dependency.YoutubeVideoAnalyticsRepository,
+   dependency.YoutubeAnalyticsService,
+   dependency.YoutubeImportService,
         
         // Conditionally register workers (processors decorated with @Processor)
         // When DISABLE_WORKERS=true, consumers use this module but no workers run.

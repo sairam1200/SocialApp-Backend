@@ -1,195 +1,380 @@
-import { IYoutubeImportService } from "domain/services/youtube/iyoutube-import.services";
 import { Injectable, Inject } from "@nestjs/common";
-import _const from "../../../core/utils/const";
-import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
+import { Job } from "bullmq";
+import axios, { AxiosError, AxiosRequestConfig } from "axios";
+import { IYoutubeImportService, YoutubePlaylistItem } from "domain/services/youtube/iyoutube-import.services";
 import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
-import axios from "axios";
+import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
+import { IContentStreamRepository } from "../../../domain/repositories/icontentStream.repository";
+import { INotificationService } from "../../../domain/services/inotification.service";
+import { IYoutubeAnalyticsService } from "../../../domain/services/iyoutubeAnalytics.service";
+import { NotificationStatus, NotificationType } from "../../../domain/enums";
+import { NotificationModel } from "../../../domain/contracts/notification.model";
+import { mapToNotificationModel } from "../../../domain/mappers/notification.mapper";
+import { mapToYouTubeContentModel } from "../../../domain/mappers/youtube.mapper";
 import { UserContent } from "../../../domain/entities/userContent.entity";
+import { ImportGateway } from "../../../infrastructure/websocket/gateways/import.gateway";
+import _const from "../../../core/utils/const";
+import logger from "../../../core/utils/winston.util";
+
+interface CursorMap {
+  [key: string]: string | null;
+}
+
+interface YoutubeVideoStatistics {
+  viewCount?: string;
+  likeCount?: string;
+  commentCount?: string;
+}
+
+interface YoutubeVideoStats {
+  statistics?: YoutubeVideoStatistics;
+  duration?: string;
+}
+
+interface YoutubeApiVideoItem {
+  id: string;
+  statistics?: YoutubeVideoStatistics;
+  contentDetails?: { duration?: string };
+}
+
+interface YoutubeVideosListResponse {
+  items?: YoutubeApiVideoItem[];
+  pageInfo?: { totalResults?: number; resultsPerPage?: number };
+}
+
+interface YoutubeApiListResponse {
+  items?: Record<string, unknown>[];
+  nextPageToken?: string;
+  pageInfo?: { totalResults?: number; resultsPerPage?: number };
+}
+
+const NOTIFICATION_UPDATE_INTERVAL = 10;
+
 @Injectable()
-export class YoutubeImportService
-  implements IYoutubeImportService {
-
+export class YoutubeImportService implements IYoutubeImportService {
   constructor(
-    @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
-    private readonly linkedAccountRepository: ILinkedAccountRepository,
-
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
-  ) { }
-  private parseDurationToSeconds(duration: string): number {
-    const match = duration.match(
-      /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/
-    );
+    @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
+    private readonly linkedAccountRepository: ILinkedAccountRepository,
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
+    @Inject(_const.INOTIFICATION_SERVICE)
+    private readonly notificationService: INotificationService,
+    @Inject(_const.IYOUTUBEANALYTICS_SERVICE)
+    private readonly youtubeAnalyticsService: IYoutubeAnalyticsService,
+    private readonly gateway: ImportGateway,
+  ) {}
 
+  parseDurationToSeconds(duration: string): number {
+    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
     if (!match) return 0;
-
-    const hours = Number(match[1] || 0);
-    const minutes = Number(match[2] || 0);
-    const seconds = Number(match[3] || 0);
-
-    return hours * 3600 + minutes * 60 + seconds;
+    return Number(match[1] || 0) * 3600 + Number(match[2] || 0) * 60 + Number(match[3] || 0);
   }
-  async importUploadsAsync(
-    userId: string,
-    accessToken: string,
-  ): Promise<number> {
-    const importStartTime = Date.now();
-    const startMemory = process.memoryUsage();
-    console.log(
-      `[YoutubeImport.DIAG] importUploadsAsync START userId=${userId} memory=${JSON.stringify({ rss: Math.round(startMemory.rss / 1024 / 1024) + 'MB', heapUsed: Math.round(startMemory.heapUsed / 1024 / 1024) + 'MB' })}`,
-    );
 
+  async callYouTubeApiWithRetry<T>(
+    config: AxiosRequestConfig,
+    retries: number = 5,
+  ): Promise<{ data: T; headers: any }> {
+    let lastError: Error | undefined;
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const url = config.url || "";
+        logger.info(`[YoutubeImport] API call attempt ${attempt}/${retries}: ${config.method || "GET"} ${url}`);
+        const response = await axios({ ...config, validateStatus: () => true });
+        logger.info(
+          `[YoutubeImport] API response ${attempt}/${retries}: ${response.status} ` +
+          `quotaCost=${response.headers["x-quota-cost"] || "N/A"} ` +
+          `quotaRemaining=${response.headers["x-ratelimit-remaining"] || "N/A"}`,
+        );
+        if (response.status === 429) {
+          const retryAfter = parseInt(response.headers["retry-after"] || "0", 10);
+          const delay = Math.max(retryAfter * 1000, Math.pow(2, attempt) * 1000);
+          logger.warn(`[YoutubeImport] HTTP 429 on ${url} attempt ${attempt}/${retries}. Retrying in ${delay}ms`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          lastError = new Error("HTTP 429: rate limited");
+          continue;
+        }
+        if (response.status >= 500) {
+          const delay = Math.pow(2, attempt) * 1000;
+          logger.warn(`[YoutubeImport] HTTP ${response.status} on ${url} attempt ${attempt}/${retries}. Retrying in ${delay}ms`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          lastError = new Error(`HTTP ${response.status}`);
+          continue;
+        }
+        if (response.status >= 400) {
+          const body = JSON.stringify(response.data).substring(0, 500);
+          throw new Error(`HTTP ${response.status}: ${body}`);
+        }
+        return { data: response.data as T, headers: response.headers };
+      } catch (err) {
+        if (err instanceof AxiosError && (err.code === "ECONNRESET" || err.code === "ETIMEDOUT")) {
+          const delay = Math.pow(2, attempt) * 1000;
+          logger.warn(`[YoutubeImport] ${err.code} on attempt ${attempt}/${retries}. Retrying in ${delay}ms`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          lastError = err;
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastError || new Error(`Request failed after ${retries} retries`);
+  }
+
+  async fetchPlaylistVideosPage(
+    accessToken: string,
+    playlistId: string,
+    pageToken: string | null = null,
+  ): Promise<{ items: YoutubePlaylistItem[]; nextPageToken: string | null }> {
+    const result = await this.callYouTubeApiWithRetry<YoutubeApiListResponse>({
+      method: "GET",
+      url: "https://www.googleapis.com/youtube/v3/playlistItems",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      params: {
+        part: "snippet,contentDetails",
+        playlistId,
+        maxResults: 50,
+        pageToken: pageToken ?? undefined,
+      },
+    });
+    const rawItems = result.data.items ?? [];
+    const items: YoutubePlaylistItem[] = rawItems.map((raw: any) => ({
+      id: typeof raw.id === "string" ? raw.id : "",
+      snippet: raw.snippet
+        ? {
+            title: raw.snippet.title,
+            description: raw.snippet.description,
+            publishedAt: raw.snippet.publishedAt,
+            thumbnails: raw.snippet.thumbnails,
+            channelId: raw.snippet.channelId,
+            channelTitle: raw.snippet.channelTitle,
+          }
+        : undefined,
+      contentDetails: raw.contentDetails
+        ? { videoId: raw.contentDetails.videoId }
+        : undefined,
+    }));
+    return {
+      items,
+      nextPageToken: typeof result.data.nextPageToken === "string" ? result.data.nextPageToken : null,
+    };
+  }
+
+  async fetchPlaylistVideos(accessToken: string, playlistId: string): Promise<YoutubePlaylistItem[]> {
+    const videos: YoutubePlaylistItem[] = [];
+    let nextPageToken: string | null = null;
+    do {
+      const page = await this.fetchPlaylistVideosPage(accessToken, playlistId, nextPageToken);
+      for (const item of page.items) videos.push(item);
+      nextPageToken = page.nextPageToken;
+    } while (nextPageToken);
+
+    if (videos.length > 0) {
+      const videoIds: string[] = [];
+      for (const v of videos) {
+        const vid = v.contentDetails?.videoId;
+        if (vid) videoIds.push(vid);
+      }
+      if (videoIds.length > 0) {
+        for (let i = 0; i < videoIds.length; i += 50) {
+          const batch = videoIds.slice(i, i + 50);
+          const statsRes = await this.callYouTubeApiWithRetry<YoutubeVideosListResponse>({
+            method: "GET",
+            url: "https://www.googleapis.com/youtube/v3/videos",
+            headers: { Authorization: `Bearer ${accessToken}` },
+            params: { part: "statistics,contentDetails", id: batch.join(",") },
+          });
+          const statsMap = new Map<string, YoutubeVideoStats>();
+          for (const item of statsRes.data.items ?? []) {
+            statsMap.set(item.id, {
+              statistics: item.statistics,
+              duration: item.contentDetails?.duration,
+            });
+          }
+          for (const video of videos) {
+            const vid = video.contentDetails?.videoId;
+            if (!vid) continue;
+            const s = statsMap.get(vid);
+            if (s) {
+              video._stats = {
+                viewCount: Number(s.statistics?.viewCount || 0),
+                likeCount: Number(s.statistics?.likeCount || 0),
+                commentCount: Number(s.statistics?.commentCount || 0),
+                duration: s.duration || "PT0S",
+              };
+            }
+          }
+        }
+      }
+    }
+    return videos;
+  }
+
+  private mapContentByType(type: string, item: any, userId: string): UserContent | null {
+    const base = new UserContent({ userId, platform: _const.PLATFORMS.YOUTUBE });
+
+    switch (type) {
+      case "Subscriptions":
+        base.type = "subscription";
+        base.title = item.snippet.title;
+        base.externalId = item.snippet.resourceId.channelId;
+        base.text = item.snippet.description;
+        base.publishedAt = item.snippet.publishedAt ? new Date(item.snippet.publishedAt) : undefined;
+        base.sourceUrl = `https://www.youtube.com/channel/${item.snippet.resourceId.channelId}`;
+        base.media = [{ url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url, type: "channel", thumbnail: item.snippet.thumbnails?.high?.url }];
+        base.metaData = { description: item.snippet.description, publishedAt: item.snippet.publishedAt, thumbnails: item.snippet.thumbnails };
+        return base;
+
+      case "Playlists":
+        base.type = "playlist";
+        base.title = item.snippet.title;
+        base.externalId = item.id;
+        base.text = item.snippet.description;
+        base.publishedAt = item.snippet.publishedAt ? new Date(item.snippet.publishedAt) : undefined;
+        base.sourceUrl = `https://www.youtube.com/playlist?list=${item.id}`;
+        base.media = [{ url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url, type: "playlist", thumbnail: item.snippet.thumbnails?.high?.url }];
+        base.metaData = { playlistId: item.id, description: item.snippet.description, itemCount: item.contentDetails?.itemCount, publishedAt: item.snippet.publishedAt, thumbnails: item.snippet.thumbnails };
+        return base;
+
+      case "Activities":
+        base.type = "activity";
+        base.title = item.snippet.title;
+        base.externalId = item.id;
+        base.text = item.snippet.description;
+        base.publishedAt = item.snippet.publishedAt ? new Date(item.snippet.publishedAt) : undefined;
+        base.sourceUrl = `https://www.youtube.com/watch?v=${item.contentDetails?.upload?.videoId || item.id}`;
+        base.media = [{ url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url, type: "activity", thumbnail: item.snippet.thumbnails?.high?.url }];
+        base.metaData = { publishedAt: item.snippet.publishedAt, channelId: item.snippet.channelId, description: item.snippet.description, thumbnails: item.snippet.thumbnails, type: item.snippet.type };
+        return base;
+
+      case "ChannelInfo":
+        base.type = "channel";
+        base.title = item.snippet.title;
+        base.externalId = item.id;
+        base.text = item.snippet.description;
+        base.publishedAt = item.snippet.publishedAt ? new Date(item.snippet.publishedAt) : undefined;
+        base.sourceUrl = `https://www.youtube.com/channel/${item.id}`;
+        base.media = [{ url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url, type: "channel", thumbnail: item.snippet.thumbnails?.high?.url }];
+        if (item.statistics) {
+          base.engagement = { views: item.statistics.viewCount, subscribers: item.statistics.subscriberCount, videos: item.statistics.videoCount };
+        }
+        base.metaData = { description: item.snippet.description, publishedAt: item.snippet.publishedAt, thumbnails: item.snippet.thumbnails, statistics: item.statistics };
+        return base;
+
+      default:
+        return null;
+    }
+  }
+
+  private async saveAndEmitContent(content: UserContent, userId: string): Promise<UserContent> {
+    await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(_const.PLATFORMS.YOUTUBE, content.externalId);
+    const saved = await this.userContentRepository.createAsync(content);
+    const mapped = mapToYouTubeContentModel(saved);
+    this.gateway.emitNewImportContent(userId, _const.PLATFORMS.YOUTUBE, mapped);
+    return saved;
+  }
+
+  private async upsertNotification(
+    notification: NotificationModel | undefined,
+    userId: string,
+    reports: Array<{ type: string; totalItem: number; itemProcessed: number; progressPercent: number; status: string }>,
+  ): Promise<NotificationModel> {
+    if (!notification) {
+      const result = await this.notificationService.notifyAsync(
+        userId,
+        NotificationType.Import,
+        "Importing your Youtube data...",
+        "",
+        true,
+        { status: NotificationStatus.InProgress, reports, platform: _const.PLATFORMS.YOUTUBE },
+      );
+      return mapToNotificationModel(result);
+    }
+    await this.notificationService.updateAsync(notification.id, true, {
+      metaData: { status: NotificationStatus.InProgress, reports, platform: _const.PLATFORMS.YOUTUBE },
+    });
+    return notification;
+  }
+
+  private loadCursors(account: any): CursorMap {
+    return account.metaData?.importCursors || {};
+  }
+
+  private async saveCursors(account: any, cursors: CursorMap): Promise<void> {
+    if (!account.metaData) account.metaData = {};
+    account.metaData.importCursors = cursors;
+    await this.linkedAccountRepository.updateAsync(account);
+  }
+
+  private async clearCursors(account: any): Promise<void> {
+    if (account.metaData?.importCursors) {
+      delete account.metaData.importCursors;
+      await this.linkedAccountRepository.updateAsync(account);
+    }
+  }
+
+  async importUploadsAsync(userId: string, accessToken: string): Promise<number> {
     let importedCount = 0;
     let pageCount = 0;
 
     try {
-      const channelStartTime = Date.now();
-      const channelResponse = await axios.get(
-        "https://www.googleapis.com/youtube/v3/channels",
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-          params: {
-            part: "snippet,contentDetails",
-            mine: true,
-          },
-        },
-      );
-      const channelDuration = Date.now() - channelStartTime;
-      console.log(
-        `[YoutubeImport.DIAG] GET channels duration=${channelDuration}ms status=${channelResponse.status}`,
-      );
+      const channelRes = await axios.get("https://www.googleapis.com/youtube/v3/channels", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: { part: "snippet,contentDetails", mine: true },
+      });
 
-      console.info(
-        `[YoutubeImport] Importing subscriptions for channel: ${channelResponse.data.items?.[0]?.id}`,
-      );
-
-      console.info(
-        `[YoutubeImport] Channel title: ${channelResponse.data.items?.[0]?.snippet?.title}`,
-      );
-      const channel = channelResponse.data?.items?.[0];
-      if (!channel) {
-        console.log(`[YoutubeImport.DIAG] No channel found, returning 0`);
-        return 0;
-      }
+      const channel = channelRes.data?.items?.[0];
+      if (!channel) return 0;
 
       const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
-      if (!uploadsPlaylistId) {
-        console.log(`[YoutubeImport.DIAG] No uploads playlist found, returning 0`);
-        return 0;
-      }
-      console.log(`[YoutubeImport.DIAG] uploadsPlaylistId=${uploadsPlaylistId}`);
+      if (!uploadsPlaylistId) return 0;
 
       let nextPageToken: string | null = null;
 
       do {
         pageCount++;
-        const pageStartTime = Date.now();
-        const playlistStartTime = Date.now();
-
         let playlistResponse;
         try {
-          playlistResponse = await axios.get(
-            "https://www.googleapis.com/youtube/v3/playlistItems",
-            {
-              headers: { Authorization: `Bearer ${accessToken}` },
-              params: {
-                part: "snippet,contentDetails",
-                playlistId: uploadsPlaylistId,
-                maxResults: 50,
-                pageToken: nextPageToken ?? undefined,
-              },
-            },
-          );
-        } catch (err: any) {
-          console.error(
-            `[YoutubeImport.DIAG] FAIL playlistItems page=${pageCount} pageToken=${nextPageToken ?? 'null'} error=${err.message} stack=${err.stack} importedSoFar=${importedCount}`,
-          );
+          playlistResponse = await axios.get("https://www.googleapis.com/youtube/v3/playlistItems", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            params: { part: "snippet,contentDetails", playlistId: uploadsPlaylistId, maxResults: 50, pageToken: nextPageToken ?? undefined },
+          });
+        } catch {
           break;
         }
-        const playlistDuration = Date.now() - playlistStartTime;
-        console.log(
-          `[YoutubeImport.DIAG] GET playlistItems page=${pageCount} pageToken=${nextPageToken ?? 'null'} duration=${playlistDuration}ms status=${playlistResponse.status} nextPageToken=${playlistResponse.data?.nextPageToken ?? 'null'}`,
-        );
 
         const items = playlistResponse.data?.items ?? [];
         nextPageToken = playlistResponse.data?.nextPageToken ?? null;
-        console.log(
-          `[YoutubeImport.DIAG] playlistItems count=${items.length} page=${pageCount}`,
-        );
 
-        const videoIds = items
-          .map((v: any) => v.contentDetails?.videoId)
-          .filter(Boolean);
+        const videoIds = items.map((v: any) => v.contentDetails?.videoId).filter(Boolean);
+        if (videoIds.length === 0) continue;
 
-        console.log(
-          `[YoutubeImport.DIAG] extracted videoIds count=${videoIds.length}`,
-        );
-
-        if (videoIds.length === 0) {
-          console.log(`[YoutubeImport.DIAG] No videoIds on page=${pageCount}, skipping`);
-          continue;
-        }
-
-        const statsStartTime = Date.now();
         let statsResponse;
         try {
-          statsResponse = await axios.get(
-            "https://www.googleapis.com/youtube/v3/videos",
-            {
-              headers: { Authorization: `Bearer ${accessToken}` },
-              params: {
-                part: "statistics,contentDetails",
-                id: videoIds.join(","),
-              },
-            },
-          );
-        } catch (err: any) {
-          console.error(
-            `[YoutubeImport.DIAG] FAIL videos stats page=${pageCount} videoCount=${videoIds.length} error=${err.message} stack=${err.stack} importedSoFar=${importedCount}`,
-          );
+          statsResponse = await axios.get("https://www.googleapis.com/youtube/v3/videos", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            params: { part: "statistics,contentDetails", id: videoIds.join(",") },
+          });
+        } catch {
           break;
         }
-        const statsDuration = Date.now() - statsStartTime;
-        console.log(
-          `[YoutubeImport.DIAG] GET videos stats page=${pageCount} duration=${statsDuration}ms status=${statsResponse.status} items=${statsResponse.data?.items?.length ?? 0}`,
-        );
 
-        const videoDetailsMap = new Map(
+        const detailsMap = new Map(
           (statsResponse.data?.items ?? []).map((item: any) => [
             item.id,
-            {
-              statistics: item.statistics,
-              duration: item.contentDetails?.duration,
-            },
+            { statistics: item.statistics, duration: item.contentDetails?.duration },
           ]),
         );
 
-        let insertedOnPage = 0;
-        let skippedOnPage = 0;
-
         for (const item of items) {
           const videoId = item.contentDetails?.videoId;
-          if (!videoId) {
-            skippedOnPage++;
-            continue;
-          }
+          if (!videoId) continue;
 
-          const details = videoDetailsMap.get(videoId) as
-            | {
-                statistics?: {
-                  viewCount?: string;
-                  likeCount?: string;
-                  commentCount?: string;
-                };
-                duration?: string;
-              }
-            | undefined;
-
+          const details = detailsMap.get(videoId) as any;
           const duration = details?.duration ?? "PT0S";
           const durationSeconds = this.parseDurationToSeconds(duration);
           const isShort = durationSeconds <= 180;
 
-          const saveStartTime = Date.now();
           try {
             await this.userContentRepository.createAsync(
               new UserContent({
@@ -207,10 +392,7 @@ export class YoutubeImportService
                   viewCount: Number(details?.statistics?.viewCount ?? 0),
                   likeCount: Number(details?.statistics?.likeCount ?? 0),
                   commentCount: Number(details?.statistics?.commentCount ?? 0),
-                  thumbnailUrl:
-                    item.snippet?.thumbnails?.high?.url ??
-                    item.snippet?.thumbnails?.medium?.url ??
-                    item.snippet?.thumbnails?.default?.url,
+                  thumbnailUrl: item.snippet?.thumbnails?.high?.url ?? item.snippet?.thumbnails?.medium?.url ?? item.snippet?.thumbnails?.default?.url,
                   channelId: channel.id,
                   channelTitle: channel.snippet?.title,
                   youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`,
@@ -218,156 +400,60 @@ export class YoutubeImportService
                 },
               }),
             );
-          } catch (err: any) {
-            console.error(
-              `[YoutubeImport.DIAG] FAIL save video videoId=${videoId} title="${item.snippet?.title ?? 'Untitled'}" page=${pageCount} error=${err.message} stack=${err.stack}`,
-            );
-            skippedOnPage++;
+            importedCount++;
+          } catch {
             continue;
           }
-          const saveDuration = Date.now() - saveStartTime;
-          if (saveDuration > 1000) {
-            console.warn(
-              `[YoutubeImport.DIAG] SLOW save videoId=${videoId} duration=${saveDuration}ms`,
-            );
-          }
-
-          insertedOnPage++;
-          importedCount++;
         }
-
-        const pageDuration = Date.now() - pageStartTime;
-        const currentMemory = process.memoryUsage();
-        const elapsed = Date.now() - importStartTime;
-        console.log(
-          `[YoutubeImport.DIAG] PAGE END page=${pageCount} inserted=${insertedOnPage} skipped=${skippedOnPage} pageDuration=${pageDuration}ms elapsed=${elapsed}ms nextPageToken=${nextPageToken ?? 'null'} memory=${JSON.stringify({ rss: Math.round(currentMemory.rss / 1024 / 1024) + 'MB', heapUsed: Math.round(currentMemory.heapUsed / 1024 / 1024) + 'MB' })}`,
-        );
       } while (nextPageToken);
 
-      const totalDuration = Date.now() - importStartTime;
-      const endMemory = process.memoryUsage();
-      console.log(
-        `[YoutubeImport.DIAG] importUploadsAsync COMPLETE userId=${userId} totalImported=${importedCount} pages=${pageCount} totalDuration=${totalDuration}ms memory=${JSON.stringify({ rss: Math.round(endMemory.rss / 1024 / 1024) + 'MB', heapUsed: Math.round(endMemory.heapUsed / 1024 / 1024) + 'MB' })}`,
-      );
-
       return importedCount;
-    } catch (err: any) {
-      const totalDuration = Date.now() - importStartTime;
-      const failMemory = process.memoryUsage();
-      console.error(
-        `[YoutubeImport.DIAG] UNCAUGHT FAILURE userId=${userId} importedBeforeFailure=${importedCount} pagesCompleted=${pageCount} totalDuration=${totalDuration}ms error=${err.message} stack=${err.stack} memory=${JSON.stringify({ rss: Math.round(failMemory.rss / 1024 / 1024) + 'MB', heapUsed: Math.round(failMemory.heapUsed / 1024 / 1024) + 'MB' })}`,
-      );
-      throw err;
+    } catch {
+      throw new Error("YouTube import uploads failed");
     }
   }
 
-  async importSubscriptionsAsync(
-    userId: string,
-    accessToken: string,
-  ): Promise<number> {
-
+  async importSubscriptionsAsync(userId: string, accessToken: string): Promise<number> {
     let importedCount = 0;
-    await this.userContentRepository.deleteByUserIdAndPlatformAsync(
-      userId,
-      _const.PLATFORMS.YOUTUBE,
-    );
-    const feedResponse = await axios.get(
-      "https://www.googleapis.com/youtube/v3/subscriptions",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        params: {
-          part: "snippet",
-          mine: true,
-          maxResults: 50,
-        },
-      },
-    );
+    await this.userContentRepository.deleteByUserIdAndPlatformAsync(userId, _const.PLATFORMS.YOUTUBE);
 
-    const feed = feedResponse.data?.items ?? [];
+    const feedRes = await axios.get("https://www.googleapis.com/youtube/v3/subscriptions", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      params: { part: "snippet", mine: true, maxResults: 50 },
+    });
 
-    for (const subscription of feed) {
-      const subscribedChannelId =
-        subscription.snippet?.resourceId?.channelId;
+    for (const sub of feedRes.data?.items ?? []) {
+      const channelId = sub.snippet?.resourceId?.channelId;
+      if (!channelId) continue;
 
-      if (!subscribedChannelId) {
-        continue;
-      }
+      const searchRes = await axios.get("https://www.googleapis.com/youtube/v3/search", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: { part: "snippet", channelId, order: "date", type: "video", maxResults: 5 },
+      });
 
-      const latestVideosResponse = await axios.get(
-        "https://www.googleapis.com/youtube/v3/search",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          params: {
-            part: "snippet",
-            channelId: subscribedChannelId,
-            order: "date",
-            type: "video",
-            maxResults: 5,
-          },
-        },
-      );
+      const videoIds = (searchRes.data?.items ?? []).map((v: any) => v.id?.videoId).filter(Boolean);
+      if (videoIds.length === 0) continue;
 
-      const latestVideos =
-        latestVideosResponse.data?.items ?? [];
+      const statsRes = await axios.get("https://www.googleapis.com/youtube/v3/videos", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: { part: "statistics,contentDetails", id: videoIds.join(",") },
+      });
 
-      const videoIds = latestVideos
-        .map(v => v.id?.videoId)
-        .filter(Boolean);
-
-      if (videoIds.length === 0) {
-        continue;
-      }
-
-      const statsResponse = await axios.get(
-        "https://www.googleapis.com/youtube/v3/videos",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          params: {
-            part: "statistics,contentDetails",
-            id: videoIds.join(","),
-          },
-        },
-      );
-      const videoDetailsMap = new Map(
-        (statsResponse.data?.items ?? []).map(item => [
+      const detailsMap = new Map(
+        (statsRes.data?.items ?? []).map((item: any) => [
           item.id,
-          {
-            statistics: item.statistics,
-            duration: item.contentDetails?.duration,
-          },
+          { statistics: item.statistics, duration: item.contentDetails?.duration },
         ]),
       );
 
-      for (const video of latestVideos) {
+      for (const video of searchRes.data?.items ?? []) {
         const videoId = video.id?.videoId;
+        if (!videoId) continue;
 
-        if (!videoId) {
-          continue;
-        }
-
-        const details = videoDetailsMap.get(videoId) as
-          | {
-            statistics?: {
-              viewCount?: string;
-              likeCount?: string;
-              commentCount?: string;
-            };
-            duration?: string;
-          }
-          | undefined;
-
+        const details = detailsMap.get(videoId) as any;
         const duration = details?.duration ?? "PT0S";
+        const isShort = this.parseDurationToSeconds(duration) <= 180;
 
-        const durationSeconds =
-          this.parseDurationToSeconds(duration);
-
-        const isShort = durationSeconds <= 180;
         await this.userContentRepository.createAsync(
           new UserContent({
             userId,
@@ -381,39 +467,313 @@ export class YoutubeImportService
               duration,
               description: video.snippet?.description,
               publishedAt: video.snippet?.publishedAt,
-
-              viewCount: Number(details?.statistics.likeCount ?? 0),
-              likeCount: Number(details?.statistics.likeCount ?? 0),
-              commentCount: Number(details?.statistics.commentCount ?? 0),
-
-              thumbnail:
-                video.snippet?.thumbnails?.high?.url ??
-                video.snippet?.thumbnails?.medium?.url ??
-                video.snippet?.thumbnails?.default?.url,
-
+              viewCount: Number(details?.statistics?.likeCount ?? 0),
+              likeCount: Number(details?.statistics?.likeCount ?? 0),
+              commentCount: Number(details?.statistics?.commentCount ?? 0),
+              thumbnail: video.snippet?.thumbnails?.high?.url ?? video.snippet?.thumbnails?.medium?.url ?? video.snippet?.thumbnails?.default?.url,
               channelId: video.snippet?.channelId,
               channelTitle: video.snippet?.channelTitle,
-
-              youtubeUrl:
-                `https://www.youtube.com/watch?v=${videoId}`,
-
+              youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`,
               importedAt: new Date().toISOString(),
             },
           }),
         );
-
         importedCount++;
       }
     }
-
     return importedCount;
   }
-  async refreshChannelProfileAsync(
-    userId: string,
-    accessToken: string,
-  ): Promise<void> {
 
-    // move channel profile update logic here
+  async refreshChannelProfileAsync(userId: string, accessToken: string): Promise<void> {
+    // Channel profile refresh is not yet implemented
   }
 
+  async importFullAsync(account: any, accessToken: string, job?: Job): Promise<void> {
+    const currentAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+      _const.PLATFORMS.YOUTUBE,
+      account.userId,
+    );
+    if (!currentAccount) {
+      logger.error(`[YoutubeImport] Account not found for user ${account.userId}`);
+      return;
+    }
+
+    if (job && !(await job.isActive())) {
+      logger.info(`[YoutubeImport] Job ${job.id} is no longer active, stopping import for user ${account.userId}`);
+      return;
+    }
+
+    logger.info(`[YoutubeImport] Starting full import for user ${account.userId}`);
+
+    const progressReports: Record<string, { totalItem: number; itemProcessed: number; progressPercent: number; status: string }> = {};
+    const lastCursors: CursorMap = this.loadCursors(currentAccount);
+    const importedExternalIds: string[] = [];
+
+    const fields: Record<string, { endpoint: string; type: string; params?: any; uploadsPlaylistExtractor?: (item: any) => string | null }> = {
+      subscriptions: { endpoint: "subscriptions", type: "Subscriptions", params: { mine: true, part: "snippet,contentDetails", maxResults: 50 } },
+      playlists: { endpoint: "playlists", type: "Playlists", params: { mine: true, part: "snippet,contentDetails" } },
+      activities: { endpoint: "activities", type: "Activities", params: { mine: true, part: "snippet,contentDetails", maxResults: 50 } },
+      channels: {
+        endpoint: "channels", type: "ChannelInfo", params: { mine: true, part: "snippet,contentDetails,statistics" },
+        uploadsPlaylistExtractor: (item: any) => item.contentDetails?.relatedPlaylists?.uploads || null,
+      },
+    };
+
+    let uploadsPlaylistId: string | null = null;
+    let notification: NotificationModel | undefined;
+    let encounteredError = false;
+    let itemsSinceLastNotify = 0;
+
+    for (const [key, { endpoint, type, params, uploadsPlaylistExtractor }] of Object.entries(fields)) {
+      let nextPageToken: string | null = lastCursors[type] || null;
+
+      progressReports[type] = { totalItem: 0, itemProcessed: 0, progressPercent: 0, status: NotificationStatus.InProgress };
+
+      try {
+        do {
+          if (nextPageToken) {
+            logger.debug(`[YoutubeImport] Resuming ${type} from token: ${nextPageToken.substring(0, 20)}...`);
+          }
+
+          const result = await this.callYouTubeApiWithRetry<any>({
+            method: "GET",
+            url: `https://www.googleapis.com/youtube/v3/${endpoint}`,
+            params: { ...params, pageToken: nextPageToken ?? undefined, access_token: accessToken },
+          });
+
+          const items: any[] = result.data.items ?? [];
+          const pageInfo = result.data.pageInfo ?? {};
+          nextPageToken = result.data.nextPageToken ?? null;
+
+          if (!nextPageToken) {
+            progressReports[type].status = NotificationStatus.Completed;
+            delete lastCursors[type];
+          }
+
+          if (pageInfo.totalResults) {
+            progressReports[type].totalItem = pageInfo.totalResults;
+          }
+
+          for (const item of items) {
+            if (uploadsPlaylistExtractor) {
+              const pid = uploadsPlaylistExtractor(item);
+              if (pid) uploadsPlaylistId = pid;
+            }
+
+            const content = this.mapContentByType(type, item, account.userId);
+            if (content) {
+              try {
+                const saved = await this.saveAndEmitContent(content, account.userId);
+                importedExternalIds.push(saved.externalId);
+
+                if (type === "Playlists" && item.id) {
+                  const playlistVideoIds = await this.importPlaylistVideosAsync(accessToken, item.id, account.userId);
+                  importedExternalIds.push(...playlistVideoIds);
+                }
+              } catch (err: any) {
+                logger.error(`[YoutubeImport] Error saving ${type} content: ${err.message}`);
+              }
+            }
+
+            progressReports[type].itemProcessed++;
+            progressReports[type].progressPercent = progressReports[type].totalItem
+              ? Math.round((progressReports[type].itemProcessed / progressReports[type].totalItem) * 100) : 0;
+
+            itemsSinceLastNotify++;
+            if (itemsSinceLastNotify >= NOTIFICATION_UPDATE_INTERVAL) {
+              const reportArray = Object.entries(progressReports).map(([t, r]) => ({ type: t, ...r }));
+              notification = await this.upsertNotification(notification, account.userId, reportArray);
+              itemsSinceLastNotify = 0;
+            }
+          }
+
+          if (nextPageToken) {
+            lastCursors[type] = nextPageToken;
+            await this.saveCursors(currentAccount, lastCursors);
+          }
+
+          if (job && !(await job.isActive())) {
+            logger.info(`[YoutubeImport] Job ${job.id} cancelled during ${type}`);
+            progressReports[type].status = NotificationStatus.Cancelled;
+            break;
+          }
+        } while (nextPageToken);
+
+        progressReports[type].status = NotificationStatus.Completed;
+        delete lastCursors[type];
+        await this.saveCursors(currentAccount, lastCursors);
+      } catch (err: any) {
+        encounteredError = true;
+        progressReports[type].status = NotificationStatus.Cancelled;
+        logger.error(`[YoutubeImport] Error importing ${type}: ${err.message}`);
+        if (nextPageToken) {
+          lastCursors[type] = nextPageToken;
+          await this.saveCursors(currentAccount, lastCursors);
+        }
+      }
+    }
+
+    if (uploadsPlaylistId) {
+      const type = "UploadedVideos";
+      let nextPageToken: string | null = lastCursors[type] || null;
+
+      progressReports[type] = { totalItem: 0, itemProcessed: 0, progressPercent: 0, status: NotificationStatus.InProgress };
+
+      try {
+        do {
+          const videos = await this.fetchPlaylistVideosPage(accessToken, uploadsPlaylistId, nextPageToken);
+          nextPageToken = videos.nextPageToken;
+
+          if (videos.items.length === 0 && !nextPageToken) {
+            progressReports[type].status = NotificationStatus.Completed;
+            delete lastCursors[type];
+            break;
+          }
+
+          for (const item of videos.items) {
+            const duration = item._stats?.duration || "PT0S";
+            const durationSeconds = this.parseDurationToSeconds(duration);
+            const isShort = durationSeconds <= 180;
+
+            const content = new UserContent({
+              userId: account.userId,
+              platform: _const.PLATFORMS.YOUTUBE,
+              type: "uploaded_video",
+              title: item.snippet?.title || "Untitled",
+              externalId: item.id,
+              text: item.snippet?.description,
+              publishedAt: item.snippet?.publishedAt ? new Date(item.snippet.publishedAt) : undefined,
+              sourceUrl: `https://www.youtube.com/watch?v=${item.contentDetails?.videoId}`,
+              media: [{ url: item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.default?.url, type: "video", thumbnail: item.snippet?.thumbnails?.high?.url }],
+              engagement: item.statistics ? { views: item.statistics.viewCount, likes: item.statistics.likeCount, comments: item.statistics.commentCount } : undefined,
+              metaData: {
+                videoId: item.contentDetails?.videoId,
+                publishedAt: item.snippet?.publishedAt,
+                description: item.snippet?.description,
+                thumbnails: item.snippet?.thumbnails,
+                viewCount: item._stats?.viewCount || 0,
+                likeCount: item._stats?.likeCount || 0,
+                commentCount: item._stats?.commentCount || 0,
+                duration,
+                isShort,
+                statistics: item.statistics,
+              },
+            });
+
+            try {
+              await this.saveAndEmitContent(content, account.userId);
+              importedExternalIds.push(content.externalId!);
+            } catch (err: any) {
+              logger.error(`[YoutubeImport] Error saving uploaded video: ${err.message}`);
+            }
+
+            progressReports[type].itemProcessed++;
+            itemsSinceLastNotify++;
+
+            if (itemsSinceLastNotify >= NOTIFICATION_UPDATE_INTERVAL) {
+              const reportArray = Object.entries(progressReports).map(([t, r]) => ({ type: t, ...r }));
+              notification = await this.upsertNotification(notification, account.userId, reportArray);
+              itemsSinceLastNotify = 0;
+            }
+          }
+
+          if (nextPageToken) {
+            lastCursors[type] = nextPageToken;
+            await this.saveCursors(currentAccount, lastCursors);
+          }
+
+          if (job && !(await job.isActive())) {
+            logger.info(`[YoutubeImport] Job ${job.id} cancelled during ${type}`);
+            progressReports[type].status = NotificationStatus.Cancelled;
+            break;
+          }
+        } while (nextPageToken);
+
+        progressReports[type].status = NotificationStatus.Completed;
+        delete lastCursors[type];
+        await this.saveCursors(currentAccount, lastCursors);
+      } catch (err: any) {
+        encounteredError = true;
+        progressReports[type].status = NotificationStatus.Cancelled;
+        logger.error(`[YoutubeImport] Error importing uploaded videos: ${err.message}`);
+        if (nextPageToken) {
+          lastCursors[type] = nextPageToken;
+          await this.saveCursors(currentAccount, lastCursors);
+        }
+      }
+    }
+
+    if (job && !(await job.isActive())) {
+      logger.info(`[YoutubeImport] Job ${job.id} was cancelled, rolling back imported content`);
+      if (importedExternalIds.length > 0) {
+        try {
+          await this.userContentRepository.deleteByExternalIdsAsync(account.userId, _const.PLATFORMS.YOUTUBE, importedExternalIds);
+          logger.info(`[YoutubeImport] Rolled back ${importedExternalIds.length} items for user ${account.userId}`);
+        } catch (rollbackError: any) {
+          logger.error(`[YoutubeImport] Error during rollback: ${rollbackError.message}`);
+        }
+      }
+      if (notification) {
+        const finalReports = Object.entries(progressReports).map(([t, r]) => ({ type: t, ...r }));
+        await this.notificationService.updateAsync(notification.id, false, { status: NotificationStatus.Cancelled, reports: finalReports }, "YouTube import was cancelled and rolled back");
+      }
+      return;
+    }
+
+    const finalAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.YOUTUBE, account.userId);
+    const finalReports = Object.entries(progressReports).map(([t, r]) => ({ type: t, ...r }));
+
+    if (notification) {
+      if (encounteredError) {
+        await this.notificationService.updateAsync(notification.id, false, { status: NotificationStatus.Completed, reports: finalReports }, "YouTube import completed with issues");
+      } else {
+        await this.notificationService.updateAsync(notification.id, false, { status: NotificationStatus.Completed, reports: finalReports, platform: _const.PLATFORMS.YOUTUBE }, "YouTube import completed!");
+      }
+
+      if (finalAccount) {
+        finalAccount.allowImport = true;
+        await this.clearCursors(finalAccount);
+        await this.linkedAccountRepository.updateAsync(finalAccount);
+      }
+
+      try {
+        await this.youtubeAnalyticsService.syncAccountAnalyticsAsync(account.userId, { forceRefresh: true });
+        logger.info(`[YoutubeImport] Analytics sync completed for user ${account.userId}`);
+      } catch (analyticsError: any) {
+        logger.warn(`[YoutubeImport] Analytics sync failed after import: ${analyticsError.message}`);
+      }
+    } else {
+      await this.notificationService.notifyAsync(account.userId, NotificationType.Import, "YouTube import could not start", "Unable to initialize YouTube data import.", false, { status: NotificationStatus.Cancelled, reports: finalReports });
+    }
+  }
+
+  private async importPlaylistVideosAsync(accessToken: string, playlistId: string, userId: string): Promise<string[]> {
+    const ids: string[] = [];
+    try {
+      const videos = await this.fetchPlaylistVideos(accessToken, playlistId);
+      for (const video of videos) {
+        const content = new UserContent({
+          userId, platform: _const.PLATFORMS.YOUTUBE, type: "playlist_video",
+          title: video.snippet?.title || "Untitled",
+          externalId: video.id,
+          metaData: {
+            videoId: video.contentDetails?.videoId,
+            publishedAt: video.snippet?.publishedAt,
+            description: video.snippet?.description,
+            thumbnails: video.snippet?.thumbnails,
+            playlistId,
+          },
+        });
+        try {
+          const saved = await this.saveAndEmitContent(content, userId);
+          ids.push(saved.externalId);
+        } catch (err: any) {
+          logger.error(`[YoutubeImport] Error saving playlist video: ${err.message}`);
+        }
+      }
+    } catch (err: any) {
+      logger.error(`[YoutubeImport] Error fetching playlist videos for ${playlistId}: ${err.message}`);
+    }
+    return ids;
+  }
 }
