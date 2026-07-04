@@ -193,7 +193,9 @@ export class UserRepository implements IUserRepository {
         "user.lastName AS \"lastName\"",
         "user.userName AS \"userName\"",
         "user.bio AS bio",
+        "biometrics.\"profileImageUrl\" AS \"profileImage\"",
       ])
+      .leftJoin(UserBiometric, "biometrics", "biometrics.\"userId\" = user.id")
       .where("user.isActive = true")
       .andWhere("user.type = :userType", { userType: UserType.User })
       .andWhere(visibility, { viewerUserId })

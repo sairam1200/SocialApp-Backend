@@ -175,6 +175,7 @@ export class UserContentRepository implements IUserContentRepository {
         "content.id AS id", "content.title AS title", "content.type AS type",
         "content.platform AS platform", "content.externalId AS \"externalId\"",
         "content.sourceUrl AS \"sourceUrl\"", "content.publishedAt AS \"publishedAt\"",
+        "content.media AS media",
         "creator.id AS \"userId\"", "creator.firstName AS \"userFirstName\"",
         "creator.lastName AS \"userLastName\"", "creator.userName AS \"userName\"",
         "creator.bio AS \"userBio\"",
@@ -192,6 +193,7 @@ export class UserContentRepository implements IUserContentRepository {
     return {
       id: row.id, title: row.title, type: row.type, platform: row.platform,
       externalId: row.externalId, sourceUrl: row.sourceUrl, publishedAt: row.publishedAt,
+      media: row.media ?? null,
       user: {
         id: row.userId, firstName: row.userFirstName, lastName: row.userLastName,
         userName: row.userName, bio: row.userBio,

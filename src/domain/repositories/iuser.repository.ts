@@ -1,7 +1,9 @@
 import { User, UserClaim, UserRole, UserBiometric } from "../entities";
 import { ProfileImagePrivacy } from "../enums";
 
-export type SearchUserProjection = Pick<User, "id" | "firstName" | "lastName" | "userName" | "bio">;
+export type SearchUserProjection = Pick<User, "id" | "firstName" | "lastName" | "userName" | "bio"> & {
+  profileImage?: string;
+};
 
 export interface IUserRepository {
 

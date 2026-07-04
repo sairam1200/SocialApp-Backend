@@ -2,7 +2,7 @@ import { QueryOptions } from "../types/queryOptions.type";
 import { UserContent } from "../entities/userContent.entity";
 import { SearchUserProjection } from "./iuser.repository";
 
-export type SearchContentProjection = Pick<UserContent, "id" | "title" | "type" | "platform" | "externalId" | "sourceUrl" | "publishedAt"> & {
+export type SearchContentProjection = Pick<UserContent, "id" | "title" | "type" | "platform" | "externalId" | "sourceUrl" | "publishedAt" | "media"> & {
   user: SearchUserProjection;
 };
 
