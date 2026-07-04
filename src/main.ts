@@ -62,9 +62,11 @@ const cookieParser = require('cookie-parser');
   app.use(ApiDocRedirectMiddleware);
   app.useGlobalFilters(new ErrorHandlersFilter());
 
-  await app.listen(configs.port);
+  const port = Number(process.env.PORT) || configs.port || 8080;
 
-  logger.info(`🚀 Application is running on: http://localhost:${configs.port}`);
+await app.listen(port, '0.0.0.0');
+
+logger.info(`🚀 Application is running on port ${port}`);
 }
 bootstrap().catch((error) => {
   logger.error(`Failed to start server: ERROR = ${error.message}`);
