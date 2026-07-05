@@ -19,13 +19,13 @@ async function bootstrap() {
     logger.error(`Uncaught Exception: ${reason}`);
   });
 
-logger.info("1 Starting");
+console.log("1 Starting");
 
 await redis.connectToRedis();
-logger.info("2 Redis connected");
+console.log("2 Redis connected");
 
 const app = await NestFactory.create(AppModule);
-logger.info("3 Nest created");
+console.log("3 Nest created");
   app.enableShutdownHooks();
 const cookieParser = require('cookie-parser');
   const globalPrefix = 'api';
