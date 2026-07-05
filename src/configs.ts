@@ -12,7 +12,7 @@ process.env.NODE_ENV = nodeEnv;
 dotenv.config({ path: path.join(process.cwd(), `.env.${nodeEnv}`) })
 dotenv.config({ override: true })
 console.log(
-  "CONFIG FILE LOADED"
+  "CONFIG FILE LOADED", process.env.DATABASE_URL
 );
 
 const envVarsSchema = Joi.object()
@@ -268,6 +268,8 @@ const envVarsSchema = Joi.object()
       .description('Cloudflare R2 access key ID'),
     R2_SECRET_ACCESS_KEY: Joi.string()
       .description('Cloudflare R2 secret access key'),
+    DATABASE_URL: Joi.string()
+  .description('PostgreSQL connection string'),
   })
   .unknown();
 
@@ -288,6 +290,7 @@ export default {
     path: envVars.LOG_PATH,
   },
   postgres: {
+     url: envVars.DATABASE_URL,
     host: envVars.POSTGRES_HOST,
     port: envVars.POSTGRES_PORT,
     username: envVars.POSTGRES_USERNAME,
