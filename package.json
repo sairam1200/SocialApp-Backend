@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
+    "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json && nest start --watch",
     "debug": "tsc -p tsconfig.json && nest start --debug --watch",
      "start": "node dist/main.js",

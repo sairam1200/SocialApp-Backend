@@ -22,7 +22,6 @@ async function bootstrap() {
   await redis.connectToRedis();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  await dataSource.initialize();
   app.enableShutdownHooks();
 const cookieParser = require('cookie-parser');
   const globalPrefix = 'api';

@@ -58,3 +58,5 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 package-lock.json
 .vscode/settings.json
+
+/src/generated/prisma
