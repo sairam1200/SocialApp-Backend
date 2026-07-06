@@ -1,4 +1,10 @@
-import { Controller, Get, Param, Inject, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Inject,
+  NotFoundException,
+} from '@nestjs/common';
 import { ApiTags, ApiResponse } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import { IYoutubeVideoRepository } from '../../../../domain/repositories/iyoutubeVideo.repository';
@@ -30,7 +36,9 @@ export class YoutubeUploadStatusController {
   @Get('upload/status/:videoId')
   @ApiResponse({ status: 200, description: 'Video upload status' })
   @ApiResponse({ status: 404, description: 'Video not found' })
-  async getStatus(@Param('videoId') videoId: string): Promise<VideoStatusResponse> {
+  async getStatus(
+    @Param('videoId') videoId: string,
+  ): Promise<VideoStatusResponse> {
     const video = await this.videoRepo.getByIdAsync(videoId);
     if (!video) {
       throw new NotFoundException('Video not found');

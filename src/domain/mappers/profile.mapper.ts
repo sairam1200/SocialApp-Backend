@@ -1,9 +1,9 @@
-import { User } from "../entities";
-import { LinkedAccount } from "../entities";
-import { ManualProfile } from "../entities";
-import { ProfileModel } from "../contracts/profile.model";
-import { mapToManualProfileModel } from "./manualProfile.mapper";
-import { mapToUserModel, mapToLinkedAccountsModel } from "./user.mapper";
+import { User } from '../entities';
+import { LinkedAccount } from '../entities';
+import { ManualProfile } from '../entities';
+import { ProfileModel } from '../contracts/profile.model';
+import { mapToManualProfileModel } from './manualProfile.mapper';
+import { mapToUserModel, mapToLinkedAccountsModel } from './user.mapper';
 
 export function mapToProfileModel(
   user: User,
@@ -13,9 +13,13 @@ export function mapToProfileModel(
   profileImageUrl: string | null = null,
   followersCount: number = 0,
   followingCount: number = 0,
-  isFollowing: boolean = false
+  isFollowing: boolean = false,
 ): ProfileModel {
-  const { isEmailVerified, ...userModel } = mapToUserModel(user, includeSensitiveFields, profileImageUrl);
+  const { isEmailVerified, ...userModel } = mapToUserModel(
+    user,
+    includeSensitiveFields,
+    profileImageUrl,
+  );
   return new ProfileModel({
     ...userModel,
     photoPrivacy: user.biometrics?.privacy,
@@ -26,4 +30,3 @@ export function mapToProfileModel(
     isFollowing,
   });
 }
-

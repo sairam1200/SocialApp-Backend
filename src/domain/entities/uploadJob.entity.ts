@@ -1,5 +1,5 @@
-import { BaseEntity } from "../baseEntity";
-import { Column, Entity, Index } from "typeorm";
+import { BaseEntity } from '../baseEntity';
+import { Column, Entity, Index } from 'typeorm';
 
 @Entity({ name: 'upload_jobs' })
 export class UploadJob extends BaseEntity {

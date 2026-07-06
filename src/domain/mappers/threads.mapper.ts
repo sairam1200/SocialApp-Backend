@@ -1,8 +1,14 @@
-import { ThreadsContentModel, ThreadsProfileModel } from "../contracts/threads.model";
-import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { UserContent } from "../entities/userContent.entity";
+import {
+  ThreadsContentModel,
+  ThreadsProfileModel,
+} from '../contracts/threads.model';
+import { LinkedAccount } from '../entities/linkedAccount.entity';
+import { UserContent } from '../entities/userContent.entity';
 
-export function mapToThreadsProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): ThreadsProfileModel {
+export function mapToThreadsProfileModel(
+  data: LinkedAccount,
+  includeSensitiveFields: boolean = false,
+): ThreadsProfileModel {
   return {
     id: data.id,
     userId: data.userId,
@@ -17,7 +23,9 @@ export function mapToThreadsProfileModel(data: LinkedAccount, includeSensitiveFi
   } as ThreadsProfileModel;
 }
 
-export function mapToThreadsContentModel(data: UserContent): ThreadsContentModel {
+export function mapToThreadsContentModel(
+  data: UserContent,
+): ThreadsContentModel {
   return {
     id: data.id,
     title: data.title,

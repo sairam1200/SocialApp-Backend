@@ -12,14 +12,18 @@ export class DiscordDisconnectCommand {
 
 @CommandHandler(DiscordDisconnectCommand)
 export class DiscordDisconnectCommandHandler
-  implements ICommandHandler<DiscordDisconnectCommand> {
+  implements ICommandHandler<DiscordDisconnectCommand>
+{
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,
-  ) { }
+  ) {}
 
   public async execute(command: DiscordDisconnectCommand): Promise<void> {
     const userId = HttpContext.getCurrentUserId;
-    await this.disconnectService.disconnectPlatformAsync(userId, _const.PLATFORMS.DISCORD);
+    await this.disconnectService.disconnectPlatformAsync(
+      userId,
+      _const.PLATFORMS.DISCORD,
+    );
   }
 }

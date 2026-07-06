@@ -6,4 +6,3 @@ export type QueryOptions = {
   searchQuery?: string;
   filter?: Record<string, any>;
 };
-

@@ -1,8 +1,14 @@
-import { SnapchatContentModel, SnapchatProfileModel } from "../contracts/snapchat.model";
-import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { UserContent } from "../entities/userContent.entity";
+import {
+  SnapchatContentModel,
+  SnapchatProfileModel,
+} from '../contracts/snapchat.model';
+import { LinkedAccount } from '../entities/linkedAccount.entity';
+import { UserContent } from '../entities/userContent.entity';
 
-export function mapToSnapchatProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): SnapchatProfileModel {
+export function mapToSnapchatProfileModel(
+  data: LinkedAccount,
+  includeSensitiveFields: boolean = false,
+): SnapchatProfileModel {
   return {
     id: data.id,
     userId: data.userId,
@@ -17,7 +23,9 @@ export function mapToSnapchatProfileModel(data: LinkedAccount, includeSensitiveF
   } as SnapchatProfileModel;
 }
 
-export function mapToSnapchatContentModel(data: UserContent): SnapchatContentModel {
+export function mapToSnapchatContentModel(
+  data: UserContent,
+): SnapchatContentModel {
   return {
     id: data.id,
     title: data.title,

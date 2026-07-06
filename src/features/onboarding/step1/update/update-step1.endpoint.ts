@@ -1,11 +1,23 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { FileInterceptor } from "@nestjs/platform-express";
-import { ApiConsumes, ApiResponse, ApiTags, ApiBody } from "@nestjs/swagger";
-import { UserAccoutGuard, OnboardingGuard } from "../../../../core/passport";
-import { OnboardingStep1Command } from "./update-step1.handler";
-import { OnboardingStep1Model, OnboardingStatusModel } from "../../../../domain/contracts/onboarding.model";
-import { Body, Controller, HttpStatus, Post, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiConsumes, ApiResponse, ApiTags, ApiBody } from '@nestjs/swagger';
+import { UserAccoutGuard, OnboardingGuard } from '../../../../core/passport';
+import { OnboardingStep1Command } from './update-step1.handler';
+import {
+  OnboardingStep1Model,
+  OnboardingStatusModel,
+} from '../../../../domain/contracts/onboarding.model';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 
 @ApiTags('Onboarding')
 @UseGuards(UserAccoutGuard, OnboardingGuard)
@@ -14,8 +26,7 @@ import { Body, Controller, HttpStatus, Post, Res, UploadedFile, UseGuards, UseIn
   version: '1',
 })
 export class UpdateOnboardingStep1Controller {
-
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('step1')
   @UseInterceptors(FileInterceptor('file'))
@@ -49,13 +60,14 @@ export class UpdateOnboardingStep1Controller {
   public async UpdateStep1(
     @UploadedFile() file: Express.Multer.File,
     @Body() request: OnboardingStep1Model,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response> {
-
-    const result = await this.commandBus.execute(new OnboardingStep1Command({
-      file,
-      model: request
-    }));
+    const result = await this.commandBus.execute(
+      new OnboardingStep1Command({
+        file,
+        model: request,
+      }),
+    );
 
     return res.status(HttpStatus.OK).send(result);
   }

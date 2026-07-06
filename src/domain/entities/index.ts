@@ -35,4 +35,3 @@ export { YoutubeVideoAnalytics } from './youtubeVideoAnalytics.entity';
 export { FacebookPageAnalytics } from './facebookPageAnalytics.entity';
 export { FacebookPostAnalytics } from './facebookPostAnalytics.entity';
 export { FacebookVideoAnalytics } from './facebookVideoAnalytics.entity';
-

@@ -16,8 +16,8 @@ import ApplicationException from '../../../../core/exceptions/application.except
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { IQueueService } from '../../../../domain/services/iqueue.service';
-import { IFacebookImportService } from "../../../../domain/services/facebook/ifacebook-import.services";
-import { deserializeObject } from "../../../../core/utils/serialization.util";
+import { IFacebookImportService } from '../../../../domain/services/facebook/ifacebook-import.services';
+import { deserializeObject } from '../../../../core/utils/serialization.util';
 export class FacebookImportRequestModel {
   @ApiProperty()
   facebookAccessToken: string;
@@ -33,7 +33,8 @@ export class FacebookImportCommand {
 
 @CommandHandler(FacebookImportCommand)
 export class FacebookImportCommandHandler
-  implements ICommandHandler<FacebookImportCommand> {
+  implements ICommandHandler<FacebookImportCommand>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
@@ -43,255 +44,162 @@ export class FacebookImportCommandHandler
     private readonly queueService: IQueueService,
     @Inject(_const.IFACEBOOK_IMPORT_SERVICE)
     private readonly facebookImportService: IFacebookImportService,
-  ) { }
+  ) {}
 
   public async execute(
-  command: FacebookImportCommand,
-): Promise<{ accessToken: string; expiresIn: number }> {
+    command: FacebookImportCommand,
+  ): Promise<{ accessToken: string; expiresIn: number }> {
+    let expiresIn: number;
 
-  let expiresIn: number;
+    const { facebookAccessToken } = command.model;
+    let accessToken: string | undefined;
 
-  const { facebookAccessToken } = command.model;
-  let accessToken: string | undefined;
+    const userId = HttpContext.user[Globals.ClaimTypes.UserId];
 
-  const userId =
-    HttpContext.user[Globals.ClaimTypes.UserId];
+    console.log('=================================');
+    console.log('FACEBOOK IMPORT EXECUTE START');
+    console.log('USER ID:', userId);
+    console.log('TOKEN PROVIDED:', !!facebookAccessToken);
+    console.log('=================================');
 
-  console.log("=================================");
-  console.log("FACEBOOK IMPORT EXECUTE START");
-  console.log("USER ID:", userId);
-  console.log(
-    "TOKEN PROVIDED:",
-    !!facebookAccessToken,
-  );
-  console.log("=================================");
+    if (facebookAccessToken) {
+      const isTokenValid =
+        await this.verifyAccessTokenAsync(facebookAccessToken);
 
-  if (facebookAccessToken) {
+      console.log('PROVIDED TOKEN VALID:', isTokenValid);
 
-    const isTokenValid =
-      await this.verifyAccessTokenAsync(
-        facebookAccessToken,
-      );
+      if (isTokenValid) {
+        accessToken = facebookAccessToken;
+      } else {
+        const userLogin = await this.getUserLoginAsync(userId);
 
-    console.log(
-      "PROVIDED TOKEN VALID:",
-      isTokenValid,
-    );
+        console.log('FACEBOOK TOKEN VALUE:', userLogin.tokenValue);
 
-    if (isTokenValid) {
+        const { access_token, expires_in } = await this.refreshTokenAsync(
+          userLogin.tokenValue,
+        );
 
-      accessToken = facebookAccessToken;
-
-    } else {
-
-      const userLogin =
-        await this.getUserLoginAsync(userId);
-
-      console.log(
-        "FACEBOOK TOKEN VALUE:",
-        userLogin.tokenValue,
-      );
-
-      const {
-        access_token,
-        expires_in,
-      } = await this.refreshTokenAsync(
-        userLogin.tokenValue,
-      );
-
-      console.log(
-        "REFRESHED TOKEN RESPONSE:",
-        {
-          access_token:
-            access_token?.substring(0, 40) + "...",
+        console.log('REFRESHED TOKEN RESPONSE:', {
+          access_token: access_token?.substring(0, 40) + '...',
           expires_in,
-        },
-      );
+        });
 
-      userLogin.tokenValue = access_token;
+        userLogin.tokenValue = access_token;
 
-      userLogin.expiryDateUtc = new Date(
-        Date.now() + expires_in * 1000,
-      );
+        userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
 
-      await this.userLoginRepository.updateAsync(
-        userLogin,
-      );
+        await this.userLoginRepository.updateAsync(userLogin);
 
-      accessToken = access_token;
-      expiresIn = expires_in;
-    }
+        accessToken = access_token;
+        expiresIn = expires_in;
+      }
+    } else {
+      const userLogin = await this.getUserLoginAsync(userId);
 
-  } else {
-
-    const userLogin =
-      await this.getUserLoginAsync(userId);
-
-    console.log(
-      "USER LOGIN FOUND:",
-      {
+      console.log('USER LOGIN FOUND:', {
         id: userLogin.id,
-        expiryDateUtc:
-          userLogin.expiryDateUtc,
-      },
-    );
+        expiryDateUtc: userLogin.expiryDateUtc,
+      });
 
-    const tokenValue =
-      deserializeObject<{
+      const tokenValue = deserializeObject<{
         access_token: string;
         expires_in: number;
       }>(userLogin.tokenValue);
 
-    console.log(
-      "DESERIALIZED TOKEN:",
-      {
-        access_token:
-          tokenValue?.access_token?.substring(
-            0,
-            40,
-          ) + "...",
-        expires_in:
-          tokenValue?.expires_in,
-      },
-    );
+      console.log('DESERIALIZED TOKEN:', {
+        access_token: tokenValue?.access_token?.substring(0, 40) + '...',
+        expires_in: tokenValue?.expires_in,
+      });
 
-    const isTokenValid =
-      await this.verifyAccessTokenAsync(
+      const isTokenValid = await this.verifyAccessTokenAsync(
         tokenValue.access_token,
       );
 
-    console.log(
-      "STORED TOKEN VALID:",
-      isTokenValid,
-    );
+      console.log('STORED TOKEN VALID:', isTokenValid);
 
-    if (!isTokenValid) {
-      throw new UnauthorizedException(
-        "Facebook login expired. Please reconnect your Facebook account.",
-      );
+      if (!isTokenValid) {
+        throw new UnauthorizedException(
+          'Facebook login expired. Please reconnect your Facebook account.',
+        );
+      }
+
+      accessToken = tokenValue.access_token;
+      expiresIn = tokenValue.expires_in;
     }
 
-    accessToken = tokenValue.access_token;
-    expiresIn = tokenValue.expires_in;
-  }
+    console.log('FINAL TOKEN:', accessToken?.substring(0, 40) + '...');
 
-  console.log(
-    "FINAL TOKEN:",
-    accessToken?.substring(0, 40) + "...",
-  );
+    console.log('FINAL EXPIRES IN:', expiresIn);
 
-  console.log(
-    "FINAL EXPIRES IN:",
-    expiresIn,
-  );
- 
-  const account =
-    await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-      _const.PLATFORMS.FACEBOOK,
-      userId,
-    );
-console.log(
-  "ACCOUNT LOOKUP RESULT:",
-  JSON.stringify(
-    account,
-    null,
-    2,
-  ),
-);
-  if (!account) {
-    throw new NotFoundException(
-      "No matching Facebook profile was found!",
-    );
-  }
+    const account =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.FACEBOOK,
+        userId,
+      );
+    console.log('ACCOUNT LOOKUP RESULT:', JSON.stringify(account, null, 2));
+    if (!account) {
+      throw new NotFoundException('No matching Facebook profile was found!');
+    }
 
-  console.log(
-    "LINKED ACCOUNT:",
-    {
+    console.log('LINKED ACCOUNT:', {
       id: account.id,
       facebookId: account.externalId,
       userName: account.userName,
       allowImport: account.allowImport,
-    },
-  );
+    });
 
-  try {
+    try {
+      console.log('CALLING FACEBOOK IMPORT SERVICE...', accessToken);
 
-    console.log(
-      "CALLING FACEBOOK IMPORT SERVICE...",accessToken,
-    );
+      const pageAccessToken = account.metaData?.pageAccessToken;
 
-    const pageAccessToken =
-  account.metaData?.pageAccessToken;
+      if (!pageAccessToken) {
+        throw new ApplicationException('Facebook Page access token not found.');
+      }
 
-if (!pageAccessToken) {
-  throw new ApplicationException(
-    "Facebook Page access token not found."
-  );
-}
+      await this.facebookImportService.importPagePostsAsync(
+        userId,
+        accessToken,
+        pageAccessToken,
+        account.externalId,
+      );
+    } catch (error: unknown) {
+      const axiosData =
+        error && typeof error === 'object' && 'response' in error
+          ? (error as { response: { data: unknown } }).response?.data
+          : undefined;
+      const errorMsg = error instanceof Error ? error.message : String(error);
 
-await this.facebookImportService.importPagePostsAsync(
-  userId,
-  accessToken,
-  pageAccessToken,
-  account.externalId,
-);
-    
-  } catch (error: unknown) {
-    const axiosData = error && typeof error === 'object' && 'response' in error
-      ? (error as { response: { data: unknown } }).response?.data
-      : undefined;
-    const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error('FACEBOOK IMPORT ERROR:', axiosData || errorMsg || error);
 
-    console.error(
-      "FACEBOOK IMPORT ERROR:",
-      axiosData || errorMsg || error,
-    );
+      logger.error(`[FacebookImport] Failed importing page posts`, error);
+    }
 
-    logger.error(
-      `[FacebookImport] Failed importing page posts`,
-      error,
-    );
-  }
+    try {
+      console.log('ENQUEUING FACEBOOK IMPORT JOB...');
 
-  try {
+      await this.queueService.enqueueFacebookImport(account, accessToken);
 
-    console.log(
-      "ENQUEUING FACEBOOK IMPORT JOB...",
-    );
+      logger.info(`[FacebookImport] Import job enqueued for user ${userId}`);
+    } catch (error) {
+      logger.error(
+        `An error occurred while enqueuing the Facebook import job:
+      ${error instanceof Error ? error.message : JSON.stringify(error)}`,
+        { error },
+      );
 
-    await this.queueService.enqueueFacebookImport(
-      account,
+      throw new ApplicationException(
+        'Failed to initiate Facebook import. Please try again later.',
+      );
+    }
+
+    console.log('FACEBOOK IMPORT EXECUTE COMPLETE');
+
+    return {
       accessToken,
-    );
-
-    logger.info(
-      `[FacebookImport] Import job enqueued for user ${userId}`,
-    );
-
-  } catch (error) {
-
-    logger.error(
-      `An error occurred while enqueuing the Facebook import job:
-      ${
-        error instanceof Error
-          ? error.message
-          : JSON.stringify(error)
-      }`,
-      { error },
-    );
-
-    throw new ApplicationException(
-      "Failed to initiate Facebook import. Please try again later.",
-    );
+      expiresIn,
+    };
   }
-
-  console.log("FACEBOOK IMPORT EXECUTE COMPLETE");
-
-  return {
-    accessToken,
-    expiresIn,
-  };
-}
 
   private async refreshTokenAsync(
     refreshToken: string,
@@ -360,45 +268,42 @@ await this.facebookImportService.importPagePostsAsync(
       // throw new ApplicationException("Something went wrong while verifying the Facebook access token. Please try again later.");
     }
   }
-private async getPageAccessTokenAsync(
-  userAccessToken: string,
-  pageId: string,
-): Promise<string> {
-  try {
-    const response = await axios.get(
-      'https://graph.facebook.com/v23.0/me/accounts',
-      {
-        params: {
-          access_token: userAccessToken,
+  private async getPageAccessTokenAsync(
+    userAccessToken: string,
+    pageId: string,
+  ): Promise<string> {
+    try {
+      const response = await axios.get(
+        'https://graph.facebook.com/v23.0/me/accounts',
+        {
+          params: {
+            access_token: userAccessToken,
+          },
         },
-      },
-    );
+      );
 
-    const page = response.data.data.find(
-      (p: { id: string; access_token?: string; name?: string }) => p.id === pageId,
-    );
+      const page = response.data.data.find(
+        (p: { id: string; access_token?: string; name?: string }) =>
+          p.id === pageId,
+      );
 
-    if (!page?.access_token) {
-      throw new Error(
-        `No access token found for page ${pageId}`,
+      if (!page?.access_token) {
+        throw new Error(`No access token found for page ${pageId}`);
+      }
+
+      return page.access_token;
+    } catch (error) {
+      logger.error(
+        `Failed to get page access token: ${
+          error instanceof Error ? error.message : JSON.stringify(error)
+        }`,
+      );
+
+      throw new UnauthorizedException(
+        'Unable to access the Facebook Page. Please reconnect your Facebook account.',
       );
     }
-
-    return page.access_token;
-  } catch (error) {
-    logger.error(
-      `Failed to get page access token: ${
-        error instanceof Error
-          ? error.message
-          : JSON.stringify(error)
-      }`,
-    );
-
-    throw new UnauthorizedException(
-      'Unable to access the Facebook Page. Please reconnect your Facebook account.',
-    );
   }
-}
   private async getUserLoginAsync(userId: string): Promise<UserLogin> {
     const now = new Date();
 
@@ -415,9 +320,7 @@ private async getPageAccessTokenAsync(
     }
 
     if (now > userLogin.expiryDateUtc) {
-      throw new ApplicationException(
-        'RECONNECT_REQUIRED',
-      );
+      throw new ApplicationException('RECONNECT_REQUIRED');
     }
 
     return userLogin;

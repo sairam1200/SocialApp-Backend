@@ -1,9 +1,16 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ActivateUserCommand } from "./activate-user.handler";
-import { ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { PermissionsGuard } from "../../../core/passport/permissions.guard";
-import { Controller, HttpStatus, Patch, Query, Res, UseGuards } from "@nestjs/common";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ActivateUserCommand } from './activate-user.handler';
+import { ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { PermissionsGuard } from '../../../core/passport/permissions.guard';
+import {
+  Controller,
+  HttpStatus,
+  Patch,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 
 @ApiTags('Users')
 @UseGuards(PermissionsGuard)
@@ -12,8 +19,7 @@ import { Controller, HttpStatus, Patch, Query, Res, UseGuards } from "@nestjs/co
   version: '1',
 })
 export class ActivateUserController {
-
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Patch('activate')
   @UseGuards(PermissionsGuard)
@@ -24,7 +30,7 @@ export class ActivateUserController {
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Activate(
     @Query('userId') userId: string,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<void> {
     await this.commandBus.execute(new ActivateUserCommand({ userId }));
     res.status(HttpStatus.NO_CONTENT).send(null);

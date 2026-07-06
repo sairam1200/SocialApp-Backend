@@ -11,8 +11,7 @@ export class RateLimitMiddleware implements NestMiddleware {
     private readonly rateLimitRepository: IRateLimitRepository,
   ) {}
 
-  private readonly limit =
-    process.env.NODE_ENV === 'production' ? 120 : 100000;
+  private readonly limit = process.env.NODE_ENV === 'production' ? 120 : 100000;
 
   private readonly windowMs = 60 * 1000; // 1 minute
 
@@ -25,7 +24,7 @@ export class RateLimitMiddleware implements NestMiddleware {
 
   async use(req: Request, res: Response, next: NextFunction) {
     // Apply rate limiting only to auth routes
-    if (!this.protectedRoutes.some(route => req.path.startsWith(route))) {
+    if (!this.protectedRoutes.some((route) => req.path.startsWith(route))) {
       return next();
     }
 

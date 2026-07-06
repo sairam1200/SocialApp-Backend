@@ -1,8 +1,8 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Controller, HttpStatus, Post, Query, Res } from "@nestjs/common";
-import { EmailInuseCommand } from "./email-inuse.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, HttpStatus, Post, Query, Res } from '@nestjs/common';
+import { EmailInuseCommand } from './email-inuse.handler';
 
 @ApiTags('Account')
 @Controller({
@@ -10,9 +10,7 @@ import { EmailInuseCommand } from "./email-inuse.handler";
   version: '1',
 })
 export class EmailInuseController {
-
-  constructor(private readonly queryBus: CommandBus) {
-  }
+  constructor(private readonly queryBus: CommandBus) {}
 
   @Post('email/in-use')
   @ApiResponse({ status: 200, description: 'OK', type: Boolean })
@@ -22,10 +20,12 @@ export class EmailInuseController {
   @ApiQuery({ name: 'email', required: true, type: String })
   public async Suggest(
     @Res() res: Response,
-    @Query('email') email?: string
+    @Query('email') email?: string,
   ): Promise<Response> {
-    const result = await this.queryBus.execute(new EmailInuseCommand({ email }));
-    res.status(HttpStatus.OK).send(result)
+    const result = await this.queryBus.execute(
+      new EmailInuseCommand({ email }),
+    );
+    res.status(HttpStatus.OK).send(result);
     return res;
   }
 }

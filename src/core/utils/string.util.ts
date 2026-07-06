@@ -5,7 +5,7 @@ export const stringUtil = {
   titleCase: (str: string): string => {
     return str
       .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   },
 
@@ -26,7 +26,8 @@ export const stringUtil = {
   },
 
   generateRandomString: (length: number): string => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const chars =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     return stringUtil.generateFromCharset(length, chars);
   },
 
@@ -36,7 +37,8 @@ export const stringUtil = {
   },
 
   generateRandomStringWithSpecialChars: (length: number): string => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+[]{}|;:,.<>?';
+    const chars =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+[]{}|;:,.<>?';
     return stringUtil.generateFromCharset(length, chars);
   },
 
@@ -58,7 +60,17 @@ export const stringUtil = {
   },
 
   extractInitialsFromName(name: string): string {
-    const FORMAL_TITLES = ["Sir", "Ma'am", "Madam", "Mr", "Mrs", "Ms", "Miss", "Dr", "Professor"];
+    const FORMAL_TITLES = [
+      'Sir',
+      "Ma'am",
+      'Madam',
+      'Mr',
+      'Mrs',
+      'Ms',
+      'Miss',
+      'Dr',
+      'Professor',
+    ];
     let cleaned = name;
 
     for (const title of FORMAL_TITLES) {
@@ -69,8 +81,7 @@ export const stringUtil = {
     cleaned = cleaned.replace(/\s+/g, ' ').replace(/,/g, '').trim();
     const words = cleaned.split(' ');
 
-    let initials = words.map(word => word.charAt(0).toUpperCase()).join('');
+    const initials = words.map((word) => word.charAt(0).toUpperCase()).join('');
     return initials.slice(0, 2);
-  }
-
+  },
 };

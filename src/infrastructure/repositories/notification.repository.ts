@@ -1,21 +1,20 @@
-import { Repository } from "typeorm";
-import { Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Notification } from "../../domain/entities/notification/notification.entity";
-import { INotificationRepository } from "../../domain/repositories/inotification.repository";
+import { Repository } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Notification } from '../../domain/entities/notification/notification.entity';
+import { INotificationRepository } from '../../domain/repositories/inotification.repository';
 
 @Injectable()
 export class NotificationRepository implements INotificationRepository {
-
   constructor(
     @InjectRepository(Notification)
     private notificationContext: Repository<Notification>,
-  ) { }
+  ) {}
 
   public async getAllAsync(userId: string): Promise<Notification[]> {
     return await this.notificationContext.find({
       where: { notifyId: userId },
-      order: { createdOn: "DESC" },
+      order: { createdOn: 'DESC' },
       take: 1000,
     });
   }
@@ -41,7 +40,7 @@ export class NotificationRepository implements INotificationRepository {
     page: number,
     pageSize: number,
     orderBy: string,
-    order: "ASC" | "DESC"
+    order: 'ASC' | 'DESC',
   ): Promise<Notification[]> {
     return await this.notificationContext.find({
       where: { notifyId: userId },

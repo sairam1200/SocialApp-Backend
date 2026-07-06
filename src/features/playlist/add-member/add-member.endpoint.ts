@@ -1,10 +1,21 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../core/passport/account.guard";
-import { PlaylistMemberModel } from "../../../domain/contracts/playlist.model";
-import { AddPlaylistMemberCommand, AddPlaylistMemberModel } from "./add-member.handler";
-import { Body, Controller, HttpStatus, Param, Put, Res, UseGuards } from "@nestjs/common";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../core/passport/account.guard';
+import { PlaylistMemberModel } from '../../../domain/contracts/playlist.model';
+import {
+  AddPlaylistMemberCommand,
+  AddPlaylistMemberModel,
+} from './add-member.handler';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Param,
+  Put,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 
 @ApiTags('Playlists')
 @UseGuards(UserAccoutGuard)
@@ -13,8 +24,7 @@ import { Body, Controller, HttpStatus, Param, Put, Res, UseGuards } from "@nestj
   version: '1',
 })
 export class AddPlaylistMemberController {
-
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Put(':id/member/add')
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
@@ -22,13 +32,17 @@ export class AddPlaylistMemberController {
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   @ApiResponse({ status: 409, description: 'CONFLICT' })
   @ApiResponse({ status: 200, description: 'OK', type: PlaylistMemberModel })
-  public async addMember(@Param('id') id: string, @Body() request: AddPlaylistMemberModel, @Res() res: Response
+  public async addMember(
+    @Param('id') id: string,
+    @Body() request: AddPlaylistMemberModel,
+    @Res() res: Response,
   ): Promise<Response> {
-
-    const result = await this.commandBus.execute(new AddPlaylistMemberCommand({
-      model: request,
-      playlistReferenceId: id
-    }));
+    const result = await this.commandBus.execute(
+      new AddPlaylistMemberCommand({
+        model: request,
+        playlistReferenceId: id,
+      }),
+    );
 
     res.status(HttpStatus.OK).send(result);
     return res;

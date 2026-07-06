@@ -1,9 +1,15 @@
-import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { UserContent } from "../entities/userContent.entity";
-import { YoutubeProfileModel, YouTubeContentModel } from "../contracts/youtube.model";
-import _const from "../../core/utils/const";
+import { LinkedAccount } from '../entities/linkedAccount.entity';
+import { UserContent } from '../entities/userContent.entity';
+import {
+  YoutubeProfileModel,
+  YouTubeContentModel,
+} from '../contracts/youtube.model';
+import _const from '../../core/utils/const';
 
-export function mapToYoutubeProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): YoutubeProfileModel {
+export function mapToYoutubeProfileModel(
+  data: LinkedAccount,
+  includeSensitiveFields: boolean = false,
+): YoutubeProfileModel {
   return {
     id: data.id,
     userId: data.userId,
@@ -21,15 +27,19 @@ export function mapToYoutubeProfileModel(data: LinkedAccount, includeSensitiveFi
   } as YoutubeProfileModel;
 }
 
-export function mapToYouTubeContentModel(data: UserContent): YouTubeContentModel {
-  
+export function mapToYouTubeContentModel(
+  data: UserContent,
+): YouTubeContentModel {
   return {
     id: data.id,
     title: data.title,
     type: data.type,
     externalId: data.externalId,
     description: data.text || data.metaData?.description,
-    thumbnailUrl: data.media?.[0]?.thumbnail || data.metaData?.thumbnailUrl || data.metaData?.thumbnails?.default?.url,
+    thumbnailUrl:
+      data.media?.[0]?.thumbnail ||
+      data.metaData?.thumbnailUrl ||
+      data.metaData?.thumbnails?.default?.url,
     publishedAt: data.publishedAt || data.metaData?.publishedAt,
     videoId: data.metaData?.videoId,
     channelId: data.metaData?.channelId,
@@ -38,7 +48,5 @@ export function mapToYouTubeContentModel(data: UserContent): YouTubeContentModel
     commentCount: data.engagement?.comments ?? data.metaData?.commentCount,
     duration: data.metaData?.duration,
     shorts: data.metaData?.isShort,
-    
   } as YouTubeContentModel;
-  
 }

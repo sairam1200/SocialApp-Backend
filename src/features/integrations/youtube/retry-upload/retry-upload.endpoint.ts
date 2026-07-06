@@ -1,4 +1,11 @@
-import { Controller, Post, Param, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Param,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ApiTags, ApiResponse } from '@nestjs/swagger';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -28,15 +35,22 @@ export class YoutubeRetryUploadController {
   @Post('upload/retry/:videoId')
   @ApiResponse({ status: 200, description: 'Upload retry queued' })
   @ApiResponse({ status: 404, description: 'Video not found' })
-  @ApiResponse({ status: 400, description: 'Video not in failed state or already uploaded' })
-  async retryUpload(@Param('videoId') videoId: string): Promise<{ jobId: string; status: string }> {
+  @ApiResponse({
+    status: 400,
+    description: 'Video not in failed state or already uploaded',
+  })
+  async retryUpload(
+    @Param('videoId') videoId: string,
+  ): Promise<{ jobId: string; status: string }> {
     const video = await this.videoRepo.getByIdAsync(videoId);
     if (!video) {
       throw new NotFoundException('Video not found');
     }
 
     if (video.youtubeVideoId) {
-      throw new BadRequestException('Video has already been uploaded to YouTube');
+      throw new BadRequestException(
+        'Video has already been uploaded to YouTube',
+      );
     }
 
     if (video.status !== 'failed') {
@@ -48,7 +62,9 @@ export class YoutubeRetryUploadController {
     }
 
     // Resolve channelId from the linked account (needed by processor)
-    const linkedAccount = await this.linkedAccountRepo.getByIdAsync(video.accountId);
+    const linkedAccount = await this.linkedAccountRepo.getByIdAsync(
+      video.accountId,
+    );
     if (!linkedAccount) {
       throw new NotFoundException('Linked account not found for video');
     }
@@ -66,7 +82,8 @@ export class YoutubeRetryUploadController {
       await this.uploadJobRepo.updateAsync(uploadJob);
     }
 
-    const job = await this.uploadQueue.add('youtube-upload-job',
+    const job = await this.uploadQueue.add(
+      'youtube-upload-job',
       {
         videoId: video.id,
         accountId: video.accountId,
@@ -79,7 +96,9 @@ export class YoutubeRetryUploadController {
       },
     );
 
-    logger.info(`[YoutubeRetryUpload] Retry job queued for video ${videoId}, jobId: ${job.id}`);
+    logger.info(
+      `[YoutubeRetryUpload] Retry job queued for video ${videoId}, jobId: ${job.id}`,
+    );
 
     return { jobId: job.id!, status: 'queued' };
   }

@@ -64,24 +64,35 @@ export class GoogleConnectCallbackQuery {
 }
 
 const googleConnectValidations = Joi.object({
-  state: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
-  userAgent: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
-  ipAddress: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
-  deviceId: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  state: Joi.string()
+    .required()
+    .messages({ 'any.required': 'Invalid request' }),
+  userAgent: Joi.string()
+    .required()
+    .messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  ipAddress: Joi.string()
+    .required()
+    .messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  deviceId: Joi.string()
+    .required()
+    .messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
 });
 
 const googleConnectCallbackValidations = Joi.object({
   code: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
-  state: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
+  state: Joi.string()
+    .required()
+    .messages({ 'any.required': 'Invalid request' }),
 });
 
 @CommandHandler(GoogleConnectQuery)
 export class GoogleConnectQueryHandler
-  implements ICommandHandler<GoogleConnectQuery> {
+  implements ICommandHandler<GoogleConnectQuery>
+{
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-  ) { }
+  ) {}
 
   public async execute(command: GoogleConnectQuery): Promise<void> {
     const { model } = command;
@@ -99,8 +110,14 @@ export class GoogleConnectQueryHandler
     console.log('[OAuth-Debug-Store] storedState:', model.state);
     console.log('[OAuth-Debug-Store] storedValue:', value);
     console.log('[OAuth-Debug-Store] expiresIn (epoch seconds):', expiresIn);
-    console.log('[OAuth-Debug-Store] expiresIn (date):', new Date(expiresIn * 1000).toISOString());
-    console.log('[OAuth-Debug-Store] tokenExpirationTime used:', configs.Token.expirationTime);
+    console.log(
+      '[OAuth-Debug-Store] expiresIn (date):',
+      new Date(expiresIn * 1000).toISOString(),
+    );
+    console.log(
+      '[OAuth-Debug-Store] tokenExpirationTime used:',
+      configs.Token.expirationTime,
+    );
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       value,
@@ -112,7 +129,8 @@ export class GoogleConnectQueryHandler
 
 @CommandHandler(GoogleConnectCallbackQuery)
 export class GoogleConnectCallbackQueryHandler
-  implements ICommandHandler<GoogleConnectCallbackQuery> {
+  implements ICommandHandler<GoogleConnectCallbackQuery>
+{
   constructor(
     @Inject(_const.ITOKEN_SERVICE)
     private readonly tokenService: ITokenService,
@@ -124,18 +142,18 @@ export class GoogleConnectCallbackQueryHandler
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-  ) { }
+  ) {}
 
-  public async execute(query: GoogleConnectCallbackQuery): Promise<GoogleCallbaclTokenResponseModel> {
+  public async execute(
+    query: GoogleConnectCallbackQuery,
+  ): Promise<GoogleCallbaclTokenResponseModel> {
     const { model } = query;
     await googleConnectCallbackValidations.validateAsync(model);
     console.log('[OAuth-Debug-Validate] receivedState:', model.state);
     const dataProtectionKey = await this.validateState(model.state);
     const parsedDataProtectionKeyValue = JSON.parse(dataProtectionKey.value);
 
-    const { access_token, expires_in } = await this.fetchToken(
-      model.code,
-    );
+    const { access_token, expires_in } = await this.fetchToken(model.code);
 
     const profile = await this.fetchUserData(access_token);
 
@@ -153,13 +171,15 @@ export class GoogleConnectCallbackQueryHandler
 
     // 3. Create user only if neither lookup matched
     if (!user) {
-      const initials = stringUtil.extractInitialsFromName(`${profile.given_name} ${profile.family_name}`);
+      const initials = stringUtil.extractInitialsFromName(
+        `${profile.given_name} ${profile.family_name}`,
+      );
       const base64Image = generateInitialImage(initials);
-      const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
+      const avatar = await uploadBase64ToCloudinaryAsync(base64Image, 'users');
       const defaultProfileImageUrl = avatar.secure_url;
 
       const entry = new User({
-        phoneNumber: "",
+        phoneNumber: '',
         type: UserType.User,
         email: profile.email,
         firstName: profile.given_name,
@@ -169,11 +189,14 @@ export class GoogleConnectCallbackQueryHandler
       });
 
       user = await this.userRepository.createAsync(entry, crypto.randomUUID());
-      await this.userRepository.upsertUserBiometricAsync(user.id, new UserBiometric({
-        profileImageUrl: profile?.picture || null,
-        defaultProfileImageUrl: defaultProfileImageUrl,
-        privacy: ProfileImagePrivacy.Everyone,
-      }))
+      await this.userRepository.upsertUserBiometricAsync(
+        user.id,
+        new UserBiometric({
+          profileImageUrl: profile?.picture || null,
+          defaultProfileImageUrl: defaultProfileImageUrl,
+          privacy: ProfileImagePrivacy.Everyone,
+        }),
+      );
 
       await this.sendWelcomeEmail(user);
     }
@@ -210,11 +233,15 @@ export class GoogleConnectCallbackQueryHandler
       return response.data;
     } catch (error) {
       logger.error('Error fetching token from Google', error);
-      throw new ApplicationException('Unexpected error during authentication with Google');
+      throw new ApplicationException(
+        'Unexpected error during authentication with Google',
+      );
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<GoogleUserDataType> {
+  private async fetchUserData(
+    accessToken: string,
+  ): Promise<GoogleUserDataType> {
     try {
       const response = await axios.get<GoogleUserDataType>(
         `${BASE_URL}/userinfo`,
@@ -226,7 +253,9 @@ export class GoogleConnectCallbackQueryHandler
       return response.data;
     } catch (error) {
       logger.error('Error fetching user data from Google', error);
-      throw new ApplicationException('Unexpected error during authentication with Google');
+      throw new ApplicationException(
+        'Unexpected error during authentication with Google',
+      );
     }
   }
 
@@ -234,12 +263,24 @@ export class GoogleConnectCallbackQueryHandler
     console.log('[OAuth-Debug-Validate] querying state:', state);
     const dataProtectionKey =
       await this.dataProtectionKeyRepository.getByKeyAsync(state);
-    console.log('[OAuth-Debug-Validate] dataProtectionKey found:', !!dataProtectionKey);
+    console.log(
+      '[OAuth-Debug-Validate] dataProtectionKey found:',
+      !!dataProtectionKey,
+    );
     if (dataProtectionKey) {
       console.log('[OAuth-Debug-Validate] stored key:', dataProtectionKey.key);
-      console.log('[OAuth-Debug-Validate] stored expiresIn:', dataProtectionKey.expiresIn);
-      console.log('[OAuth-Debug-Validate] current epoch:', Math.floor(Date.now() / 1000));
-      console.log('[OAuth-Debug-Validate] expired?:', dataProtectionKey.expiresIn < Math.floor(Date.now() / 1000));
+      console.log(
+        '[OAuth-Debug-Validate] stored expiresIn:',
+        dataProtectionKey.expiresIn,
+      );
+      console.log(
+        '[OAuth-Debug-Validate] current epoch:',
+        Math.floor(Date.now() / 1000),
+      );
+      console.log(
+        '[OAuth-Debug-Validate] expired?:',
+        dataProtectionKey.expiresIn < Math.floor(Date.now() / 1000),
+      );
     }
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
@@ -274,7 +315,10 @@ export class GoogleConnectCallbackQueryHandler
       model.ipAddress,
     );
 
-    await this.userRepository.cacheUserAccountAsync(user, _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC);
+    await this.userRepository.cacheUserAccountAsync(
+      user,
+      _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC,
+    );
 
     // TODO: Send email notification of login with new ipAddress and deviceInfo
     return new GoogleCallbaclTokenResponseModel({
@@ -283,7 +327,9 @@ export class GoogleConnectCallbackQueryHandler
       message: 'Login successful',
       succeeded: true,
       isLockedOut: false,
-      refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
+      refreshTokenExpiryTime: Math.floor(
+        userToken.expiryDateUtc.getTime() / 1000,
+      ),
       onboardingCompleted: String(user.onboardingStep) === 'Completed',
     });
   }
@@ -292,7 +338,9 @@ export class GoogleConnectCallbackQueryHandler
     return user.isLockedOut || !user.isActive;
   }
 
-  private handleLockedOrInactiveAccount(user: User): GoogleCallbaclTokenResponseModel {
+  private handleLockedOrInactiveAccount(
+    user: User,
+  ): GoogleCallbaclTokenResponseModel {
     const message = this.getAccountLockMessage(user);
     return this.createErrorResponse(message);
   }
@@ -307,7 +355,9 @@ export class GoogleConnectCallbackQueryHandler
       : 'Your account has been locked due to suspicious activity.';
   }
 
-  private createErrorResponse(message: string): GoogleCallbaclTokenResponseModel {
+  private createErrorResponse(
+    message: string,
+  ): GoogleCallbaclTokenResponseModel {
     return new GoogleCallbaclTokenResponseModel({ message, succeeded: false });
   }
 
@@ -315,8 +365,8 @@ export class GoogleConnectCallbackQueryHandler
     try {
       await this.emailService.sendTemplatedAsync({
         to: user.email,
-        subject: "Welcome to Gaddr",
-        templatePath: "templates/email/welcome-email-v1.html",
+        subject: 'Welcome to Gaddr',
+        templatePath: 'templates/email/welcome-email-v1.html',
         context: {
           year: new Date().getFullYear(),
         },

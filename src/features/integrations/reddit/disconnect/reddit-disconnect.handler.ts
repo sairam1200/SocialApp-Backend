@@ -12,15 +12,18 @@ export class RedditDisconnectCommand {
 
 @CommandHandler(RedditDisconnectCommand)
 export class RedditDisconnectCommandHandler
-  implements ICommandHandler<RedditDisconnectCommand> {
+  implements ICommandHandler<RedditDisconnectCommand>
+{
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,
-  ) { }
+  ) {}
 
   public async execute(command: RedditDisconnectCommand): Promise<void> {
     const userId = HttpContext.getCurrentUserId;
-    await this.disconnectService.disconnectPlatformAsync(userId, _const.PLATFORMS.REDDIT);
+    await this.disconnectService.disconnectPlatformAsync(
+      userId,
+      _const.PLATFORMS.REDDIT,
+    );
   }
 }
-

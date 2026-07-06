@@ -1,12 +1,18 @@
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../../core/utils/const";
-import { UserType } from "../../../../domain/enums";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { ApplicationException, UserNotFoundException } from "../../../../core/exceptions";
-import { IManualProfileRepository, IUserRepository } from "../../../../domain/repositories";
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../../core/utils/const';
+import { UserType } from '../../../../domain/enums';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import {
+  ApplicationException,
+  UserNotFoundException,
+} from '../../../../core/exceptions';
+import {
+  IManualProfileRepository,
+  IUserRepository,
+} from '../../../../domain/repositories';
 
 export class ReorderManualProfileRequestModel {
   @ApiProperty()
@@ -17,7 +23,7 @@ export class ReorderManualProfileRequestModel {
 }
 
 export class ReorderManualProfileCommand {
-  model: ReorderManualProfileRequestModel
+  model: ReorderManualProfileRequestModel;
 
   constructor(request: Partial<ReorderManualProfileCommand> = {}) {
     Object.assign(this, request);
@@ -30,29 +36,38 @@ const updateUserValidations = Joi.object({
 });
 
 @CommandHandler(ReorderManualProfileCommand)
-export class ReorderManualProfileCommandHandler implements ICommandHandler<ReorderManualProfileCommand, void> {
+export class ReorderManualProfileCommandHandler
+  implements ICommandHandler<ReorderManualProfileCommand, void>
+{
   constructor(
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     @Inject(_const.IMANUALPROFILE_REPOSITORY)
     private readonly manualProfileRepository: IManualProfileRepository,
-  ) { }
+  ) {}
 
   public async execute(command: ReorderManualProfileCommand): Promise<void> {
     const { model } = command;
 
     await updateUserValidations.validateAsync(model);
 
-    const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
+    const user = await this.userRepository.getUserByIdAsync(
+      HttpContext.getCurrentUserId,
+    );
     if (!user || user.type !== UserType.User) {
       throw new UserNotFoundException();
     }
 
-    const manualProfile = await this.manualProfileRepository.getByIdAsync(model.id);
+    const manualProfile = await this.manualProfileRepository.getByIdAsync(
+      model.id,
+    );
     if (!manualProfile || manualProfile.userId !== user.id) {
-      throw new ApplicationException('Prevented: Manual profile not found.')
+      throw new ApplicationException('Prevented: Manual profile not found.');
     }
 
-    await this.manualProfileRepository.reorderAsync(model.id, model.displayOrder);
+    await this.manualProfileRepository.reorderAsync(
+      model.id,
+      model.displayOrder,
+    );
   }
-} 
+}

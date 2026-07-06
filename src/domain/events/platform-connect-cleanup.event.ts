@@ -1,10 +1,9 @@
-import { LinkedAccount } from "../entities/linkedAccount.entity";
+import { LinkedAccount } from '../entities/linkedAccount.entity';
 
 export class PlatformConnectCleanupEvent {
   constructor(
     public readonly data: {
       account: LinkedAccount;
-    }
-  ) { }
+    },
+  ) {}
 }
-

@@ -1,14 +1,14 @@
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../core/utils/const";
-import { User } from "../../../domain/entities";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { ITokenService } from "../../../domain/services/itoken.service";
-import { IUserRepository } from "../../../domain/repositories/iuser.repository";
-import { IAnalyticsService } from "../../../domain/services/ianalytics.service";
-import { TokenResponseModel } from "../../../domain/contracts/tokenResponse.model";
-import { IUserLoginRepository } from "../../../domain/repositories/iuserLogin.repository";
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../core/utils/const';
+import { User } from '../../../domain/entities';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { ITokenService } from '../../../domain/services/itoken.service';
+import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IAnalyticsService } from '../../../domain/services/ianalytics.service';
+import { TokenResponseModel } from '../../../domain/contracts/tokenResponse.model';
+import { IUserLoginRepository } from '../../../domain/repositories/iuserLogin.repository';
 
 export class TokenRequestModel {
   @ApiProperty()
@@ -34,9 +34,15 @@ export class TokenRequestModel {
 const loginValidations = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().required(),
-  userAgent: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
-  ipAddress: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
-  deviceId: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  userAgent: Joi.string()
+    .required()
+    .messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  ipAddress: Joi.string()
+    .required()
+    .messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  deviceId: Joi.string()
+    .required()
+    .messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
 });
 
 export class LoginCommand {
@@ -49,54 +55,62 @@ export class LoginCommand {
 
 @CommandHandler(LoginCommand)
 export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
-
   constructor(
     @Inject(_const.ITOKEN_SERVICE) private readonly tokenService: ITokenService,
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
-    @Inject(_const.IUSERLOGIN_REPOSITORY) private readonly userLoginRepository: IUserLoginRepository,
-    @Inject(_const.IANALYTICS_SERVICE) private readonly analyticsService: IAnalyticsService
-  ) { }
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+    @Inject(_const.IUSERLOGIN_REPOSITORY)
+    private readonly userLoginRepository: IUserLoginRepository,
+    @Inject(_const.IANALYTICS_SERVICE)
+    private readonly analyticsService: IAnalyticsService,
+  ) {}
 
   public async execute(command: LoginCommand): Promise<TokenResponseModel> {
-
     await loginValidations.validateAsync(command.model);
 
-    const user = await this.userRepository.getUserByEmailAsync(command.model.email);
+    const user = await this.userRepository.getUserByEmailAsync(
+      command.model.email,
+    );
     console.log('LOGIN EMAIL:', command.model.email);
     console.log('USER FOUND:', user?.email);
     console.log('EMAIL CONFIRMED:', user?.emailConfirmed);
-    if (!user || !(await this.userRepository.checkPasswordAsync(user, command.model.password))) {
+    if (
+      !user ||
+      !(await this.userRepository.checkPasswordAsync(
+        user,
+        command.model.password,
+      ))
+    ) {
       await this.handleFailedLoginAttempt(user);
-      return this.createErrorResponse("Invalid login attempt.");
+      return this.createErrorResponse('Invalid login attempt.');
     }
 
     if (!user.emailConfirmed) {
-      return this.createErrorResponse("Invalid login attempt.");
+      return this.createErrorResponse('Invalid login attempt.');
     }
 
     if (this.isAccountLockedOrInactive(user)) {
       return this.handleLockedOrInactiveAccount(user);
     }
     // Log the onboarding step for debugging
-console.log(
-  "LOGIN ONBOARDING:",
-  user.onboardingStep
-);
-//
+    console.log('LOGIN ONBOARDING:', user.onboardingStep);
+    //
     return this.handleSuccessfulLogin(user, command.model);
   }
 
-  private async handleSuccessfulLogin(user: User, model: TokenRequestModel): Promise<TokenResponseModel> {
+  private async handleSuccessfulLogin(
+    user: User,
+    model: TokenRequestModel,
+  ): Promise<TokenResponseModel> {
     user.accessFailedCount = 0;
     await this.userRepository.updateAsync(user);
 
     if (user.twoFactorEnabled) {
-
       const access_token = this.tokenService.generate2FAJwt(
         user,
         model.ipAddress,
         model.userAgent,
-        model.deviceId
+        model.deviceId,
       );
 
       return new TokenResponseModel({
@@ -104,19 +118,20 @@ console.log(
         isTwoFARequired: true,
         succeeded: false,
       });
-
     } else {
-
       const access_token = await this.tokenService.generateJwtAsync(user);
       const userToken = await this.userLoginRepository.createAysnc(
-        "Gaddr",
+        'Gaddr',
         user.id,
         model.deviceId,
         model.userAgent,
-        model.ipAddress
+        model.ipAddress,
       );
 
-      await this.userRepository.cacheUserAccountAsync(user, _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC);
+      await this.userRepository.cacheUserAccountAsync(
+        user,
+        _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC,
+      );
       // TODO: Send email notification of login with new ipAddress and deviceInfo
 
       await this.analyticsService.trackEvent(
@@ -125,14 +140,16 @@ console.log(
           ipAddress: model.ipAddress,
           userAgent: model.userAgent,
           deviceId: model.deviceId,
-        }
+        },
       );
 
       return new TokenResponseModel({
         access_token,
         refresh_token: userToken.tokenValue,
         succeeded: true,
-        refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
+        refreshTokenExpiryTime: Math.floor(
+          userToken.expiryDateUtc.getTime() / 1000,
+        ),
         onboardingCompleted: String(user.onboardingStep) === 'Completed',
       });
     }
@@ -156,15 +173,15 @@ console.log(
 
   private getAccountLockMessage(user: User): string {
     if (!user.isActive) {
-      return "Your account has been deactivated.";
+      return 'Your account has been deactivated.';
     }
 
     return user.accessFailedCount >= 5
-      ? "Your account is locked due to too many unsuccessful login attempts."
-      : "Your account has been locked due to suspicious activity.";
+      ? 'Your account is locked due to too many unsuccessful login attempts.'
+      : 'Your account has been locked due to suspicious activity.';
   }
 
   private createErrorResponse(message: string): TokenResponseModel {
     return new TokenResponseModel({ message, succeeded: false });
   }
-}  
+}

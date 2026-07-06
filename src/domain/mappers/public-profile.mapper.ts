@@ -1,6 +1,6 @@
-import { PublicProfileModel } from "../contracts/public-profile.model";
-import { LinkedAccountModel } from "../contracts/linked-account.model";
-import { User } from "../entities";
+import { PublicProfileModel } from '../contracts/public-profile.model';
+import { LinkedAccountModel } from '../contracts/linked-account.model';
+import { User } from '../entities';
 
 type PublicProfileMapperInput = {
   user: User;
@@ -15,15 +15,18 @@ type PublicProfileMapperInput = {
   linkedAccounts?: LinkedAccountModel[];
 };
 
-export function mapToPublicProfileModel(input: PublicProfileMapperInput): PublicProfileModel {
+export function mapToPublicProfileModel(
+  input: PublicProfileMapperInput,
+): PublicProfileModel {
   const userWithVerified = input.user as User & { verified?: boolean };
 
   return new PublicProfileModel({
     id: input.user.id,
-    userName: input.user.userName ?? "",
-    firstName: input.user.firstName ?? "",
-    lastName: input.user.lastName ?? "",
-    DisplayName: `${input.user.firstName ?? ''} ${input.user.lastName ?? ''}`.trim(),
+    userName: input.user.userName ?? '',
+    firstName: input.user.firstName ?? '',
+    lastName: input.user.lastName ?? '',
+    DisplayName:
+      `${input.user.firstName ?? ''} ${input.user.lastName ?? ''}`.trim(),
     bio: input.user.bio ?? null,
     profileImage: input.profileImage,
     linkedAccounts: input.linkedAccounts,

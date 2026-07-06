@@ -1,21 +1,21 @@
-import axios from "axios";
-import { Inject } from "@nestjs/common";
+import axios from 'axios';
+import { Inject } from '@nestjs/common';
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import _const from "../../../core/utils/const";
-import logger from "../../../core/utils/winston.util";
-import { UserContent } from "../../../domain/entities/userContent.entity";
-import { NotificationStatus, NotificationType } from "../../../domain/enums";
-import { NotificationModel } from "../../../domain/contracts/notification.model";
-import { mapToNotificationModel } from "../../../domain/mappers/notification.mapper";
-import { INotificationService } from "../../../domain/services/inotification.service";
-import { ImportGateway } from "../../../infrastructure/websocket/gateways/import.gateway";
-import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
-import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
-import { stringUtil } from "../../../core/utils/string.util";
-import BullMQConfig from "../../../core/config/bullmq.config";
-import { mapToRedditContentModel } from "../../../domain/mappers/reddit.mapper";
-import { IContentStreamRepository } from "../../../domain/repositories/icontentStream.repository";
+import _const from '../../../core/utils/const';
+import logger from '../../../core/utils/winston.util';
+import { UserContent } from '../../../domain/entities/userContent.entity';
+import { NotificationStatus, NotificationType } from '../../../domain/enums';
+import { NotificationModel } from '../../../domain/contracts/notification.model';
+import { mapToNotificationModel } from '../../../domain/mappers/notification.mapper';
+import { INotificationService } from '../../../domain/services/inotification.service';
+import { ImportGateway } from '../../../infrastructure/websocket/gateways/import.gateway';
+import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
+import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
+import { stringUtil } from '../../../core/utils/string.util';
+import BullMQConfig from '../../../core/config/bullmq.config';
+import { mapToRedditContentModel } from '../../../domain/mappers/reddit.mapper';
+import { IContentStreamRepository } from '../../../domain/repositories/icontentStream.repository';
 
 interface CursorMap {
   [key: string]: string | null;
@@ -37,7 +37,10 @@ interface RedditImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.REDDIT_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.REDDIT_IMPORT, 2))
+@Processor(
+  _const.BULL_QUEUES.REDDIT_IMPORT,
+  BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.REDDIT_IMPORT, 2),
+)
 export class RedditImportProcessor extends WorkerHost {
   private readonly NOTIFICATION_UPDATE_INTERVAL = 10;
 
@@ -74,23 +77,30 @@ export class RedditImportProcessor extends WorkerHost {
   public async process(job: Job<RedditImportJobData>): Promise<void> {
     const { account, accessToken } = job.data;
 
-    const currentAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-      _const.PLATFORMS.REDDIT,
-      account.userId,
-    );
+    const currentAccount =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.REDDIT,
+        account.userId,
+      );
 
     if (!currentAccount) {
-      logger.error(`[RedditImport] Account not found for user ${account.userId}`);
+      logger.error(
+        `[RedditImport] Account not found for user ${account.userId}`,
+      );
       return;
     }
 
     if (!(await job.isActive())) {
-      logger.info(`[RedditImport] Job ${job.id} is no longer active, stopping import for user ${account.userId}`);
+      logger.info(
+        `[RedditImport] Job ${job.id} is no longer active, stopping import for user ${account.userId}`,
+      );
       return;
     }
 
     logger.info(`[RedditImport] Starting import for user ${account.userId}`);
-    logger.debug(`[RedditImport] Using access token: ${accessToken.substring(0, 20)}...`);
+    logger.debug(
+      `[RedditImport] Using access token: ${accessToken.substring(0, 20)}...`,
+    );
 
     const username = account.userName;
     const progressReports: ProgressReports = {};
@@ -98,9 +108,18 @@ export class RedditImportProcessor extends WorkerHost {
     const importedExternalIds: string[] = [];
 
     const endpoints = {
-      posts: { url: `https://oauth.reddit.com/user/${username}/submitted`, type: "Posts" },
-      comments: { url: `https://oauth.reddit.com/user/${username}/comments`, type: "Comments" },
-      saved: { url: `https://oauth.reddit.com/user/${username}/saved`, type: "Saved" },
+      posts: {
+        url: `https://oauth.reddit.com/user/${username}/submitted`,
+        type: 'Posts',
+      },
+      comments: {
+        url: `https://oauth.reddit.com/user/${username}/comments`,
+        type: 'Comments',
+      },
+      saved: {
+        url: `https://oauth.reddit.com/user/${username}/saved`,
+        type: 'Saved',
+      },
     };
 
     let notification: NotificationModel | undefined;
@@ -117,25 +136,33 @@ export class RedditImportProcessor extends WorkerHost {
         status: NotificationStatus.InProgress,
       };
 
-      logger.info(`[RedditImport] Starting import of ${type} for user ${account.userId}`);
+      logger.info(
+        `[RedditImport] Starting import of ${type} for user ${account.userId}`,
+      );
 
       try {
         while (true) {
           if (!(await job.isActive())) {
-            logger.info(`[RedditImport] Job ${job.id} cancelled during processing ${type}`);
+            logger.info(
+              `[RedditImport] Job ${job.id} cancelled during processing ${type}`,
+            );
             progressReports[type].status = NotificationStatus.Cancelled;
             break;
           }
 
           if (after) {
-            logger.debug(`[RedditImport] Resuming ${type} from cursor: ${after.substring(0, 20)}...`);
+            logger.debug(
+              `[RedditImport] Resuming ${type} from cursor: ${after.substring(0, 20)}...`,
+            );
           }
 
-          logger.debug(`[RedditImport] Fetching ${type} with cursor: ${after || "none"}`);
+          logger.debug(
+            `[RedditImport] Fetching ${type} with cursor: ${after || 'none'}`,
+          );
 
           const response = await axios.get(url, {
             headers: {
-              Authorization: `Bearer ${accessToken}`
+              Authorization: `Bearer ${accessToken}`,
             },
             params: after ? { limit: 100, after } : { limit: 100 },
           });
@@ -143,10 +170,13 @@ export class RedditImportProcessor extends WorkerHost {
           const items = response.data.data.children || [];
           after = response.data.data.after;
 
-          logger.debug(`[RedditImport] Retrieved ${items.length} ${type} items, next cursor: ${after}`);
+          logger.debug(
+            `[RedditImport] Retrieved ${items.length} ${type} items, next cursor: ${after}`,
+          );
 
           if (progressReports[type].totalItem === 0) {
-            progressReports[type].totalItem = response.data.data.dist || items.length;
+            progressReports[type].totalItem =
+              response.data.data.dist || items.length;
           }
 
           if (items.length === 0 && !after) {
@@ -157,21 +187,25 @@ export class RedditImportProcessor extends WorkerHost {
 
           for (const item of items) {
             if (!(await job.isActive())) {
-              logger.info(`[RedditImport] Job ${job.id} cancelled during processing ${type}`);
+              logger.info(
+                `[RedditImport] Job ${job.id} cancelled during processing ${type}`,
+              );
               progressReports[type].status = NotificationStatus.Cancelled;
               break;
             }
 
             const data = item.data;
 
-            let content = new UserContent({
+            const content = new UserContent({
               userId: account.userId,
               platform: _const.PLATFORMS.REDDIT,
               externalId: data.id,
             });
 
             content.type = key;
-            content.title = stringUtil.trimWithEllipsis(data.title ?? data.body ?? data.link_title);
+            content.title = stringUtil.trimWithEllipsis(
+              data.title ?? data.body ?? data.link_title,
+            );
             content.metaData = {
               subreddit: data.subreddit,
               score: data.score,
@@ -190,29 +224,51 @@ export class RedditImportProcessor extends WorkerHost {
                 _const.PLATFORMS.REDDIT,
                 content.externalId,
               );
-              const savedContent = await this.userContentRepository.createAsync(content);
+              const savedContent =
+                await this.userContentRepository.createAsync(content);
               importedExternalIds.push(savedContent.externalId);
               const mappedContent = mapToRedditContentModel(savedContent);
-              this.gateway.emitNewImportContent(account.userId, _const.PLATFORMS.REDDIT, mappedContent);
+              this.gateway.emitNewImportContent(
+                account.userId,
+                _const.PLATFORMS.REDDIT,
+                mappedContent,
+              );
 
               progressReports[type].itemProcessed++;
-              progressReports[type].progressPercent = progressReports[type].totalItem
-                ? Math.round((progressReports[type].itemProcessed / progressReports[type].totalItem) * 100)
+              progressReports[type].progressPercent = progressReports[type]
+                .totalItem
+                ? Math.round(
+                    (progressReports[type].itemProcessed /
+                      progressReports[type].totalItem) *
+                      100,
+                  )
                 : 0;
 
               itemsProcessedSinceLastNotification++;
 
-              if (itemsProcessedSinceLastNotification >= this.NOTIFICATION_UPDATE_INTERVAL) {
-                notification = await this.updateNotification(notification, account.userId, progressReports);
+              if (
+                itemsProcessedSinceLastNotification >=
+                this.NOTIFICATION_UPDATE_INTERVAL
+              ) {
+                notification = await this.updateNotification(
+                  notification,
+                  account.userId,
+                  progressReports,
+                );
                 itemsProcessedSinceLastNotification = 0;
               }
             } catch (err) {
-              logger.error(`[RedditImport] Error saving ${type} content:`, err.message);
+              logger.error(
+                `[RedditImport] Error saving ${type} content:`,
+                err.message,
+              );
             }
           }
 
           if (!after) {
-            logger.info(`[RedditImport] Completed import of ${type} for user ${account.userId}`);
+            logger.info(
+              `[RedditImport] Completed import of ${type} for user ${account.userId}`,
+            );
             progressReports[type].status = NotificationStatus.Completed;
             delete lastCursors[key];
             await this.saveCursors(currentAccount, lastCursors);
@@ -234,7 +290,9 @@ export class RedditImportProcessor extends WorkerHost {
     }
 
     if (!(await job.isActive())) {
-      logger.info(`[RedditImport] Job ${job.id} was cancelled, rolling back imported content`);
+      logger.info(
+        `[RedditImport] Job ${job.id} was cancelled, rolling back imported content`,
+      );
 
       if (importedExternalIds.length > 0) {
         try {
@@ -243,17 +301,21 @@ export class RedditImportProcessor extends WorkerHost {
             _const.PLATFORMS.REDDIT,
             importedExternalIds,
           );
-          logger.info(`[RedditImport] Rolled back ${importedExternalIds.length} imported items for user ${account.userId}`);
+          logger.info(
+            `[RedditImport] Rolled back ${importedExternalIds.length} imported items for user ${account.userId}`,
+          );
         } catch (rollbackError) {
           logger.error(`[RedditImport] Error during rollback:`, rollbackError);
         }
       }
 
       if (notification) {
-        const finalReportArray = Object.entries(progressReports).map(([type, report]) => ({
-          type,
-          ...report,
-        }));
+        const finalReportArray = Object.entries(progressReports).map(
+          ([type, report]) => ({
+            type,
+            ...report,
+          }),
+        );
         await this.notificationService.updateAsync(
           notification.id,
           false,
@@ -262,20 +324,24 @@ export class RedditImportProcessor extends WorkerHost {
             reports: finalReportArray,
             platform: _const.PLATFORMS.REDDIT,
           },
-          "❌ Reddit import was cancelled and rolled back",
+          '❌ Reddit import was cancelled and rolled back',
         );
       }
       return;
     }
 
-    const finalReportArray = Object.entries(progressReports).map(([type, report]) => ({
-      type,
-      ...report,
-    }));
+    const finalReportArray = Object.entries(progressReports).map(
+      ([type, report]) => ({
+        type,
+        ...report,
+      }),
+    );
 
     if (notification) {
       if (encounteredError) {
-        logger.warn(`[RedditImport] Completed with issues for user ${account.userId}`);
+        logger.warn(
+          `[RedditImport] Completed with issues for user ${account.userId}`,
+        );
         await this.notificationService.updateAsync(
           notification.id,
           false,
@@ -284,10 +350,12 @@ export class RedditImportProcessor extends WorkerHost {
             reports: finalReportArray,
             platform: _const.PLATFORMS.REDDIT,
           },
-          "Reddit import completed with issues",
+          'Reddit import completed with issues',
         );
       } else {
-        logger.info(`[RedditImport] Successfully completed import for user ${account.userId}`);
+        logger.info(
+          `[RedditImport] Successfully completed import for user ${account.userId}`,
+        );
         await this.notificationService.updateAsync(
           notification.id,
           false,
@@ -296,14 +364,15 @@ export class RedditImportProcessor extends WorkerHost {
             reports: finalReportArray,
             platform: _const.PLATFORMS.REDDIT,
           },
-          "Reddit import completed!",
+          'Reddit import completed!',
         );
       }
 
-      const finalAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-        _const.PLATFORMS.REDDIT,
-        account.userId,
-      );
+      const finalAccount =
+        await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+          _const.PLATFORMS.REDDIT,
+          account.userId,
+        );
 
       if (finalAccount) {
         finalAccount.allowImport = true;
@@ -314,8 +383,8 @@ export class RedditImportProcessor extends WorkerHost {
       await this.notificationService.notifyAsync(
         account.userId,
         NotificationType.Import,
-        "Reddit import could not start",
-        "Unable to initialize Reddit data import.",
+        'Reddit import could not start',
+        'Unable to initialize Reddit data import.',
         false,
         {
           status: NotificationStatus.Cancelled,
@@ -323,7 +392,9 @@ export class RedditImportProcessor extends WorkerHost {
           platform: _const.PLATFORMS.REDDIT,
         },
       );
-      logger.warn(`[RedditImport] No notification initialized for user ${account.userId}`);
+      logger.warn(
+        `[RedditImport] No notification initialized for user ${account.userId}`,
+      );
     }
   }
 
@@ -332,18 +403,20 @@ export class RedditImportProcessor extends WorkerHost {
     userId: string,
     progressReports: ProgressReports,
   ): Promise<NotificationModel> {
-    const reportArray = Object.entries(progressReports).map(([type, report]) => ({
-      type,
-      ...report,
-    }));
+    const reportArray = Object.entries(progressReports).map(
+      ([type, report]) => ({
+        type,
+        ...report,
+      }),
+    );
 
     if (!notification) {
       logger.debug(`[RedditImport] Creating initial notification`);
       const notificationResult = await this.notificationService.notifyAsync(
         userId,
         NotificationType.Import,
-        "Importing your Reddit data...",
-        "",
+        'Importing your Reddit data...',
+        '',
         true,
         {
           status: NotificationStatus.InProgress,

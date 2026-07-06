@@ -5,13 +5,17 @@ import { FacebookPageAnalytics } from '../../domain/entities/facebookPageAnalyti
 import { IFacebookPageAnalyticsRepository } from '../../domain/repositories/ifacebookPageAnalytics.repository';
 
 @Injectable()
-export class FacebookPageAnalyticsRepository implements IFacebookPageAnalyticsRepository {
+export class FacebookPageAnalyticsRepository
+  implements IFacebookPageAnalyticsRepository
+{
   constructor(
     @InjectRepository(FacebookPageAnalytics)
     private readonly pageAnalyticsContext: Repository<FacebookPageAnalytics>,
   ) {}
 
-  async createOrUpdateAsync(analytics: FacebookPageAnalytics): Promise<FacebookPageAnalytics> {
+  async createOrUpdateAsync(
+    analytics: FacebookPageAnalytics,
+  ): Promise<FacebookPageAnalytics> {
     const existing = await this.pageAnalyticsContext.findOne({
       where: {
         pageId: analytics.pageId,
@@ -28,21 +32,29 @@ export class FacebookPageAnalyticsRepository implements IFacebookPageAnalyticsRe
     return await this.pageAnalyticsContext.save(newEntity);
   }
 
-  async getLatestByPageIdAsync(pageId: string): Promise<FacebookPageAnalytics | null> {
+  async getLatestByPageIdAsync(
+    pageId: string,
+  ): Promise<FacebookPageAnalytics | null> {
     return await this.pageAnalyticsContext.findOne({
       where: { pageId },
       order: { snapshotDate: 'DESC' },
     });
   }
 
-  async getLatestByUserIdAsync(userId: string): Promise<FacebookPageAnalytics | null> {
+  async getLatestByUserIdAsync(
+    userId: string,
+  ): Promise<FacebookPageAnalytics | null> {
     return await this.pageAnalyticsContext.findOne({
       where: { userId },
       order: { snapshotDate: 'DESC' },
     });
   }
 
-  async getTrendsAsync(pageId: string, startDate: Date, endDate: Date): Promise<FacebookPageAnalytics[]> {
+  async getTrendsAsync(
+    pageId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<FacebookPageAnalytics[]> {
     return await this.pageAnalyticsContext.find({
       where: {
         pageId,

@@ -1,17 +1,20 @@
-import axios from "axios";
-import configs from "../../../../configs";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../../core/utils/const";
-import fuseUtil from "../../../../core/utils/fuse.util";
-import logger from "../../../../core/utils/winston.util";
-import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
-import { SearchHistory } from "../../../../domain/entities";
-import { Inject, UnauthorizedException } from "@nestjs/common";
-import { ApplicationException } from "../../../../core/exceptions";
-import { ISearchService } from "../../../../domain/services/isearch.service";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { BehanceSearchResponseModel } from "../../../../domain/contracts/behance.model";
-import { ISearchHistoryRepository, IUserLoginRepository } from "../../../../domain/repositories";
+import axios from 'axios';
+import configs from '../../../../configs';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../../core/utils/const';
+import fuseUtil from '../../../../core/utils/fuse.util';
+import logger from '../../../../core/utils/winston.util';
+import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+import { SearchHistory } from '../../../../domain/entities';
+import { Inject, UnauthorizedException } from '@nestjs/common';
+import { ApplicationException } from '../../../../core/exceptions';
+import { ISearchService } from '../../../../domain/services/isearch.service';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { BehanceSearchResponseModel } from '../../../../domain/contracts/behance.model';
+import {
+  ISearchHistoryRepository,
+  IUserLoginRepository,
+} from '../../../../domain/repositories';
 
 export class BehanceSearchRequestModel {
   @ApiProperty()
@@ -33,8 +36,9 @@ export class BehanceSearchQuery {
 }
 
 @QueryHandler(BehanceSearchQuery)
-export class BehanceSearchQueryHandler implements IQueryHandler<BehanceSearchQuery> {
-
+export class BehanceSearchQueryHandler
+  implements IQueryHandler<BehanceSearchQuery>
+{
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,
@@ -42,9 +46,11 @@ export class BehanceSearchQueryHandler implements IQueryHandler<BehanceSearchQue
     private readonly searchHistoryRepository: ISearchHistoryRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-  ) { }
+  ) {}
 
-  public async execute(command: BehanceSearchQuery): Promise<BehanceSearchResponseModel> {
+  public async execute(
+    command: BehanceSearchQuery,
+  ): Promise<BehanceSearchResponseModel> {
     const { searchTerm, filter, behanceAccessToken } = command.model;
 
     let expiresIn: number;
@@ -55,12 +61,20 @@ export class BehanceSearchQueryHandler implements IQueryHandler<BehanceSearchQue
     if (behanceAccessToken) {
       accessToken = behanceAccessToken;
     } else {
-      const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.BEHANCE);
+      const userLogin =
+        await this.userLoginRepository.getByUserIdAndProviderAsync(
+          userId,
+          _const.PLATFORMS.BEHANCE,
+        );
       if (!userLogin) {
-        throw new UnauthorizedException('No Behance account linked to your user profile. Please link your Behance account to proceed.');
+        throw new UnauthorizedException(
+          'No Behance account linked to your user profile. Please link your Behance account to proceed.',
+        );
       }
       accessToken = userLogin.tokenValue;
-      expiresIn = Math.floor((userLogin.expiryDateUtc.getTime() - Date.now()) / 1000);
+      expiresIn = Math.floor(
+        (userLogin.expiryDateUtc.getTime() - Date.now()) / 1000,
+      );
     }
 
     const normalizedQuery = await this.normalizeQueryAsync(searchTerm);
@@ -83,14 +97,19 @@ export class BehanceSearchQueryHandler implements IQueryHandler<BehanceSearchQue
     }
 
     const similarQueries =
-      (await this.searchHistoryRepository.findSimilarQueriesAsync(trimmedQuery)) ?? [];
+      (await this.searchHistoryRepository.findSimilarQueriesAsync(
+        trimmedQuery,
+      )) ?? [];
 
     const candidateValues = similarQueries
       .map((item) => item.normalizedQuery)
       .filter(Boolean)
       .slice(0, 50);
 
-    const normalizedQuery = fuseUtil.normalizeSearchTerm(trimmedQuery, candidateValues);
+    const normalizedQuery = fuseUtil.normalizeSearchTerm(
+      trimmedQuery,
+      candidateValues,
+    );
 
     const hasExistingEntry = similarQueries.some((item) => {
       const original = (item.originalQuery ?? '').trim().toLowerCase();

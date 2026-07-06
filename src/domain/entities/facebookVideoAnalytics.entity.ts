@@ -6,7 +6,6 @@ import { BaseEntity } from '../baseEntity';
 @Index(['videoId'])
 @Index(['snapshotDate'])
 export class FacebookVideoAnalytics extends BaseEntity {
-
   @Column({ nullable: false })
   videoId: string;
 

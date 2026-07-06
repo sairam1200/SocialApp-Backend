@@ -1,15 +1,14 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
 export class PagedResult<T> {
-    
-    @ApiProperty()
-    result: T;
+  @ApiProperty()
+  result: T;
 
-    @ApiProperty({ default: 0 })
-    total: number;
+  @ApiProperty({ default: 0 })
+  total: number;
 
-    constructor(result: T, total: number) {
-        this.result = result;
-        this.total = total;
-    }
-} 
+  constructor(result: T, total: number) {
+    this.result = result;
+    this.total = total;
+  }
+}

@@ -1,22 +1,41 @@
-import { Module } from "@nestjs/common";
-import _const from "../core/utils/const";
-import { JwtService } from "@nestjs/jwt";
-import { CqrsModule } from "@nestjs/cqrs";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import integrations from "../features/integrations";
-import search from "../features/search";
-import { dependency } from "../infrastructure/dependency";
-import { NotificationModule } from "./notification.module";
+import { Module } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { CqrsModule } from '@nestjs/cqrs';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import integrations from '../features/integrations';
+import search from '../features/search';
+import { dependency } from '../infrastructure/dependency';
+import { NotificationModule } from './notification.module';
 
-import { AuthGuardsModule } from "./authGuard.module";
-import { AnalyticsModule } from "./analytics.module";
-import { SearchCacheService, YoutubeWebhookService } from "infrastructure/services";
-
-import { ImportGateway } from "../infrastructure/websocket/gateways/import.gateway";
-import { PlatformRollbackListener } from "../infrastructure/background/listeners/platform-rollback.listener";
-import { ContentStream, DataProtectionKey, LinkedAccount, Role, SearchHistory, User, UserBiometric, UserClaim, UserContent, UserLogin, UserRole,  YoutubeAccount, YoutubeVideo, UploadJob,YoutubeChannelAnalytics, YoutubeVideoAnalytics, FacebookPageAnalytics, FacebookPostAnalytics, FacebookVideoAnalytics } from "../domain/entities";
-import { YoutubeAnalyticsCron } from "../infrastructure/background/cron/jobs/youtube-analytics.cron";
-import { FacebookAnalyticsCron } from "../infrastructure/background/cron/jobs/facebook-analytics.cron";
+import { AuthGuardsModule } from './authGuard.module';
+import { AnalyticsModule } from './analytics.module';
+import { SearchCacheService } from 'infrastructure/services';
+import { PlatformRollbackListener } from '../infrastructure/background/listeners/platform-rollback.listener';
+import { VideoCodecService } from '../shared/video/video-codec.service';
+import { VideoTranscodingService } from '../shared/video/video-transcoding.service';
+import {
+  ContentStream,
+  DataProtectionKey,
+  LinkedAccount,
+  Role,
+  SearchHistory,
+  User,
+  UserBiometric,
+  UserClaim,
+  UserContent,
+  UserLogin,
+  UserRole,
+  YoutubeAccount,
+  YoutubeVideo,
+  UploadJob,
+  YoutubeChannelAnalytics,
+  YoutubeVideoAnalytics,
+  FacebookPageAnalytics,
+  FacebookPostAnalytics,
+  FacebookVideoAnalytics,
+} from '../domain/entities';
+import { YoutubeAnalyticsCron } from '../infrastructure/background/cron/jobs/youtube-analytics.cron';
+import { FacebookAnalyticsCron } from '../infrastructure/background/cron/jobs/facebook-analytics.cron';
 @Module({
   imports: [
     CqrsModule,
@@ -42,13 +61,10 @@ import { FacebookAnalyticsCron } from "../infrastructure/background/cron/jobs/fa
       YoutubeVideoAnalytics,
       FacebookPageAnalytics,
       FacebookPostAnalytics,
-      FacebookVideoAnalytics
-    ])
+      FacebookVideoAnalytics,
+    ]),
   ],
-  controllers: [
-    ...integrations.addControllers(),
-    ...search.addControllers(),
-  ],
+  controllers: [...integrations.addControllers(), ...search.addControllers()],
   providers: [
     JwtService,
     SearchCacheService,
@@ -89,7 +105,9 @@ import { FacebookAnalyticsCron } from "../infrastructure/background/cron/jobs/fa
     dependency.FacebookVideoAnalyticsRepository,
     dependency.FacebookAnalyticsService,
     FacebookAnalyticsCron,
+    VideoCodecService,
+    VideoTranscodingService,
   ],
   exports: [],
 })
-export class IntegrationsModule { }
+export class IntegrationsModule {}

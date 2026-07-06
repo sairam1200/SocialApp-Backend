@@ -1,15 +1,15 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class UserBioAndDropProfile1765000000000 implements MigrationInterface {
-    name = 'UserBioAndDropProfile1765000000000'
+  name = 'UserBioAndDropProfile1765000000000';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "identity"."users" ADD "bio" text`);
-        await queryRunner.query(`DROP TABLE IF EXISTS "identity"."user_profiles"`);
-    }
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`ALTER TABLE "identity"."users" ADD "bio" text`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "identity"."user_profiles"`);
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS "identity"."user_profiles" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "userId" uuid NOT NULL,
@@ -24,6 +24,6 @@ export class UserBioAndDropProfile1765000000000 implements MigrationInterface {
                 CONSTRAINT "FK_user_profiles_userId" FOREIGN KEY ("userId") REFERENCES "identity"."users"("id") ON DELETE CASCADE
             )
         `);
-        await queryRunner.query(`ALTER TABLE "identity"."users" DROP COLUMN "bio"`);
-    }
+    await queryRunner.query(`ALTER TABLE "identity"."users" DROP COLUMN "bio"`);
+  }
 }

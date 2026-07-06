@@ -1,4 +1,4 @@
-import { RateLimit } from "../entities/rateLimit.entity";
+import { RateLimit } from '../entities/rateLimit.entity';
 
 export interface IRateLimitRepository {
   createAsync(ip: string, route: string, expiresAt: Date): Promise<RateLimit>;

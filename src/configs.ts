@@ -1,7 +1,7 @@
-import * as Joi from "joi";
-import * as path from "path";
-import * as dotenv from 'dotenv'
-import { ApplicationException } from "./core/exceptions/application.exception";
+import * as Joi from 'joi';
+import * as path from 'path';
+import * as dotenv from 'dotenv';
+import { ApplicationException } from './core/exceptions/application.exception';
 
 const nodeEnv = process.env.NODE_ENV || 'development';
 
@@ -9,21 +9,17 @@ const nodeEnv = process.env.NODE_ENV || 'development';
 process.env.NODE_ENV = nodeEnv;
 
 // Load the appropriate .env file based on the environment
-dotenv.config({ path: path.join(process.cwd(), `.env.${nodeEnv}`) })
-dotenv.config({ override: true })
-console.log(
-  "CONFIG FILE LOADED"
-);
+dotenv.config({ path: path.join(process.cwd(), `.env.${nodeEnv}`) });
+dotenv.config({ override: true });
+console.log('CONFIG FILE LOADED');
 
 const envVarsSchema = Joi.object()
   .keys({
     NODE_ENV: Joi.string()
       .required()
       .description('Node environment (development, production, etc.)'),
-    PROJECT_NAME: Joi.string()
-      .description('Project name'),
-    PORT: Joi.number().default(3000)
-      .description('Application port'),
+    PROJECT_NAME: Joi.string().description('Project name'),
+    PORT: Joi.number().default(3000).description('Application port'),
     ENCRYPTION_KEY: Joi.string()
       .default('this is my custom Secret key for encryption')
       .description('Encryption key for data encryption'),
@@ -72,204 +68,202 @@ const envVarsSchema = Joi.object()
     POSTGRES_AUTO_LOAD_ENTITIES: Joi.boolean()
       .default(true)
       .description('Automatically load all entities'),
-    POSTGRES_ENTITIES: Joi.string()
-      .description('Path to PostgreSQL entities'),
-    POSTGRES_MIGRATIONS: Joi.string()
-      .description('Path to PostgreSQL migrations'),
+    POSTGRES_ENTITIES: Joi.string().description('Path to PostgreSQL entities'),
+    POSTGRES_MIGRATIONS: Joi.string().description(
+      'Path to PostgreSQL migrations',
+    ),
     POSTGRES_SSL_REJECTUNAUTHORIZED: Joi.boolean()
       .default(false)
       .description('Path to PostgreSQL ssl rejectUnauthorized'),
-    POSTGRES_SSL_CERTIFICATION: Joi.string()
-      .description('Path to PostgreSQL ssl certificate'),
+    POSTGRES_SSL_CERTIFICATION: Joi.string().description(
+      'Path to PostgreSQL ssl certificate',
+    ),
     POSTGRES_LOGGING: Joi.boolean()
       .default(false)
       .description('Enable PostgreSQL query logging'),
     POSTGRES_MIGRATIONS_RUN: Joi.boolean()
       .default(true)
       .description('Run migrations on application start'),
-    FACEBOOK_CLIENT_ID: Joi.string()
-      .description('Facebook OAuth client ID'),
-    FACEBOOK_CLIENT_SECRET: Joi.string()
-      .description('Facebook OAuth client secret'),
-    FACEBOOK_APP_SECRET: Joi.string()
-      .description('Facebook App Secret for signed_request verification'),
-    FACEBOOK_CALLBACK_URL: Joi.string()
-      .description('Facebook OAuth callback URL'),
-    FACEBOOK_AUTH_CALLBACK_URL: Joi.string()
-      .description('Facebook OAuth auth callback URL for login'),
+    FACEBOOK_CLIENT_ID: Joi.string().description('Facebook OAuth client ID'),
+    FACEBOOK_CLIENT_SECRET: Joi.string().description(
+      'Facebook OAuth client secret',
+    ),
+    FACEBOOK_APP_SECRET: Joi.string().description(
+      'Facebook App Secret for signed_request verification',
+    ),
+    FACEBOOK_CALLBACK_URL: Joi.string().description(
+      'Facebook OAuth callback URL',
+    ),
+    FACEBOOK_AUTH_CALLBACK_URL: Joi.string().description(
+      'Facebook OAuth auth callback URL for login',
+    ),
     FACEBOOK_GRAPH_API_VERSION: Joi.string()
       .default('v23.0')
       .description('Facebook Graph API version'),
-    INSTAGRAM_CLIENT_ID: Joi.string()
-      .description('Instagram OAuth client ID'),
-    INSTAGRAM_CLIENT_SECRET: Joi.string()
-      .description('Instagram OAuth client secret'),
-    INSTAGRAM_CALLBACK_URL: Joi.string()
-      .description('Instagram OAuth callback URL'),
-    PINTEREST_CLIENT_ID: Joi.string()
-      .description('Pinterest OAuth client ID'),
-    PINTEREST_CLIENT_SECRET: Joi.string()
-      .description('Pinterest OAuth client secret'),
-    PINTEREST_CALLBACK_URL: Joi.string()
-      .description('Pinterest OAuth callback URL'),
-    TWITTER_CLIENT_ID: Joi.string()
-      .description('Twitter OAuth client ID'),
-    TWITTER_CLIENT_SECRET: Joi.string()
-      .description('Twitter OAuth client secret'),
-    TWITTER_CALLBACK_URL: Joi.string()
-      .description('Twitter OAuth callback URL'),
-    YOUTUBE_CLIENT_ID: Joi.string()
-      .description('YouTube OAuth client ID'),
-    YOUTUBE_CLIENT_SECRET: Joi.string()
-      .description('YouTube OAuth client secret'),
-    YOUTUBE_CALLBACK_URL: Joi.string()
-      .description('YouTube OAuth callback URL'),
-    YOUTUBE_API_KEY: Joi.string()
-      .description('YouTube API key'),
-    YOUTUBE_WEBHOOK_URL: Joi.string()
-      .description('YouTube webhook callback URL'),
-    APP_URL: Joi.string()
-      .description('Application base URL'),
-    SPOTIFY_CLIENT_ID: Joi.string()
-      .description('Spotify OAuth client ID'),
-    SPOTIFY_CLIENT_SECRET: Joi.string()
-      .description('Spotify OAuth client secret'),
-    SPOTIFY_CALLBACK_URL: Joi.string()
-      .description('Spotify OAuth callback URL'),
-    REDIS_HOST: Joi.string()
-      .description('Redis server host'),
-    REDIS_PORT: Joi.number()
-      .description('Redis server port'),
+    INSTAGRAM_CLIENT_ID: Joi.string().description('Instagram OAuth client ID'),
+    INSTAGRAM_CLIENT_SECRET: Joi.string().description(
+      'Instagram OAuth client secret',
+    ),
+    INSTAGRAM_CALLBACK_URL: Joi.string().description(
+      'Instagram OAuth callback URL',
+    ),
+    PINTEREST_CLIENT_ID: Joi.string().description('Pinterest OAuth client ID'),
+    PINTEREST_CLIENT_SECRET: Joi.string().description(
+      'Pinterest OAuth client secret',
+    ),
+    PINTEREST_CALLBACK_URL: Joi.string().description(
+      'Pinterest OAuth callback URL',
+    ),
+    TWITTER_CLIENT_ID: Joi.string().description('Twitter OAuth client ID'),
+    TWITTER_CLIENT_SECRET: Joi.string().description(
+      'Twitter OAuth client secret',
+    ),
+    TWITTER_CALLBACK_URL: Joi.string().description(
+      'Twitter OAuth callback URL',
+    ),
+    YOUTUBE_CLIENT_ID: Joi.string().description('YouTube OAuth client ID'),
+    YOUTUBE_CLIENT_SECRET: Joi.string().description(
+      'YouTube OAuth client secret',
+    ),
+    YOUTUBE_CALLBACK_URL: Joi.string().description(
+      'YouTube OAuth callback URL',
+    ),
+    YOUTUBE_API_KEY: Joi.string().description('YouTube API key'),
+    YOUTUBE_WEBHOOK_URL: Joi.string().description(
+      'YouTube webhook callback URL',
+    ),
+    APP_URL: Joi.string().description('Application base URL'),
+    SPOTIFY_CLIENT_ID: Joi.string().description('Spotify OAuth client ID'),
+    SPOTIFY_CLIENT_SECRET: Joi.string().description(
+      'Spotify OAuth client secret',
+    ),
+    SPOTIFY_CALLBACK_URL: Joi.string().description(
+      'Spotify OAuth callback URL',
+    ),
+    REDIS_HOST: Joi.string().description('Redis server host'),
+    REDIS_PORT: Joi.number().description('Redis server port'),
     REDIS_PASSWORD: Joi.string()
       .description('Redis server password')
       .optional(),
-    REDIS_USERNAME: Joi.string()
-      .description('Redis server username'),
-    REDDIT_CLIENT_ID: Joi.string()
-      .description('Reddit client ID'),
-    REDDIT_CLIENT_SECRET: Joi.string()
-      .description('Reddit client secret'),
-    REDDIT_CALLBACK_URL: Joi.string()
-      .description('Reddit callback URL'),
-    TIKTOK_CLIENT_ID: Joi.string()
-      .description('TikTok OAuth client ID'),
-    TIKTOK_CLIENT_SECRET: Joi.string()
-      .description('TikTok OAuth client secret'),
-    TIKTOK_CALLBACK_URL: Joi.string()
-      .description('TikTok OAuth callback URL'),
-    SNAPCHAT_CLIENT_ID: Joi.string()
-      .description('Snapchat OAuth client ID'),
-    SNAPCHAT_CLIENT_SECRET: Joi.string()
-      .description('Snapchat OAuth client secret'),
-    SNAPCHAT_CALLBACK_URL: Joi.string()
-      .description('Snapchat OAuth callback URL'),
-    LINKEDIN_CLIENT_ID: Joi.string()
-      .description('LinkedIn OAuth client ID'),
-    LINKEDIN_CLIENT_SECRET: Joi.string()
-      .description('LinkedIn OAuth client secret'),
-    LINKEDIN_CALLBACK_URL: Joi.string()
-      .description('LinkedIn OAuth callback URL'),
-    THREADS_CLIENT_ID: Joi.string()
-      .description('Threads OAuth client ID'),
-    THREADS_CLIENT_SECRET: Joi.string()
-      .description('Threads OAuth client secret'),
-    THREADS_CALLBACK_URL: Joi.string()
-      .description('Threads OAuth callback URL'),
-    BEHANCE_CLIENT_ID: Joi.string()
-      .description('Behance OAuth client ID'),
-    BEHANCE_CLIENT_SECRET: Joi.string()
-      .description('Behance OAuth client secret'),
-    BEHANCE_CALLBACK_URL: Joi.string()
-      .description('Behance OAuth callback URL'),
-    GITHUB_CLIENT_ID: Joi.string()
-      .description('GitHub OAuth client ID'),
-    GITHUB_CLIENT_SECRET: Joi.string()
-      .description('GitHub OAuth client secret'),
-    GITHUB_CALLBACK_URL: Joi.string()
-      .description('GitHub OAuth callback URL'),
-    DISCORD_CLIENT_ID: Joi.string()
-      .description('Discord OAuth client ID'),
-    DISCORD_CLIENT_SECRET: Joi.string()
-      .description('Discord OAuth client secret'),
-    DISCORD_CALLBACK_URL: Joi.string()
-      .description('Discord OAuth callback URL'),
-    TWITCH_CLIENT_ID: Joi.string()
-      .description('Twitch OAuth client ID'),
-    TWITCH_CLIENT_SECRET: Joi.string()
-      .description('Twitch OAuth client secret'),
-    TWITCH_CALLBACK_URL: Joi.string()
-      .description('Twitch OAuth callback URL'),
+    REDIS_USERNAME: Joi.string().description('Redis server username'),
+    REDDIT_CLIENT_ID: Joi.string().description('Reddit client ID'),
+    REDDIT_CLIENT_SECRET: Joi.string().description('Reddit client secret'),
+    REDDIT_CALLBACK_URL: Joi.string().description('Reddit callback URL'),
+    TIKTOK_CLIENT_ID: Joi.string().description('TikTok OAuth client ID'),
+    TIKTOK_CLIENT_SECRET: Joi.string().description(
+      'TikTok OAuth client secret',
+    ),
+    TIKTOK_CALLBACK_URL: Joi.string().description('TikTok OAuth callback URL'),
+    SNAPCHAT_CLIENT_ID: Joi.string().description('Snapchat OAuth client ID'),
+    SNAPCHAT_CLIENT_SECRET: Joi.string().description(
+      'Snapchat OAuth client secret',
+    ),
+    SNAPCHAT_CALLBACK_URL: Joi.string().description(
+      'Snapchat OAuth callback URL',
+    ),
+    LINKEDIN_CLIENT_ID: Joi.string().description('LinkedIn OAuth client ID'),
+    LINKEDIN_CLIENT_SECRET: Joi.string().description(
+      'LinkedIn OAuth client secret',
+    ),
+    LINKEDIN_CALLBACK_URL: Joi.string().description(
+      'LinkedIn OAuth callback URL',
+    ),
+    THREADS_CLIENT_ID: Joi.string().description('Threads OAuth client ID'),
+    THREADS_CLIENT_SECRET: Joi.string().description(
+      'Threads OAuth client secret',
+    ),
+    THREADS_CALLBACK_URL: Joi.string().description(
+      'Threads OAuth callback URL',
+    ),
+    BEHANCE_CLIENT_ID: Joi.string().description('Behance OAuth client ID'),
+    BEHANCE_CLIENT_SECRET: Joi.string().description(
+      'Behance OAuth client secret',
+    ),
+    BEHANCE_CALLBACK_URL: Joi.string().description(
+      'Behance OAuth callback URL',
+    ),
+    GITHUB_CLIENT_ID: Joi.string().description('GitHub OAuth client ID'),
+    GITHUB_CLIENT_SECRET: Joi.string().description(
+      'GitHub OAuth client secret',
+    ),
+    GITHUB_CALLBACK_URL: Joi.string().description('GitHub OAuth callback URL'),
+    DISCORD_CLIENT_ID: Joi.string().description('Discord OAuth client ID'),
+    DISCORD_CLIENT_SECRET: Joi.string().description(
+      'Discord OAuth client secret',
+    ),
+    DISCORD_CALLBACK_URL: Joi.string().description(
+      'Discord OAuth callback URL',
+    ),
+    TWITCH_CLIENT_ID: Joi.string().description('Twitch OAuth client ID'),
+    TWITCH_CLIENT_SECRET: Joi.string().description(
+      'Twitch OAuth client secret',
+    ),
+    TWITCH_CALLBACK_URL: Joi.string().description('Twitch OAuth callback URL'),
     TOKEN_EXPIRATION_TIME: Joi.number()
       .default(900000)
       .description('Token expiration time in milliseconds'),
     USER_PROFILE_CHANGE_COOLDOWN_DAYS: Joi.number()
       .default(60)
-      .description('Cooldown period in days before user can change email or username again'),
+      .description(
+        'Cooldown period in days before user can change email or username again',
+      ),
     DAILY_FOLLOW_LIMIT: Joi.number()
       .default(100)
       .description('Maximum number of follows a user can perform per day'),
-    GOOGLE_REDIRECT_URI: Joi.string()
-      .description('Google OAuth redirect URI'),
-    SMTP_HOST: Joi.string()
-      .description('SMTP server host'),
-    SMTP_PORT: Joi.number()
-      .description('SMTP server port'),
-    SMTP_USER: Joi.string()
-      .description('SMTP username'),
-    SMTP_SECURE: Joi.boolean()
-      .default(false)
-      .description('SMTP secure'),
-    SMTP_PASSWORD: Joi.string()
-      .description('SMTP password'),
-    BREVO_API_KEY: Joi.string()
-      .description('Brevo (formerly Sendinblue) API key'),
+    GOOGLE_REDIRECT_URI: Joi.string().description('Google OAuth redirect URI'),
+    SMTP_HOST: Joi.string().description('SMTP server host'),
+    SMTP_PORT: Joi.number().description('SMTP server port'),
+    SMTP_USER: Joi.string().description('SMTP username'),
+    SMTP_SECURE: Joi.boolean().default(false).description('SMTP secure'),
+    SMTP_PASSWORD: Joi.string().description('SMTP password'),
+    BREVO_API_KEY: Joi.string().description(
+      'Brevo (formerly Sendinblue) API key',
+    ),
     LOG_PATH: Joi.string()
       .default('logs')
       .description('Directory path for log files'),
-    SYSTEM_ADMIN_EMAIL: Joi.string()
-      .default('team@gaddr.com'),
-    SYSTEM_ADMIN_PASSWORD: Joi.string()
-      .default('@Admin@123'),
-    SYSTEM_ADMIN_FIRST_NAME: Joi.string()
-      .default('System'),
-    SYSTEM_ADMIN_LAST_NAME: Joi.string()
-      .default('Admin'),
-    GUEST_USER_EMAIL: Joi.string()
-      .default('johndoe@gaddr.com'),
-    GUEST_USER_PASSWORD: Joi.string()
-      .default('@Abc@123'),
-    GUEST_USER_FIRST_NAME: Joi.string()
-      .default('John'),
-    GUEST_USER_LAST_NAME: Joi.string()
-      .default('Doe'),
-    GUEST_USERNAME: Joi.string()
-      .default('Doe'),
-    CLOUDINARY_CLOUD_NAME: Joi.string()
-      .description('Cloudinary cloud name for media storage'),
-    CLOUDINARY_API_KEY: Joi.string()
-      .description('Cloudinary API key for media storage'),
-    CLOUDINARY_API_SECRET: Joi.string()
-      .description('Cloudinary API secret for media storage'),
+    SYSTEM_ADMIN_EMAIL: Joi.string().default('team@gaddr.com'),
+    SYSTEM_ADMIN_PASSWORD: Joi.string().default('@Admin@123'),
+    SYSTEM_ADMIN_FIRST_NAME: Joi.string().default('System'),
+    SYSTEM_ADMIN_LAST_NAME: Joi.string().default('Admin'),
+    GUEST_USER_EMAIL: Joi.string().default('johndoe@gaddr.com'),
+    GUEST_USER_PASSWORD: Joi.string().default('@Abc@123'),
+    GUEST_USER_FIRST_NAME: Joi.string().default('John'),
+    GUEST_USER_LAST_NAME: Joi.string().default('Doe'),
+    GUEST_USERNAME: Joi.string().default('Doe'),
+    CLOUDINARY_CLOUD_NAME: Joi.string().description(
+      'Cloudinary cloud name for media storage',
+    ),
+    CLOUDINARY_API_KEY: Joi.string().description(
+      'Cloudinary API key for media storage',
+    ),
+    CLOUDINARY_API_SECRET: Joi.string().description(
+      'Cloudinary API secret for media storage',
+    ),
     YOUTUBE_MAX_VIDEO_SIZE_MB: Joi.number()
       .default(100)
       .description('Maximum YouTube video upload size in MB'),
-    YOUTUBE_TEMP_UPLOAD_DIR: Joi.string()
-      .description('Temporary directory for YouTube upload files'),
-    TURNSTILE_SECRET_KEY: Joi.string()
-      .description('Cloudflare Turnstile secret key'),
+    YOUTUBE_TEMP_UPLOAD_DIR: Joi.string().description(
+      'Temporary directory for YouTube upload files',
+    ),
+    TURNSTILE_SECRET_KEY: Joi.string().description(
+      'Cloudflare Turnstile secret key',
+    ),
     FRONTEND_URL: Joi.string()
       .default('https://gaddr.com')
       .description('Frontend application URL'),
-    CLOUDFLARE_ACCOUNT_ID: Joi.string()
-      .description('Cloudflare account ID for R2'),
-    R2_BUCKET: Joi.string()
-      .description('Cloudflare R2 bucket name'),
-    R2_ACCESS_KEY_ID: Joi.string()
-      .description('Cloudflare R2 access key ID'),
-    R2_SECRET_ACCESS_KEY: Joi.string()
-      .description('Cloudflare R2 secret access key'),
-    DATABASE_URL: Joi.string()
-  .description('PostgreSQL connection string'),
+    CLOUDFLARE_ACCOUNT_ID: Joi.string().description(
+      'Cloudflare account ID for R2',
+    ),
+    R2_BUCKET: Joi.string().description('Cloudflare R2 bucket name'),
+    R2_ACCESS_KEY_ID: Joi.string().description('Cloudflare R2 access key ID'),
+    R2_SECRET_ACCESS_KEY: Joi.string().description(
+      'Cloudflare R2 secret access key',
+    ),
+    R2_PUBLIC_URL_BASE: Joi.string().description(
+      'Cloudflare R2 public URL base (for serving files via HTTP)',
+    ),
+    DATABASE_URL: Joi.string().description('PostgreSQL connection string'),
   })
   .unknown();
 
@@ -284,13 +278,13 @@ if (error) {
 export default {
   env: envVars.NODE_ENV,
   projectName: envVars.PROJECT_NAME,
-  port: envVars.PORT ||5000,
+  port: envVars.PORT || 5000,
   log: {
     level: envVars.NODE_ENV === 'development' ? 'debug' : 'info',
     path: envVars.LOG_PATH,
   },
   postgres: {
-     url: envVars.DATABASE_URL,
+    url: envVars.DATABASE_URL,
     host: envVars.POSTGRES_HOST,
     port: envVars.POSTGRES_PORT,
     username: envVars.POSTGRES_USERNAME,
@@ -305,7 +299,7 @@ export default {
     ssl: {
       certificate: envVars.POSTGRES_SSL_CERTIFICATION,
       rejectUnauthorized: envVars.POSTGRES_SSL_REJECTUNAUTHORIZED,
-    }
+    },
   },
   jwt: {
     secret: envVars.JWT_SECRET,
@@ -319,7 +313,7 @@ export default {
     algorithm: envVars.ENCRYPTION_ALGORITHM,
     iv: envVars.ENCRYPTION_IV,
   },
-  
+
   youtube: {
     clientId: envVars.YOUTUBE_CLIENT_ID,
     clientSecret: envVars.YOUTUBE_CLIENT_SECRET,
@@ -329,7 +323,7 @@ export default {
     maxVideoSizeMB: envVars.YOUTUBE_MAX_VIDEO_SIZE_MB,
     tempUploadDir: envVars.YOUTUBE_TEMP_UPLOAD_DIR,
   },
-  
+
   app: {
     url: envVars.APP_URL,
   },
@@ -373,7 +367,7 @@ export default {
     host: envVars.REDIS_HOST,
     port: envVars.REDIS_PORT,
     username: envVars.REDIS_USERNAME,
-    password: envVars.REDIS_PASSWORD
+    password: envVars.REDIS_PASSWORD,
   },
   tiktok: {
     clientId: envVars.TIKTOK_CLIENT_ID,
@@ -411,7 +405,7 @@ export default {
     redirectUri: envVars.TWITCH_CALLBACK_URL,
   },
   Token: {
-    expirationTime: envVars.TOKEN_EXPIRATION_TIME
+    expirationTime: envVars.TOKEN_EXPIRATION_TIME,
   },
   user: {
     profileChangeCooldownDays: envVars.USER_PROFILE_CHANGE_COOLDOWN_DAYS,
@@ -422,7 +416,7 @@ export default {
     port: envVars.SMTP_PORT,
     user: envVars.SMTP_USER,
     secure: envVars.SMTP_SECURE,
-    password: envVars.SMTP_PASSWORD
+    password: envVars.SMTP_PASSWORD,
   },
   brevo: {
     apiKey: envVars.BREVO_API_KEY,
@@ -462,6 +456,9 @@ export default {
     accessKeyId: envVars.R2_ACCESS_KEY_ID,
     secretAccessKey: envVars.R2_SECRET_ACCESS_KEY,
     endpoint: `https://${envVars.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    publicUrlBase:
+      envVars.R2_PUBLIC_URL_BASE ||
+      `https://${envVars.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
     region: 'auto',
   },
-}
+};

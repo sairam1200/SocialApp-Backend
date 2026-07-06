@@ -1,22 +1,24 @@
-import { Repository, In, MoreThan, Brackets } from "typeorm";
-import { Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { UserContent, UserBiometric } from "../../domain/entities";
-import { IUserContentRepository } from "../../domain/repositories";
-import { QueryOptions } from "../../domain/types/queryOptions.type";
-import { SearchContentProjection } from "../../domain/repositories/iuserContent.repository";
-import { User } from "../../domain/entities/identity/user.entity";
+import { Repository, In, MoreThan, Brackets } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { UserContent, UserBiometric } from '../../domain/entities';
+import { IUserContentRepository } from '../../domain/repositories';
+import { QueryOptions } from '../../domain/types/queryOptions.type';
+import { SearchContentProjection } from '../../domain/repositories/iuserContent.repository';
+import { User } from '../../domain/entities/identity/user.entity';
 @Injectable()
 export class UserContentRepository implements IUserContentRepository {
-
   constructor(
     @InjectRepository(UserContent)
     private readonly userContentContext: Repository<UserContent>,
-  ) { }
+  ) {}
 
   public async createAsync(content: UserContent): Promise<UserContent> {
-
-    const existingContent = await this.getByPlatformAndContentIdAsync(content.userId,content.platform, content.externalId);
+    const existingContent = await this.getByPlatformAndContentIdAsync(
+      content.userId,
+      content.platform,
+      content.externalId,
+    );
     if (existingContent) {
       existingContent.title = content.title;
       existingContent.metaData = content.metaData;
@@ -32,8 +34,14 @@ export class UserContentRepository implements IUserContentRepository {
     await this.userContentContext.save(content);
   }
 
-  public async getByPlatformAndContentIdAsync(userId: string,platform: string, contentId: string): Promise<UserContent | null> {
-    return await this.userContentContext.findOne({ where: { userId,platform, externalId: contentId } });
+  public async getByPlatformAndContentIdAsync(
+    userId: string,
+    platform: string,
+    contentId: string,
+  ): Promise<UserContent | null> {
+    return await this.userContentContext.findOne({
+      where: { userId, platform, externalId: contentId },
+    });
   }
 
   public async getByIdAsync(id: string): Promise<UserContent | null> {
@@ -48,19 +56,18 @@ export class UserContentRepository implements IUserContentRepository {
     platform: string,
     cursor: string,
   ): Promise<[UserContent[], string]> {
-
     const take = 20;
 
     const qb = this.userContentContext
-      .createQueryBuilder("content")
-      .where("content.userId = :userId", { userId })
-      .andWhere("content.platform = :platform", { platform })
-      .orderBy("content.createdOn", "DESC")
-      .addOrderBy("content.id", "DESC")
+      .createQueryBuilder('content')
+      .where('content.userId = :userId', { userId })
+      .andWhere('content.platform = :platform', { platform })
+      .orderBy('content.createdOn', 'DESC')
+      .addOrderBy('content.id', 'DESC')
       .take(take + 1);
 
     if (cursor) {
-      qb.andWhere("content.createdOn < :cursor", {
+      qb.andWhere('content.createdOn < :cursor', {
         cursor: new Date(cursor),
       });
     }
@@ -73,21 +80,22 @@ export class UserContentRepository implements IUserContentRepository {
       items.pop();
     }
 
-    const nextCursor =
-      hasMore
-        ? items[items.length - 1].createdOn.toISOString()
-        : "";
+    const nextCursor = hasMore
+      ? items[items.length - 1].createdOn.toISOString()
+      : '';
 
     return [items, nextCursor];
   }
 
-  async getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]> {
+  async getEntriesAsync(
+    params: QueryOptions,
+  ): Promise<[UserContent[], number]> {
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;
     console.log('Query Options:', searchQuery);
-    const queryBuilder = this.userContentContext.createQueryBuilder("uc");
+    const queryBuilder = this.userContentContext.createQueryBuilder('uc');
 
     if (!orderBy) {
-      orderBy = "title";
+      orderBy = 'title';
     }
 
     const whereConditions: string[] = [];
@@ -109,17 +117,17 @@ export class UserContentRepository implements IUserContentRepository {
     }
 
     if (filter?.externalId) {
-      whereConditions.push("uc.externalId = :externalId");
+      whereConditions.push('uc.externalId = :externalId');
       parameters.externalId = filter.externalId;
     }
 
     if (filter?.type) {
-      whereConditions.push("uc.type = :type");
+      whereConditions.push('uc.type = :type');
       parameters.type = filter.type;
     }
 
     if (whereConditions.length > 0) {
-      queryBuilder.where(whereConditions.join(" AND "), parameters);
+      queryBuilder.where(whereConditions.join(' AND '), parameters);
     }
 
     if (searchQuery) {
@@ -129,82 +137,118 @@ export class UserContentRepository implements IUserContentRepository {
           `CASE WHEN uc.title ILIKE :exactSearch THEN 0 
                  WHEN uc.title ILIKE :searchQuery THEN 1 
                  ELSE 2 END`,
-          "ASC"
+          'ASC',
         )
         .addOrderBy(`uc.${orderBy}`, order)
-        .setParameter("exactSearch", `%${exactSearch}%`)
-        .setParameter("searchQuery", parameters.searchQuery);
+        .setParameter('exactSearch', `%${exactSearch}%`)
+        .setParameter('searchQuery', parameters.searchQuery);
     } else {
       queryBuilder.orderBy(`uc.${orderBy}`, order);
     }
 
-    queryBuilder.skip((page - 1) * pageSize)
-      .take(pageSize);
+    queryBuilder.skip((page - 1) * pageSize).take(pageSize);
     const result = await queryBuilder.getManyAndCount();
     console.log('Query Result:', result);
-    return result
+    return result;
   }
 
-  public async searchGlobalAsync(keyword: string, viewerUserId: string, page: number, limit: number): Promise<[SearchContentProjection[], number]> {
-    const escapedKeyword = keyword.replace(/[\\%_]/g, "\\$&");
+  public async searchGlobalAsync(
+    keyword: string,
+    viewerUserId: string,
+    page: number,
+    limit: number,
+  ): Promise<[SearchContentProjection[], number]> {
+    const escapedKeyword = keyword.replace(/[\\%_]/g, '\\$&');
     const qb = this.createGlobalSearchQuery(viewerUserId)
-      .andWhere("content.title ILIKE :pattern ESCAPE '\\'", { pattern: `%${escapedKeyword}%` })
-      .orderBy(`CASE
+      .andWhere("content.title ILIKE :pattern ESCAPE '\\'", {
+        pattern: `%${escapedKeyword}%`,
+      })
+      .orderBy(
+        `CASE
         WHEN LOWER(content.title) = LOWER(:keyword) THEN 0
         WHEN content.title ILIKE :prefix ESCAPE '\\' THEN 1
-        ELSE 2 END`, "ASC")
-      .addOrderBy("content.publishedAt", "DESC", "NULLS LAST")
+        ELSE 2 END`,
+        'ASC',
+      )
+      .addOrderBy('content.publishedAt', 'DESC', 'NULLS LAST')
       .setParameters({ keyword, prefix: `${escapedKeyword}%` });
     const rows = await qb.clone().getRawMany();
     const count = rows.length;
-    
+
     return [rows.map(this.mapSearchRow), count];
   }
 
-  public async getGlobalSearchItemAsync(id: string, viewerUserId: string): Promise<SearchContentProjection | null> {
+  public async getGlobalSearchItemAsync(
+    id: string,
+    viewerUserId: string,
+  ): Promise<SearchContentProjection | null> {
     const row = await this.createGlobalSearchQuery(viewerUserId)
-      .andWhere("content.id = :id", { id })
+      .andWhere('content.id = :id', { id })
       .getRawOne();
     return row ? this.mapSearchRow(row) : null;
   }
 
   private createGlobalSearchQuery(viewerUserId: string) {
-    return this.userContentContext.createQueryBuilder("content")
-      .innerJoin(User, "creator", "creator.id = content.userId")
-      .leftJoin(UserBiometric, "creatorbio", "creatorbio.\"userId\" = creator.id")
+    return this.userContentContext
+      .createQueryBuilder('content')
+      .innerJoin(User, 'creator', 'creator.id = content.userId')
+      .leftJoin(UserBiometric, 'creatorbio', 'creatorbio."userId" = creator.id')
       .select([
-        "content.id AS id", "content.title AS title", "content.type AS type",
-        "content.platform AS platform", "content.externalId AS \"externalId\"",
-        "content.sourceUrl AS \"sourceUrl\"", "content.publishedAt AS \"publishedAt\"",
-        "content.media AS media",
-        "creator.id AS \"userId\"", "creator.firstName AS \"userFirstName\"",
-        "creator.lastName AS \"userLastName\"", "creator.userName AS \"userName\"",
-        "creator.bio AS \"userBio\"",
-        "creatorbio.\"profileImageUrl\" AS \"userProfileImage\"",
+        'content.id AS id',
+        'content.title AS title',
+        'content.type AS type',
+        'content.platform AS platform',
+        'content.externalId AS "externalId"',
+        'content.sourceUrl AS "sourceUrl"',
+        'content.publishedAt AS "publishedAt"',
+        'content.media AS media',
+        'content.metaData AS "metaData"',
+        'creator.id AS "userId"',
+        'creator.firstName AS "userFirstName"',
+        'creator.lastName AS "userLastName"',
+        'creator.userName AS "userName"',
+        'creator.bio AS "userBio"',
+        'creatorbio."profileImageUrl" AS "userProfileImage"',
       ])
-      .where("creator.isActive = true")
-      .andWhere(`(creator.profilePrivacy = 'Public' OR creator.id = CAST(:viewerUserId AS uuid) OR EXISTS (
+      .where('creator.isActive = true')
+      .andWhere(
+        `(creator.profilePrivacy = 'Public' OR creator.id = CAST(:viewerUserId AS uuid) OR EXISTS (
         SELECT 1 FROM identity.user_follows follow
         WHERE follow."followerId" = CAST(:viewerUserId AS uuid)
           AND follow."followedId" = creator.id
           AND follow.status = 'accepted'
-      ))`, { viewerUserId });
+      ))`,
+        { viewerUserId },
+      );
   }
 
   private mapSearchRow(row: any): SearchContentProjection {
     return {
-      id: row.id, title: row.title, type: row.type, platform: row.platform,
-      externalId: row.externalId, sourceUrl: row.sourceUrl, publishedAt: row.publishedAt,
+      id: row.id,
+      title: row.title,
+      type: row.type,
+      platform: row.platform,
+      externalId: row.externalId,
+      sourceUrl: row.sourceUrl,
+      publishedAt: row.publishedAt,
       media: row.media ?? null,
+      metaData: row.metaData ?? null,
       user: {
-        id: row.userId, firstName: row.userFirstName, lastName: row.userLastName,
-        userName: row.userName, bio: row.userBio,
+        id: row.userId,
+        firstName: row.userFirstName,
+        lastName: row.userLastName,
+        userName: row.userName,
+        bio: row.userBio,
         profileImage: row.userProfileImage ?? null,
       },
     };
   }
 
-  public async getVideoMetaDataByUserIdAndPlatformAsync(userId: string, platform: string, types: string[]): Promise<Pick<UserContent, 'externalId' | 'metaData'>[]> {
+  public async getVideoMetaDataByUserIdAndPlatformAsync(
+    userId: string,
+    platform: string,
+    types: string[],
+  ): Promise<Pick<UserContent, 'externalId' | 'metaData'>[]> {
     if (types.length === 0) {
       return [];
     }
@@ -214,7 +258,11 @@ export class UserContentRepository implements IUserContentRepository {
     });
   }
 
-  public async getVideoIdsByUserIdAndPlatformAsync(userId: string, platform: string, types: string[]): Promise<string[]> {
+  public async getVideoIdsByUserIdAndPlatformAsync(
+    userId: string,
+    platform: string,
+    types: string[],
+  ): Promise<string[]> {
     if (types.length === 0) {
       return [];
     }
@@ -232,12 +280,23 @@ export class UserContentRepository implements IUserContentRepository {
       ...new Set(
         rows
           .map((row) => row.metaData?.videoId || row.externalId)
-          .filter((id): id is string => typeof id === 'string' && id.length > 0),
+          .filter(
+            (id): id is string => typeof id === 'string' && id.length > 0,
+          ),
       ),
     ];
   }
 
-  public async getUserContentVideosAsync(userId: string, platform: string, types: string[]): Promise<Pick<UserContent, 'externalId' | 'metaData' | 'title' | 'media' | 'publishedAt'>[]> {
+  public async getUserContentVideosAsync(
+    userId: string,
+    platform: string,
+    types: string[],
+  ): Promise<
+    Pick<
+      UserContent,
+      'externalId' | 'metaData' | 'title' | 'media' | 'publishedAt'
+    >[]
+  > {
     if (types.length === 0) {
       return [];
     }
@@ -247,11 +306,18 @@ export class UserContentRepository implements IUserContentRepository {
     });
   }
 
-  public async deleteByUserIdAndPlatformAsync(userId: string, platform: string): Promise<void> {
+  public async deleteByUserIdAndPlatformAsync(
+    userId: string,
+    platform: string,
+  ): Promise<void> {
     await this.userContentContext.delete({ userId, platform });
   }
 
-  public async deleteByExternalIdsAsync(userId: string, platform: string, externalIds: string[]): Promise<void> {
+  public async deleteByExternalIdsAsync(
+    userId: string,
+    platform: string,
+    externalIds: string[],
+  ): Promise<void> {
     if (externalIds.length === 0) {
       return;
     }

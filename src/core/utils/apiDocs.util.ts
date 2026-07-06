@@ -1,15 +1,16 @@
-import configs from "../../configs";
-import { INestApplication } from "@nestjs/common";
-import { apiReference } from "@scalar/nestjs-api-reference";
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import configs from '../../configs';
+import { INestApplication } from '@nestjs/common';
+import { apiReference } from '@scalar/nestjs-api-reference';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as fs from 'fs';
 import * as path from 'path';
-import logger from "../utils/winston.util";
+import logger from '../utils/winston.util';
 
 export function addSwaggerApiDocs(app: INestApplication) {
   const swaggerConfig = new DocumentBuilder()
     .setTitle(`${configs.projectName}`)
-    .setDescription(`${configs.projectName} api documentation
+    .setDescription(
+      `${configs.projectName} api documentation
      <div style="padding: 10px; text-align: center; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
       <a href="/docs-scalar">
         <button style="padding: 10px; background-color: #1c2132 !important; color: white; border-radius: 5px; font-size: 16px; border: none; cursor: pointer;">
@@ -22,19 +23,24 @@ export function addSwaggerApiDocs(app: INestApplication) {
         </button>
       </a>
     </div>
-    `)
+    `,
+    )
     .setVersion('1.0')
     .addBearerAuth()
     .build();
 
-  SwaggerModule.setup('docs-swagger', app, SwaggerModule.createDocument(app, swaggerConfig));
+  SwaggerModule.setup(
+    'docs-swagger',
+    app,
+    SwaggerModule.createDocument(app, swaggerConfig),
+  );
 }
 
 export function addScalarApiDocs(app: INestApplication) {
-
   const config = new DocumentBuilder()
     .setTitle(`${configs.projectName}`)
-    .setDescription(`${configs.projectName} api documentation
+    .setDescription(
+      `${configs.projectName} api documentation
            <div style="padding: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
             <a href="/docs-swagger">
               <button style="padding: 10px; background-color: #1c2132 !important; color: white; border-radius: 5px; font-size: 16px; border: none; cursor: pointer;">
@@ -47,7 +53,8 @@ export function addScalarApiDocs(app: INestApplication) {
               </button>
             </a>
           </div>
-          `)
+          `,
+    )
     .setVersion('1.0')
     .addBearerAuth()
     .build();
@@ -59,7 +66,7 @@ export function addScalarApiDocs(app: INestApplication) {
   app.use(
     '/docs-scalar',
     apiReference({
-      content: SwaggerModule.createDocument(app, config)
+      content: SwaggerModule.createDocument(app, config),
     }),
   );
 }
@@ -84,13 +91,25 @@ export function addWebSocketDocs(app: INestApplication) {
     let cssPath: string;
 
     try {
-      const packageJsonPath = require.resolve('@asyncapi/react-component/package.json');
+      const packageJsonPath = require.resolve(
+        '@asyncapi/react-component/package.json',
+      );
       componentPath = path.dirname(packageJsonPath);
-      standaloneJsPath = path.join(componentPath, 'browser', 'standalone', 'index.js');
+      standaloneJsPath = path.join(
+        componentPath,
+        'browser',
+        'standalone',
+        'index.js',
+      );
       cssPath = path.join(componentPath, 'styles', 'default.min.css');
     } catch (error) {
-      logger.error('Failed to resolve @asyncapi/react-component package:', error);
-      throw new Error('AsyncAPI React component package not found. Make sure @asyncapi/react-component is installed.');
+      logger.error(
+        'Failed to resolve @asyncapi/react-component package:',
+        error,
+      );
+      throw new Error(
+        'AsyncAPI React component package not found. Make sure @asyncapi/react-component is installed.',
+      );
     }
 
     httpAdapter.get('/docs-websocket/spec.json', (req, res) => {
@@ -119,10 +138,17 @@ export function addWebSocketDocs(app: INestApplication) {
     });
 
     httpAdapter.get('/docs-websocket', (req, res) => {
-      const htmlTemplatePath = path.join(process.cwd(), 'docs', 'AsyncAPI', 'index.html');
+      const htmlTemplatePath = path.join(
+        process.cwd(),
+        'docs',
+        'AsyncAPI',
+        'index.html',
+      );
 
       if (!fs.existsSync(htmlTemplatePath)) {
-        logger.error(`AsyncAPI HTML template not found at: ${htmlTemplatePath}`);
+        logger.error(
+          `AsyncAPI HTML template not found at: ${htmlTemplatePath}`,
+        );
         res.status(500).send('AsyncAPI documentation template not found');
         return;
       }

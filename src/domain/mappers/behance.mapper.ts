@@ -1,8 +1,14 @@
-import { BehanceContentModel, BehanceProfileModel } from "../contracts/behance.model";
-import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { UserContent } from "../entities/userContent.entity";
+import {
+  BehanceContentModel,
+  BehanceProfileModel,
+} from '../contracts/behance.model';
+import { LinkedAccount } from '../entities/linkedAccount.entity';
+import { UserContent } from '../entities/userContent.entity';
 
-export function mapToBehanceProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): BehanceProfileModel {
+export function mapToBehanceProfileModel(
+  data: LinkedAccount,
+  includeSensitiveFields: boolean = false,
+): BehanceProfileModel {
   return {
     id: data.id,
     userId: data.userId,
@@ -20,7 +26,9 @@ export function mapToBehanceProfileModel(data: LinkedAccount, includeSensitiveFi
   } as BehanceProfileModel;
 }
 
-export function mapToBehanceContentModel(data: UserContent): BehanceContentModel {
+export function mapToBehanceContentModel(
+  data: UserContent,
+): BehanceContentModel {
   return {
     id: data.id,
     title: data.title,

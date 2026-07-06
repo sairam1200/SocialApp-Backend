@@ -18,28 +18,33 @@ export class FacebookDataDeletionCommand {
 
 @CommandHandler(FacebookDataDeletionCommand)
 export class FacebookDataDeletionCommandHandler
-  implements ICommandHandler<FacebookDataDeletionCommand> {
-
+  implements ICommandHandler<FacebookDataDeletionCommand>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,
-  ) { }
+  ) {}
 
-  public async execute(command: FacebookDataDeletionCommand): Promise<{ url: string; confirmation_code: string }> {
+  public async execute(
+    command: FacebookDataDeletionCommand,
+  ): Promise<{ url: string; confirmation_code: string }> {
     const { signedRequest } = command;
 
     const { user_id } = this.parseAndVerifySignedRequest(signedRequest);
 
-    const linkedAccount = await this.linkedAccountRepository.getByPlatformAndMetaDataValueAsync(
-      _const.PLATFORMS.FACEBOOK,
-      'facebookUserId',
-      user_id,
-    );
+    const linkedAccount =
+      await this.linkedAccountRepository.getByPlatformAndMetaDataValueAsync(
+        _const.PLATFORMS.FACEBOOK,
+        'facebookUserId',
+        user_id,
+      );
 
     if (!linkedAccount) {
-      logger.warn(`[FacebookDataDeletion] No linked account found for Facebook user ${user_id}`);
+      logger.warn(
+        `[FacebookDataDeletion] No linked account found for Facebook user ${user_id}`,
+      );
       const confirmationCode = crypto.randomUUID();
       return {
         url: `${configs.frontend.url}/data-deletion?code=${confirmationCode}`,
@@ -48,7 +53,9 @@ export class FacebookDataDeletionCommandHandler
     }
 
     const confirmationCode = crypto.randomUUID();
-    logger.info(`[FacebookDataDeletion] Initiating data deletion for user ${linkedAccount.userId}`);
+    logger.info(
+      `[FacebookDataDeletion] Initiating data deletion for user ${linkedAccount.userId}`,
+    );
 
     await this.disconnectService.disconnectPlatformAsync(
       linkedAccount.userId,
@@ -61,7 +68,9 @@ export class FacebookDataDeletionCommandHandler
     };
   }
 
-  private parseAndVerifySignedRequest(signedRequest: string): { user_id: string } {
+  private parseAndVerifySignedRequest(signedRequest: string): {
+    user_id: string;
+  } {
     if (!signedRequest) {
       throw new ApplicationException('Missing signed_request');
     }
@@ -103,8 +112,10 @@ export class FacebookDataDeletionCommandHandler
       'base64',
     );
 
-    if (expectedSig.length !== actualSig.length ||
-        !crypto.timingSafeEqual(expectedSig, actualSig)) {
+    if (
+      expectedSig.length !== actualSig.length ||
+      !crypto.timingSafeEqual(expectedSig, actualSig)
+    ) {
       throw new ApplicationException('Invalid signed_request signature');
     }
 

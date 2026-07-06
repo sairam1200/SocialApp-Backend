@@ -1,9 +1,19 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { AuthenticatedAccountGuard } from "../../../core/passport";
-import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
-import { ChangePasswordCommand, ChangePasswordRequestModel } from "./change-password.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AuthenticatedAccountGuard } from '../../../core/passport';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ChangePasswordCommand,
+  ChangePasswordRequestModel,
+} from './change-password.handler';
 
 @ApiTags('Account')
 @Controller({
@@ -11,10 +21,7 @@ import { ChangePasswordCommand, ChangePasswordRequestModel } from "./change-pass
   version: '1',
 })
 export class ChangePasswordController {
-
-  constructor(
-    private readonly commandBus: CommandBus
-  ) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('change-password')
   @UseGuards(AuthenticatedAccountGuard)
@@ -27,8 +34,9 @@ export class ChangePasswordController {
     @Body() model: ChangePasswordRequestModel,
     @Res() res: Response,
   ): Promise<Response | void> {
-
     await this.commandBus.execute(new ChangePasswordCommand({ model }));
-    return res.status(HttpStatus.OK).json({ message: "Password changed successfully" });
+    return res
+      .status(HttpStatus.OK)
+      .json({ message: 'Password changed successfully' });
   }
 }

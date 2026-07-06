@@ -1,18 +1,24 @@
-import axios from "axios";
-import { Inject, UnauthorizedException } from "@nestjs/common";
-import configs from "../../../../configs";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../../core/utils/const";
-import fuseUtil from "../../../../core/utils/fuse.util";
-import logger from "../../../../core/utils/winston.util";
-import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
-import { SearchHistory } from "../../../../domain/entities";
-import { ApplicationException } from "../../../../core/exceptions";
-import { ISearchService } from "../../../../domain/services/isearch.service";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { InstagramSearchResponseModel } from "../../../../domain/contracts/instagram.model";
-import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
-import { ISearchHistoryRepository, IUserLoginRepository } from "../../../../domain/repositories";
+import axios from 'axios';
+import { Inject, UnauthorizedException } from '@nestjs/common';
+import configs from '../../../../configs';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../../core/utils/const';
+import fuseUtil from '../../../../core/utils/fuse.util';
+import logger from '../../../../core/utils/winston.util';
+import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+import { SearchHistory } from '../../../../domain/entities';
+import { ApplicationException } from '../../../../core/exceptions';
+import { ISearchService } from '../../../../domain/services/isearch.service';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { InstagramSearchResponseModel } from '../../../../domain/contracts/instagram.model';
+import {
+  deserializeObject,
+  serializeObject,
+} from '../../../../core/utils/serialization.util';
+import {
+  ISearchHistoryRepository,
+  IUserLoginRepository,
+} from '../../../../domain/repositories';
 
 export class InstagramSearchRequestModel {
   @ApiProperty()
@@ -34,8 +40,9 @@ export class InstagramSearchQuery {
 }
 
 @QueryHandler(InstagramSearchQuery)
-export class InstagramSearchQueryHandler implements IQueryHandler<InstagramSearchQuery, InstagramSearchResponseModel> {
-
+export class InstagramSearchQueryHandler
+  implements IQueryHandler<InstagramSearchQuery, InstagramSearchResponseModel>
+{
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,
@@ -43,9 +50,11 @@ export class InstagramSearchQueryHandler implements IQueryHandler<InstagramSearc
     private readonly searchHistoryRepository: ISearchHistoryRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-  ) { }
+  ) {}
 
-  public async execute(command: InstagramSearchQuery): Promise<InstagramSearchResponseModel> {
+  public async execute(
+    command: InstagramSearchQuery,
+  ): Promise<InstagramSearchResponseModel> {
     const { searchTerm, filter, instagramAccessToken } = command.model;
 
     let expiresIn: number;
@@ -53,16 +62,29 @@ export class InstagramSearchQueryHandler implements IQueryHandler<InstagramSearc
     const userId = HttpContext.getCurrentUserId;
 
     if (instagramAccessToken) {
-      const isTokenValid = await this.verifyAccessTokenAsync(instagramAccessToken);
+      const isTokenValid =
+        await this.verifyAccessTokenAsync(instagramAccessToken);
       if (!isTokenValid) {
         const now = new Date();
-        const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.INSTAGRAM);
+        const userLogin =
+          await this.userLoginRepository.getByUserIdAndProviderAsync(
+            userId,
+            _const.PLATFORMS.INSTAGRAM,
+          );
 
         if (userLogin && now < userLogin.expiryDateUtc) {
-          const tokenValue = deserializeObject<{ access_token: string, refresh_token: string }>(userLogin.tokenValue);
-          const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
+          const tokenValue = deserializeObject<{
+            access_token: string;
+            refresh_token: string;
+          }>(userLogin.tokenValue);
+          const { access_token, expires_in } = await this.refreshTokenAsync(
+            tokenValue.refresh_token,
+          );
           if (access_token) {
-            userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
+            userLogin.tokenValue = serializeObject({
+              access_token,
+              refresh_token: tokenValue.refresh_token,
+            });
             userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
             await this.userLoginRepository.updateAsync(userLogin);
           }
@@ -73,16 +95,33 @@ export class InstagramSearchQueryHandler implements IQueryHandler<InstagramSearc
         accessToken = instagramAccessToken;
       }
     } else {
-      const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.INSTAGRAM);
+      const userLogin =
+        await this.userLoginRepository.getByUserIdAndProviderAsync(
+          userId,
+          _const.PLATFORMS.INSTAGRAM,
+        );
       if (!userLogin) {
-        throw new UnauthorizedException('No Instagram account linked to your user profile. Please link your Instagram account to proceed.');
+        throw new UnauthorizedException(
+          'No Instagram account linked to your user profile. Please link your Instagram account to proceed.',
+        );
       }
 
-      const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
-      const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
+      const tokenValue = deserializeObject<{
+        access_token: string;
+        refresh_token: string;
+        expires_in: number;
+      }>(userLogin.tokenValue);
+      const isTokenValid = await this.verifyAccessTokenAsync(
+        tokenValue.access_token,
+      );
       if (!isTokenValid) {
-        const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
-        userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
+        const { access_token, expires_in } = await this.refreshTokenAsync(
+          tokenValue.refresh_token,
+        );
+        userLogin.tokenValue = serializeObject({
+          access_token,
+          refresh_token: tokenValue.refresh_token,
+        });
         userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
         await this.userLoginRepository.updateAsync(userLogin);
         accessToken = access_token;
@@ -106,21 +145,27 @@ export class InstagramSearchQueryHandler implements IQueryHandler<InstagramSearc
     return data;
   }
 
-  private async refreshTokenAsync(refreshToken: string)
-    : Promise<{ access_token: string, expires_in: number }> {
+  private async refreshTokenAsync(
+    refreshToken: string,
+  ): Promise<{ access_token: string; expires_in: number }> {
     try {
-      const response = await axios.get('https://graph.facebook.com/v23.0/oauth/access_token', {
-        params: {
-          grant_type: 'fb_exchange_token',
-          client_id: configs.facebook.clientId,
-          client_secret: configs.facebook.clientSecret,
-          fb_exchange_token: refreshToken,
+      const response = await axios.get(
+        'https://graph.facebook.com/v23.0/oauth/access_token',
+        {
+          params: {
+            grant_type: 'fb_exchange_token',
+            client_id: configs.facebook.clientId,
+            client_secret: configs.facebook.clientSecret,
+            fb_exchange_token: refreshToken,
+          },
         },
-      });
+      );
 
       const { access_token, expires_in } = response.data;
       if (!access_token) {
-        throw new ApplicationException('Your Instagram session has expired or the access token is invalid. Please log in to Instagram again to continue.');
+        throw new ApplicationException(
+          'Your Instagram session has expired or the access token is invalid. Please log in to Instagram again to continue.',
+        );
       }
 
       return {
@@ -128,8 +173,10 @@ export class InstagramSearchQueryHandler implements IQueryHandler<InstagramSearc
         expires_in,
       };
     } catch (error) {
-      logger.error("Error refreshing Instagram token", { error });
-      throw new UnauthorizedException('Your Instagram session has expired or the access token is invalid. Please log in to Instagram again to continue.');
+      logger.error('Error refreshing Instagram token', { error });
+      throw new UnauthorizedException(
+        'Your Instagram session has expired or the access token is invalid. Please log in to Instagram again to continue.',
+      );
     }
   }
 
@@ -137,12 +184,15 @@ export class InstagramSearchQueryHandler implements IQueryHandler<InstagramSearc
     try {
       const appAccessToken = `${configs.facebook.clientId}|${configs.facebook.clientSecret}`;
 
-      const response = await axios.get('https://graph.facebook.com/v23.0/debug_token', {
-        params: {
-          input_token: accessToken,
-          access_token: appAccessToken,
+      const response = await axios.get(
+        'https://graph.facebook.com/v23.0/debug_token',
+        {
+          params: {
+            input_token: accessToken,
+            access_token: appAccessToken,
+          },
         },
-      });
+      );
 
       const data = response.data.data;
       return data.is_valid;
@@ -158,14 +208,19 @@ export class InstagramSearchQueryHandler implements IQueryHandler<InstagramSearc
     }
 
     const similarQueries =
-      (await this.searchHistoryRepository.findSimilarQueriesAsync(trimmedQuery)) ?? [];
+      (await this.searchHistoryRepository.findSimilarQueriesAsync(
+        trimmedQuery,
+      )) ?? [];
 
     const candidateValues = similarQueries
       .map((item) => item.normalizedQuery)
       .filter(Boolean)
       .slice(0, 50);
 
-    const normalizedQuery = fuseUtil.normalizeSearchTerm(trimmedQuery, candidateValues);
+    const normalizedQuery = fuseUtil.normalizeSearchTerm(
+      trimmedQuery,
+      candidateValues,
+    );
 
     const hasExistingEntry = similarQueries.some((item) => {
       const original = (item.originalQuery ?? '').trim().toLowerCase();
@@ -188,4 +243,3 @@ export class InstagramSearchQueryHandler implements IQueryHandler<InstagramSearc
     return normalizedQuery;
   }
 }
-

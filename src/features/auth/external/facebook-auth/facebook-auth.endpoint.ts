@@ -1,4 +1,3 @@
-
 import { Response } from 'express';
 import { CommandBus } from '@nestjs/cqrs';
 import configs from '../../../../configs';
@@ -23,7 +22,7 @@ class ConnectResponseModel {
   version: '1',
 })
 export class FacebookAuthenticationController {
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Get('connect')
   @ApiResponse({ status: 200, description: 'OK', type: ConnectResponseModel })
@@ -40,7 +39,7 @@ export class FacebookAuthenticationController {
     @Query('ipAddress') ipAddress: string,
   ): Promise<Response | void> {
     const scopes = [
-       'public_profile',
+      'public_profile',
       'email',
       'pages_show_list',
       'pages_read_engagement',
@@ -69,7 +68,11 @@ export class FacebookAuthenticationController {
   }
 
   @Get('connect-callback')
-  @ApiResponse({ status: 200, description: 'OK', type: FacebookCallbackTokenResponseModel })
+  @ApiResponse({
+    status: 200,
+    description: 'OK',
+    type: FacebookCallbackTokenResponseModel,
+  })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })

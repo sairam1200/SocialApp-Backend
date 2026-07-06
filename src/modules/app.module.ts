@@ -23,7 +23,13 @@ import { HttpContextMiddleware } from '../core/middlewares/httpContext.middlewar
 import { RateLimitMiddleware } from '../core/middlewares/rate-limit.middleware';
 import { RateLimit, RateLimitLog } from '../domain/entities';
 import { dependency } from '../infrastructure/dependency';
-import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  OnApplicationBootstrap,
+  OnApplicationShutdown,
+} from '@nestjs/common';
 
 @Module({
   imports: [
@@ -47,24 +53,17 @@ import { MiddlewareConsumer, Module, NestModule, OnApplicationBootstrap, OnAppli
     FollowModule,
     AnalyticsModule,
   ],
-  providers: [
-    dependency.RateLimitRepository,
-    RateLimitMiddleware,
-  ],
+  providers: [dependency.RateLimitRepository, RateLimitMiddleware],
 })
-export class AppModule implements OnApplicationBootstrap, OnApplicationShutdown, NestModule {
-  constructor(
-    private readonly dataSeeder: DataSeeder
-  ) { }
+export class AppModule
+  implements OnApplicationBootstrap, OnApplicationShutdown, NestModule
+{
+  constructor(private readonly dataSeeder: DataSeeder) {}
 
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(HttpContextMiddleware)
-      .forRoutes('*');
+    consumer.apply(HttpContextMiddleware).forRoutes('*');
 
-    consumer
-      .apply(RateLimitMiddleware)
-      .forRoutes('*');
+    consumer.apply(RateLimitMiddleware).forRoutes('*');
   }
 
   async onApplicationBootstrap(): Promise<void> {
@@ -75,4 +74,4 @@ export class AppModule implements OnApplicationBootstrap, OnApplicationShutdown,
     logger.info(`Application shutting down (signal: ${signal})`);
     await redis.disconnectFromRedis();
   }
-} 
+}

@@ -6,17 +6,20 @@ import { IAnalyticsService } from '../../domain/services/ianalytics.service';
 
 @Injectable()
 export class AnalyticsService implements IAnalyticsService {
-
   constructor(
     @Inject(_const.IANALYTICS_REPOSITORY)
     private readonly analyticsRepository: IAnalyticsRepository,
-  ) { }
+  ) {}
 
   async trackEvent(
     eventName: string,
     properties: Record<string, any> = {},
   ): Promise<void> {
     const userId = HttpContext.getCurrentUserId;
-    await this.analyticsRepository.trackEventAsync(eventName, userId, properties);
+    await this.analyticsRepository.trackEventAsync(
+      eventName,
+      userId,
+      properties,
+    );
   }
 }

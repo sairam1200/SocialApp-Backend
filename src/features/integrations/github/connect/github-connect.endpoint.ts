@@ -1,11 +1,21 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import configs from "../../../../configs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { cryptoUtils } from "../../../../core/utils/crypto.util";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
-import { GithubConnectQuery, GithubConnectCallbackQuery } from "./github-connect.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import configs from '../../../../configs';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { cryptoUtils } from '../../../../core/utils/crypto.util';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  GithubConnectQuery,
+  GithubConnectCallbackQuery,
+} from './github-connect.handler';
 
 @ApiTags('Integrations')
 @Controller({
@@ -13,8 +23,7 @@ import { GithubConnectQuery, GithubConnectCallbackQuery } from "./github-connect
   version: '1',
 })
 export class GithubConnectController {
-
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
@@ -23,12 +32,7 @@ export class GithubConnectController {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Connect(@Res() res: Response): Promise<Response | void> {
-
-    const scopes = [
-      'read:user',
-      'user:email',
-      'repo',
-    ].join(' ');
+    const scopes = ['read:user', 'user:email', 'repo'].join(' ');
 
     const state = cryptoUtils.generateEncryptionKey(16);
 
@@ -52,10 +56,13 @@ export class GithubConnectController {
   public async Callback(
     @Query('code') code: string,
     @Query('state') state: string,
-    @Res() res: Response): Promise<Response | void> {
-    const result = await this.commandBus.execute(new GithubConnectCallbackQuery({
-      model: { code, state }
-    }));
+    @Res() res: Response,
+  ): Promise<Response | void> {
+    const result = await this.commandBus.execute(
+      new GithubConnectCallbackQuery({
+        model: { code, state },
+      }),
+    );
     return res.status(HttpStatus.OK).json(result);
   }
 }

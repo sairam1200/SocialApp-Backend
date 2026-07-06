@@ -1,14 +1,17 @@
-import axios from "axios";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../../core/utils/const";
-import fuseUtil from "../../../../core/utils/fuse.util";
-import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
-import { SearchHistory } from "../../../../domain/entities";
-import { Inject, UnauthorizedException } from "@nestjs/common";
-import { ISearchService } from "../../../../domain/services/isearch.service";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { SnapchatSearchResponseModel } from "../../../../domain/contracts/snapchat.model";
-import { ISearchHistoryRepository, IUserLoginRepository } from "../../../../domain/repositories";
+import axios from 'axios';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../../core/utils/const';
+import fuseUtil from '../../../../core/utils/fuse.util';
+import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+import { SearchHistory } from '../../../../domain/entities';
+import { Inject, UnauthorizedException } from '@nestjs/common';
+import { ISearchService } from '../../../../domain/services/isearch.service';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { SnapchatSearchResponseModel } from '../../../../domain/contracts/snapchat.model';
+import {
+  ISearchHistoryRepository,
+  IUserLoginRepository,
+} from '../../../../domain/repositories';
 
 export class SnapchatSearchRequestModel {
   @ApiProperty()
@@ -30,8 +33,9 @@ export class SnapchatSearchQuery {
 }
 
 @QueryHandler(SnapchatSearchQuery)
-export class SnapchatSearchQueryHandler implements IQueryHandler<SnapchatSearchQuery> {
-
+export class SnapchatSearchQueryHandler
+  implements IQueryHandler<SnapchatSearchQuery>
+{
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,
@@ -39,9 +43,11 @@ export class SnapchatSearchQueryHandler implements IQueryHandler<SnapchatSearchQ
     private readonly searchHistoryRepository: ISearchHistoryRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-  ) { }
+  ) {}
 
-  public async execute(command: SnapchatSearchQuery): Promise<SnapchatSearchResponseModel> {
+  public async execute(
+    command: SnapchatSearchQuery,
+  ): Promise<SnapchatSearchResponseModel> {
     const { searchTerm, filter, snapchatAccessToken } = command.model;
 
     let expiresIn: number;
@@ -49,30 +55,49 @@ export class SnapchatSearchQueryHandler implements IQueryHandler<SnapchatSearchQ
     const userId = HttpContext.getCurrentUserId;
 
     if (snapchatAccessToken) {
-      const isTokenValid = await this.verifyAccessTokenAsync(snapchatAccessToken);
+      const isTokenValid =
+        await this.verifyAccessTokenAsync(snapchatAccessToken);
       if (!isTokenValid) {
         const now = new Date();
-        const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.SNAPCHAT);
+        const userLogin =
+          await this.userLoginRepository.getByUserIdAndProviderAsync(
+            userId,
+            _const.PLATFORMS.SNAPCHAT,
+          );
 
         if (userLogin && now < userLogin.expiryDateUtc) {
           accessToken = userLogin.tokenValue;
-          expiresIn = Math.floor((userLogin.expiryDateUtc.getTime() - Date.now()) / 1000);
+          expiresIn = Math.floor(
+            (userLogin.expiryDateUtc.getTime() - Date.now()) / 1000,
+          );
         }
       } else {
         accessToken = snapchatAccessToken;
       }
     } else {
-      const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.SNAPCHAT);
+      const userLogin =
+        await this.userLoginRepository.getByUserIdAndProviderAsync(
+          userId,
+          _const.PLATFORMS.SNAPCHAT,
+        );
       if (!userLogin) {
-        throw new UnauthorizedException('No Snapchat account linked to your user profile. Please link your Snapchat account to proceed.');
+        throw new UnauthorizedException(
+          'No Snapchat account linked to your user profile. Please link your Snapchat account to proceed.',
+        );
       }
 
-      const isTokenValid = await this.verifyAccessTokenAsync(userLogin.tokenValue);
+      const isTokenValid = await this.verifyAccessTokenAsync(
+        userLogin.tokenValue,
+      );
       if (!isTokenValid) {
-        throw new UnauthorizedException('Your Snapchat session has expired or the access token is invalid. Please log in to Snapchat again to continue.');
+        throw new UnauthorizedException(
+          'Your Snapchat session has expired or the access token is invalid. Please log in to Snapchat again to continue.',
+        );
       } else {
         accessToken = userLogin.tokenValue;
-        expiresIn = Math.floor((userLogin.expiryDateUtc.getTime() - Date.now()) / 1000);
+        expiresIn = Math.floor(
+          (userLogin.expiryDateUtc.getTime() - Date.now()) / 1000,
+        );
       }
     }
 
@@ -110,14 +135,19 @@ export class SnapchatSearchQueryHandler implements IQueryHandler<SnapchatSearchQ
     }
 
     const similarQueries =
-      (await this.searchHistoryRepository.findSimilarQueriesAsync(trimmedQuery)) ?? [];
+      (await this.searchHistoryRepository.findSimilarQueriesAsync(
+        trimmedQuery,
+      )) ?? [];
 
     const candidateValues = similarQueries
       .map((item) => item.normalizedQuery)
       .filter(Boolean)
       .slice(0, 50);
 
-    const normalizedQuery = fuseUtil.normalizeSearchTerm(trimmedQuery, candidateValues);
+    const normalizedQuery = fuseUtil.normalizeSearchTerm(
+      trimmedQuery,
+      candidateValues,
+    );
 
     const hasExistingEntry = similarQueries.some((item) => {
       const original = (item.originalQuery ?? '').trim().toLowerCase();

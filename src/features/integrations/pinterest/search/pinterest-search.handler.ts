@@ -1,17 +1,20 @@
-import axios from "axios";
-import configs from "../../../../configs";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../../core/utils/const";
-import fuseUtil from "../../../../core/utils/fuse.util";
-import logger from "../../../../core/utils/winston.util";
-import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
-import { SearchHistory } from "../../../../domain/entities";
-import { Inject, UnauthorizedException } from "@nestjs/common";
-import { ApplicationException } from "../../../../core/exceptions";
-import { ISearchService } from "../../../../domain/services/isearch.service";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { PinterestSearchResponseModel } from "../../../../domain/contracts/pinterest.model";
-import { ISearchHistoryRepository, IUserLoginRepository } from "../../../../domain/repositories";
+import axios from 'axios';
+import configs from '../../../../configs';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../../core/utils/const';
+import fuseUtil from '../../../../core/utils/fuse.util';
+import logger from '../../../../core/utils/winston.util';
+import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+import { SearchHistory } from '../../../../domain/entities';
+import { Inject, UnauthorizedException } from '@nestjs/common';
+import { ApplicationException } from '../../../../core/exceptions';
+import { ISearchService } from '../../../../domain/services/isearch.service';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { PinterestSearchResponseModel } from '../../../../domain/contracts/pinterest.model';
+import {
+  ISearchHistoryRepository,
+  IUserLoginRepository,
+} from '../../../../domain/repositories';
 
 export class PinterestSearchRequestModel {
   @ApiProperty()
@@ -33,8 +36,9 @@ export class PinterestSearchQuery {
 }
 
 @QueryHandler(PinterestSearchQuery)
-export class PinterestSearchQueryHandler implements IQueryHandler<PinterestSearchQuery> {
-
+export class PinterestSearchQueryHandler
+  implements IQueryHandler<PinterestSearchQuery>
+{
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,
@@ -42,9 +46,11 @@ export class PinterestSearchQueryHandler implements IQueryHandler<PinterestSearc
     private readonly searchHistoryRepository: ISearchHistoryRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-  ) { }
+  ) {}
 
-  public async execute(command: PinterestSearchQuery): Promise<PinterestSearchResponseModel> {
+  public async execute(
+    command: PinterestSearchQuery,
+  ): Promise<PinterestSearchResponseModel> {
     const { searchTerm, filter, pinterestAccessToken } = command.model;
 
     let expiresIn: number;
@@ -52,16 +58,28 @@ export class PinterestSearchQueryHandler implements IQueryHandler<PinterestSearc
     const userId = HttpContext.getCurrentUserId;
 
     if (pinterestAccessToken) {
-      const isTokenValid = await this.verifyAccessTokenAsync(pinterestAccessToken);
+      const isTokenValid =
+        await this.verifyAccessTokenAsync(pinterestAccessToken);
       if (!isTokenValid) {
         const now = new Date();
-        const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.PINTEREST);
+        const userLogin =
+          await this.userLoginRepository.getByUserIdAndProviderAsync(
+            userId,
+            _const.PLATFORMS.PINTEREST,
+          );
 
         if (userLogin && now < userLogin.expiryDateUtc) {
-          const { access_token, expires_in, refresh_token, refresh_token_expires_in } = await this.refreshTokenAsync(userLogin.tokenValue);
+          const {
+            access_token,
+            expires_in,
+            refresh_token,
+            refresh_token_expires_in,
+          } = await this.refreshTokenAsync(userLogin.tokenValue);
           if (access_token) {
             userLogin.tokenValue = refresh_token || userLogin.tokenValue;
-            userLogin.expiryDateUtc = new Date(Date.now() + (refresh_token_expires_in || expires_in) * 1000);
+            userLogin.expiryDateUtc = new Date(
+              Date.now() + (refresh_token_expires_in || expires_in) * 1000,
+            );
             await this.userLoginRepository.updateAsync(userLogin);
           }
           accessToken = access_token;
@@ -71,22 +89,39 @@ export class PinterestSearchQueryHandler implements IQueryHandler<PinterestSearc
         accessToken = pinterestAccessToken;
       }
     } else {
-      const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.PINTEREST);
+      const userLogin =
+        await this.userLoginRepository.getByUserIdAndProviderAsync(
+          userId,
+          _const.PLATFORMS.PINTEREST,
+        );
       if (!userLogin) {
-        throw new UnauthorizedException('No Pinterest account linked to your user profile. Please link your Pinterest account to proceed.');
+        throw new UnauthorizedException(
+          'No Pinterest account linked to your user profile. Please link your Pinterest account to proceed.',
+        );
       }
 
-      const isTokenValid = await this.verifyAccessTokenAsync(userLogin.tokenValue);
+      const isTokenValid = await this.verifyAccessTokenAsync(
+        userLogin.tokenValue,
+      );
       if (!isTokenValid) {
-        const { access_token, expires_in, refresh_token, refresh_token_expires_in } = await this.refreshTokenAsync(userLogin.tokenValue);
+        const {
+          access_token,
+          expires_in,
+          refresh_token,
+          refresh_token_expires_in,
+        } = await this.refreshTokenAsync(userLogin.tokenValue);
         userLogin.tokenValue = refresh_token || userLogin.tokenValue;
-        userLogin.expiryDateUtc = new Date(Date.now() + (refresh_token_expires_in || expires_in) * 1000);
+        userLogin.expiryDateUtc = new Date(
+          Date.now() + (refresh_token_expires_in || expires_in) * 1000,
+        );
         await this.userLoginRepository.updateAsync(userLogin);
         accessToken = access_token;
         expiresIn = expires_in;
       } else {
         accessToken = userLogin.tokenValue;
-        expiresIn = Math.floor((userLogin.expiryDateUtc.getTime() - Date.now()) / 1000);
+        expiresIn = Math.floor(
+          (userLogin.expiryDateUtc.getTime() - Date.now()) / 1000,
+        );
       }
     }
 
@@ -103,10 +138,16 @@ export class PinterestSearchQueryHandler implements IQueryHandler<PinterestSearc
     return data;
   }
 
-  private async refreshTokenAsync(refreshToken: string)
-    : Promise<{ access_token: string, expires_in: number, refresh_token?: string, refresh_token_expires_in?: number }> {
+  private async refreshTokenAsync(refreshToken: string): Promise<{
+    access_token: string;
+    expires_in: number;
+    refresh_token?: string;
+    refresh_token_expires_in?: number;
+  }> {
     try {
-      const basicAuth = Buffer.from(`${configs.pinterest.clientId}:${configs.pinterest.clientSecret}`).toString('base64');
+      const basicAuth = Buffer.from(
+        `${configs.pinterest.clientId}:${configs.pinterest.clientSecret}`,
+      ).toString('base64');
 
       const response = await axios.post(
         'https://api.pinterest.com/v5/oauth/token',
@@ -114,14 +155,21 @@ export class PinterestSearchQueryHandler implements IQueryHandler<PinterestSearc
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${basicAuth}`
+            Authorization: `Basic ${basicAuth}`,
           },
         },
       );
 
-      const { access_token, expires_in, refresh_token, refresh_token_expires_in } = response.data;
+      const {
+        access_token,
+        expires_in,
+        refresh_token,
+        refresh_token_expires_in,
+      } = response.data;
       if (!access_token) {
-        throw new ApplicationException('Your Pinterest session has expired or the access token is invalid. Please log in to Pinterest again to continue.');
+        throw new ApplicationException(
+          'Your Pinterest session has expired or the access token is invalid. Please log in to Pinterest again to continue.',
+        );
       }
 
       return {
@@ -131,18 +179,23 @@ export class PinterestSearchQueryHandler implements IQueryHandler<PinterestSearc
         refresh_token_expires_in,
       };
     } catch (error) {
-      logger.error("Error refreshing Pinterest token", { error });
-      throw new UnauthorizedException('Your Pinterest session has expired or the access token is invalid. Please log in to Pinterest again to continue.');
+      logger.error('Error refreshing Pinterest token', { error });
+      throw new UnauthorizedException(
+        'Your Pinterest session has expired or the access token is invalid. Please log in to Pinterest again to continue.',
+      );
     }
   }
 
   private async verifyAccessTokenAsync(accessToken: string): Promise<boolean> {
     try {
-      const response = await axios.get('https://api.pinterest.com/v5/user_account', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
+      const response = await axios.get(
+        'https://api.pinterest.com/v5/user_account',
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         },
-      });
+      );
 
       return !!response.data?.username;
     } catch (error) {
@@ -157,14 +210,19 @@ export class PinterestSearchQueryHandler implements IQueryHandler<PinterestSearc
     }
 
     const similarQueries =
-      (await this.searchHistoryRepository.findSimilarQueriesAsync(trimmedQuery)) ?? [];
+      (await this.searchHistoryRepository.findSimilarQueriesAsync(
+        trimmedQuery,
+      )) ?? [];
 
     const candidateValues = similarQueries
       .map((item) => item.normalizedQuery)
       .filter(Boolean)
       .slice(0, 50);
 
-    const normalizedQuery = fuseUtil.normalizeSearchTerm(trimmedQuery, candidateValues);
+    const normalizedQuery = fuseUtil.normalizeSearchTerm(
+      trimmedQuery,
+      candidateValues,
+    );
 
     const hasExistingEntry = similarQueries.some((item) => {
       const original = (item.originalQuery ?? '').trim().toLowerCase();

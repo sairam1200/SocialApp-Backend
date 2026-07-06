@@ -1,9 +1,16 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiBearerAuth, ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { AuthenticatedAccountGuard } from "../../../core/passport";
-import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
-import { LogoutCommand, LogoutRequestModel } from "./logout.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiBearerAuth, ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AuthenticatedAccountGuard } from '../../../core/passport';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { LogoutCommand, LogoutRequestModel } from './logout.handler';
 
 @ApiBearerAuth()
 @ApiTags('Authentication')
@@ -12,10 +19,7 @@ import { LogoutCommand, LogoutRequestModel } from "./logout.handler";
   version: '1',
 })
 export class LogoutController {
-
-  constructor(
-    private readonly commandBus: CommandBus
-  ) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('logout')
   @UseGuards(AuthenticatedAccountGuard)
@@ -28,7 +32,6 @@ export class LogoutController {
     @Body() model: LogoutRequestModel,
     @Res() res: Response,
   ): Promise<Response | void> {
-
     await this.commandBus.execute(new LogoutCommand({ model }));
     return res.status(HttpStatus.NO_CONTENT).send();
   }

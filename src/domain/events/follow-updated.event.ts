@@ -5,6 +5,5 @@ export class FollowUpdatedEvent {
     public readonly isFollowing: boolean,
     public readonly targetFollowersCount: number,
     public readonly viewerFollowingCount: number,
-  ) { }
+  ) {}
 }
-

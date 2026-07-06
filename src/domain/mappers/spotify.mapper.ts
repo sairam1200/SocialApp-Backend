@@ -1,7 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { UserContent } from "../entities/userContent.entity";
-import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { SpotifyAlbumModel, SpotifyPlaylistModel, SpotifyProfileModel, SpotifyShowModel, SpotifyTrackModel } from "../contracts/spotify.model";
+import { UserContent } from '../entities/userContent.entity';
+import { LinkedAccount } from '../entities/linkedAccount.entity';
+import {
+  SpotifyAlbumModel,
+  SpotifyPlaylistModel,
+  SpotifyProfileModel,
+  SpotifyShowModel,
+  SpotifyTrackModel,
+} from '../contracts/spotify.model';
 
 export class SpotifyContentModel {
   @ApiProperty()
@@ -19,7 +25,10 @@ export class SpotifyContentModel {
   [key: string]: any;
 }
 
-export function mapToSpotifyProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): SpotifyProfileModel {
+export function mapToSpotifyProfileModel(
+  data: LinkedAccount,
+  includeSensitiveFields: boolean = false,
+): SpotifyProfileModel {
   return {
     id: data.id,
     userId: data.userId,
@@ -41,7 +50,9 @@ export function mapToSpotifyProfileModel(data: LinkedAccount, includeSensitiveFi
   } as SpotifyProfileModel;
 }
 
-export function mapToSpotifyPlaylistModel(data: UserContent): SpotifyPlaylistModel {
+export function mapToSpotifyPlaylistModel(
+  data: UserContent,
+): SpotifyPlaylistModel {
   return {
     id: data.id,
     name: data.title,
@@ -53,7 +64,6 @@ export function mapToSpotifyPlaylistModel(data: UserContent): SpotifyPlaylistMod
     trackCount: data.metaData.trackCount,
     playListId: data.externalId,
     description: data.metaData.description,
-
   } as SpotifyPlaylistModel;
 }
 
@@ -66,19 +76,18 @@ export function mapToSpotifyTrackModel(data: UserContent): SpotifyTrackModel {
     durationMs: data.metaData.durationMs,
     previewUrl: data.metaData.previewUrl,
     explicit: data.metaData.explicit,
-    album: data.metaData.album.map(album => ({
+    album: data.metaData.album.map((album) => ({
       id: album.id,
       name: album.name,
       href: album.href,
       imageUrl: album.imageUrl,
     })),
-    artists: data.metaData.artists.map(artist => ({
+    artists: data.metaData.artists.map((artist) => ({
       name: artist.name,
       type: artist.type,
       href: artist.href,
     })),
     url: data.metaData.url,
-
   } as SpotifyTrackModel;
 }
 
@@ -87,7 +96,7 @@ export function mapToSpotifyAlbumModel(data: UserContent): SpotifyAlbumModel {
     id: data.id,
     albumId: data.externalId,
     name: data.title,
-    artists: data.metaData.artists.map(artist => ({
+    artists: data.metaData.artists.map((artist) => ({
       name: artist.name,
       type: artist.type,
       href: artist.href,
@@ -99,7 +108,13 @@ export function mapToSpotifyAlbumModel(data: UserContent): SpotifyAlbumModel {
   } as SpotifyAlbumModel;
 }
 
-export function mapToSpotifyContentModel(data: UserContent): SpotifyPlaylistModel | SpotifyTrackModel | SpotifyAlbumModel | SpotifyShowModel {
+export function mapToSpotifyContentModel(
+  data: UserContent,
+):
+  | SpotifyPlaylistModel
+  | SpotifyTrackModel
+  | SpotifyAlbumModel
+  | SpotifyShowModel {
   const type = data.type as 'playlist' | 'track' | 'album' | 'show';
 
   switch (type) {
@@ -131,7 +146,7 @@ export function mapToSpotifyShowModel(data: UserContent): SpotifyShowModel {
     mediaType: data.metaData.mediaType,
     show: {
       availableMarkets: data.metaData.availableMarkets,
-      copyRights: data.metaData.copyRights.map(credit => ({
+      copyRights: data.metaData.copyRights.map((credit) => ({
         text: credit.text,
         type: credit.type,
       })),

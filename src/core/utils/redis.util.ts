@@ -1,10 +1,10 @@
 import { Redis, RedisOptions } from 'ioredis';
-import configs from "../../configs";
-import logger from "./winston.util";
+import configs from '../../configs';
+import logger from './winston.util';
 import { deserializeObject, serializeObject } from './serialization.util';
 
-type Prefix = 'gaddr'
-const prefix = 'gaddr'
+type Prefix = 'gaddr';
+const prefix = 'gaddr';
 
 // Simple in-memory LRU cache to reduce Redis round-trips for frequently-read keys.
 // Each entry has a TTL; expired entries are lazily evicted on read.
@@ -80,9 +80,13 @@ const instance = new Redis(REDIS_OPTS);
 
 let connectionMonitor: ReturnType<typeof setInterval> | null = null;
 
-function getRedisKey<T extends string = any | '*'>(key: T, ...concatKeys: string[]): `${Prefix}:${T}${string | ''}` {
-  return `${prefix}:${key}${concatKeys && concatKeys.length ? `:${concatKeys.join('_')}` : ''
-    }`
+function getRedisKey<T extends string = any | '*'>(
+  key: T,
+  ...concatKeys: string[]
+): `${Prefix}:${T}${string | ''}` {
+  return `${prefix}:${key}${
+    concatKeys && concatKeys.length ? `:${concatKeys.join('_')}` : ''
+  }`;
 }
 
 async function connectToRedis() {
@@ -94,7 +98,9 @@ async function connectToRedis() {
       logger.info('Redis client already connected');
     }
   } catch (connectError) {
-    logger.error(`Redis client connection failed: ${JSON.stringify(connectError)}`);
+    logger.error(
+      `Redis client connection failed: ${JSON.stringify(connectError)}`,
+    );
     throw connectError;
   }
 
@@ -109,7 +115,9 @@ async function connectToRedis() {
         const connCount = parseInt(match[1], 10);
         logger.debug(`[RedisMonitor] connected_clients: ${connCount}`);
         if (connCount > 25) {
-          logger.warn(`[RedisMonitor] WARNING: ${connCount} clients connected (limit: 30)`);
+          logger.warn(
+            `[RedisMonitor] WARNING: ${connCount} clients connected (limit: 30)`,
+          );
         }
       }
     } catch {
@@ -161,7 +169,10 @@ async function getFromRedisAsync<T = any>(key: string): Promise<T | null> {
   return null;
 }
 
-async function incrementInRedisAsync(key: string, ttl?: number): Promise<number> {
+async function incrementInRedisAsync(
+  key: string,
+  ttl?: number,
+): Promise<number> {
   const count = await instance.incr(key);
   if (count === 1 && ttl) {
     await instance.expire(key, ttl);
@@ -193,23 +204,36 @@ function logRedisDiagnostics() {
 
   logger.info(`[RedisDiagnostics] === Redis Connection Budget ===`);
   logger.info(`[RedisDiagnostics] Shared client:            ${sharedClient}`);
-  logger.info(`[RedisDiagnostics] Worker blocking clients:   ${workerBlocking} (${workerCount} Workers × 1 duplicate)`);
-  logger.info(`[RedisDiagnostics] Queue clients:             ${queueCount} (all shared, 0 new connections)`);
+  logger.info(
+    `[RedisDiagnostics] Worker blocking clients:   ${workerBlocking} (${workerCount} Workers × 1 duplicate)`,
+  );
+  logger.info(
+    `[RedisDiagnostics] Queue clients:             ${queueCount} (all shared, 0 new connections)`,
+  );
   logger.info(`[RedisDiagnostics] QueueEvents clients:       ${queueEvents}`);
   logger.info(`[RedisDiagnostics] QueueScheduler clients:    ${scheduler}`);
   logger.info(`[RedisDiagnostics] -------------------------`);
   logger.info(`[RedisDiagnostics] Total expected clients:    ${totalExpected}`);
-  logger.info(`[RedisDiagnostics] === Plan limit: ~30 clients, headroom: ${30 - totalExpected} ===`);
+  logger.info(
+    `[RedisDiagnostics] === Plan limit: ~30 clients, headroom: ${30 - totalExpected} ===`,
+  );
   logger.info(`[RedisDiagnostics] Workers enabled: ${ENABLE_WORKERS}`);
 }
 
 const redis: {
   instance: Redis;
   getBullMQConnection: () => Redis;
-  getRedisKey: <T extends string = string>(key: T, ...concatKeys: string[]) => string;
+  getRedisKey: <T extends string = string>(
+    key: T,
+    ...concatKeys: string[]
+  ) => string;
   connectToRedis: () => Promise<void>;
   disconnectFromRedis: () => Promise<void>;
-  storeInRedisAsync: (key: string, value: object, ttl?: number) => Promise<boolean>;
+  storeInRedisAsync: (
+    key: string,
+    value: object,
+    ttl?: number,
+  ) => Promise<boolean>;
   getFromRedisAsync: <T = any>(key: string) => Promise<T | null>;
   removeFromRedisAsync: (key: string) => Promise<void>;
   incrementInRedisAsync: (key: string, ttl?: number) => Promise<number>;

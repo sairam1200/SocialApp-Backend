@@ -43,17 +43,25 @@ export class SearchCacheService {
       const cacheKey = this.generateCacheKey(params);
       const cached = await redis.getFromRedisAsync<T>(cacheKey);
       if (cached) {
-        logger.debug(`Cache HIT for ${params.platform} query: "${params.normalizedQuery}"`);
+        logger.debug(
+          `Cache HIT for ${params.platform} query: "${params.normalizedQuery}"`,
+        );
         return cached;
       }
       return null;
     } catch (error) {
-      logger.error(`Error getting cached results for ${params.platform}:`, error);
+      logger.error(
+        `Error getting cached results for ${params.platform}:`,
+        error,
+      );
       return null;
     }
   }
 
-  async setCachedResults<T extends object>(params: SearchCacheParams, results: T): Promise<void> {
+  async setCachedResults<T extends object>(
+    params: SearchCacheParams,
+    results: T,
+  ): Promise<void> {
     try {
       const cacheKey = this.generateCacheKey(params);
       const ttl = _const.SEARCH_CACHE.QUERY_CACHE_TTL_SEC;
@@ -67,7 +75,13 @@ export class SearchCacheService {
     try {
       const lockKey = this.generateLockKey(params);
       const ttl = _const.SEARCH_CACHE.QUERY_LOCK_TTL_SEC;
-      const result = await redis.instance.set(lockKey, Date.now().toString(), 'EX', ttl, 'NX');
+      const result = await redis.instance.set(
+        lockKey,
+        Date.now().toString(),
+        'EX',
+        ttl,
+        'NX',
+      );
       return result === 'OK';
     } catch (error) {
       logger.error(`Error acquiring lock for ${params.platform}:`, error);
@@ -98,7 +112,10 @@ export class SearchCacheService {
         if (cached) return cached;
         await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
       } catch (error) {
-        logger.error(`Error waiting for cached results for ${params.platform}:`, error);
+        logger.error(
+          `Error waiting for cached results for ${params.platform}:`,
+          error,
+        );
         return null;
       }
     }
@@ -114,4 +131,3 @@ export class SearchCacheService {
     }
   }
 }
-

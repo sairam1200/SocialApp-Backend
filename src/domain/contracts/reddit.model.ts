@@ -21,7 +21,7 @@ export type RedditUserDataType = {
   total_karma?: number;
   over_18: boolean;
   url: string;
-}
+};
 
 export interface RedditProfileModel {
   id: string;

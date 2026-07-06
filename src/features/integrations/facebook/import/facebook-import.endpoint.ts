@@ -1,10 +1,20 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
-import { FacebookImportCommand, FacebookImportRequestModel } from "./facebook-import.handler";
-import logger from "core/utils/winston.util";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  FacebookImportCommand,
+  FacebookImportRequestModel,
+} from './facebook-import.handler';
+import logger from 'core/utils/winston.util';
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
@@ -13,10 +23,7 @@ import logger from "core/utils/winston.util";
   version: '1',
 })
 export class FacebookImportController {
-
-  constructor(
-    private readonly commandBus: CommandBus
-  ) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('import')
   @ApiResponse({ status: 200, description: 'OK' })
@@ -28,15 +35,18 @@ export class FacebookImportController {
     @Body() model: FacebookImportRequestModel,
     @Res() res: Response,
   ): Promise<Response | void> {
-
-    const result = await this.commandBus.execute(new FacebookImportCommand({ model }));
-    console.log("facebook import result:", result)
+    const result = await this.commandBus.execute(
+      new FacebookImportCommand({ model }),
+    );
+    console.log('facebook import result:', result);
     if (model.facebookAccessToken) {
       return res
         .status(HttpStatus.OK)
         .json({ message: 'Facebook import has begun.' });
     }
 
-    return res.status(HttpStatus.OK).json({ message: "Facebook import has begun.", ...result });
+    return res
+      .status(HttpStatus.OK)
+      .json({ message: 'Facebook import has begun.', ...result });
   }
 }

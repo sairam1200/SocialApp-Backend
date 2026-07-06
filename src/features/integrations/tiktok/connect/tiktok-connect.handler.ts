@@ -1,23 +1,26 @@
 import axios from 'axios';
 import * as Joi from 'joi';
-import { Inject } from "@nestjs/common";
-import configs from "../../../../configs";
-import _const from "../../../../core/utils/const";
-import { EventEmitter2 } from "@nestjs/event-emitter";
-import { UserLogin } from "../../../../domain/entities";
+import { Inject } from '@nestjs/common';
+import configs from '../../../../configs';
+import _const from '../../../../core/utils/const';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { UserLogin } from '../../../../domain/entities';
 import logger from '../../../../core/utils/winston.util';
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { PlatformConnectCleanupEvent } from '../../../../domain/events';
 import { serializeObject } from '../../../../core/utils/serialization.util';
-import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
+import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
 import { mapToTiktokProfileModel } from '../../../../domain/mappers/tiktok.mapper';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
-import { TiktokProfileModel, TiktokUserDataType } from '../../../../domain/contracts/tiktok.model';
-import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import {
+  TiktokProfileModel,
+  TiktokUserDataType,
+} from '../../../../domain/contracts/tiktok.model';
+import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
 import { IContentStreamRepository } from '../../../../domain/repositories/icontentStream.repository';
 
@@ -27,7 +30,7 @@ export class TikTokConnectQuery {
   model: {
     state: string;
     codeVerifier: string;
-  }
+  };
 
   constructor(request: Partial<TikTokConnectQuery> = {}) {
     Object.assign(this, request);
@@ -38,7 +41,7 @@ export class TiktokConnectCallbackQuery {
   model: {
     code: string;
     state: string;
-  }
+  };
 
   constructor(request: Partial<TiktokConnectCallbackQuery> = {}) {
     Object.assign(this, request);
@@ -47,35 +50,41 @@ export class TiktokConnectCallbackQuery {
 
 const tiktokConnectCallbackValidations = Joi.object({
   code: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
-  state: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
+  state: Joi.string()
+    .required()
+    .messages({ 'any.required': 'Invalid request' }),
 });
 
 @CommandHandler(TikTokConnectQuery)
-export class TiktokConnectQueryHandler implements ICommandHandler<TikTokConnectQuery> {
-
+export class TiktokConnectQueryHandler
+  implements ICommandHandler<TikTokConnectQuery>
+{
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-  ) { console.log('TiktokConnectQueryHandler initialized'); }
+  ) {
+    console.log('TiktokConnectQueryHandler initialized');
+  }
 
   public async execute(query: TikTokConnectQuery): Promise<void> {
-
     const { model } = query;
 
     // expires in 15 minutes
-    const expiresIn = Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
+    const expiresIn =
+      Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
-      model.codeVerifier || "",
+      model.codeVerifier || '',
       HttpContext.getCurrentUserId,
-      expiresIn
+      expiresIn,
     );
   }
 }
 
 @CommandHandler(TiktokConnectCallbackQuery)
-export class TiktokConnectCallbackQueryHandler implements ICommandHandler<TiktokConnectCallbackQuery> {
-
+export class TiktokConnectCallbackQueryHandler
+  implements ICommandHandler<TiktokConnectCallbackQuery>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
@@ -88,11 +97,13 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
     @Inject(_const.ICONTENTSTREAM_REPOSITORY)
     private readonly contentStreamRepository: IContentStreamRepository,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
-  public async execute(query: TiktokConnectCallbackQuery):
-    Promise<{ accessToken: string; expiresIn: number; profile: TiktokProfileModel }> {
-
+  public async execute(query: TiktokConnectCallbackQuery): Promise<{
+    accessToken: string;
+    expiresIn: number;
+    profile: TiktokProfileModel;
+  }> {
     const { model } = query;
     await tiktokConnectCallbackValidations.validateAsync(model);
     const dataProtectionKey = await this.validateStateAsync(model.state);
@@ -102,24 +113,37 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
       expires_in,
       open_id,
       refresh_expires_in,
-      refresh_token
+      refresh_token,
     } = await this.fetchTokenAsync(model.code, dataProtectionKey.value);
     console.log('TikTok access token:', access_token);
     const userData = await this.fetchUserData(access_token, open_id);
-    const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
+    const user = await this.userRepository.getUserByIdAsync(
+      dataProtectionKey.userId,
+    );
 
     if (!user) {
-      throw new ApplicationException('Prevented: Alduterated Request Received!');
+      throw new ApplicationException(
+        'Prevented: Alduterated Request Received!',
+      );
     }
 
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.TIKTOK, user.id);
+    let linkedAccount =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.TIKTOK,
+        user.id,
+      );
     const newExternalId = userData.open_id;
     if (linkedAccount) {
       const oldExternalId = linkedAccount.externalId;
 
       if (oldExternalId !== newExternalId) {
-        logger.info(`[TikTokConnect] User ${user.id} changed TikTok account from ${oldExternalId} to ${newExternalId}`);
-        this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
+        logger.info(
+          `[TikTokConnect] User ${user.id} changed TikTok account from ${oldExternalId} to ${newExternalId}`,
+        );
+        this.eventEmitter.emit(
+          'platform.connect.cleanup',
+          new PlatformConnectCleanupEvent({ account: linkedAccount }),
+        );
       }
 
       linkedAccount = await this.updateLinkedAccount(linkedAccount, userData);
@@ -127,11 +151,25 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
       linkedAccount = await this.createLinkedAccount(user.id, userData);
     }
 
-    const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.TIKTOK);
+    const userLogin =
+      await this.userLoginRepository.getByUserIdAndProviderAsync(
+        user.id,
+        _const.PLATFORMS.TIKTOK,
+      );
     if (userLogin) {
-      await this.updateUserLogin(userLogin, { access_token, expires_in, refresh_token, refresh_expires_in });
+      await this.updateUserLogin(userLogin, {
+        access_token,
+        expires_in,
+        refresh_token,
+        refresh_expires_in,
+      });
     } else {
-      await this.createUserLogin(user.id, { access_token, expires_in, refresh_token, refresh_expires_in });
+      await this.createUserLogin(user.id, {
+        access_token,
+        expires_in,
+        refresh_token,
+        refresh_expires_in,
+      });
     }
 
     return {
@@ -141,8 +179,16 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
     };
   }
 
-  private async fetchTokenAsync(code: string, codeVerifier?: string)
-    : Promise<{ access_token: string; expires_in: number; refresh_token: string; refresh_expires_in: number; open_id: number; }> {
+  private async fetchTokenAsync(
+    code: string,
+    codeVerifier?: string,
+  ): Promise<{
+    access_token: string;
+    expires_in: number;
+    refresh_token: string;
+    refresh_expires_in: number;
+    open_id: number;
+  }> {
     try {
       const tokenRequest: any = {
         client_key: configs.tiktok.clientId,
@@ -153,52 +199,67 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
         redirect_uri: configs.tiktok.redirectUri,
       };
       console.log(configs.tiktok.clientId, configs.tiktok.clientSecret);
-      const response = await axios.post(`${TIKTOK_BASE}/oauth/token/`, tokenRequest, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Cache-Control': 'no-cache',
+      const response = await axios.post(
+        `${TIKTOK_BASE}/oauth/token/`,
+        tokenRequest,
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Cache-Control': 'no-cache',
+          },
         },
-      });
+      );
       return response.data;
     } catch (error) {
       logger.error('Error fetching token from TikTok', error);
-      throw new ApplicationException('Unexpected error during authentication with TikTok');
+      throw new ApplicationException(
+        'Unexpected error during authentication with TikTok',
+      );
     }
   }
 
-  private async fetchUserData(accessToken: string, openId: number): Promise<TiktokUserDataType> {
+  private async fetchUserData(
+    accessToken: string,
+    openId: number,
+  ): Promise<TiktokUserDataType> {
     try {
-      const response = await axios.get('https://open.tiktokapis.com/v2/user/info/', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
+      const response = await axios.get(
+        'https://open.tiktokapis.com/v2/user/info/',
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          params: {
+            open_id: openId,
+            fields: [
+              'open_id',
+              'union_id',
+              'display_name',
+              'avatar_url',
+              'bio',
+              'profile_deep_link',
+              'is_verified',
+              'follower_count',
+              'following_count',
+              'likes_count',
+              'video_count',
+            ].join(','),
+          },
         },
-        params: {
-          open_id: openId,
-          fields: [
-            'open_id',
-            'union_id',
-            'display_name',
-            'avatar_url',
-            'bio',
-            'profile_deep_link',
-            'is_verified',
-            'follower_count',
-            'following_count',
-            'likes_count',
-            'video_count'
-          ].join(','),
-        },
-      });
+      );
 
-      return response.data.data.user
+      return response.data.data.user;
     } catch (error) {
       logger.error('Error fetching user data from Tiktok', error);
-      throw new ApplicationException('Unexpected error during authentication with Tiktok');
+      throw new ApplicationException(
+        'Unexpected error during authentication with Tiktok',
+      );
     }
   }
 
   private async validateStateAsync(state: string): Promise<DataProtectionKey> {
-    const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
+    const dataProtectionKey =
+      await this.dataProtectionKeyRepository.getByKeyAsync(state);
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
     }
@@ -209,7 +270,10 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
     return dataProtectionKey;
   }
 
-  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: TiktokUserDataType): Promise<LinkedAccount> {
+  private async updateLinkedAccount(
+    linkedAccount: LinkedAccount,
+    userData: TiktokUserDataType,
+  ): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       _const.PLATFORMS.TIKTOK,
       userData.open_id,
@@ -233,12 +297,15 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
     return linkedAccount;
   }
 
-  private async createLinkedAccount(userId: string, userData: TiktokUserDataType): Promise<LinkedAccount> {
+  private async createLinkedAccount(
+    userId: string,
+    userData: TiktokUserDataType,
+  ): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       _const.PLATFORMS.TIKTOK,
       userData.open_id,
     );
-    console.log("this is the user data", userData);
+    console.log('this is the user data', userData);
     const userName = userData.profile_deep_link?.split('@')[1] ?? '';
     const newEntry = new LinkedAccount({
       userId,
@@ -261,23 +328,41 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
     return this.linkedAccountRepository.createAsync(newEntry);
   }
 
-  private async updateUserLogin(userLogin: UserLogin, tokenData: { access_token: string; expires_in: number; refresh_token: string; refresh_expires_in: number; }): Promise<void> {
+  private async updateUserLogin(
+    userLogin: UserLogin,
+    tokenData: {
+      access_token: string;
+      expires_in: number;
+      refresh_token: string;
+      refresh_expires_in: number;
+    },
+  ): Promise<void> {
     const tokenValue = serializeObject({
       access_token: tokenData.access_token,
       expires_in: tokenData.expires_in,
-      refresh_token: tokenData.refresh_token
-    })
+      refresh_token: tokenData.refresh_token,
+    });
     userLogin.tokenValue = tokenValue;
-    userLogin.expiryDateUtc = new Date(Date.now() + tokenData.refresh_expires_in * 1000);
+    userLogin.expiryDateUtc = new Date(
+      Date.now() + tokenData.refresh_expires_in * 1000,
+    );
     await this.userLoginRepository.updateAsync(userLogin);
   }
 
-  private async createUserLogin(userId: string, tokenData: { access_token: string; expires_in: number; refresh_token: string; refresh_expires_in: number; }): Promise<void> {
+  private async createUserLogin(
+    userId: string,
+    tokenData: {
+      access_token: string;
+      expires_in: number;
+      refresh_token: string;
+      refresh_expires_in: number;
+    },
+  ): Promise<void> {
     const tokenValue = serializeObject({
       access_token: tokenData.access_token,
       expires_in: tokenData.expires_in,
-      refresh_token: tokenData.refresh_token
-    })
+      refresh_token: tokenData.refresh_token,
+    });
 
     await this.userLoginRepository.createAysnc(
       _const.PLATFORMS.TIKTOK,
@@ -286,7 +371,7 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
       '', // userAgent
       '', // ipAddress
       tokenValue,
-      new Date(Date.now() + tokenData.refresh_expires_in * 1000)
+      new Date(Date.now() + tokenData.refresh_expires_in * 1000),
     );
   }
 }

@@ -5,7 +5,6 @@ import { BaseEntity } from '../baseEntity';
 @Index(['channelId', 'snapshotDate'], { unique: true })
 @Index(['userId', 'snapshotDate'])
 export class YoutubeChannelAnalytics extends BaseEntity {
-
   @Column({ nullable: false })
   channelId: string;
 

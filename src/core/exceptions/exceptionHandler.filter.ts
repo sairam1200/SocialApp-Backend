@@ -9,7 +9,7 @@ import {
   HttpStatus,
   Logger,
   NotFoundException,
-  UnauthorizedException
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ProblemDocument } from 'http-problem-details';
@@ -28,7 +28,7 @@ export class ErrorHandlersFilter implements ExceptionFilter {
         type: ApplicationException.name,
         title: err.message,
         detail: err.stack,
-        status: err.statusCode
+        status: err.statusCode,
       });
 
       response.status(HttpStatus.BAD_REQUEST).json(problem);
@@ -43,7 +43,7 @@ export class ErrorHandlersFilter implements ExceptionFilter {
         type: err.name,
         title: err.message,
         detail: err.stack,
-        status: err.getStatus()
+        status: err.getStatus(),
       });
 
       response.status(HttpStatus.BAD_REQUEST).json(problem);
@@ -58,7 +58,7 @@ export class ErrorHandlersFilter implements ExceptionFilter {
         type: ForbiddenException.name,
         title: err.message,
         detail: err.stack,
-        status: err.getStatus()
+        status: err.getStatus(),
       });
 
       response.status(HttpStatus.FORBIDDEN).json(problem);
@@ -73,7 +73,7 @@ export class ErrorHandlersFilter implements ExceptionFilter {
         type: NotFoundException.name,
         title: err.message,
         detail: err.stack,
-        status: err.getStatus()
+        status: err.getStatus(),
       });
 
       response.status(HttpStatus.NOT_FOUND).json(problem);
@@ -88,7 +88,7 @@ export class ErrorHandlersFilter implements ExceptionFilter {
         type: ConflictException.name,
         title: err.message,
         detail: err.stack,
-        status: err.getStatus()
+        status: err.getStatus(),
       });
 
       response.status(HttpStatus.CONFLICT).json(problem);
@@ -118,7 +118,7 @@ export class ErrorHandlersFilter implements ExceptionFilter {
         type: ValidationError.name,
         title: err.message,
         detail: err.stack,
-        status: HttpStatus.BAD_REQUEST
+        status: HttpStatus.BAD_REQUEST,
       });
 
       response.status(HttpStatus.BAD_REQUEST).json(problem);
@@ -132,7 +132,7 @@ export class ErrorHandlersFilter implements ExceptionFilter {
       type: 'INTERNAL_SERVER_ERROR',
       title: err.message,
       detail: err.stack,
-      status: err.statusCode || 500
+      status: err.statusCode || 500,
     });
 
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json(problem);

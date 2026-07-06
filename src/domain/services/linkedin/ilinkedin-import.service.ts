@@ -5,8 +5,5 @@ export interface ILinkedInImportService {
     organizationId: string,
   ): Promise<number>;
 
-  refreshProfileAsync(
-    userId: string,
-    accessToken: string,
-  ): Promise<void>;
+  refreshProfileAsync(userId: string, accessToken: string): Promise<void>;
 }

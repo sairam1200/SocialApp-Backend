@@ -1,8 +1,8 @@
-import { QueryBus } from "@nestjs/cqrs";
-import { ApiResponse, ApiTags, ApiParam } from "@nestjs/swagger";
-import { Controller, Get, Param } from "@nestjs/common";
-import { FollowStatusModel } from "../../../../domain/contracts/follow-status.model";
-import { GetFollowStatusQuery } from "./follow-status.handler";
+import { QueryBus } from '@nestjs/cqrs';
+import { ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Param } from '@nestjs/common';
+import { FollowStatusModel } from '../../../../domain/contracts/follow-status.model';
+import { GetFollowStatusQuery } from './follow-status.handler';
 
 @ApiTags('Social')
 @Controller({
@@ -10,7 +10,7 @@ import { GetFollowStatusQuery } from "./follow-status.handler";
   version: '1',
 })
 export class FollowStatusController {
-  constructor(private readonly queryBus: QueryBus) { }
+  constructor(private readonly queryBus: QueryBus) {}
 
   @Get(':userId/follow-status')
   @ApiParam({ name: 'userId', description: 'User to check follow status for' })
@@ -18,8 +18,6 @@ export class FollowStatusController {
   public async getFollowStatus(
     @Param('userId') userId: string,
   ): Promise<FollowStatusModel> {
-    return this.queryBus.execute(
-      new GetFollowStatusQuery(userId),
-    );
+    return this.queryBus.execute(new GetFollowStatusQuery(userId));
   }
 }

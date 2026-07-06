@@ -1,7 +1,10 @@
-import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { GithubProfileModel } from "../contracts/github.model";
+import { LinkedAccount } from '../entities/linkedAccount.entity';
+import { GithubProfileModel } from '../contracts/github.model';
 
-export function mapToGithubProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): GithubProfileModel {
+export function mapToGithubProfileModel(
+  data: LinkedAccount,
+  includeSensitiveFields: boolean = false,
+): GithubProfileModel {
   return {
     id: data.id,
     userId: data.userId,

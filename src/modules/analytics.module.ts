@@ -14,9 +14,7 @@ import { PremiumRollupCron } from '../infrastructure/background/cron/jobs/premiu
     AuthGuardsModule,
     TypeOrmModule.forFeature([AnalyticsEvent, PremiumRollup]),
   ],
-  controllers: [
-    ...analytics.addControllers(),
-  ],
+  controllers: [...analytics.addControllers()],
   providers: [
     JwtService,
     ...analytics.addHandlers(),
@@ -25,8 +23,6 @@ import { PremiumRollupCron } from '../infrastructure/background/cron/jobs/premiu
     dependency.PremiumRollupRepository,
     dependency.AnalyticsService,
   ],
-  exports: [
-    dependency.AnalyticsService,
-  ],
+  exports: [dependency.AnalyticsService],
 })
-export class AnalyticsModule { }
+export class AnalyticsModule {}

@@ -12,15 +12,18 @@ export class TwitterDisconnectCommand {
 
 @CommandHandler(TwitterDisconnectCommand)
 export class TwitterDisconnectCommandHandler
-  implements ICommandHandler<TwitterDisconnectCommand> {
+  implements ICommandHandler<TwitterDisconnectCommand>
+{
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,
-  ) { }
+  ) {}
 
   public async execute(command: TwitterDisconnectCommand): Promise<void> {
     const userId = HttpContext.getCurrentUserId;
-    await this.disconnectService.disconnectPlatformAsync(userId, _const.PLATFORMS.TWITTER);
+    await this.disconnectService.disconnectPlatformAsync(
+      userId,
+      _const.PLATFORMS.TWITTER,
+    );
   }
 }
-

@@ -25,7 +25,7 @@ export type TwitterUserDataType = {
       scope?: string;
     };
   };
-}
+};
 
 export class TwitterProfileModel {
   @ApiProperty()

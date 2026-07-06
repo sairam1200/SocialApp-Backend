@@ -18,7 +18,9 @@ export class LinkedAccountsController {
   @ApiResponse({ status: 200, description: 'OK' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   public async Get(@Res() res: Response): Promise<Response | void> {
-    const result = await this.commandBus.execute(new GetUserLinkedAccountsQuery());
+    const result = await this.commandBus.execute(
+      new GetUserLinkedAccountsQuery(),
+    );
     return res.status(HttpStatus.OK).json(result);
   }
 }

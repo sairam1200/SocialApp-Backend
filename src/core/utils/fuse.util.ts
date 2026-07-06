@@ -42,11 +42,7 @@ function normalizeSearchTerm(
   };
 
   const uniqueCandidates = Array.from(
-    new Set(
-      (possibleTerms ?? [])
-        .map(sanitizeTerm)
-        .filter(Boolean),
-    ),
+    new Set((possibleTerms ?? []).map(sanitizeTerm).filter(Boolean)),
   );
 
   if (uniqueCandidates.length === 0) {
@@ -57,14 +53,17 @@ function normalizeSearchTerm(
     uniqueCandidates.splice(maxCandidates);
   }
 
-  const fuse = new Fuse(uniqueCandidates.map((term) => ({ term })), {
-    keys: ['term'],
-    includeScore: true,
-    threshold,
-    ignoreLocation,
-    minMatchCharLength: 2,
-    distance: 100,
-  });
+  const fuse = new Fuse(
+    uniqueCandidates.map((term) => ({ term })),
+    {
+      keys: ['term'],
+      includeScore: true,
+      threshold,
+      ignoreLocation,
+      minMatchCharLength: 2,
+      distance: 100,
+    },
+  );
 
   const match = fuse.search(sanitizedQuery)[0];
   return match ? match.item.term : sanitizedQuery;

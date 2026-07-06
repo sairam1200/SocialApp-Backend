@@ -1,11 +1,11 @@
-import _const from "../../../../core/utils/const";
-import { Globals } from "../../../../core/globals";
-import { Inject, NotFoundException } from "@nestjs/common";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { ThreadsProfileModel } from "../../../../domain/contracts/threads.model";
-import { mapToThreadsProfileModel } from "../../../../domain/mappers/threads.mapper";
-import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
+import _const from '../../../../core/utils/const';
+import { Globals } from '../../../../core/globals';
+import { Inject, NotFoundException } from '@nestjs/common';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { ThreadsProfileModel } from '../../../../domain/contracts/threads.model';
+import { mapToThreadsProfileModel } from '../../../../domain/mappers/threads.mapper';
+import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 
 const PLATFORM = _const.PLATFORMS.THREADS;
 export class ThreadsProfileQuery {
@@ -13,7 +13,7 @@ export class ThreadsProfileQuery {
     userId?: string;
     userName?: string;
     threadsId?: string;
-  }
+  };
 
   constructor(request: Partial<ThreadsProfileQuery> = {}) {
     Object.assign(this, request);
@@ -21,28 +21,44 @@ export class ThreadsProfileQuery {
 }
 
 @CommandHandler(ThreadsProfileQuery)
-export class ThreadsProfileQueryHandler implements ICommandHandler<ThreadsProfileQuery> {
-
+export class ThreadsProfileQueryHandler
+  implements ICommandHandler<ThreadsProfileQuery>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
-  ) { }
+  ) {}
 
-  public async execute(query: ThreadsProfileQuery): Promise<ThreadsProfileModel> {
-
+  public async execute(
+    query: ThreadsProfileQuery,
+  ): Promise<ThreadsProfileModel> {
     const { model } = query;
 
-    const account = model.userId ? await this.linkedAccountRepository.getByPlatformAndUserIdAsync(PLATFORM, model.userId)
-      : model.userName ? await this.linkedAccountRepository.getByPlatformAndUserNameAsync(PLATFORM, model.userName)
-        : await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(PLATFORM, model.threadsId);
+    const account = model.userId
+      ? await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+          PLATFORM,
+          model.userId,
+        )
+      : model.userName
+        ? await this.linkedAccountRepository.getByPlatformAndUserNameAsync(
+            PLATFORM,
+            model.userName,
+          )
+        : await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(
+            PLATFORM,
+            model.threadsId,
+          );
 
     if (!account) {
-      throw new NotFoundException("No matching Threads profile was found based on the provided information.");
+      throw new NotFoundException(
+        'No matching Threads profile was found based on the provided information.',
+      );
     }
 
     const includeSensitiveFields = HttpContext.user
-      ? (account.userId === HttpContext.user[Globals.ClaimTypes.UserId]
-        || HttpContext.user.permission.some(a => a === "viewuser")) : false;
+      ? account.userId === HttpContext.user[Globals.ClaimTypes.UserId] ||
+        HttpContext.user.permission.some((a) => a === 'viewuser')
+      : false;
 
     return mapToThreadsProfileModel(account, includeSensitiveFields);
   }

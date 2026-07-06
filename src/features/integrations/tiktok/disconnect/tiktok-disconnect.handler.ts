@@ -12,15 +12,18 @@ export class TiktokDisconnectCommand {
 
 @CommandHandler(TiktokDisconnectCommand)
 export class TiktokDisconnectCommandHandler
-  implements ICommandHandler<TiktokDisconnectCommand> {
+  implements ICommandHandler<TiktokDisconnectCommand>
+{
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,
-  ) { }
+  ) {}
 
   public async execute(command: TiktokDisconnectCommand): Promise<void> {
     const userId = HttpContext.getCurrentUserId;
-    await this.disconnectService.disconnectPlatformAsync(userId, _const.PLATFORMS.TIKTOK);
+    await this.disconnectService.disconnectPlatformAsync(
+      userId,
+      _const.PLATFORMS.TIKTOK,
+    );
   }
 }
-

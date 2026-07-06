@@ -16,8 +16,16 @@ import { HttpContext } from '../../../../core/middlewares/httpContext.middleware
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { mapToYoutubeProfileModel } from '../../../../domain/mappers/youtube.mapper';
-import { IUserLoginRepository, ILinkedAccountRepository, IDataProtectionKeyRepository } from '../../../../domain/repositories';
-import { GoogleUserDataType, YoutubeChannelDataType, YoutubeProfileModel } from '../../../../domain/contracts/youtube.model';
+import {
+  IUserLoginRepository,
+  ILinkedAccountRepository,
+  IDataProtectionKeyRepository,
+} from '../../../../domain/repositories';
+import {
+  GoogleUserDataType,
+  YoutubeChannelDataType,
+  YoutubeProfileModel,
+} from '../../../../domain/contracts/youtube.model';
 import { IContentStreamRepository } from '../../../../domain/repositories/icontentStream.repository';
 import { YoutubeAccount } from '../../../../domain/entities/youtubeAccount.entity';
 import { IYoutubeAccountRepository } from '../../../../domain/repositories/iyoutubeAccount.repository';
@@ -56,11 +64,12 @@ const youtubeConnectCallbackValidations = Joi.object({
 
 @CommandHandler(YoutubeConnectQuery)
 export class YoutubeConnectQueryHandler
-  implements ICommandHandler<YoutubeConnectQuery> {
+  implements ICommandHandler<YoutubeConnectQuery>
+{
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-  ) { }
+  ) {}
 
   public async execute(command: YoutubeConnectQuery): Promise<void> {
     const { model } = command;
@@ -79,7 +88,8 @@ export class YoutubeConnectQueryHandler
 
 @CommandHandler(YoutubeConnectCallbackQuery)
 export class YoutubeConnectCallbackQueryHandler
-  implements ICommandHandler<YoutubeConnectCallbackQuery> {
+  implements ICommandHandler<YoutubeConnectCallbackQuery>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
@@ -96,7 +106,7 @@ export class YoutubeConnectCallbackQueryHandler
     @Inject(_const.IYOUTUBEANALYTICS_SERVICE)
     private readonly youtubeAnalyticsService: IYoutubeAnalyticsService,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
   public async execute(query: YoutubeConnectCallbackQuery): Promise<{
     accessToken: string;
@@ -111,16 +121,22 @@ export class YoutubeConnectCallbackQueryHandler
       model.code,
     );
 
-    const tokenValue = serializeObject({ access_token, refresh_token, expires_in });
+    const tokenValue = serializeObject({
+      access_token,
+      refresh_token,
+      expires_in,
+    });
 
     const userData = await this.fetchUserData(access_token);
     console.log(userData);
 
-    const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
+    const user = await this.userRepository.getUserByIdAsync(
+      dataProtectionKey.userId,
+    );
     if (!user) {
       throw new UserNotFoundException('User not found from connect state');
     }
-    
+
     let linkedAccount =
       await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
         _const.PLATFORMS.YOUTUBE,
@@ -133,18 +149,23 @@ export class YoutubeConnectCallbackQueryHandler
       const oldExternalId = linkedAccount.externalId;
 
       if (oldExternalId !== newExternalId) {
-        logger.info(`[YoutubeConnect] User ${user.id} changed YouTube account from ${oldExternalId} to ${newExternalId}`);
-        this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
+        logger.info(
+          `[YoutubeConnect] User ${user.id} changed YouTube account from ${oldExternalId} to ${newExternalId}`,
+        );
+        this.eventEmitter.emit(
+          'platform.connect.cleanup',
+          new PlatformConnectCleanupEvent({ account: linkedAccount }),
+        );
       }
 
       linkedAccount.externalId = newExternalId;
       linkedAccount.userName = userData.profile.name;
       linkedAccount.profileImage = userData.profile.picture;
       linkedAccount.externalUrl = `https://www.youtube.com/channel/${userData.channel.items[0].id}`;
-      (linkedAccount.followersCount = Number.parseInt(
+      ((linkedAccount.followersCount = Number.parseInt(
         userData.channel.items[0].statistics.subscriberCount,
       )),
-        (linkedAccount.followingCount = 0); // TODO : retreive this
+        (linkedAccount.followingCount = 0)); // TODO : retreive this
       linkedAccount.metaData = {
         hd: userData.profile.hd,
         locale: userData.profile.locale,
@@ -155,7 +176,8 @@ export class YoutubeConnectCallbackQueryHandler
           description: userData.channel.items[0].snippet.description,
           viewCount: userData.channel.items[0].statistics.viewCount,
           videoCount: userData.channel.items[0].statistics.videoCount,
-          thumbthumbnail: userData.channel.items[0].snippet.thumbnails.default.url,
+          thumbthumbnail:
+            userData.channel.items[0].snippet.thumbnails.default.url,
         },
       };
       await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
@@ -191,7 +213,8 @@ export class YoutubeConnectCallbackQueryHandler
               description: userData.channel.items[0].snippet.description,
               viewCount: userData.channel.items[0].statistics.viewCount,
               videoCount: userData.channel.items[0].statistics.videoCount,
-              thumbnail: userData.channel.items[0].snippet.thumbnails.default.url,
+              thumbnail:
+                userData.channel.items[0].snippet.thumbnails.default.url,
             },
           },
         }),
@@ -225,7 +248,8 @@ export class YoutubeConnectCallbackQueryHandler
 
     const channelId = userData.channel.items[0].id;
     const channelTitle = userData.channel.items[0].snippet.title;
-    let youtubeAccount = await this.youtubeAccountRepository.getByChannelIdAsync(channelId);
+    let youtubeAccount =
+      await this.youtubeAccountRepository.getByChannelIdAsync(channelId);
 
     if (youtubeAccount) {
       youtubeAccount.userId = user.id;
@@ -250,12 +274,19 @@ export class YoutubeConnectCallbackQueryHandler
       );
     }
 
-    await this.youtubeAccountRepository.disconnectOtherAccountsAsync(user.id, channelId);
+    await this.youtubeAccountRepository.disconnectOtherAccountsAsync(
+      user.id,
+      channelId,
+    );
 
     try {
-      await this.youtubeAnalyticsService.syncAccountAnalyticsAsync(user.id, { forceRefresh: true });
+      await this.youtubeAnalyticsService.syncAccountAnalyticsAsync(user.id, {
+        forceRefresh: true,
+      });
     } catch (error: any) {
-      logger.warn(`[YoutubeConnect] Initial analytics sync failed for user ${user.id}, channel ${channelId}: ${error.message}`);
+      logger.warn(
+        `[YoutubeConnect] Initial analytics sync failed for user ${user.id}, channel ${channelId}: ${error.message}`,
+      );
     }
 
     return {
@@ -272,7 +303,6 @@ export class YoutubeConnectCallbackQueryHandler
     refresh_token: string;
   }> {
     try {
-      
       const response = await axios.post(`https://oauth2.googleapis.com/token`, {
         client_secret: configs.youtube.clientSecret,
         redirect_uri: getRedirectUrl(configs.youtube.callbackUrl),
@@ -284,7 +314,9 @@ export class YoutubeConnectCallbackQueryHandler
       return response.data;
     } catch (error) {
       logger.error('Error fetching token from Google', error);
-      throw new ApplicationException('Unexpected error during authentication with Google');
+      throw new ApplicationException(
+        'Unexpected error during authentication with Google',
+      );
     }
   }
 
@@ -319,7 +351,9 @@ export class YoutubeConnectCallbackQueryHandler
       };
     } catch (error) {
       logger.error('Error fetching user data from Google', error);
-      throw new ApplicationException('Unexpected error during authentication with Google');
+      throw new ApplicationException(
+        'Unexpected error during authentication with Google',
+      );
     }
   }
 

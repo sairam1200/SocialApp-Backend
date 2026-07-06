@@ -1,13 +1,24 @@
-import { Module } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
-import profile from "../features/profile";
-import { CqrsModule } from "@nestjs/cqrs";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { dependency } from "../infrastructure/dependency";
-import { NotificationModule } from "./notification.module";
-import { ProfileCacheService } from "../infrastructure/services/profileCache.service";
-import { User, Role, UserRole, LinkedAccount, ManualProfile, RoleClaim, UserClaim, PlaylistMember, UserBiometric, UserFollow } from "../domain/entities";
-import { AnalyticsModule } from "./analytics.module";
+import { Module } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import profile from '../features/profile';
+import { CqrsModule } from '@nestjs/cqrs';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { dependency } from '../infrastructure/dependency';
+import { NotificationModule } from './notification.module';
+import { ProfileCacheService } from '../infrastructure/services/profileCache.service';
+import {
+  User,
+  Role,
+  UserRole,
+  LinkedAccount,
+  ManualProfile,
+  RoleClaim,
+  UserClaim,
+  PlaylistMember,
+  UserBiometric,
+  UserFollow,
+} from '../domain/entities';
+import { AnalyticsModule } from './analytics.module';
 
 @Module({
   imports: [
@@ -25,7 +36,7 @@ import { AnalyticsModule } from "./analytics.module";
       PlaylistMember,
       UserBiometric,
       UserFollow,
-    ])
+    ]),
   ],
   controllers: [...profile.addControllers()],
   providers: [
@@ -40,8 +51,6 @@ import { AnalyticsModule } from "./analytics.module";
     dependency.ManualProfileRepository,
     dependency.UserFollowRepository,
   ],
-  exports: [
-    ProfileCacheService,
-  ],
+  exports: [ProfileCacheService],
 })
-export class ProfileModule { }
+export class ProfileModule {}

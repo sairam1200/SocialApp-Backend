@@ -1,10 +1,23 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
-import { LinkedInImportCommand, LinkedInImportRequestModel } from "./linkedin-import.handler";
-import { CancelLinkedInImportCommand, CancelLinkedInImportRequestModel } from "./cancel-linkedin-import.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  LinkedInImportCommand,
+  LinkedInImportRequestModel,
+} from './linkedin-import.handler';
+import {
+  CancelLinkedInImportCommand,
+  CancelLinkedInImportRequestModel,
+} from './cancel-linkedin-import.handler';
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
@@ -13,10 +26,7 @@ import { CancelLinkedInImportCommand, CancelLinkedInImportRequestModel } from ".
   version: '1',
 })
 export class LinkedInImportController {
-
-  constructor(
-    private readonly commandBus: CommandBus
-  ) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('import')
   @UseGuards(UserAccoutGuard)
@@ -27,15 +37,20 @@ export class LinkedInImportController {
   @ApiBody({ type: LinkedInImportRequestModel, required: false })
   public async Import(
     @Body() model: LinkedInImportRequestModel,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response | void> {
-
-    const result = await this.commandBus.execute(new LinkedInImportCommand({ model }));
+    const result = await this.commandBus.execute(
+      new LinkedInImportCommand({ model }),
+    );
     if (model.linkedInAccessToken) {
-      return res.status(HttpStatus.OK).json({ message: "LinkedIn import has begun." });
+      return res
+        .status(HttpStatus.OK)
+        .json({ message: 'LinkedIn import has begun.' });
     }
 
-    return res.status(HttpStatus.OK).json({ message: "LinkedIn import has begun.", ...result });
+    return res
+      .status(HttpStatus.OK)
+      .json({ message: 'LinkedIn import has begun.', ...result });
   }
 
   @Post('import/cancel')
@@ -46,9 +61,11 @@ export class LinkedInImportController {
   @ApiBody({ type: CancelLinkedInImportRequestModel })
   public async Cancel(
     @Body() model: CancelLinkedInImportRequestModel,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response | void> {
     await this.commandBus.execute(new CancelLinkedInImportCommand({ model }));
-    return res.status(HttpStatus.OK).json({ message: "LinkedIn import cancellation and rollback requested." });
+    return res.status(HttpStatus.OK).json({
+      message: 'LinkedIn import cancellation and rollback requested.',
+    });
   }
 }

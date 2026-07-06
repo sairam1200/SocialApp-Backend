@@ -5,7 +5,7 @@ export type ThreadsUserDataType = {
   username: string;
   name: string;
   profile_picture_url?: string;
-}
+};
 
 export class ThreadsProfileModel {
   @ApiProperty()

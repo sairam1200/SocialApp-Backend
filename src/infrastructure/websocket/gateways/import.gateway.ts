@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
+import { Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
@@ -7,11 +7,11 @@ import {
   WebSocketGateway,
   WebSocketServer,
   OnGatewayConnection,
-  OnGatewayDisconnect
-} from "@nestjs/websockets";
+  OnGatewayDisconnect,
+} from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import logger from "../../../core/utils/winston.util";
-import { BaseGateway } from "./base.gateway";
+import logger from '../../../core/utils/winston.util';
+import { BaseGateway } from './base.gateway';
 
 export interface ImportContentPayload {
   platform?: string;
@@ -23,10 +23,13 @@ export interface ImportContentPayload {
   namespace: '/imports',
   cors: {
     origin: '*',
-    credentials: true
-  }
+    credentials: true,
+  },
 })
-export class ImportGateway extends BaseGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ImportGateway
+  extends BaseGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -41,8 +44,14 @@ export class ImportGateway extends BaseGateway implements OnGatewayConnection, O
     const authResult = await this.authenticateClient(client);
 
     if (!authResult) {
-      logger.warn(`[${this.gatewayName}] Failed to authenticate connection from ${client.handshake.address}`);
-      this.emitError(client, 'AUTHENTICATION_FAILED', 'Invalid or missing authentication token');
+      logger.warn(
+        `[${this.gatewayName}] Failed to authenticate connection from ${client.handshake.address}`,
+      );
+      this.emitError(
+        client,
+        'AUTHENTICATION_FAILED',
+        'Invalid or missing authentication token',
+      );
       client.disconnect();
       return;
     }
@@ -59,7 +68,9 @@ export class ImportGateway extends BaseGateway implements OnGatewayConnection, O
     this.connectedUsers.get(userId)!.add(client.id);
 
     client.emit('connected', { connectedUserId: userId });
-    logger.info(`[${this.gatewayName}] User ${userId} connected (socket: ${client.id})`);
+    logger.info(
+      `[${this.gatewayName}] User ${userId} connected (socket: ${client.id})`,
+    );
   }
 
   async handleDisconnect(client: Socket) {
@@ -72,7 +83,9 @@ export class ImportGateway extends BaseGateway implements OnGatewayConnection, O
           this.connectedUsers.delete(userId);
         }
       }
-      logger.info(`[${this.gatewayName}] User ${userId} disconnected (socket: ${client.id})`);
+      logger.info(
+        `[${this.gatewayName}] User ${userId} disconnected (socket: ${client.id})`,
+      );
     }
   }
 
@@ -80,7 +93,9 @@ export class ImportGateway extends BaseGateway implements OnGatewayConnection, O
   handleJoin(@MessageBody() userId: string, @ConnectedSocket() client: Socket) {
     if (!this.validateUserId(client, userId)) {
       this.emitError(client, 'UNAUTHORIZED', 'Cannot join other user rooms');
-      logger.warn(`[${this.gatewayName}] User ${client.data.userId} attempted to join room ${userId}`);
+      logger.warn(
+        `[${this.gatewayName}] User ${client.data.userId} attempted to join room ${userId}`,
+      );
       return;
     }
 
@@ -88,13 +103,20 @@ export class ImportGateway extends BaseGateway implements OnGatewayConnection, O
     logger.debug(`[${this.gatewayName}] User ${userId} joined room`);
   }
 
-  emitNewImportContent(userId: string, platform: string, payload: ImportContentPayload) {
+  emitNewImportContent(
+    userId: string,
+    platform: string,
+    payload: ImportContentPayload,
+  ) {
     const data = { platform, ...payload };
     this.safeEmit(userId, 'new-content', data);
   }
 
   isUserConnected(userId: string): boolean {
-    return this.connectedUsers.has(userId) && this.connectedUsers.get(userId)!.size > 0;
+    return (
+      this.connectedUsers.has(userId) &&
+      this.connectedUsers.get(userId)!.size > 0
+    );
   }
 
   getConnectedUserCount(): number {

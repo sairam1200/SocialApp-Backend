@@ -1,8 +1,8 @@
-import { Not, Repository } from "typeorm";
-import { Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { YoutubeAccount } from "../../domain/entities";
-import { IYoutubeAccountRepository } from "../../domain/repositories/iyoutubeAccount.repository";
+import { Not, Repository } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { YoutubeAccount } from '../../domain/entities';
+import { IYoutubeAccountRepository } from '../../domain/repositories/iyoutubeAccount.repository';
 
 @Injectable()
 export class YoutubeAccountRepository implements IYoutubeAccountRepository {
@@ -35,11 +35,19 @@ export class YoutubeAccountRepository implements IYoutubeAccountRepository {
     return this.repo.findOne({ where: { userId } });
   }
 
-  async getConnectedByUserIdAsync(userId: string): Promise<YoutubeAccount | null> {
-    return this.repo.findOne({ where: { userId, connected: true }, order: { lastModifiedOn: 'DESC', createdOn: 'DESC' } });
+  async getConnectedByUserIdAsync(
+    userId: string,
+  ): Promise<YoutubeAccount | null> {
+    return this.repo.findOne({
+      where: { userId, connected: true },
+      order: { lastModifiedOn: 'DESC', createdOn: 'DESC' },
+    });
   }
 
-  async disconnectOtherAccountsAsync(userId: string, channelId: string): Promise<void> {
+  async disconnectOtherAccountsAsync(
+    userId: string,
+    channelId: string,
+  ): Promise<void> {
     await this.repo.update(
       { userId, connected: true, channelId: Not(channelId) },
       { connected: false, disconnectedAt: new Date() },

@@ -35,7 +35,10 @@ interface FacebookImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.FACEBOOK_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.FACEBOOK_IMPORT, 2))
+@Processor(
+  _const.BULL_QUEUES.FACEBOOK_IMPORT,
+  BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.FACEBOOK_IMPORT, 2),
+)
 export class FacebookImportProcessor extends WorkerHost {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
@@ -71,7 +74,9 @@ export class FacebookImportProcessor extends WorkerHost {
     const { account, accessToken } = job.data;
 
     if (!(await job.isActive())) {
-      logger.info(`[FacebookImport] Job ${job.id} is no longer active, stopping import for user ${account.userId}`);
+      logger.info(
+        `[FacebookImport] Job ${job.id} is no longer active, stopping import for user ${account.userId}`,
+      );
       return;
     }
 
@@ -125,7 +130,9 @@ export class FacebookImportProcessor extends WorkerHost {
       try {
         while (true) {
           if (!(await job.isActive())) {
-            logger.info(`[FacebookImport] Job ${job.id} cancelled during processing ${type}`);
+            logger.info(
+              `[FacebookImport] Job ${job.id} cancelled during processing ${type}`,
+            );
             progressReports[type].status = NotificationStatus.Cancelled;
             break;
           }
@@ -169,7 +176,9 @@ export class FacebookImportProcessor extends WorkerHost {
 
           for (const facebookContent of facebookContents) {
             if (!(await job.isActive())) {
-              logger.info(`[FacebookImport] Job ${job.id} cancelled during processing ${type}`);
+              logger.info(
+                `[FacebookImport] Job ${job.id} cancelled during processing ${type}`,
+              );
               progressReports[type].status = NotificationStatus.Cancelled;
               break;
             }
@@ -196,10 +205,12 @@ export class FacebookImportProcessor extends WorkerHost {
                 facebookContent.name ??
                 facebookContent.message ??
                 'Facebook Post';
-              
+
               // Normalized fields
               content.text = facebookContent.message || facebookContent.story;
-              content.publishedAt = facebookContent.created_time ? new Date(facebookContent.created_time) : undefined;
+              content.publishedAt = facebookContent.created_time
+                ? new Date(facebookContent.created_time)
+                : undefined;
               content.sourceUrl = facebookContent.permalink_url;
 
               // Handle media (Attachments/Albums)
@@ -211,14 +222,14 @@ export class FacebookImportProcessor extends WorkerHost {
                       mediaAssets.push({
                         url: sub.media?.image?.src || sub.target?.url,
                         type: sub.type,
-                        thumbnail: sub.media?.image?.src
+                        thumbnail: sub.media?.image?.src,
                       });
                     });
                   } else {
                     mediaAssets.push({
                       url: att.media?.image?.src || att.target?.url,
                       type: att.type,
-                      thumbnail: att.media?.image?.src
+                      thumbnail: att.media?.image?.src,
                     });
                   }
                 });
@@ -226,7 +237,7 @@ export class FacebookImportProcessor extends WorkerHost {
                 mediaAssets.push({
                   url: facebookContent.full_picture,
                   type: facebookContent.type || 'photo',
-                  thumbnail: facebookContent.full_picture
+                  thumbnail: facebookContent.full_picture,
                 });
               }
               content.media = mediaAssets;
@@ -235,7 +246,7 @@ export class FacebookImportProcessor extends WorkerHost {
               content.engagement = {
                 likes: facebookContent.reactions?.summary?.total_count || 0,
                 shares: facebookContent.shares?.count || 0,
-                comments: facebookContent.comments?.summary?.total_count || 0
+                comments: facebookContent.comments?.summary?.total_count || 0,
               };
 
               content.metaData = {
@@ -245,7 +256,8 @@ export class FacebookImportProcessor extends WorkerHost {
                 story: facebookContent.story,
                 message: facebookContent.message,
                 reactions: facebookContent.reactions,
-                commentCount: facebookContent.comments?.summary?.total_count || 0,
+                commentCount:
+                  facebookContent.comments?.summary?.total_count || 0,
                 permalinkUrl: facebookContent.permalink_url,
                 sharesCount: facebookContent.shares?.count,
                 createdAt: facebookContent.created_time,
@@ -254,7 +266,7 @@ export class FacebookImportProcessor extends WorkerHost {
                 isHidden: facebookContent.is_hidden,
                 picture: facebookContent.full_picture,
                 via: facebookContent.via,
-                attachments: facebookContent.attachments
+                attachments: facebookContent.attachments,
               };
             } else if (type === 'Likes') {
               content.type = 'likes';
@@ -286,7 +298,7 @@ export class FacebookImportProcessor extends WorkerHost {
                 Math.round(
                   (progressReports[type].itemProcessed /
                     progressReports[type].totalItem) *
-                  100,
+                    100,
                 ),
                 100,
               );
@@ -333,7 +345,9 @@ export class FacebookImportProcessor extends WorkerHost {
           }
 
           if (!(await job.isActive())) {
-            logger.info(`[FacebookImport] Job ${job.id} cancelled during processing ${type}`);
+            logger.info(
+              `[FacebookImport] Job ${job.id} cancelled during processing ${type}`,
+            );
             progressReports[type].status = NotificationStatus.Cancelled;
             break;
           }
@@ -370,7 +384,9 @@ export class FacebookImportProcessor extends WorkerHost {
     }
 
     if (!(await job.isActive())) {
-      logger.info(`[FacebookImport] Job ${job.id} was cancelled, rolling back imported content`);
+      logger.info(
+        `[FacebookImport] Job ${job.id} was cancelled, rolling back imported content`,
+      );
 
       if (importedExternalIds.length > 0) {
         try {
@@ -379,9 +395,14 @@ export class FacebookImportProcessor extends WorkerHost {
             _const.PLATFORMS.FACEBOOK,
             importedExternalIds,
           );
-          logger.info(`[FacebookImport] Rolled back ${importedExternalIds.length} imported items for user ${account.userId}`);
+          logger.info(
+            `[FacebookImport] Rolled back ${importedExternalIds.length} imported items for user ${account.userId}`,
+          );
         } catch (rollbackError) {
-          logger.error(`[FacebookImport] Error during rollback:`, rollbackError);
+          logger.error(
+            `[FacebookImport] Error during rollback:`,
+            rollbackError,
+          );
         }
       }
 
@@ -400,7 +421,7 @@ export class FacebookImportProcessor extends WorkerHost {
             reports: finalReportArray,
             platform: _const.PLATFORMS.FACEBOOK,
           },
-          "Facebook import was cancelled and rolled back",
+          'Facebook import was cancelled and rolled back',
         );
       }
       return;
@@ -536,7 +557,8 @@ export class FacebookImportProcessor extends WorkerHost {
           : Math.max(resetTime * 1000 - Date.now(), 5000);
 
         logger.warn(
-          `[FacebookImport] Rate limit (429) hit for ${url}. Waiting ${waitTime / 1000
+          `[FacebookImport] Rate limit (429) hit for ${url}. Waiting ${
+            waitTime / 1000
           }s before retrying...`,
         );
         await new Promise((resolve) => setTimeout(resolve, waitTime));
@@ -546,7 +568,8 @@ export class FacebookImportProcessor extends WorkerHost {
       if (status === 403 && fbError?.code === 4) {
         const waitTime = Math.min(15 * 60 * 1000, attempt * 60_000);
         logger.warn(
-          `[FacebookImport] App-level rate limit (403 code=4) hit for ${url}. Backing off ${waitTime / 1000
+          `[FacebookImport] App-level rate limit (403 code=4) hit for ${url}. Backing off ${
+            waitTime / 1000
           }s (attempt ${attempt})...`,
         );
         await new Promise((resolve) => setTimeout(resolve, waitTime));
@@ -561,7 +584,8 @@ export class FacebookImportProcessor extends WorkerHost {
       }
 
       logger.error(
-        `[FacebookImport] Error fetching ${url} (status ${status || 'N/A'}): ${error.message
+        `[FacebookImport] Error fetching ${url} (status ${status || 'N/A'}): ${
+          error.message
         }`,
         { fbError, headers: error.response?.headers },
       );
@@ -569,4 +593,3 @@ export class FacebookImportProcessor extends WorkerHost {
     }
   }
 }
-

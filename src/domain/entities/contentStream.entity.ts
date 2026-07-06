@@ -1,10 +1,9 @@
-import { Column, Entity } from "typeorm";
-import { BaseEntity } from "../baseEntity";
-import { StreamEntityType } from "../enums";
+import { Column, Entity } from 'typeorm';
+import { BaseEntity } from '../baseEntity';
+import { StreamEntityType } from '../enums';
 
-@Entity({ name: "contentStreams" })
+@Entity({ name: 'contentStreams' })
 export class ContentStream extends BaseEntity {
-
   @Column({ type: 'enum', enum: StreamEntityType })
   type: StreamEntityType;
 

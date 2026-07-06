@@ -7,7 +7,7 @@ export type BehanceUserDataType = {
   profile_image?: string;
   location?: string;
   occupation?: string;
-}
+};
 
 export class BehanceProfileModel {
   @ApiProperty()

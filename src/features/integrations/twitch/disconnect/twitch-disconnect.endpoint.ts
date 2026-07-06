@@ -11,20 +11,17 @@ import { TwitchDisconnectCommand } from './twitch-disconnect.handler';
   version: '1',
 })
 export class TwitchDisconnectController {
-  constructor(
-    private readonly commandBus: CommandBus,
-  ) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Delete('disconnect')
   @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 200, description: 'OK' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 404, description: 'NOT_FOUND' })
-  public async disconnect(
-    @Res() res: Response,
-  ): Promise<Response | void> {
+  public async disconnect(@Res() res: Response): Promise<Response | void> {
     await this.commandBus.execute(new TwitchDisconnectCommand());
-    return res.status(HttpStatus.OK).json({ message: 'Twitch account disconnected successfully' });
+    return res
+      .status(HttpStatus.OK)
+      .json({ message: 'Twitch account disconnected successfully' });
   }
 }
-

@@ -1,18 +1,24 @@
-import axios from "axios";
-import configs from "../../../../configs";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../../core/utils/const";
-import fuseUtil from "../../../../core/utils/fuse.util";
-import logger from "../../../../core/utils/winston.util";
-import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
-import { SearchHistory } from "../../../../domain/entities";
-import { Inject, UnauthorizedException } from "@nestjs/common";
-import { ApplicationException } from "../../../../core/exceptions";
-import { ISearchService } from "../../../../domain/services/isearch.service";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { TiktokSearchResponseModel } from "../../../../domain/contracts/tiktok.model";
-import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
-import { ISearchHistoryRepository, IUserLoginRepository } from "../../../../domain/repositories";
+import axios from 'axios';
+import configs from '../../../../configs';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../../core/utils/const';
+import fuseUtil from '../../../../core/utils/fuse.util';
+import logger from '../../../../core/utils/winston.util';
+import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+import { SearchHistory } from '../../../../domain/entities';
+import { Inject, UnauthorizedException } from '@nestjs/common';
+import { ApplicationException } from '../../../../core/exceptions';
+import { ISearchService } from '../../../../domain/services/isearch.service';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { TiktokSearchResponseModel } from '../../../../domain/contracts/tiktok.model';
+import {
+  deserializeObject,
+  serializeObject,
+} from '../../../../core/utils/serialization.util';
+import {
+  ISearchHistoryRepository,
+  IUserLoginRepository,
+} from '../../../../domain/repositories';
 
 export class TiktokSearchRequestModel {
   @ApiProperty()
@@ -34,8 +40,9 @@ export class TiktokSearchQuery {
 }
 
 @QueryHandler(TiktokSearchQuery)
-export class TiktokSearchQueryHandler implements IQueryHandler<TiktokSearchQuery> {
-
+export class TiktokSearchQueryHandler
+  implements IQueryHandler<TiktokSearchQuery>
+{
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,
@@ -43,9 +50,11 @@ export class TiktokSearchQueryHandler implements IQueryHandler<TiktokSearchQuery
     private readonly searchHistoryRepository: ISearchHistoryRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-  ) { }
+  ) {}
 
-  public async execute(command: TiktokSearchQuery): Promise<TiktokSearchResponseModel> {
+  public async execute(
+    command: TiktokSearchQuery,
+  ): Promise<TiktokSearchResponseModel> {
     const { searchTerm, filter, tiktokAccessToken } = command.model;
 
     let expiresIn: number;
@@ -56,13 +65,25 @@ export class TiktokSearchQueryHandler implements IQueryHandler<TiktokSearchQuery
       const isTokenValid = await this.verifyAccessTokenAsync(tiktokAccessToken);
       if (!isTokenValid) {
         const now = new Date();
-        const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.TIKTOK);
+        const userLogin =
+          await this.userLoginRepository.getByUserIdAndProviderAsync(
+            userId,
+            _const.PLATFORMS.TIKTOK,
+          );
 
         if (userLogin && now < userLogin.expiryDateUtc) {
-          const tokenValue = deserializeObject<{ access_token: string, refresh_token: string }>(userLogin.tokenValue);
-          const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
+          const tokenValue = deserializeObject<{
+            access_token: string;
+            refresh_token: string;
+          }>(userLogin.tokenValue);
+          const { access_token, expires_in } = await this.refreshTokenAsync(
+            tokenValue.refresh_token,
+          );
           if (access_token) {
-            userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
+            userLogin.tokenValue = serializeObject({
+              access_token,
+              refresh_token: tokenValue.refresh_token,
+            });
             userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
             await this.userLoginRepository.updateAsync(userLogin);
           }
@@ -73,16 +94,33 @@ export class TiktokSearchQueryHandler implements IQueryHandler<TiktokSearchQuery
         accessToken = tiktokAccessToken;
       }
     } else {
-      const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.TIKTOK);
+      const userLogin =
+        await this.userLoginRepository.getByUserIdAndProviderAsync(
+          userId,
+          _const.PLATFORMS.TIKTOK,
+        );
       if (!userLogin) {
-        throw new UnauthorizedException('No TikTok account linked to your user profile. Please link your TikTok account to proceed.');
+        throw new UnauthorizedException(
+          'No TikTok account linked to your user profile. Please link your TikTok account to proceed.',
+        );
       }
 
-      const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
-      const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
+      const tokenValue = deserializeObject<{
+        access_token: string;
+        refresh_token: string;
+        expires_in: number;
+      }>(userLogin.tokenValue);
+      const isTokenValid = await this.verifyAccessTokenAsync(
+        tokenValue.access_token,
+      );
       if (!isTokenValid) {
-        const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
-        userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
+        const { access_token, expires_in } = await this.refreshTokenAsync(
+          tokenValue.refresh_token,
+        );
+        userLogin.tokenValue = serializeObject({
+          access_token,
+          refresh_token: tokenValue.refresh_token,
+        });
         userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
         await this.userLoginRepository.updateAsync(userLogin);
         accessToken = access_token;
@@ -106,8 +144,9 @@ export class TiktokSearchQueryHandler implements IQueryHandler<TiktokSearchQuery
     return data;
   }
 
-  private async refreshTokenAsync(refreshToken: string)
-    : Promise<{ access_token: string, expires_in: number }> {
+  private async refreshTokenAsync(
+    refreshToken: string,
+  ): Promise<{ access_token: string; expires_in: number }> {
     try {
       const response = await axios.post(
         'https://open.tiktokapis.com/v2/oauth/token/',
@@ -126,7 +165,9 @@ export class TiktokSearchQueryHandler implements IQueryHandler<TiktokSearchQuery
 
       const { access_token, expires_in } = response.data.data;
       if (!access_token) {
-        throw new ApplicationException('Your TikTok session has expired or the access token is invalid. Please log in to TikTok again to continue.');
+        throw new ApplicationException(
+          'Your TikTok session has expired or the access token is invalid. Please log in to TikTok again to continue.',
+        );
       }
 
       return {
@@ -134,21 +175,26 @@ export class TiktokSearchQueryHandler implements IQueryHandler<TiktokSearchQuery
         expires_in,
       };
     } catch (error) {
-      logger.error("Error refreshing TikTok token", { error });
-      throw new UnauthorizedException('Your TikTok session has expired or the access token is invalid. Please log in to TikTok again to continue.');
+      logger.error('Error refreshing TikTok token', { error });
+      throw new UnauthorizedException(
+        'Your TikTok session has expired or the access token is invalid. Please log in to TikTok again to continue.',
+      );
     }
   }
 
   private async verifyAccessTokenAsync(accessToken: string): Promise<boolean> {
     try {
-      const response = await axios.get('https://open.tiktokapis.com/v2/user/info/', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
+      const response = await axios.get(
+        'https://open.tiktokapis.com/v2/user/info/',
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          params: {
+            fields: 'open_id,union_id',
+          },
         },
-        params: {
-          fields: 'open_id,union_id',
-        },
-      });
+      );
 
       return !!response.data?.data?.user;
     } catch (error) {
@@ -163,14 +209,19 @@ export class TiktokSearchQueryHandler implements IQueryHandler<TiktokSearchQuery
     }
 
     const similarQueries =
-      (await this.searchHistoryRepository.findSimilarQueriesAsync(trimmedQuery)) ?? [];
+      (await this.searchHistoryRepository.findSimilarQueriesAsync(
+        trimmedQuery,
+      )) ?? [];
 
     const candidateValues = similarQueries
       .map((item) => item.normalizedQuery)
       .filter(Boolean)
       .slice(0, 50);
 
-    const normalizedQuery = fuseUtil.normalizeSearchTerm(trimmedQuery, candidateValues);
+    const normalizedQuery = fuseUtil.normalizeSearchTerm(
+      trimmedQuery,
+      candidateValues,
+    );
 
     const hasExistingEntry = similarQueries.some((item) => {
       const original = (item.originalQuery ?? '').trim().toLowerCase();

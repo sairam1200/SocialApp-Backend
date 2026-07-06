@@ -1,19 +1,57 @@
-import _const from "../core/utils/const";
+import _const from '../core/utils/const';
 
-import { GeneralRepository } from "./repositories/general.repository";
-import { ManualProfileRepository } from "./repositories/manualProfile.repository";
-import {YoutubeImportService} from "../infrastructure/services/youtube/youtube-imports.service";
-import {YoutubePublishingService} from "../infrastructure/services/youtube/youtube-publishing.service";
-import {FacebookImportService} from "../infrastructure/services/facebook/facebook-imports.service";
-import { InstagramImportService } from "../infrastructure/services/instagram/instagram-import.service";
-import { TwitterImportService } from "../infrastructure/services/Twitter/x-import.service";
-import { LinkedInImportService} from "../infrastructure/services/linkedin/linkedin-import.service";
-import { PinterestImportService } from "./services/pinterest/pinterest-import.service";
-import { R2StorageService } from "../shared/storage/r2/r2-storage.service";
+import { GeneralRepository } from './repositories/general.repository';
+import { ManualProfileRepository } from './repositories/manualProfile.repository';
+import { YoutubeImportService } from '../infrastructure/services/youtube/youtube-imports.service';
+import { YoutubePublishingService } from '../infrastructure/services/youtube/youtube-publishing.service';
+import { FacebookImportService } from '../infrastructure/services/facebook/facebook-imports.service';
+import { InstagramImportService } from '../infrastructure/services/instagram/instagram-import.service';
+import { TwitterImportService } from '../infrastructure/services/Twitter/x-import.service';
+import { LinkedInImportService } from '../infrastructure/services/linkedin/linkedin-import.service';
+import { PinterestImportService } from './services/pinterest/pinterest-import.service';
+import { R2StorageService } from '../shared/storage/r2/r2-storage.service';
 
-import { AnalyticsRepository, ContentStreamRepository, DataProtectionKeyRepository, LinkedAccountRepository, NotificationRepository, PlaylistRepository, PremiumRollupRepository, RateLimitRepository, RoleClaimRepository, RoleRepository, SearchHistoryRepository, TopicRepository, UserContentRepository, UserFollowRepository, UserLoginRepository, UserPreferenceRepository, UserRepository, UserRoleRepository, YoutubeChannelAnalyticsRepository, YoutubeVideoAnalyticsRepository, FacebookPageAnalyticsRepository, FacebookPostAnalyticsRepository, FacebookVideoAnalyticsRepository,YoutubeAccountRepository, YoutubeVideoRepository, UploadJobRepository } from "./repositories";
-import { AnalyticsService, EmailService, NotificationService, SearchService, SearchCacheService, TokenService, YoutubeWebhookService, QueueService, PlatformDisconnectService, YoutubeAnalyticsService, FacebookAnalyticsService } from "./services";
-
+import {
+  AnalyticsRepository,
+  ContentStreamRepository,
+  DataProtectionKeyRepository,
+  LinkedAccountRepository,
+  NotificationRepository,
+  PlaylistRepository,
+  PremiumRollupRepository,
+  RateLimitRepository,
+  RoleClaimRepository,
+  RoleRepository,
+  SearchHistoryRepository,
+  TopicRepository,
+  UserContentRepository,
+  UserFollowRepository,
+  UserLoginRepository,
+  UserPreferenceRepository,
+  UserRepository,
+  UserRoleRepository,
+  YoutubeChannelAnalyticsRepository,
+  YoutubeVideoAnalyticsRepository,
+  FacebookPageAnalyticsRepository,
+  FacebookPostAnalyticsRepository,
+  FacebookVideoAnalyticsRepository,
+  YoutubeAccountRepository,
+  YoutubeVideoRepository,
+  UploadJobRepository,
+} from './repositories';
+import {
+  AnalyticsService,
+  EmailService,
+  NotificationService,
+  SearchService,
+  SearchCacheService,
+  TokenService,
+  YoutubeWebhookService,
+  QueueService,
+  PlatformDisconnectService,
+  YoutubeAnalyticsService,
+  FacebookAnalyticsService,
+} from './services';
 
 /* This is the dependency object that holds all the repositories & services
  * used in the application. It is used to provide the dependencies to the
@@ -51,33 +89,32 @@ export const dependency = {
   },
   NotificationRepository: {
     provide: _const.INOTIFICATION_REPOSITORY,
-    useClass: NotificationRepository
+    useClass: NotificationRepository,
   },
   UserContentRepository: {
     provide: _const.IUSERCONTENT_REPOSITORY,
-    useClass: UserContentRepository
+    useClass: UserContentRepository,
   },
   RateLimitRepository: {
     provide: _const.IRATELIMIT_REPOSITORY,
-    useClass: RateLimitRepository
+    useClass: RateLimitRepository,
   },
   PlaylistRepository: {
     provide: _const.IPLAYLIST_REPOSITORY,
-    useClass: PlaylistRepository
+    useClass: PlaylistRepository,
   },
   ManualProfileRepository: {
     provide: _const.IMANUALPROFILE_REPOSITORY,
-    useClass: ManualProfileRepository
+    useClass: ManualProfileRepository,
   },
-
 
   ContentStreamRepository: {
     provide: _const.ICONTENTSTREAM_REPOSITORY,
-    useClass: ContentStreamRepository
+    useClass: ContentStreamRepository,
   },
   SearchHistoryRepository: {
     provide: _const.ISEARCHHISTORY_REPOSITORY,
-    useClass: SearchHistoryRepository
+    useClass: SearchHistoryRepository,
   },
   UserFollowRepository: {
     provide: _const.IUSERFOLLOW_REPOSITORY,
@@ -126,52 +163,50 @@ export const dependency = {
   },
 
   YoutubeImportService: {
-  provide: _const.IYOUTUBE_IMPORT_SERVICE,
-  useClass: YoutubeImportService,
-}, 
-FacebookImportService: {
-  provide: _const.IFACEBOOK_IMPORT_SERVICE,
+    provide: _const.IYOUTUBE_IMPORT_SERVICE,
+    useClass: YoutubeImportService,
+  },
+  FacebookImportService: {
+    provide: _const.IFACEBOOK_IMPORT_SERVICE,
     useClass: FacebookImportService,
-}, 
-InstagramImportService: {
-      provide: _const.IINSTAGRAM_IMPORT_SERVICE,
-      useClass: InstagramImportService,
-    },
-TwitterImportService:{
-  provide: _const.ITWITTER_IMPORT_SERVICE,
-      useClass: TwitterImportService,
-},
-PinterestImportService:{
-  provide: _const.IPINTEREST_IMPORT_SERVICE,
-  useClass: PinterestImportService,
-},
-LinkedInImportService:{
-  provide: _const.ILINKEDIN_IMPORT_SERVICE,
-  useClass: LinkedInImportService,
-},
-YoutubeAccountRepository: {
-  provide: _const.IYOUTUBEACCOUNT_REPOSITORY,
-  useClass: YoutubeAccountRepository,
-},
-YoutubeVideoRepository: {
-  provide: _const.IYOUTUBEVIDEO_REPOSITORY,
-  useClass: YoutubeVideoRepository,
-},
+  },
+  InstagramImportService: {
+    provide: _const.IINSTAGRAM_IMPORT_SERVICE,
+    useClass: InstagramImportService,
+  },
+  TwitterImportService: {
+    provide: _const.ITWITTER_IMPORT_SERVICE,
+    useClass: TwitterImportService,
+  },
+  PinterestImportService: {
+    provide: _const.IPINTEREST_IMPORT_SERVICE,
+    useClass: PinterestImportService,
+  },
+  LinkedInImportService: {
+    provide: _const.ILINKEDIN_IMPORT_SERVICE,
+    useClass: LinkedInImportService,
+  },
+  YoutubeAccountRepository: {
+    provide: _const.IYOUTUBEACCOUNT_REPOSITORY,
+    useClass: YoutubeAccountRepository,
+  },
+  YoutubeVideoRepository: {
+    provide: _const.IYOUTUBEVIDEO_REPOSITORY,
+    useClass: YoutubeVideoRepository,
+  },
 
-UploadJobRepository: {
-  provide: _const.IUPLOADJOB_REPOSITORY,
-  useClass: UploadJobRepository,
-},
-YoutubePublishingService: {
-  provide: _const.IYOUTUBE_PUBLISHING_SERVICE,
-  useClass: YoutubePublishingService,
-},
-R2StorageService: {
-  provide: _const.IR2_STORAGE_SERVICE,
-  useClass: R2StorageService,
-},
-
-
+  UploadJobRepository: {
+    provide: _const.IUPLOADJOB_REPOSITORY,
+    useClass: UploadJobRepository,
+  },
+  YoutubePublishingService: {
+    provide: _const.IYOUTUBE_PUBLISHING_SERVICE,
+    useClass: YoutubePublishingService,
+  },
+  R2StorageService: {
+    provide: _const.IR2_STORAGE_SERVICE,
+    useClass: R2StorageService,
+  },
 
   // Analytics
   AnalyticsRepository: {
@@ -215,4 +250,3 @@ R2StorageService: {
     useClass: FacebookAnalyticsService,
   },
 };
-

@@ -1,13 +1,23 @@
-import { QueryOptions } from "../types/queryOptions.type";
-import { UserContent } from "../entities/userContent.entity";
-import { SearchUserProjection } from "./iuser.repository";
+import { QueryOptions } from '../types/queryOptions.type';
+import { UserContent } from '../entities/userContent.entity';
+import { SearchUserProjection } from './iuser.repository';
 
-export type SearchContentProjection = Pick<UserContent, "id" | "title" | "type" | "platform" | "externalId" | "sourceUrl" | "publishedAt" | "media"> & {
+export type SearchContentProjection = Pick<
+  UserContent,
+  | 'id'
+  | 'title'
+  | 'type'
+  | 'platform'
+  | 'externalId'
+  | 'sourceUrl'
+  | 'publishedAt'
+  | 'media'
+  | 'metaData'
+> & {
   user: SearchUserProjection;
 };
 
 export interface IUserContentRepository {
-
   createAsync(content: UserContent): Promise<UserContent>;
   updateAsync(content: UserContent): Promise<void>;
 
@@ -16,22 +26,54 @@ export interface IUserContentRepository {
   getByPlatformAndContentIdAsync(
     userId: string,
     platform: string,
-    contentId: string
+    contentId: string,
   ): Promise<UserContent>;
 
   getByUserIdAsync(
     userId: string,
     platform: string,
-    cursor: string
+    cursor: string,
   ): Promise<[UserContent[], string]>;
 
   getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]>;
-  searchGlobalAsync(keyword: string, viewerUserId: string, page: number, limit: number): Promise<[SearchContentProjection[], number]>;
-  getGlobalSearchItemAsync(id: string, viewerUserId: string): Promise<SearchContentProjection | null>;
-  getVideoIdsByUserIdAndPlatformAsync(userId: string, platform: string, types: string[]): Promise<string[]>;
-  getUserContentVideosAsync(userId: string, platform: string, types: string[]): Promise<Pick<UserContent, 'externalId' | 'metaData' | 'title' | 'media' | 'publishedAt'>[]>;
-  getVideoMetaDataByUserIdAndPlatformAsync(userId: string, platform: string, types: string[]): Promise<Pick<UserContent, 'externalId' | 'metaData'>[]>;
+  searchGlobalAsync(
+    keyword: string,
+    viewerUserId: string,
+    page: number,
+    limit: number,
+  ): Promise<[SearchContentProjection[], number]>;
+  getGlobalSearchItemAsync(
+    id: string,
+    viewerUserId: string,
+  ): Promise<SearchContentProjection | null>;
+  getVideoIdsByUserIdAndPlatformAsync(
+    userId: string,
+    platform: string,
+    types: string[],
+  ): Promise<string[]>;
+  getUserContentVideosAsync(
+    userId: string,
+    platform: string,
+    types: string[],
+  ): Promise<
+    Pick<
+      UserContent,
+      'externalId' | 'metaData' | 'title' | 'media' | 'publishedAt'
+    >[]
+  >;
+  getVideoMetaDataByUserIdAndPlatformAsync(
+    userId: string,
+    platform: string,
+    types: string[],
+  ): Promise<Pick<UserContent, 'externalId' | 'metaData'>[]>;
 
-  deleteByUserIdAndPlatformAsync(userId: string, platform: string): Promise<void>;
-  deleteByExternalIdsAsync(userId: string, platform: string, externalIds: string[]): Promise<void>;
+  deleteByUserIdAndPlatformAsync(
+    userId: string,
+    platform: string,
+  ): Promise<void>;
+  deleteByExternalIdsAsync(
+    userId: string,
+    platform: string,
+    externalIds: string[],
+  ): Promise<void>;
 }

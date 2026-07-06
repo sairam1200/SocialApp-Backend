@@ -1,20 +1,23 @@
-import { Injectable, Inject } from "@nestjs/common";
-import { Job } from "bullmq";
-import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import { EventEmitter2 } from "@nestjs/event-emitter";
-import { IYoutubeImportService, YoutubePlaylistItem } from "domain/services/youtube/iyoutube-import.services";
-import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
-import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
-import { IContentStreamRepository } from "../../../domain/repositories/icontentStream.repository";
-import { INotificationService } from "../../../domain/services/inotification.service";
-import { IYoutubeAnalyticsService } from "../../../domain/services/iyoutubeAnalytics.service";
-import { NotificationStatus, NotificationType } from "../../../domain/enums";
-import { NotificationModel } from "../../../domain/contracts/notification.model";
-import { mapToNotificationModel } from "../../../domain/mappers/notification.mapper";
-import { mapToYouTubeContentModel } from "../../../domain/mappers/youtube.mapper";
-import { UserContent } from "../../../domain/entities/userContent.entity";
-import _const from "../../../core/utils/const";
-import logger from "../../../core/utils/winston.util";
+import { Injectable, Inject } from '@nestjs/common';
+import { Job } from 'bullmq';
+import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  IYoutubeImportService,
+  YoutubePlaylistItem,
+} from 'domain/services/youtube/iyoutube-import.services';
+import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
+import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
+import { IContentStreamRepository } from '../../../domain/repositories/icontentStream.repository';
+import { INotificationService } from '../../../domain/services/inotification.service';
+import { IYoutubeAnalyticsService } from '../../../domain/services/iyoutubeAnalytics.service';
+import { NotificationStatus, NotificationType } from '../../../domain/enums';
+import { NotificationModel } from '../../../domain/contracts/notification.model';
+import { mapToNotificationModel } from '../../../domain/mappers/notification.mapper';
+import { mapToYouTubeContentModel } from '../../../domain/mappers/youtube.mapper';
+import { UserContent } from '../../../domain/entities/userContent.entity';
+import _const from '../../../core/utils/const';
+import logger from '../../../core/utils/winston.util';
 
 interface CursorMap {
   [key: string]: string | null;
@@ -69,7 +72,11 @@ export class YoutubeImportService implements IYoutubeImportService {
   parseDurationToSeconds(duration: string): number {
     const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
     if (!match) return 0;
-    return Number(match[1] || 0) * 3600 + Number(match[2] || 0) * 60 + Number(match[3] || 0);
+    return (
+      Number(match[1] || 0) * 3600 +
+      Number(match[2] || 0) * 60 +
+      Number(match[3] || 0)
+    );
   }
 
   async callYouTubeApiWithRetry<T>(
@@ -79,25 +86,37 @@ export class YoutubeImportService implements IYoutubeImportService {
     let lastError: Error | undefined;
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        const url = config.url || "";
-        logger.info(`[YoutubeImport] API call attempt ${attempt}/${retries}: ${config.method || "GET"} ${url}`);
+        const url = config.url || '';
+        logger.info(
+          `[YoutubeImport] API call attempt ${attempt}/${retries}: ${config.method || 'GET'} ${url}`,
+        );
         const response = await axios({ ...config, validateStatus: () => true });
         logger.info(
           `[YoutubeImport] API response ${attempt}/${retries}: ${response.status} ` +
-          `quotaCost=${response.headers["x-quota-cost"] || "N/A"} ` +
-          `quotaRemaining=${response.headers["x-ratelimit-remaining"] || "N/A"}`,
+            `quotaCost=${response.headers['x-quota-cost'] || 'N/A'} ` +
+            `quotaRemaining=${response.headers['x-ratelimit-remaining'] || 'N/A'}`,
         );
         if (response.status === 429) {
-          const retryAfter = parseInt(response.headers["retry-after"] || "0", 10);
-          const delay = Math.max(retryAfter * 1000, Math.pow(2, attempt) * 1000);
-          logger.warn(`[YoutubeImport] HTTP 429 on ${url} attempt ${attempt}/${retries}. Retrying in ${delay}ms`);
+          const retryAfter = parseInt(
+            response.headers['retry-after'] || '0',
+            10,
+          );
+          const delay = Math.max(
+            retryAfter * 1000,
+            Math.pow(2, attempt) * 1000,
+          );
+          logger.warn(
+            `[YoutubeImport] HTTP 429 on ${url} attempt ${attempt}/${retries}. Retrying in ${delay}ms`,
+          );
           await new Promise((resolve) => setTimeout(resolve, delay));
-          lastError = new Error("HTTP 429: rate limited");
+          lastError = new Error('HTTP 429: rate limited');
           continue;
         }
         if (response.status >= 500) {
           const delay = Math.pow(2, attempt) * 1000;
-          logger.warn(`[YoutubeImport] HTTP ${response.status} on ${url} attempt ${attempt}/${retries}. Retrying in ${delay}ms`);
+          logger.warn(
+            `[YoutubeImport] HTTP ${response.status} on ${url} attempt ${attempt}/${retries}. Retrying in ${delay}ms`,
+          );
           await new Promise((resolve) => setTimeout(resolve, delay));
           lastError = new Error(`HTTP ${response.status}`);
           continue;
@@ -108,9 +127,14 @@ export class YoutubeImportService implements IYoutubeImportService {
         }
         return { data: response.data as T, headers: response.headers };
       } catch (err) {
-        if (err instanceof AxiosError && (err.code === "ECONNRESET" || err.code === "ETIMEDOUT")) {
+        if (
+          err instanceof AxiosError &&
+          (err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT')
+        ) {
           const delay = Math.pow(2, attempt) * 1000;
-          logger.warn(`[YoutubeImport] ${err.code} on attempt ${attempt}/${retries}. Retrying in ${delay}ms`);
+          logger.warn(
+            `[YoutubeImport] ${err.code} on attempt ${attempt}/${retries}. Retrying in ${delay}ms`,
+          );
           await new Promise((resolve) => setTimeout(resolve, delay));
           lastError = err;
           continue;
@@ -127,11 +151,11 @@ export class YoutubeImportService implements IYoutubeImportService {
     pageToken: string | null = null,
   ): Promise<{ items: YoutubePlaylistItem[]; nextPageToken: string | null }> {
     const result = await this.callYouTubeApiWithRetry<YoutubeApiListResponse>({
-      method: "GET",
-      url: "https://www.googleapis.com/youtube/v3/playlistItems",
+      method: 'GET',
+      url: 'https://www.googleapis.com/youtube/v3/playlistItems',
       headers: { Authorization: `Bearer ${accessToken}` },
       params: {
-        part: "snippet,contentDetails",
+        part: 'snippet,contentDetails',
         playlistId,
         maxResults: 50,
         pageToken: pageToken ?? undefined,
@@ -139,7 +163,7 @@ export class YoutubeImportService implements IYoutubeImportService {
     });
     const rawItems = result.data.items ?? [];
     const items: YoutubePlaylistItem[] = rawItems.map((raw: any) => ({
-      id: typeof raw.id === "string" ? raw.id : "",
+      id: typeof raw.id === 'string' ? raw.id : '',
       snippet: raw.snippet
         ? {
             title: raw.snippet.title,
@@ -156,15 +180,25 @@ export class YoutubeImportService implements IYoutubeImportService {
     }));
     return {
       items,
-      nextPageToken: typeof result.data.nextPageToken === "string" ? result.data.nextPageToken : null,
+      nextPageToken:
+        typeof result.data.nextPageToken === 'string'
+          ? result.data.nextPageToken
+          : null,
     };
   }
 
-  async fetchPlaylistVideos(accessToken: string, playlistId: string): Promise<YoutubePlaylistItem[]> {
+  async fetchPlaylistVideos(
+    accessToken: string,
+    playlistId: string,
+  ): Promise<YoutubePlaylistItem[]> {
     const videos: YoutubePlaylistItem[] = [];
     let nextPageToken: string | null = null;
     do {
-      const page = await this.fetchPlaylistVideosPage(accessToken, playlistId, nextPageToken);
+      const page = await this.fetchPlaylistVideosPage(
+        accessToken,
+        playlistId,
+        nextPageToken,
+      );
       for (const item of page.items) videos.push(item);
       nextPageToken = page.nextPageToken;
     } while (nextPageToken);
@@ -178,12 +212,16 @@ export class YoutubeImportService implements IYoutubeImportService {
       if (videoIds.length > 0) {
         for (let i = 0; i < videoIds.length; i += 50) {
           const batch = videoIds.slice(i, i + 50);
-          const statsRes = await this.callYouTubeApiWithRetry<YoutubeVideosListResponse>({
-            method: "GET",
-            url: "https://www.googleapis.com/youtube/v3/videos",
-            headers: { Authorization: `Bearer ${accessToken}` },
-            params: { part: "statistics,contentDetails", id: batch.join(",") },
-          });
+          const statsRes =
+            await this.callYouTubeApiWithRetry<YoutubeVideosListResponse>({
+              method: 'GET',
+              url: 'https://www.googleapis.com/youtube/v3/videos',
+              headers: { Authorization: `Bearer ${accessToken}` },
+              params: {
+                part: 'statistics,contentDetails',
+                id: batch.join(','),
+              },
+            });
           const statsMap = new Map<string, YoutubeVideoStats>();
           for (const item of statsRes.data.items ?? []) {
             statsMap.set(item.id, {
@@ -200,7 +238,7 @@ export class YoutubeImportService implements IYoutubeImportService {
                 viewCount: Number(s.statistics?.viewCount || 0),
                 likeCount: Number(s.statistics?.likeCount || 0),
                 commentCount: Number(s.statistics?.commentCount || 0),
-                duration: s.duration || "PT0S",
+                duration: s.duration || 'PT0S',
               };
             }
           }
@@ -210,55 +248,127 @@ export class YoutubeImportService implements IYoutubeImportService {
     return videos;
   }
 
-  private mapContentByType(type: string, item: any, userId: string): UserContent | null {
-    const base = new UserContent({ userId, platform: _const.PLATFORMS.YOUTUBE });
+  private mapContentByType(
+    type: string,
+    item: any,
+    userId: string,
+  ): UserContent | null {
+    const base = new UserContent({
+      userId,
+      platform: _const.PLATFORMS.YOUTUBE,
+    });
 
     switch (type) {
-      case "Subscriptions":
-        base.type = "subscription";
+      case 'Subscriptions':
+        base.type = 'subscription';
         base.title = item.snippet.title;
         base.externalId = item.snippet.resourceId.channelId;
         base.text = item.snippet.description;
-        base.publishedAt = item.snippet.publishedAt ? new Date(item.snippet.publishedAt) : undefined;
+        base.publishedAt = item.snippet.publishedAt
+          ? new Date(item.snippet.publishedAt)
+          : undefined;
         base.sourceUrl = `https://www.youtube.com/channel/${item.snippet.resourceId.channelId}`;
-        base.media = [{ url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url, type: "channel", thumbnail: item.snippet.thumbnails?.high?.url }];
-        base.metaData = { description: item.snippet.description, publishedAt: item.snippet.publishedAt, thumbnails: item.snippet.thumbnails };
+        base.media = [
+          {
+            url:
+              item.snippet.thumbnails?.high?.url ||
+              item.snippet.thumbnails?.default?.url,
+            type: 'channel',
+            thumbnail: item.snippet.thumbnails?.high?.url,
+          },
+        ];
+        base.metaData = {
+          description: item.snippet.description,
+          publishedAt: item.snippet.publishedAt,
+          thumbnails: item.snippet.thumbnails,
+        };
         return base;
 
-      case "Playlists":
-        base.type = "playlist";
+      case 'Playlists':
+        base.type = 'playlist';
         base.title = item.snippet.title;
         base.externalId = item.id;
         base.text = item.snippet.description;
-        base.publishedAt = item.snippet.publishedAt ? new Date(item.snippet.publishedAt) : undefined;
+        base.publishedAt = item.snippet.publishedAt
+          ? new Date(item.snippet.publishedAt)
+          : undefined;
         base.sourceUrl = `https://www.youtube.com/playlist?list=${item.id}`;
-        base.media = [{ url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url, type: "playlist", thumbnail: item.snippet.thumbnails?.high?.url }];
-        base.metaData = { playlistId: item.id, description: item.snippet.description, itemCount: item.contentDetails?.itemCount, publishedAt: item.snippet.publishedAt, thumbnails: item.snippet.thumbnails };
+        base.media = [
+          {
+            url:
+              item.snippet.thumbnails?.high?.url ||
+              item.snippet.thumbnails?.default?.url,
+            type: 'playlist',
+            thumbnail: item.snippet.thumbnails?.high?.url,
+          },
+        ];
+        base.metaData = {
+          playlistId: item.id,
+          description: item.snippet.description,
+          itemCount: item.contentDetails?.itemCount,
+          publishedAt: item.snippet.publishedAt,
+          thumbnails: item.snippet.thumbnails,
+        };
         return base;
 
-      case "Activities":
-        base.type = "activity";
+      case 'Activities':
+        base.type = 'activity';
         base.title = item.snippet.title;
         base.externalId = item.id;
         base.text = item.snippet.description;
-        base.publishedAt = item.snippet.publishedAt ? new Date(item.snippet.publishedAt) : undefined;
+        base.publishedAt = item.snippet.publishedAt
+          ? new Date(item.snippet.publishedAt)
+          : undefined;
         base.sourceUrl = `https://www.youtube.com/watch?v=${item.contentDetails?.upload?.videoId || item.id}`;
-        base.media = [{ url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url, type: "activity", thumbnail: item.snippet.thumbnails?.high?.url }];
-        base.metaData = { publishedAt: item.snippet.publishedAt, channelId: item.snippet.channelId, description: item.snippet.description, thumbnails: item.snippet.thumbnails, type: item.snippet.type };
+        base.media = [
+          {
+            url:
+              item.snippet.thumbnails?.high?.url ||
+              item.snippet.thumbnails?.default?.url,
+            type: 'activity',
+            thumbnail: item.snippet.thumbnails?.high?.url,
+          },
+        ];
+        base.metaData = {
+          publishedAt: item.snippet.publishedAt,
+          channelId: item.snippet.channelId,
+          description: item.snippet.description,
+          thumbnails: item.snippet.thumbnails,
+          type: item.snippet.type,
+        };
         return base;
 
-      case "ChannelInfo":
-        base.type = "channel";
+      case 'ChannelInfo':
+        base.type = 'channel';
         base.title = item.snippet.title;
         base.externalId = item.id;
         base.text = item.snippet.description;
-        base.publishedAt = item.snippet.publishedAt ? new Date(item.snippet.publishedAt) : undefined;
+        base.publishedAt = item.snippet.publishedAt
+          ? new Date(item.snippet.publishedAt)
+          : undefined;
         base.sourceUrl = `https://www.youtube.com/channel/${item.id}`;
-        base.media = [{ url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url, type: "channel", thumbnail: item.snippet.thumbnails?.high?.url }];
+        base.media = [
+          {
+            url:
+              item.snippet.thumbnails?.high?.url ||
+              item.snippet.thumbnails?.default?.url,
+            type: 'channel',
+            thumbnail: item.snippet.thumbnails?.high?.url,
+          },
+        ];
         if (item.statistics) {
-          base.engagement = { views: item.statistics.viewCount, subscribers: item.statistics.subscriberCount, videos: item.statistics.videoCount };
+          base.engagement = {
+            views: item.statistics.viewCount,
+            subscribers: item.statistics.subscriberCount,
+            videos: item.statistics.videoCount,
+          };
         }
-        base.metaData = { description: item.snippet.description, publishedAt: item.snippet.publishedAt, thumbnails: item.snippet.thumbnails, statistics: item.statistics };
+        base.metaData = {
+          description: item.snippet.description,
+          publishedAt: item.snippet.publishedAt,
+          thumbnails: item.snippet.thumbnails,
+          statistics: item.statistics,
+        };
         return base;
 
       default:
@@ -266,32 +376,56 @@ export class YoutubeImportService implements IYoutubeImportService {
     }
   }
 
-  private async saveAndEmitContent(content: UserContent, userId: string): Promise<UserContent> {
-    await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(_const.PLATFORMS.YOUTUBE, content.externalId);
+  private async saveAndEmitContent(
+    content: UserContent,
+    userId: string,
+  ): Promise<UserContent> {
+    await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
+      _const.PLATFORMS.YOUTUBE,
+      content.externalId,
+    );
     const saved = await this.userContentRepository.createAsync(content);
     const mapped = mapToYouTubeContentModel(saved);
-    this.eventEmitter.emit("content.imported", { userId, platform: _const.PLATFORMS.YOUTUBE, data: mapped });
+    this.eventEmitter.emit('content.imported', {
+      userId,
+      platform: _const.PLATFORMS.YOUTUBE,
+      data: mapped,
+    });
     return saved;
   }
 
   private async upsertNotification(
     notification: NotificationModel | undefined,
     userId: string,
-    reports: Array<{ type: string; totalItem: number; itemProcessed: number; progressPercent: number; status: string }>,
+    reports: Array<{
+      type: string;
+      totalItem: number;
+      itemProcessed: number;
+      progressPercent: number;
+      status: string;
+    }>,
   ): Promise<NotificationModel> {
     if (!notification) {
       const result = await this.notificationService.notifyAsync(
         userId,
         NotificationType.Import,
-        "Importing your Youtube data...",
-        "",
+        'Importing your Youtube data...',
+        '',
         true,
-        { status: NotificationStatus.InProgress, reports, platform: _const.PLATFORMS.YOUTUBE },
+        {
+          status: NotificationStatus.InProgress,
+          reports,
+          platform: _const.PLATFORMS.YOUTUBE,
+        },
       );
       return mapToNotificationModel(result);
     }
     await this.notificationService.updateAsync(notification.id, true, {
-      metaData: { status: NotificationStatus.InProgress, reports, platform: _const.PLATFORMS.YOUTUBE },
+      metaData: {
+        status: NotificationStatus.InProgress,
+        reports,
+        platform: _const.PLATFORMS.YOUTUBE,
+      },
     });
     return notification;
   }
@@ -313,20 +447,27 @@ export class YoutubeImportService implements IYoutubeImportService {
     }
   }
 
-  async importUploadsAsync(userId: string, accessToken: string): Promise<number> {
+  async importUploadsAsync(
+    userId: string,
+    accessToken: string,
+  ): Promise<number> {
     let importedCount = 0;
     let pageCount = 0;
 
     try {
-      const channelRes = await axios.get("https://www.googleapis.com/youtube/v3/channels", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: { part: "snippet,contentDetails", mine: true },
-      });
+      const channelRes = await axios.get(
+        'https://www.googleapis.com/youtube/v3/channels',
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          params: { part: 'snippet,contentDetails', mine: true },
+        },
+      );
 
       const channel = channelRes.data?.items?.[0];
       if (!channel) return 0;
 
-      const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
+      const uploadsPlaylistId =
+        channel.contentDetails?.relatedPlaylists?.uploads;
       if (!uploadsPlaylistId) return 0;
 
       let nextPageToken: string | null = null;
@@ -335,10 +476,18 @@ export class YoutubeImportService implements IYoutubeImportService {
         pageCount++;
         let playlistResponse;
         try {
-          playlistResponse = await axios.get("https://www.googleapis.com/youtube/v3/playlistItems", {
-            headers: { Authorization: `Bearer ${accessToken}` },
-            params: { part: "snippet,contentDetails", playlistId: uploadsPlaylistId, maxResults: 50, pageToken: nextPageToken ?? undefined },
-          });
+          playlistResponse = await axios.get(
+            'https://www.googleapis.com/youtube/v3/playlistItems',
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+              params: {
+                part: 'snippet,contentDetails',
+                playlistId: uploadsPlaylistId,
+                maxResults: 50,
+                pageToken: nextPageToken ?? undefined,
+              },
+            },
+          );
         } catch {
           break;
         }
@@ -346,15 +495,23 @@ export class YoutubeImportService implements IYoutubeImportService {
         const items = playlistResponse.data?.items ?? [];
         nextPageToken = playlistResponse.data?.nextPageToken ?? null;
 
-        const videoIds = items.map((v: any) => v.contentDetails?.videoId).filter(Boolean);
+        const videoIds = items
+          .map((v: any) => v.contentDetails?.videoId)
+          .filter(Boolean);
         if (videoIds.length === 0) continue;
 
         let statsResponse;
         try {
-          statsResponse = await axios.get("https://www.googleapis.com/youtube/v3/videos", {
-            headers: { Authorization: `Bearer ${accessToken}` },
-            params: { part: "statistics,contentDetails", id: videoIds.join(",") },
-          });
+          statsResponse = await axios.get(
+            'https://www.googleapis.com/youtube/v3/videos',
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+              params: {
+                part: 'statistics,contentDetails',
+                id: videoIds.join(','),
+              },
+            },
+          );
         } catch {
           break;
         }
@@ -362,7 +519,10 @@ export class YoutubeImportService implements IYoutubeImportService {
         const detailsMap = new Map(
           (statsResponse.data?.items ?? []).map((item: any) => [
             item.id,
-            { statistics: item.statistics, duration: item.contentDetails?.duration },
+            {
+              statistics: item.statistics,
+              duration: item.contentDetails?.duration,
+            },
           ]),
         );
 
@@ -371,7 +531,7 @@ export class YoutubeImportService implements IYoutubeImportService {
           if (!videoId) continue;
 
           const details = detailsMap.get(videoId) as any;
-          const duration = details?.duration ?? "PT0S";
+          const duration = details?.duration ?? 'PT0S';
           const durationSeconds = this.parseDurationToSeconds(duration);
           const isShort = durationSeconds <= 180;
 
@@ -380,9 +540,9 @@ export class YoutubeImportService implements IYoutubeImportService {
               new UserContent({
                 userId,
                 platform: _const.PLATFORMS.YOUTUBE,
-                type: "uploaded_video",
+                type: 'uploaded_video',
                 externalId: videoId,
-                title: item.snippet?.title ?? "Untitled Video",
+                title: item.snippet?.title ?? 'Untitled Video',
                 metaData: {
                   videoId,
                   isShort,
@@ -392,7 +552,10 @@ export class YoutubeImportService implements IYoutubeImportService {
                   viewCount: Number(details?.statistics?.viewCount ?? 0),
                   likeCount: Number(details?.statistics?.likeCount ?? 0),
                   commentCount: Number(details?.statistics?.commentCount ?? 0),
-                  thumbnailUrl: item.snippet?.thumbnails?.high?.url ?? item.snippet?.thumbnails?.medium?.url ?? item.snippet?.thumbnails?.default?.url,
+                  thumbnailUrl:
+                    item.snippet?.thumbnails?.high?.url ??
+                    item.snippet?.thumbnails?.medium?.url ??
+                    item.snippet?.thumbnails?.default?.url,
                   channelId: channel.id,
                   channelTitle: channel.snippet?.title,
                   youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`,
@@ -409,40 +572,66 @@ export class YoutubeImportService implements IYoutubeImportService {
 
       return importedCount;
     } catch {
-      throw new Error("YouTube import uploads failed");
+      throw new Error('YouTube import uploads failed');
     }
   }
 
-  async importSubscriptionsAsync(userId: string, accessToken: string): Promise<number> {
+  async importSubscriptionsAsync(
+    userId: string,
+    accessToken: string,
+  ): Promise<number> {
     let importedCount = 0;
-    await this.userContentRepository.deleteByUserIdAndPlatformAsync(userId, _const.PLATFORMS.YOUTUBE);
+    await this.userContentRepository.deleteByUserIdAndPlatformAsync(
+      userId,
+      _const.PLATFORMS.YOUTUBE,
+    );
 
-    const feedRes = await axios.get("https://www.googleapis.com/youtube/v3/subscriptions", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      params: { part: "snippet", mine: true, maxResults: 50 },
-    });
+    const feedRes = await axios.get(
+      'https://www.googleapis.com/youtube/v3/subscriptions',
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: { part: 'snippet', mine: true, maxResults: 50 },
+      },
+    );
 
     for (const sub of feedRes.data?.items ?? []) {
       const channelId = sub.snippet?.resourceId?.channelId;
       if (!channelId) continue;
 
-      const searchRes = await axios.get("https://www.googleapis.com/youtube/v3/search", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: { part: "snippet", channelId, order: "date", type: "video", maxResults: 5 },
-      });
+      const searchRes = await axios.get(
+        'https://www.googleapis.com/youtube/v3/search',
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          params: {
+            part: 'snippet',
+            channelId,
+            order: 'date',
+            type: 'video',
+            maxResults: 5,
+          },
+        },
+      );
 
-      const videoIds = (searchRes.data?.items ?? []).map((v: any) => v.id?.videoId).filter(Boolean);
+      const videoIds = (searchRes.data?.items ?? [])
+        .map((v: any) => v.id?.videoId)
+        .filter(Boolean);
       if (videoIds.length === 0) continue;
 
-      const statsRes = await axios.get("https://www.googleapis.com/youtube/v3/videos", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: { part: "statistics,contentDetails", id: videoIds.join(",") },
-      });
+      const statsRes = await axios.get(
+        'https://www.googleapis.com/youtube/v3/videos',
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          params: { part: 'statistics,contentDetails', id: videoIds.join(',') },
+        },
+      );
 
       const detailsMap = new Map(
         (statsRes.data?.items ?? []).map((item: any) => [
           item.id,
-          { statistics: item.statistics, duration: item.contentDetails?.duration },
+          {
+            statistics: item.statistics,
+            duration: item.contentDetails?.duration,
+          },
         ]),
       );
 
@@ -451,16 +640,16 @@ export class YoutubeImportService implements IYoutubeImportService {
         if (!videoId) continue;
 
         const details = detailsMap.get(videoId) as any;
-        const duration = details?.duration ?? "PT0S";
+        const duration = details?.duration ?? 'PT0S';
         const isShort = this.parseDurationToSeconds(duration) <= 180;
 
         await this.userContentRepository.createAsync(
           new UserContent({
             userId,
             platform: _const.PLATFORMS.YOUTUBE,
-            type: "subscription_video",
+            type: 'subscription_video',
             externalId: videoId,
-            title: video.snippet?.title ?? "Untitled Video",
+            title: video.snippet?.title ?? 'Untitled Video',
             metaData: {
               videoId,
               isShort,
@@ -470,7 +659,10 @@ export class YoutubeImportService implements IYoutubeImportService {
               viewCount: Number(details?.statistics?.likeCount ?? 0),
               likeCount: Number(details?.statistics?.likeCount ?? 0),
               commentCount: Number(details?.statistics?.commentCount ?? 0),
-              thumbnail: video.snippet?.thumbnails?.high?.url ?? video.snippet?.thumbnails?.medium?.url ?? video.snippet?.thumbnails?.default?.url,
+              thumbnail:
+                video.snippet?.thumbnails?.high?.url ??
+                video.snippet?.thumbnails?.medium?.url ??
+                video.snippet?.thumbnails?.default?.url,
               channelId: video.snippet?.channelId,
               channelTitle: video.snippet?.channelTitle,
               youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`,
@@ -484,38 +676,83 @@ export class YoutubeImportService implements IYoutubeImportService {
     return importedCount;
   }
 
-  async refreshChannelProfileAsync(userId: string, accessToken: string): Promise<void> {
+  async refreshChannelProfileAsync(
+    userId: string,
+    accessToken: string,
+  ): Promise<void> {
     // Channel profile refresh is not yet implemented
   }
 
-  async importFullAsync(account: any, accessToken: string, job?: Job): Promise<void> {
-    const currentAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-      _const.PLATFORMS.YOUTUBE,
-      account.userId,
-    );
+  async importFullAsync(
+    account: any,
+    accessToken: string,
+    job?: Job,
+  ): Promise<void> {
+    const currentAccount =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.YOUTUBE,
+        account.userId,
+      );
     if (!currentAccount) {
-      logger.error(`[YoutubeImport] Account not found for user ${account.userId}`);
+      logger.error(
+        `[YoutubeImport] Account not found for user ${account.userId}`,
+      );
       return;
     }
 
     if (job && !(await job.isActive())) {
-      logger.info(`[YoutubeImport] Job ${job.id} is no longer active, stopping import for user ${account.userId}`);
+      logger.info(
+        `[YoutubeImport] Job ${job.id} is no longer active, stopping import for user ${account.userId}`,
+      );
       return;
     }
 
-    logger.info(`[YoutubeImport] Starting full import for user ${account.userId}`);
+    logger.info(
+      `[YoutubeImport] Starting full import for user ${account.userId}`,
+    );
 
-    const progressReports: Record<string, { totalItem: number; itemProcessed: number; progressPercent: number; status: string }> = {};
+    const progressReports: Record<
+      string,
+      {
+        totalItem: number;
+        itemProcessed: number;
+        progressPercent: number;
+        status: string;
+      }
+    > = {};
     const lastCursors: CursorMap = this.loadCursors(currentAccount);
     const importedExternalIds: string[] = [];
 
-    const fields: Record<string, { endpoint: string; type: string; params?: any; uploadsPlaylistExtractor?: (item: any) => string | null }> = {
-      subscriptions: { endpoint: "subscriptions", type: "Subscriptions", params: { mine: true, part: "snippet,contentDetails", maxResults: 50 } },
-      playlists: { endpoint: "playlists", type: "Playlists", params: { mine: true, part: "snippet,contentDetails" } },
-      activities: { endpoint: "activities", type: "Activities", params: { mine: true, part: "snippet,contentDetails", maxResults: 50 } },
+    const fields: Record<
+      string,
+      {
+        endpoint: string;
+        type: string;
+        params?: any;
+        uploadsPlaylistExtractor?: (item: any) => string | null;
+      }
+    > = {
+      subscriptions: {
+        endpoint: 'subscriptions',
+        type: 'Subscriptions',
+        params: { mine: true, part: 'snippet,contentDetails', maxResults: 50 },
+      },
+      playlists: {
+        endpoint: 'playlists',
+        type: 'Playlists',
+        params: { mine: true, part: 'snippet,contentDetails' },
+      },
+      activities: {
+        endpoint: 'activities',
+        type: 'Activities',
+        params: { mine: true, part: 'snippet,contentDetails', maxResults: 50 },
+      },
       channels: {
-        endpoint: "channels", type: "ChannelInfo", params: { mine: true, part: "snippet,contentDetails,statistics" },
-        uploadsPlaylistExtractor: (item: any) => item.contentDetails?.relatedPlaylists?.uploads || null,
+        endpoint: 'channels',
+        type: 'ChannelInfo',
+        params: { mine: true, part: 'snippet,contentDetails,statistics' },
+        uploadsPlaylistExtractor: (item: any) =>
+          item.contentDetails?.relatedPlaylists?.uploads || null,
       },
     };
 
@@ -524,21 +761,35 @@ export class YoutubeImportService implements IYoutubeImportService {
     let encounteredError = false;
     let itemsSinceLastNotify = 0;
 
-    for (const [key, { endpoint, type, params, uploadsPlaylistExtractor }] of Object.entries(fields)) {
+    for (const [
+      key,
+      { endpoint, type, params, uploadsPlaylistExtractor },
+    ] of Object.entries(fields)) {
       let nextPageToken: string | null = lastCursors[type] || null;
 
-      progressReports[type] = { totalItem: 0, itemProcessed: 0, progressPercent: 0, status: NotificationStatus.InProgress };
+      progressReports[type] = {
+        totalItem: 0,
+        itemProcessed: 0,
+        progressPercent: 0,
+        status: NotificationStatus.InProgress,
+      };
 
       try {
         do {
           if (nextPageToken) {
-            logger.debug(`[YoutubeImport] Resuming ${type} from token: ${nextPageToken.substring(0, 20)}...`);
+            logger.debug(
+              `[YoutubeImport] Resuming ${type} from token: ${nextPageToken.substring(0, 20)}...`,
+            );
           }
 
           const result = await this.callYouTubeApiWithRetry<any>({
-            method: "GET",
+            method: 'GET',
             url: `https://www.googleapis.com/youtube/v3/${endpoint}`,
-            params: { ...params, pageToken: nextPageToken ?? undefined, access_token: accessToken },
+            params: {
+              ...params,
+              pageToken: nextPageToken ?? undefined,
+              access_token: accessToken,
+            },
           });
 
           const items: any[] = result.data.items ?? [];
@@ -563,26 +814,47 @@ export class YoutubeImportService implements IYoutubeImportService {
             const content = this.mapContentByType(type, item, account.userId);
             if (content) {
               try {
-                const saved = await this.saveAndEmitContent(content, account.userId);
+                const saved = await this.saveAndEmitContent(
+                  content,
+                  account.userId,
+                );
                 importedExternalIds.push(saved.externalId);
 
-                if (type === "Playlists" && item.id) {
-                  const playlistVideoIds = await this.importPlaylistVideosAsync(accessToken, item.id, account.userId);
+                if (type === 'Playlists' && item.id) {
+                  const playlistVideoIds = await this.importPlaylistVideosAsync(
+                    accessToken,
+                    item.id,
+                    account.userId,
+                  );
                   importedExternalIds.push(...playlistVideoIds);
                 }
               } catch (err: any) {
-                logger.error(`[YoutubeImport] Error saving ${type} content: ${err.message}`);
+                logger.error(
+                  `[YoutubeImport] Error saving ${type} content: ${err.message}`,
+                );
               }
             }
 
             progressReports[type].itemProcessed++;
-            progressReports[type].progressPercent = progressReports[type].totalItem
-              ? Math.round((progressReports[type].itemProcessed / progressReports[type].totalItem) * 100) : 0;
+            progressReports[type].progressPercent = progressReports[type]
+              .totalItem
+              ? Math.round(
+                  (progressReports[type].itemProcessed /
+                    progressReports[type].totalItem) *
+                    100,
+                )
+              : 0;
 
             itemsSinceLastNotify++;
             if (itemsSinceLastNotify >= NOTIFICATION_UPDATE_INTERVAL) {
-              const reportArray = Object.entries(progressReports).map(([t, r]) => ({ type: t, ...r }));
-              notification = await this.upsertNotification(notification, account.userId, reportArray);
+              const reportArray = Object.entries(progressReports).map(
+                ([t, r]) => ({ type: t, ...r }),
+              );
+              notification = await this.upsertNotification(
+                notification,
+                account.userId,
+                reportArray,
+              );
               itemsSinceLastNotify = 0;
             }
           }
@@ -593,7 +865,9 @@ export class YoutubeImportService implements IYoutubeImportService {
           }
 
           if (job && !(await job.isActive())) {
-            logger.info(`[YoutubeImport] Job ${job.id} cancelled during ${type}`);
+            logger.info(
+              `[YoutubeImport] Job ${job.id} cancelled during ${type}`,
+            );
             progressReports[type].status = NotificationStatus.Cancelled;
             break;
           }
@@ -614,14 +888,23 @@ export class YoutubeImportService implements IYoutubeImportService {
     }
 
     if (uploadsPlaylistId) {
-      const type = "UploadedVideos";
+      const type = 'UploadedVideos';
       let nextPageToken: string | null = lastCursors[type] || null;
 
-      progressReports[type] = { totalItem: 0, itemProcessed: 0, progressPercent: 0, status: NotificationStatus.InProgress };
+      progressReports[type] = {
+        totalItem: 0,
+        itemProcessed: 0,
+        progressPercent: 0,
+        status: NotificationStatus.InProgress,
+      };
 
       try {
         do {
-          const videos = await this.fetchPlaylistVideosPage(accessToken, uploadsPlaylistId, nextPageToken);
+          const videos = await this.fetchPlaylistVideosPage(
+            accessToken,
+            uploadsPlaylistId,
+            nextPageToken,
+          );
           nextPageToken = videos.nextPageToken;
 
           if (videos.items.length === 0 && !nextPageToken) {
@@ -631,21 +914,37 @@ export class YoutubeImportService implements IYoutubeImportService {
           }
 
           for (const item of videos.items) {
-            const duration = item._stats?.duration || "PT0S";
+            const duration = item._stats?.duration || 'PT0S';
             const durationSeconds = this.parseDurationToSeconds(duration);
             const isShort = durationSeconds <= 180;
 
             const content = new UserContent({
               userId: account.userId,
               platform: _const.PLATFORMS.YOUTUBE,
-              type: "uploaded_video",
-              title: item.snippet?.title || "Untitled",
+              type: 'uploaded_video',
+              title: item.snippet?.title || 'Untitled',
               externalId: item.id,
               text: item.snippet?.description,
-              publishedAt: item.snippet?.publishedAt ? new Date(item.snippet.publishedAt) : undefined,
+              publishedAt: item.snippet?.publishedAt
+                ? new Date(item.snippet.publishedAt)
+                : undefined,
               sourceUrl: `https://www.youtube.com/watch?v=${item.contentDetails?.videoId}`,
-              media: [{ url: item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.default?.url, type: "video", thumbnail: item.snippet?.thumbnails?.high?.url }],
-              engagement: item.statistics ? { views: item.statistics.viewCount, likes: item.statistics.likeCount, comments: item.statistics.commentCount } : undefined,
+              media: [
+                {
+                  url:
+                    item.snippet?.thumbnails?.high?.url ||
+                    item.snippet?.thumbnails?.default?.url,
+                  type: 'video',
+                  thumbnail: item.snippet?.thumbnails?.high?.url,
+                },
+              ],
+              engagement: item.statistics
+                ? {
+                    views: item.statistics.viewCount,
+                    likes: item.statistics.likeCount,
+                    comments: item.statistics.commentCount,
+                  }
+                : undefined,
               metaData: {
                 videoId: item.contentDetails?.videoId,
                 publishedAt: item.snippet?.publishedAt,
@@ -664,15 +963,23 @@ export class YoutubeImportService implements IYoutubeImportService {
               await this.saveAndEmitContent(content, account.userId);
               importedExternalIds.push(content.externalId!);
             } catch (err: any) {
-              logger.error(`[YoutubeImport] Error saving uploaded video: ${err.message}`);
+              logger.error(
+                `[YoutubeImport] Error saving uploaded video: ${err.message}`,
+              );
             }
 
             progressReports[type].itemProcessed++;
             itemsSinceLastNotify++;
 
             if (itemsSinceLastNotify >= NOTIFICATION_UPDATE_INTERVAL) {
-              const reportArray = Object.entries(progressReports).map(([t, r]) => ({ type: t, ...r }));
-              notification = await this.upsertNotification(notification, account.userId, reportArray);
+              const reportArray = Object.entries(progressReports).map(
+                ([t, r]) => ({ type: t, ...r }),
+              );
+              notification = await this.upsertNotification(
+                notification,
+                account.userId,
+                reportArray,
+              );
               itemsSinceLastNotify = 0;
             }
           }
@@ -683,7 +990,9 @@ export class YoutubeImportService implements IYoutubeImportService {
           }
 
           if (job && !(await job.isActive())) {
-            logger.info(`[YoutubeImport] Job ${job.id} cancelled during ${type}`);
+            logger.info(
+              `[YoutubeImport] Job ${job.id} cancelled during ${type}`,
+            );
             progressReports[type].status = NotificationStatus.Cancelled;
             break;
           }
@@ -695,7 +1004,9 @@ export class YoutubeImportService implements IYoutubeImportService {
       } catch (err: any) {
         encounteredError = true;
         progressReports[type].status = NotificationStatus.Cancelled;
-        logger.error(`[YoutubeImport] Error importing uploaded videos: ${err.message}`);
+        logger.error(
+          `[YoutubeImport] Error importing uploaded videos: ${err.message}`,
+        );
         if (nextPageToken) {
           lastCursors[type] = nextPageToken;
           await this.saveCursors(currentAccount, lastCursors);
@@ -704,30 +1015,69 @@ export class YoutubeImportService implements IYoutubeImportService {
     }
 
     if (job && !(await job.isActive())) {
-      logger.info(`[YoutubeImport] Job ${job.id} was cancelled, rolling back imported content`);
+      logger.info(
+        `[YoutubeImport] Job ${job.id} was cancelled, rolling back imported content`,
+      );
       if (importedExternalIds.length > 0) {
         try {
-          await this.userContentRepository.deleteByExternalIdsAsync(account.userId, _const.PLATFORMS.YOUTUBE, importedExternalIds);
-          logger.info(`[YoutubeImport] Rolled back ${importedExternalIds.length} items for user ${account.userId}`);
+          await this.userContentRepository.deleteByExternalIdsAsync(
+            account.userId,
+            _const.PLATFORMS.YOUTUBE,
+            importedExternalIds,
+          );
+          logger.info(
+            `[YoutubeImport] Rolled back ${importedExternalIds.length} items for user ${account.userId}`,
+          );
         } catch (rollbackError: any) {
-          logger.error(`[YoutubeImport] Error during rollback: ${rollbackError.message}`);
+          logger.error(
+            `[YoutubeImport] Error during rollback: ${rollbackError.message}`,
+          );
         }
       }
       if (notification) {
-        const finalReports = Object.entries(progressReports).map(([t, r]) => ({ type: t, ...r }));
-        await this.notificationService.updateAsync(notification.id, false, { status: NotificationStatus.Cancelled, reports: finalReports }, "YouTube import was cancelled and rolled back");
+        const finalReports = Object.entries(progressReports).map(([t, r]) => ({
+          type: t,
+          ...r,
+        }));
+        await this.notificationService.updateAsync(
+          notification.id,
+          false,
+          { status: NotificationStatus.Cancelled, reports: finalReports },
+          'YouTube import was cancelled and rolled back',
+        );
       }
       return;
     }
 
-    const finalAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.YOUTUBE, account.userId);
-    const finalReports = Object.entries(progressReports).map(([t, r]) => ({ type: t, ...r }));
+    const finalAccount =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.YOUTUBE,
+        account.userId,
+      );
+    const finalReports = Object.entries(progressReports).map(([t, r]) => ({
+      type: t,
+      ...r,
+    }));
 
     if (notification) {
       if (encounteredError) {
-        await this.notificationService.updateAsync(notification.id, false, { status: NotificationStatus.Completed, reports: finalReports }, "YouTube import completed with issues");
+        await this.notificationService.updateAsync(
+          notification.id,
+          false,
+          { status: NotificationStatus.Completed, reports: finalReports },
+          'YouTube import completed with issues',
+        );
       } else {
-        await this.notificationService.updateAsync(notification.id, false, { status: NotificationStatus.Completed, reports: finalReports, platform: _const.PLATFORMS.YOUTUBE }, "YouTube import completed!");
+        await this.notificationService.updateAsync(
+          notification.id,
+          false,
+          {
+            status: NotificationStatus.Completed,
+            reports: finalReports,
+            platform: _const.PLATFORMS.YOUTUBE,
+          },
+          'YouTube import completed!',
+        );
       }
 
       if (finalAccount) {
@@ -737,24 +1087,44 @@ export class YoutubeImportService implements IYoutubeImportService {
       }
 
       try {
-        await this.youtubeAnalyticsService.syncAccountAnalyticsAsync(account.userId, { forceRefresh: true });
-        logger.info(`[YoutubeImport] Analytics sync completed for user ${account.userId}`);
+        await this.youtubeAnalyticsService.syncAccountAnalyticsAsync(
+          account.userId,
+          { forceRefresh: true },
+        );
+        logger.info(
+          `[YoutubeImport] Analytics sync completed for user ${account.userId}`,
+        );
       } catch (analyticsError: any) {
-        logger.warn(`[YoutubeImport] Analytics sync failed after import: ${analyticsError.message}`);
+        logger.warn(
+          `[YoutubeImport] Analytics sync failed after import: ${analyticsError.message}`,
+        );
       }
     } else {
-      await this.notificationService.notifyAsync(account.userId, NotificationType.Import, "YouTube import could not start", "Unable to initialize YouTube data import.", false, { status: NotificationStatus.Cancelled, reports: finalReports });
+      await this.notificationService.notifyAsync(
+        account.userId,
+        NotificationType.Import,
+        'YouTube import could not start',
+        'Unable to initialize YouTube data import.',
+        false,
+        { status: NotificationStatus.Cancelled, reports: finalReports },
+      );
     }
   }
 
-  private async importPlaylistVideosAsync(accessToken: string, playlistId: string, userId: string): Promise<string[]> {
+  private async importPlaylistVideosAsync(
+    accessToken: string,
+    playlistId: string,
+    userId: string,
+  ): Promise<string[]> {
     const ids: string[] = [];
     try {
       const videos = await this.fetchPlaylistVideos(accessToken, playlistId);
       for (const video of videos) {
         const content = new UserContent({
-          userId, platform: _const.PLATFORMS.YOUTUBE, type: "playlist_video",
-          title: video.snippet?.title || "Untitled",
+          userId,
+          platform: _const.PLATFORMS.YOUTUBE,
+          type: 'playlist_video',
+          title: video.snippet?.title || 'Untitled',
           externalId: video.id,
           metaData: {
             videoId: video.contentDetails?.videoId,
@@ -768,11 +1138,15 @@ export class YoutubeImportService implements IYoutubeImportService {
           const saved = await this.saveAndEmitContent(content, userId);
           ids.push(saved.externalId);
         } catch (err: any) {
-          logger.error(`[YoutubeImport] Error saving playlist video: ${err.message}`);
+          logger.error(
+            `[YoutubeImport] Error saving playlist video: ${err.message}`,
+          );
         }
       }
     } catch (err: any) {
-      logger.error(`[YoutubeImport] Error fetching playlist videos for ${playlistId}: ${err.message}`);
+      logger.error(
+        `[YoutubeImport] Error fetching playlist videos for ${playlistId}: ${err.message}`,
+      );
     }
     return ids;
   }

@@ -1,9 +1,8 @@
-import { BaseEntity } from "../baseEntity";
-import { Column, Entity } from "typeorm";
+import { BaseEntity } from '../baseEntity';
+import { Column, Entity } from 'typeorm';
 
-@Entity({ name: "rateLimitLogs" })
+@Entity({ name: 'rateLimitLogs' })
 export class RateLimitLog extends BaseEntity {
-
   @Column()
   ip: string;
 

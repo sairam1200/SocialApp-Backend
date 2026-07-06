@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { OnboardingStep } from "../enums";
+import { ApiProperty } from '@nestjs/swagger';
+import { OnboardingStep } from '../enums';
 
 export class OnboardingStep1Model {
   @ApiProperty({ required: false, nullable: true })

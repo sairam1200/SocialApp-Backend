@@ -1,9 +1,5 @@
-import { Entity } from "typeorm";
-import { BaseEntity } from "../../baseEntity";
+import { Entity } from 'typeorm';
+import { BaseEntity } from '../../baseEntity';
 
-@Entity({ name: "notificationEvents", schema: "notification" })
-export class NotificationEvent extends BaseEntity {
-
-  
-
-}
+@Entity({ name: 'notificationEvents', schema: 'notification' })
+export class NotificationEvent extends BaseEntity {}

@@ -1,20 +1,25 @@
-import axios from "axios";
-import { Inject } from "@nestjs/common";
+import axios from 'axios';
+import { Inject } from '@nestjs/common';
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import _const from "../../../core/utils/const";
-import logger from "../../../core/utils/winston.util";
-import { UserContent } from "../../../domain/entities/userContent.entity";
-import { NotificationStatus, NotificationType } from "../../../domain/enums";
-import { NotificationModel } from "../../../domain/contracts/notification.model";
-import { mapToNotificationModel } from "../../../domain/mappers/notification.mapper";
-import { INotificationService } from "../../../domain/services/inotification.service";
-import { ImportGateway } from "../../../infrastructure/websocket/gateways/import.gateway";
-import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
-import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
-import { mapToSpotifyAlbumModel, mapToSpotifyPlaylistModel, mapToSpotifyShowModel, mapToSpotifyTrackModel } from "../../../domain/mappers/spotify.mapper";
-import BullMQConfig from "../../../core/config/bullmq.config";
-import { IContentStreamRepository } from "../../../domain/repositories/icontentStream.repository";
+import _const from '../../../core/utils/const';
+import logger from '../../../core/utils/winston.util';
+import { UserContent } from '../../../domain/entities/userContent.entity';
+import { NotificationStatus, NotificationType } from '../../../domain/enums';
+import { NotificationModel } from '../../../domain/contracts/notification.model';
+import { mapToNotificationModel } from '../../../domain/mappers/notification.mapper';
+import { INotificationService } from '../../../domain/services/inotification.service';
+import { ImportGateway } from '../../../infrastructure/websocket/gateways/import.gateway';
+import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
+import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
+import {
+  mapToSpotifyAlbumModel,
+  mapToSpotifyPlaylistModel,
+  mapToSpotifyShowModel,
+  mapToSpotifyTrackModel,
+} from '../../../domain/mappers/spotify.mapper';
+import BullMQConfig from '../../../core/config/bullmq.config';
+import { IContentStreamRepository } from '../../../domain/repositories/icontentStream.repository';
 
 interface CursorMap {
   [key: string]: string | null;
@@ -36,7 +41,10 @@ interface SpotifyImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.SPOTIFY_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.SPOTIFY_IMPORT, 2))
+@Processor(
+  _const.BULL_QUEUES.SPOTIFY_IMPORT,
+  BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.SPOTIFY_IMPORT, 2),
+)
 export class SpotifyImportProcessor extends WorkerHost {
   private readonly NOTIFICATION_UPDATE_INTERVAL = 10;
 
@@ -73,18 +81,23 @@ export class SpotifyImportProcessor extends WorkerHost {
   async process(job: Job<SpotifyImportJobData>): Promise<void> {
     const { account, accessToken } = job.data;
 
-    const currentAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-      _const.PLATFORMS.SPOTIFY,
-      account.userId,
-    );
+    const currentAccount =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.SPOTIFY,
+        account.userId,
+      );
 
     if (!currentAccount) {
-      logger.error(`[SpotifyImport] Account not found for user ${account.userId}`);
+      logger.error(
+        `[SpotifyImport] Account not found for user ${account.userId}`,
+      );
       return;
     }
 
     if (!(await job.isActive())) {
-      logger.info(`[SpotifyImport] Job ${job.id} is no longer active, stopping import for user ${account.userId}`);
+      logger.info(
+        `[SpotifyImport] Job ${job.id} is no longer active, stopping import for user ${account.userId}`,
+      );
       return;
     }
 
@@ -120,27 +133,36 @@ export class SpotifyImportProcessor extends WorkerHost {
       try {
         while (true) {
           if (!(await job.isActive())) {
-            logger.info(`[SpotifyImport] Job ${job.id} cancelled during processing ${type}`);
+            logger.info(
+              `[SpotifyImport] Job ${job.id} cancelled during processing ${type}`,
+            );
             progressReports[type].status = NotificationStatus.Cancelled;
             break;
           }
 
-          logger.debug(`[SpotifyImport] Fetching ${type} items with offset ${offset} and limit ${limit}`);
+          logger.debug(
+            `[SpotifyImport] Fetching ${type} items with offset ${offset} and limit ${limit}`,
+          );
 
-          const response = await axios.get(`https://api.spotify.com${endpoint}`, {
-            params: {
-              limit,
-              offset,
+          const response = await axios.get(
+            `https://api.spotify.com${endpoint}`,
+            {
+              params: {
+                limit,
+                offset,
+              },
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
             },
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          });
+          );
 
           const items = response.data.items || [];
           total = response.data.total || 0;
 
-          logger.debug(`[SpotifyImport] Received ${items.length} ${type} items (total: ${total})`);
+          logger.debug(
+            `[SpotifyImport] Received ${items.length} ${type} items (total: ${total})`,
+          );
 
           if (totalItemsProcessed === 0) {
             progressReports[type].totalItem = total;
@@ -153,13 +175,15 @@ export class SpotifyImportProcessor extends WorkerHost {
           }
 
           for (const item of items) {
-            let content = new UserContent({
+            const content = new UserContent({
               userId: account.userId,
               platform: _const.PLATFORMS.SPOTIFY,
               externalId: item.id,
             });
 
-            logger.debug(`[SpotifyImport] Mapping ${type} item: ${item.name} (${item.id})`);
+            logger.debug(
+              `[SpotifyImport] Mapping ${type} item: ${item.name} (${item.id})`,
+            );
 
             if (type === 'Playlists') {
               content.type = 'playlist';
@@ -186,14 +210,21 @@ export class SpotifyImportProcessor extends WorkerHost {
                   _const.PLATFORMS.SPOTIFY,
                   content.externalId,
                 );
-                const savedContent = await this.userContentRepository.createAsync(content);
+                const savedContent =
+                  await this.userContentRepository.createAsync(content);
                 importedExternalIds.push(savedContent.externalId);
                 const playlist = mapToSpotifyPlaylistModel(savedContent);
-                this.gateway.emitNewImportContent(account.userId, _const.PLATFORMS.SPOTIFY, playlist);
+                this.gateway.emitNewImportContent(
+                  account.userId,
+                  _const.PLATFORMS.SPOTIFY,
+                  playlist,
+                );
               } catch (err) {
-                logger.error(`[SpotifyImport] Error saving playlist content:`, err.message);
+                logger.error(
+                  `[SpotifyImport] Error saving playlist content:`,
+                  err.message,
+                );
               }
-
             } else if (type === 'Tracks') {
               content.type = 'track';
               content.title = item.name;
@@ -203,11 +234,12 @@ export class SpotifyImportProcessor extends WorkerHost {
                 durationMs: item.duration_ms,
                 previewUrl: item.preview_url,
                 explicit: item.explicit,
-                artists: item.artists?.map((artist: any) => ({
-                  name: artist.name,
-                  type: artist.type,
-                  href: artist.href,
-                })) || [],
+                artists:
+                  item.artists?.map((artist: any) => ({
+                    name: artist.name,
+                    type: artist.type,
+                    href: artist.href,
+                  })) || [],
                 album: {
                   id: item.album?.id,
                   name: item.album?.name,
@@ -222,23 +254,31 @@ export class SpotifyImportProcessor extends WorkerHost {
                   _const.PLATFORMS.SPOTIFY,
                   content.externalId,
                 );
-                const savedContent = await this.userContentRepository.createAsync(content);
+                const savedContent =
+                  await this.userContentRepository.createAsync(content);
                 importedExternalIds.push(savedContent.externalId);
                 const track = mapToSpotifyTrackModel(savedContent);
-                this.gateway.emitNewImportContent(account.userId, _const.PLATFORMS.SPOTIFY, track);
+                this.gateway.emitNewImportContent(
+                  account.userId,
+                  _const.PLATFORMS.SPOTIFY,
+                  track,
+                );
               } catch (err) {
-                logger.error(`[SpotifyImport] Error saving track content:`, err.message);
+                logger.error(
+                  `[SpotifyImport] Error saving track content:`,
+                  err.message,
+                );
               }
-
             } else if (type === 'Albums') {
               content.type = 'album';
               content.title = item.name;
               content.metaData = {
-                artists: item.artists?.map((artist: any) => ({
-                  name: artist.name,
-                  type: artist.type,
-                  href: artist.href,
-                })) || [],
+                artists:
+                  item.artists?.map((artist: any) => ({
+                    name: artist.name,
+                    type: artist.type,
+                    href: artist.href,
+                  })) || [],
                 releaseDate: item.release_date,
                 totalTracks: item.total_tracks,
                 imageUrl: item.images?.[0]?.url,
@@ -251,14 +291,21 @@ export class SpotifyImportProcessor extends WorkerHost {
                   _const.PLATFORMS.SPOTIFY,
                   content.externalId,
                 );
-                const savedContent = await this.userContentRepository.createAsync(content);
+                const savedContent =
+                  await this.userContentRepository.createAsync(content);
                 importedExternalIds.push(savedContent.externalId);
                 const album = mapToSpotifyAlbumModel(savedContent);
-                this.gateway.emitNewImportContent(account.userId, _const.PLATFORMS.SPOTIFY, album);
+                this.gateway.emitNewImportContent(
+                  account.userId,
+                  _const.PLATFORMS.SPOTIFY,
+                  album,
+                );
               } catch (err) {
-                logger.error(`[SpotifyImport] Error saving album content:`, err.message);
+                logger.error(
+                  `[SpotifyImport] Error saving album content:`,
+                  err.message,
+                );
               }
-
             } else if (type === 'Shows') {
               content.type = 'show';
               content.title = item.name;
@@ -268,7 +315,8 @@ export class SpotifyImportProcessor extends WorkerHost {
                 explicit: item.explicit,
                 htmlDescription: item.html_description,
                 show: {
-                  availableMarkets: item.show?.available_markets || item.available_markets,
+                  availableMarkets:
+                    item.show?.available_markets || item.available_markets,
                   copyRights: item.show?.copyrights || item.copyrights || [],
                 },
                 languages: item.languages,
@@ -285,25 +333,39 @@ export class SpotifyImportProcessor extends WorkerHost {
                   _const.PLATFORMS.SPOTIFY,
                   content.externalId,
                 );
-                const savedContent = await this.userContentRepository.createAsync(content);
+                const savedContent =
+                  await this.userContentRepository.createAsync(content);
                 importedExternalIds.push(savedContent.externalId);
                 const show = mapToSpotifyShowModel(savedContent);
-                this.gateway.emitNewImportContent(account.userId, _const.PLATFORMS.SPOTIFY, show);
+                this.gateway.emitNewImportContent(
+                  account.userId,
+                  _const.PLATFORMS.SPOTIFY,
+                  show,
+                );
               } catch (err) {
-                logger.error(`[SpotifyImport] Error saving show content:`, err.message);
+                logger.error(
+                  `[SpotifyImport] Error saving show content:`,
+                  err.message,
+                );
               }
             }
 
             totalItemsProcessed++;
             progressReports[type].itemProcessed = totalItemsProcessed;
-            progressReports[type].progressPercent = total > 0
-              ? Math.round((totalItemsProcessed / total) * 100)
-              : 0;
+            progressReports[type].progressPercent =
+              total > 0 ? Math.round((totalItemsProcessed / total) * 100) : 0;
 
             itemsProcessedSinceLastNotification++;
 
-            if (itemsProcessedSinceLastNotification >= this.NOTIFICATION_UPDATE_INTERVAL) {
-              notification = await this.updateNotification(notification, account.userId, progressReports);
+            if (
+              itemsProcessedSinceLastNotification >=
+              this.NOTIFICATION_UPDATE_INTERVAL
+            ) {
+              notification = await this.updateNotification(
+                notification,
+                account.userId,
+                progressReports,
+              );
               itemsProcessedSinceLastNotification = 0;
             }
           }
@@ -323,7 +385,10 @@ export class SpotifyImportProcessor extends WorkerHost {
       } catch (err: any) {
         encounteredError = true;
         progressReports[type].status = NotificationStatus.Cancelled;
-        logger.error(`[SpotifyImport] Error occurred while importing ${type}:`, err.message);
+        logger.error(
+          `[SpotifyImport] Error occurred while importing ${type}:`,
+          err.message,
+        );
         if (offset > 0) {
           lastCursors[key] = offset.toString();
           await this.saveCursors(currentAccount, lastCursors);
@@ -332,7 +397,9 @@ export class SpotifyImportProcessor extends WorkerHost {
     }
 
     if (!(await job.isActive())) {
-      logger.info(`[SpotifyImport] Job ${job.id} was cancelled, rolling back imported content`);
+      logger.info(
+        `[SpotifyImport] Job ${job.id} was cancelled, rolling back imported content`,
+      );
 
       if (importedExternalIds.length > 0) {
         try {
@@ -341,17 +408,21 @@ export class SpotifyImportProcessor extends WorkerHost {
             _const.PLATFORMS.SPOTIFY,
             importedExternalIds,
           );
-          logger.info(`[SpotifyImport] Rolled back ${importedExternalIds.length} imported items for user ${account.userId}`);
+          logger.info(
+            `[SpotifyImport] Rolled back ${importedExternalIds.length} imported items for user ${account.userId}`,
+          );
         } catch (rollbackError) {
           logger.error(`[SpotifyImport] Error during rollback:`, rollbackError);
         }
       }
 
       if (notification) {
-        const finalReportArray = Object.entries(progressReports).map(([type, report]) => ({
-          type,
-          ...report,
-        }));
+        const finalReportArray = Object.entries(progressReports).map(
+          ([type, report]) => ({
+            type,
+            ...report,
+          }),
+        );
         await this.notificationService.updateAsync(
           notification.id,
           false,
@@ -360,25 +431,30 @@ export class SpotifyImportProcessor extends WorkerHost {
             reports: finalReportArray,
             platform: _const.PLATFORMS.SPOTIFY,
           },
-          "Spotify import was cancelled and rolled back",
+          'Spotify import was cancelled and rolled back',
         );
       }
       return;
     }
 
-    const finalAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-      _const.PLATFORMS.SPOTIFY,
-      account.userId,
-    );
+    const finalAccount =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.SPOTIFY,
+        account.userId,
+      );
 
-    const finalReportArray = Object.entries(progressReports).map(([type, report]) => ({
-      type,
-      ...report,
-    }));
+    const finalReportArray = Object.entries(progressReports).map(
+      ([type, report]) => ({
+        type,
+        ...report,
+      }),
+    );
 
     if (notification) {
       if (encounteredError) {
-        logger.warn(`[SpotifyImport] Completed with issues for user ${account.userId}`);
+        logger.warn(
+          `[SpotifyImport] Completed with issues for user ${account.userId}`,
+        );
         await this.notificationService.updateAsync(
           notification.id,
           false,
@@ -387,10 +463,12 @@ export class SpotifyImportProcessor extends WorkerHost {
             reports: finalReportArray,
             platform: _const.PLATFORMS.SPOTIFY,
           },
-          "Spotify import completed with issues",
+          'Spotify import completed with issues',
         );
       } else {
-        logger.info(`[SpotifyImport] Successfully completed import for user ${account.userId}`);
+        logger.info(
+          `[SpotifyImport] Successfully completed import for user ${account.userId}`,
+        );
         await this.notificationService.updateAsync(
           notification.id,
           false,
@@ -399,7 +477,7 @@ export class SpotifyImportProcessor extends WorkerHost {
             reports: finalReportArray,
             platform: _const.PLATFORMS.SPOTIFY,
           },
-          "Spotify import completed!",
+          'Spotify import completed!',
         );
       }
 
@@ -412,8 +490,8 @@ export class SpotifyImportProcessor extends WorkerHost {
       await this.notificationService.notifyAsync(
         account.userId,
         NotificationType.Import,
-        "Spotify import could not start",
-        "Unable to initialize Spotify data import.",
+        'Spotify import could not start',
+        'Unable to initialize Spotify data import.',
         false,
         {
           status: NotificationStatus.Cancelled,
@@ -421,7 +499,9 @@ export class SpotifyImportProcessor extends WorkerHost {
           platform: _const.PLATFORMS.SPOTIFY,
         },
       );
-      logger.warn(`[SpotifyImport] No notification initialized for user ${account.userId}`);
+      logger.warn(
+        `[SpotifyImport] No notification initialized for user ${account.userId}`,
+      );
     }
   }
 
@@ -430,18 +510,20 @@ export class SpotifyImportProcessor extends WorkerHost {
     userId: string,
     progressReports: ProgressReports,
   ): Promise<NotificationModel> {
-    const reportArray = Object.entries(progressReports).map(([type, report]) => ({
-      type,
-      ...report,
-    }));
+    const reportArray = Object.entries(progressReports).map(
+      ([type, report]) => ({
+        type,
+        ...report,
+      }),
+    );
 
     if (!notification) {
       logger.debug(`[SpotifyImport] Creating initial notification`);
       const notificationResult = await this.notificationService.notifyAsync(
         userId,
         NotificationType.Import,
-        "Importing your Spotify data...",
-        "",
+        'Importing your Spotify data...',
+        '',
         true,
         {
           status: NotificationStatus.InProgress,
@@ -482,4 +564,3 @@ export class SpotifyImportProcessor extends WorkerHost {
     }
   }
 }
-

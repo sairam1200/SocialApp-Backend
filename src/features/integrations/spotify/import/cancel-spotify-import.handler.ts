@@ -1,18 +1,18 @@
-import { Inject } from "@nestjs/common";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../../core/utils/const";
-import logger from "../../../../core/utils/winston.util";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { INotificationService } from "../../../../domain/services/inotification.service";
-import { INotificationRepository } from "../../../../domain/repositories/inotification.repository";
-import { NotFoundException } from "@nestjs/common";
-import { NotificationStatus, NotificationType } from "../../../../domain/enums";
-import { ApplicationException } from "../../../../core/exceptions";
-import { PlatformRollbackEvent } from "../../../../domain/events/platform-rollback.event";
-import { IQueueService } from "../../../../domain/services/iqueue.service";
+import { Inject } from '@nestjs/common';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../../core/utils/const';
+import logger from '../../../../core/utils/winston.util';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
+import { INotificationService } from '../../../../domain/services/inotification.service';
+import { INotificationRepository } from '../../../../domain/repositories/inotification.repository';
+import { NotFoundException } from '@nestjs/common';
+import { NotificationStatus, NotificationType } from '../../../../domain/enums';
+import { ApplicationException } from '../../../../core/exceptions';
+import { PlatformRollbackEvent } from '../../../../domain/events/platform-rollback.event';
+import { IQueueService } from '../../../../domain/services/iqueue.service';
 
 export class CancelSpotifyImportRequestModel {
   @ApiProperty()
@@ -28,7 +28,9 @@ export class CancelSpotifyImportCommand {
 }
 
 @CommandHandler(CancelSpotifyImportCommand)
-export class CancelSpotifyImportCommandHandler implements ICommandHandler<CancelSpotifyImportCommand> {
+export class CancelSpotifyImportCommandHandler
+  implements ICommandHandler<CancelSpotifyImportCommand>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
@@ -39,54 +41,78 @@ export class CancelSpotifyImportCommandHandler implements ICommandHandler<Cancel
     @Inject(_const.IQUEUE_SERVICE)
     private readonly queueService: IQueueService,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
   public async execute(command: CancelSpotifyImportCommand): Promise<void> {
     if (!command.model.confirm) {
-      throw new ApplicationException("Cancellation requires confirmation. Set 'confirm' to true.");
+      throw new ApplicationException(
+        "Cancellation requires confirmation. Set 'confirm' to true.",
+      );
     }
 
     const userId = HttpContext.getCurrentUserId;
 
-    const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-      _const.PLATFORMS.SPOTIFY,
-      userId,
-    );
+    const account =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.SPOTIFY,
+        userId,
+      );
 
     if (!account) {
-      throw new NotFoundException("No matching Spotify profile was found!");
+      throw new NotFoundException('No matching Spotify profile was found!');
     }
 
     logger.info(`[SpotifyImport] Cancellation requested for user ${userId}`);
 
     try {
       /* await this.queueService.cancelSpotifyImport(userId); */
-      logger.info(`[SpotifyImport] Job cancellation requested for user ${userId}`);
+      logger.info(
+        `[SpotifyImport] Job cancellation requested for user ${userId}`,
+      );
     } catch (error) {
-      logger.error(`[SpotifyImport] Error cancelling job: 
-        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
+      logger.error(
+        `[SpotifyImport] Error cancelling job: 
+        ${error instanceof Error ? error.message : JSON.stringify(error)}`,
+        { error },
+      );
     }
 
     const notifications = await this.notificationRepository.getAllAsync(userId);
     const importNotification = notifications.find(
-      n => n.type === NotificationType.Import && n.isLive && n.metaData?.platform === _const.PLATFORMS.SPOTIFY,
+      (n) =>
+        n.type === NotificationType.Import &&
+        n.isLive &&
+        n.metaData?.platform === _const.PLATFORMS.SPOTIFY,
     );
 
-    if (importNotification && importNotification.metaData?.status === NotificationStatus.InProgress) {
-      await this.notificationService.updateAsync(importNotification.id, false, {
-        status: NotificationStatus.Cancelled,
-        reports: importNotification.metaData.reports || [],
-        platform: _const.PLATFORMS.SPOTIFY,
-      }, "Spotify import cancellation requested.");
+    if (
+      importNotification &&
+      importNotification.metaData?.status === NotificationStatus.InProgress
+    ) {
+      await this.notificationService.updateAsync(
+        importNotification.id,
+        false,
+        {
+          status: NotificationStatus.Cancelled,
+          reports: importNotification.metaData.reports || [],
+          platform: _const.PLATFORMS.SPOTIFY,
+        },
+        'Spotify import cancellation requested.',
+      );
     }
 
     try {
-      this.eventEmitter.emit('platform.rollback', new PlatformRollbackEvent({ account }));
+      this.eventEmitter.emit(
+        'platform.rollback',
+        new PlatformRollbackEvent({ account }),
+      );
       logger.info(`[SpotifyImport] Rollback event emitted for user ${userId}`);
     } catch (error) {
-      logger.error(`[SpotifyImport] Error emitting rollback event: 
-        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
+      logger.error(
+        `[SpotifyImport] Error emitting rollback event: 
+        ${error instanceof Error ? error.message : JSON.stringify(error)}`,
+        { error },
+      );
     }
   }
 }
-

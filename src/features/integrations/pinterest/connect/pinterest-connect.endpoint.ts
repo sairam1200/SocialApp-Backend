@@ -1,12 +1,22 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import configs from "../../../../configs";
-import { stringUtil } from "../../../../core/utils/string.util";
-import { ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
-import { PinterestProfileModel } from "../../../../domain/contracts/pinterest.model";
-import { PinterestConnectCallbackQuery, PinterestConnectQuery } from "./pinterest-connect.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import configs from '../../../../configs';
+import { stringUtil } from '../../../../core/utils/string.util';
+import { ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { PinterestProfileModel } from '../../../../domain/contracts/pinterest.model';
+import {
+  PinterestConnectCallbackQuery,
+  PinterestConnectQuery,
+} from './pinterest-connect.handler';
 
 class PinterestConnectCallbackResponseModel {
   @ApiProperty()
@@ -28,8 +38,7 @@ class ConnectResponseModel {
   version: '1',
 })
 export class PinterestConnectController {
-
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
@@ -38,14 +47,13 @@ export class PinterestConnectController {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Connect(@Res() res: Response): Promise<Response | void> {
-
     const scopes = [
-  'user_accounts:read',
-  'pins:read',
-  'pins:write',
-  'boards:read',
-  'boards:write'
-].join(',');
+      'user_accounts:read',
+      'pins:read',
+      'pins:write',
+      'boards:read',
+      'boards:write',
+    ].join(',');
     const state = stringUtil.generateRandomString(16);
     const params = new URLSearchParams({
       response_type: 'code',
@@ -56,22 +64,30 @@ export class PinterestConnectController {
     });
     const authorizeURL = `https://www.pinterest.com/oauth/?${params.toString()}`;
 
-    await this.commandBus.execute(new PinterestConnectQuery({ model: { state } }));
+    await this.commandBus.execute(
+      new PinterestConnectQuery({ model: { state } }),
+    );
 
     return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });
   }
 
   @Get('connect-callback')
-  @ApiResponse({ status: 200, description: 'OK', type: PinterestConnectCallbackResponseModel })
+  @ApiResponse({
+    status: 200,
+    description: 'OK',
+    type: PinterestConnectCallbackResponseModel,
+  })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Callback(
     @Query('code') code: string,
     @Query('state') state: string,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response | void> {
-    const result = await this.commandBus.execute(new PinterestConnectCallbackQuery({ model: { code, state } }));
+    const result = await this.commandBus.execute(
+      new PinterestConnectCallbackQuery({ model: { code, state } }),
+    );
     return res.status(HttpStatus.OK).json(result);
   }
 }

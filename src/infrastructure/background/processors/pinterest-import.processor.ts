@@ -1,20 +1,20 @@
-import axios from "axios";
-import { Inject } from "@nestjs/common";
+import axios from 'axios';
+import { Inject } from '@nestjs/common';
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import _const from "../../../core/utils/const";
-import logger from "../../../core/utils/winston.util";
-import { UserContent } from "../../../domain/entities/userContent.entity";
-import { NotificationStatus, NotificationType } from "../../../domain/enums";
-import { NotificationModel } from "../../../domain/contracts/notification.model";
-import { mapToNotificationModel } from "../../../domain/mappers/notification.mapper";
-import { INotificationService } from "../../../domain/services/inotification.service";
-import { ImportGateway } from "../../../infrastructure/websocket/gateways/import.gateway";
-import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
-import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
-import BullMQConfig from "../../../core/config/bullmq.config";
-import { mapToPinterestContentModel } from "../../../domain/mappers/pinterest.mapper";
-import { IContentStreamRepository } from "../../../domain/repositories/icontentStream.repository";
+import _const from '../../../core/utils/const';
+import logger from '../../../core/utils/winston.util';
+import { UserContent } from '../../../domain/entities/userContent.entity';
+import { NotificationStatus, NotificationType } from '../../../domain/enums';
+import { NotificationModel } from '../../../domain/contracts/notification.model';
+import { mapToNotificationModel } from '../../../domain/mappers/notification.mapper';
+import { INotificationService } from '../../../domain/services/inotification.service';
+import { ImportGateway } from '../../../infrastructure/websocket/gateways/import.gateway';
+import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
+import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
+import BullMQConfig from '../../../core/config/bullmq.config';
+import { mapToPinterestContentModel } from '../../../domain/mappers/pinterest.mapper';
+import { IContentStreamRepository } from '../../../domain/repositories/icontentStream.repository';
 
 interface CursorMap {
   [key: string]: string | null;
@@ -36,7 +36,10 @@ interface PinterestImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.PINTEREST_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.PINTEREST_IMPORT, 2))
+@Processor(
+  _const.BULL_QUEUES.PINTEREST_IMPORT,
+  BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.PINTEREST_IMPORT, 2),
+)
 export class PinterestImportProcessor extends WorkerHost {
   private readonly NOTIFICATION_UPDATE_INTERVAL = 10;
 
@@ -73,18 +76,23 @@ export class PinterestImportProcessor extends WorkerHost {
   public async process(job: Job<PinterestImportJobData>): Promise<void> {
     const { account, accessToken } = job.data;
 
-    const currentAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-      _const.PLATFORMS.PINTEREST,
-      account.userId,
-    );
+    const currentAccount =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.PINTEREST,
+        account.userId,
+      );
 
     if (!currentAccount) {
-      logger.error(`[PinterestImport] Account not found for user ${account.userId}`);
+      logger.error(
+        `[PinterestImport] Account not found for user ${account.userId}`,
+      );
       return;
     }
 
     if (!(await job.isActive())) {
-      logger.info(`[PinterestImport] Job ${job.id} is no longer active, stopping import for user ${account.userId}`);
+      logger.info(
+        `[PinterestImport] Job ${job.id} is no longer active, stopping import for user ${account.userId}`,
+      );
       return;
     }
 
@@ -115,29 +123,38 @@ export class PinterestImportProcessor extends WorkerHost {
       try {
         while (true) {
           if (!(await job.isActive())) {
-            logger.info(`[PinterestImport] Job ${job.id} cancelled during processing ${type}`);
+            logger.info(
+              `[PinterestImport] Job ${job.id} cancelled during processing ${type}`,
+            );
             progressReports[type].status = NotificationStatus.Cancelled;
             break;
           }
 
           if (cursor) {
-            logger.debug(`[PinterestImport] Resuming ${type} from cursor: ${cursor.substring(0, 20)}...`);
+            logger.debug(
+              `[PinterestImport] Resuming ${type} from cursor: ${cursor.substring(0, 20)}...`,
+            );
           }
 
-          const response = await axios.get(`https://api.pinterest.com/v5${endpoint}`, {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
+          const response = await axios.get(
+            `https://api.pinterest.com/v5${endpoint}`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              params: {
+                bookmark: cursor || undefined,
+              },
             },
-            params: {
-              bookmark: cursor || undefined,
-            },
-          });
+          );
 
           const data = response.data;
           const items = data.items || [];
 
-          logger.debug(`[PinterestImport] Retrieved ${items.length} ${type} items`);
+          logger.debug(
+            `[PinterestImport] Retrieved ${items.length} ${type} items`,
+          );
 
           if (items.length === 0 && !data.bookmark) {
             progressReports[type].status = NotificationStatus.Completed;
@@ -147,12 +164,14 @@ export class PinterestImportProcessor extends WorkerHost {
 
           for (const item of items) {
             if (!(await job.isActive())) {
-              logger.info(`[PinterestImport] Job ${job.id} cancelled during processing ${type}`);
+              logger.info(
+                `[PinterestImport] Job ${job.id} cancelled during processing ${type}`,
+              );
               progressReports[type].status = NotificationStatus.Cancelled;
               break;
             }
 
-            let content = new UserContent({
+            const content = new UserContent({
               userId: account.userId,
               platform: _const.PLATFORMS.PINTEREST,
               externalId: item.id,
@@ -200,20 +219,35 @@ export class PinterestImportProcessor extends WorkerHost {
                 _const.PLATFORMS.PINTEREST,
                 content.externalId,
               );
-              const savedContent = await this.userContentRepository.createAsync(content);
+              const savedContent =
+                await this.userContentRepository.createAsync(content);
               importedExternalIds.push(savedContent.externalId);
               const mappedContent = mapToPinterestContentModel(savedContent);
-              this.gateway.emitNewImportContent(account.userId, _const.PLATFORMS.PINTEREST, mappedContent);
+              this.gateway.emitNewImportContent(
+                account.userId,
+                _const.PLATFORMS.PINTEREST,
+                mappedContent,
+              );
 
               progressReports[type].itemProcessed++;
               itemsProcessedSinceLastNotification++;
 
-              if (itemsProcessedSinceLastNotification >= this.NOTIFICATION_UPDATE_INTERVAL) {
-                notification = await this.updateNotification(notification, account.userId, progressReports);
+              if (
+                itemsProcessedSinceLastNotification >=
+                this.NOTIFICATION_UPDATE_INTERVAL
+              ) {
+                notification = await this.updateNotification(
+                  notification,
+                  account.userId,
+                  progressReports,
+                );
                 itemsProcessedSinceLastNotification = 0;
               }
             } catch (err) {
-              logger.error(`[PinterestImport] Error saving ${type} content:`, err.message);
+              logger.error(
+                `[PinterestImport] Error saving ${type} content:`,
+                err.message,
+              );
             }
           }
 
@@ -222,7 +256,9 @@ export class PinterestImportProcessor extends WorkerHost {
             lastCursors[key] = cursor;
             await this.saveCursors(currentAccount, lastCursors);
           } else {
-            logger.info(`[PinterestImport] Completed import of ${type} for user ${account.userId}`);
+            logger.info(
+              `[PinterestImport] Completed import of ${type} for user ${account.userId}`,
+            );
             progressReports[type].status = NotificationStatus.Completed;
             delete lastCursors[key];
             await this.saveCursors(currentAccount, lastCursors);
@@ -232,7 +268,10 @@ export class PinterestImportProcessor extends WorkerHost {
       } catch (err: any) {
         encounteredError = true;
         progressReports[type].status = NotificationStatus.Cancelled;
-        logger.error(`[PinterestImport] Error occurred while importing ${type}:`, err.message);
+        logger.error(
+          `[PinterestImport] Error occurred while importing ${type}:`,
+          err.message,
+        );
         if (cursor) {
           lastCursors[key] = cursor;
           await this.saveCursors(currentAccount, lastCursors);
@@ -241,7 +280,9 @@ export class PinterestImportProcessor extends WorkerHost {
     }
 
     if (!(await job.isActive())) {
-      logger.info(`[PinterestImport] Job ${job.id} was cancelled, rolling back imported content`);
+      logger.info(
+        `[PinterestImport] Job ${job.id} was cancelled, rolling back imported content`,
+      );
 
       if (importedExternalIds.length > 0) {
         try {
@@ -250,17 +291,24 @@ export class PinterestImportProcessor extends WorkerHost {
             _const.PLATFORMS.PINTEREST,
             importedExternalIds,
           );
-          logger.info(`[PinterestImport] Rolled back ${importedExternalIds.length} imported items for user ${account.userId}`);
+          logger.info(
+            `[PinterestImport] Rolled back ${importedExternalIds.length} imported items for user ${account.userId}`,
+          );
         } catch (rollbackError) {
-          logger.error(`[PinterestImport] Error during rollback:`, rollbackError);
+          logger.error(
+            `[PinterestImport] Error during rollback:`,
+            rollbackError,
+          );
         }
       }
 
       if (notification) {
-        const finalReportArray = Object.entries(progressReports).map(([type, report]) => ({
-          type,
-          ...report,
-        }));
+        const finalReportArray = Object.entries(progressReports).map(
+          ([type, report]) => ({
+            type,
+            ...report,
+          }),
+        );
         await this.notificationService.updateAsync(
           notification.id,
           false,
@@ -269,20 +317,24 @@ export class PinterestImportProcessor extends WorkerHost {
             reports: finalReportArray,
             platform: _const.PLATFORMS.PINTEREST,
           },
-          "Pinterest import was cancelled and rolled back",
+          'Pinterest import was cancelled and rolled back',
         );
       }
       return;
     }
 
-    const finalReportArray = Object.entries(progressReports).map(([type, report]) => ({
-      type,
-      ...report,
-    }));
+    const finalReportArray = Object.entries(progressReports).map(
+      ([type, report]) => ({
+        type,
+        ...report,
+      }),
+    );
 
     if (notification) {
       if (encounteredError) {
-        logger.warn(`[PinterestImport] Completed with issues for user ${account.userId}`);
+        logger.warn(
+          `[PinterestImport] Completed with issues for user ${account.userId}`,
+        );
         await this.notificationService.updateAsync(
           notification.id,
           false,
@@ -291,10 +343,12 @@ export class PinterestImportProcessor extends WorkerHost {
             reports: finalReportArray,
             platform: _const.PLATFORMS.PINTEREST,
           },
-          "Pinterest import completed with issues",
+          'Pinterest import completed with issues',
         );
       } else {
-        logger.info(`[PinterestImport] Successfully completed import for user ${account.userId}`);
+        logger.info(
+          `[PinterestImport] Successfully completed import for user ${account.userId}`,
+        );
         await this.notificationService.updateAsync(
           notification.id,
           false,
@@ -303,14 +357,15 @@ export class PinterestImportProcessor extends WorkerHost {
             reports: finalReportArray,
             platform: _const.PLATFORMS.PINTEREST,
           },
-          "Pinterest import completed!",
+          'Pinterest import completed!',
         );
       }
 
-      const finalAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-        _const.PLATFORMS.PINTEREST,
-        account.userId,
-      );
+      const finalAccount =
+        await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+          _const.PLATFORMS.PINTEREST,
+          account.userId,
+        );
 
       if (finalAccount) {
         finalAccount.allowImport = true;
@@ -321,8 +376,8 @@ export class PinterestImportProcessor extends WorkerHost {
       await this.notificationService.notifyAsync(
         account.userId,
         NotificationType.Import,
-        "Pinterest import could not start",
-        "Unable to initialize Pinterest data import.",
+        'Pinterest import could not start',
+        'Unable to initialize Pinterest data import.',
         false,
         {
           status: NotificationStatus.Cancelled,
@@ -330,7 +385,9 @@ export class PinterestImportProcessor extends WorkerHost {
           platform: _const.PLATFORMS.PINTEREST,
         },
       );
-      logger.warn(`[PinterestImport] No notification initialized for user ${account.userId}`);
+      logger.warn(
+        `[PinterestImport] No notification initialized for user ${account.userId}`,
+      );
     }
   }
 
@@ -339,18 +396,20 @@ export class PinterestImportProcessor extends WorkerHost {
     userId: string,
     progressReports: ProgressReports,
   ): Promise<NotificationModel> {
-    const reportArray = Object.entries(progressReports).map(([type, report]) => ({
-      type,
-      ...report,
-    }));
+    const reportArray = Object.entries(progressReports).map(
+      ([type, report]) => ({
+        type,
+        ...report,
+      }),
+    );
 
     if (!notification) {
       logger.debug(`[PinterestImport] Creating initial notification`);
       const notificationResult = await this.notificationService.notifyAsync(
         userId,
         NotificationType.Import,
-        "Importing your Pinterest data...",
-        "",
+        'Importing your Pinterest data...',
+        '',
         true,
         {
           status: NotificationStatus.InProgress,
@@ -391,5 +450,3 @@ export class PinterestImportProcessor extends WorkerHost {
     }
   }
 }
-
-

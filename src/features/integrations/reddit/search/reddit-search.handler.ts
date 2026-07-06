@@ -1,18 +1,24 @@
-import axios from "axios";
-import configs from "../../../../configs";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../../core/utils/const";
-import fuseUtil from "../../../../core/utils/fuse.util";
-import logger from "../../../../core/utils/winston.util";
-import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
-import { SearchHistory } from "../../../../domain/entities";
-import { Inject, UnauthorizedException } from "@nestjs/common";
-import { ApplicationException } from "../../../../core/exceptions";
-import { ISearchService } from "../../../../domain/services/isearch.service";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { RedditSearchResponseModel } from "../../../../domain/contracts/reddit.model";
-import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
-import { ISearchHistoryRepository, IUserLoginRepository } from "../../../../domain/repositories";
+import axios from 'axios';
+import configs from '../../../../configs';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../../core/utils/const';
+import fuseUtil from '../../../../core/utils/fuse.util';
+import logger from '../../../../core/utils/winston.util';
+import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+import { SearchHistory } from '../../../../domain/entities';
+import { Inject, UnauthorizedException } from '@nestjs/common';
+import { ApplicationException } from '../../../../core/exceptions';
+import { ISearchService } from '../../../../domain/services/isearch.service';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { RedditSearchResponseModel } from '../../../../domain/contracts/reddit.model';
+import {
+  deserializeObject,
+  serializeObject,
+} from '../../../../core/utils/serialization.util';
+import {
+  ISearchHistoryRepository,
+  IUserLoginRepository,
+} from '../../../../domain/repositories';
 
 export class RedditSearchRequestModel {
   @ApiProperty()
@@ -34,8 +40,9 @@ export class RedditSearchQuery {
 }
 
 @QueryHandler(RedditSearchQuery)
-export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery> {
-
+export class RedditSearchQueryHandler
+  implements IQueryHandler<RedditSearchQuery>
+{
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,
@@ -43,9 +50,11 @@ export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery
     private readonly searchHistoryRepository: ISearchHistoryRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-  ) { }
+  ) {}
 
-  public async execute(command: RedditSearchQuery): Promise<RedditSearchResponseModel> {
+  public async execute(
+    command: RedditSearchQuery,
+  ): Promise<RedditSearchResponseModel> {
     const { searchTerm, filter, redditAccessToken } = command.model;
 
     let expiresIn: number;
@@ -56,13 +65,25 @@ export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery
       const isTokenValid = await this.verifyAccessTokenAsync(redditAccessToken);
       if (!isTokenValid && userId) {
         const now = new Date();
-        const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.REDDIT);
+        const userLogin =
+          await this.userLoginRepository.getByUserIdAndProviderAsync(
+            userId,
+            _const.PLATFORMS.REDDIT,
+          );
 
         if (userLogin && now < userLogin.expiryDateUtc) {
-          const tokenValue = deserializeObject<{ access_token: string, refresh_token: string }>(userLogin.tokenValue);
-          const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
+          const tokenValue = deserializeObject<{
+            access_token: string;
+            refresh_token: string;
+          }>(userLogin.tokenValue);
+          const { access_token, expires_in } = await this.refreshTokenAsync(
+            tokenValue.refresh_token,
+          );
           if (access_token) {
-            userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
+            userLogin.tokenValue = serializeObject({
+              access_token,
+              refresh_token: tokenValue.refresh_token,
+            });
             userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
             await this.userLoginRepository.updateAsync(userLogin);
           }
@@ -73,13 +94,28 @@ export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery
         accessToken = redditAccessToken;
       }
     } else if (userId) {
-      const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.REDDIT);
+      const userLogin =
+        await this.userLoginRepository.getByUserIdAndProviderAsync(
+          userId,
+          _const.PLATFORMS.REDDIT,
+        );
       if (userLogin) {
-        const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
-        const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
+        const tokenValue = deserializeObject<{
+          access_token: string;
+          refresh_token: string;
+          expires_in: number;
+        }>(userLogin.tokenValue);
+        const isTokenValid = await this.verifyAccessTokenAsync(
+          tokenValue.access_token,
+        );
         if (!isTokenValid) {
-          const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
-          userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
+          const { access_token, expires_in } = await this.refreshTokenAsync(
+            tokenValue.refresh_token,
+          );
+          userLogin.tokenValue = serializeObject({
+            access_token,
+            refresh_token: tokenValue.refresh_token,
+          });
           userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
           await this.userLoginRepository.updateAsync(userLogin);
           accessToken = access_token;
@@ -104,10 +140,13 @@ export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery
     return data;
   }
 
-  private async refreshTokenAsync(refreshToken: string)
-    : Promise<{ access_token: string, expires_in: number }> {
+  private async refreshTokenAsync(
+    refreshToken: string,
+  ): Promise<{ access_token: string; expires_in: number }> {
     try {
-      const basicAuth = Buffer.from(`${configs.reddit.clientId}:${configs.reddit.clientSecret}`).toString('base64');
+      const basicAuth = Buffer.from(
+        `${configs.reddit.clientId}:${configs.reddit.clientSecret}`,
+      ).toString('base64');
 
       const response = await axios.post(
         'https://www.reddit.com/api/v1/access_token',
@@ -115,7 +154,7 @@ export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${basicAuth}`,
+            Authorization: `Basic ${basicAuth}`,
             'User-Agent': 'Gaddr/1.0',
           },
         },
@@ -123,7 +162,9 @@ export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery
 
       const { access_token, expires_in } = response.data;
       if (!access_token) {
-        throw new ApplicationException('Your Reddit session has expired or the access token is invalid. Please log in to Reddit again to continue.');
+        throw new ApplicationException(
+          'Your Reddit session has expired or the access token is invalid. Please log in to Reddit again to continue.',
+        );
       }
 
       return {
@@ -131,8 +172,10 @@ export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery
         expires_in,
       };
     } catch (error) {
-      logger.error("Error refreshing Reddit token", { error });
-      throw new UnauthorizedException('Your Reddit session has expired or the access token is invalid. Please log in to Reddit again to continue.');
+      logger.error('Error refreshing Reddit token', { error });
+      throw new UnauthorizedException(
+        'Your Reddit session has expired or the access token is invalid. Please log in to Reddit again to continue.',
+      );
     }
   }
 
@@ -158,14 +201,19 @@ export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery
     }
 
     const similarQueries =
-      (await this.searchHistoryRepository.findSimilarQueriesAsync(trimmedQuery)) ?? [];
+      (await this.searchHistoryRepository.findSimilarQueriesAsync(
+        trimmedQuery,
+      )) ?? [];
 
     const candidateValues = similarQueries
       .map((item) => item.normalizedQuery)
       .filter(Boolean)
       .slice(0, 50);
 
-    const normalizedQuery = fuseUtil.normalizeSearchTerm(trimmedQuery, candidateValues);
+    const normalizedQuery = fuseUtil.normalizeSearchTerm(
+      trimmedQuery,
+      candidateValues,
+    );
 
     const hasExistingEntry = similarQueries.some((item) => {
       const original = (item.originalQuery ?? '').trim().toLowerCase();
@@ -189,4 +237,3 @@ export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery
     return normalizedQuery;
   }
 }
-

@@ -1,7 +1,7 @@
-import { Inject } from "@nestjs/common";
-import _const from "../../../../core/utils/const";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { IUserRepository } from "../../../../domain/repositories";
+import { Inject } from '@nestjs/common';
+import _const from '../../../../core/utils/const';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { IUserRepository } from '../../../../domain/repositories';
 
 export class EmailInuseCommand {
   email: string;
@@ -12,12 +12,15 @@ export class EmailInuseCommand {
 }
 
 @CommandHandler(EmailInuseCommand)
-export class EmailInUseCommandHandler implements ICommandHandler<EmailInuseCommand, Boolean> {
+export class EmailInUseCommandHandler
+  implements ICommandHandler<EmailInuseCommand, boolean>
+{
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository) {
-  }
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+  ) {}
 
-  async execute(command: EmailInuseCommand): Promise<Boolean> {
+  async execute(command: EmailInuseCommand): Promise<boolean> {
     return await this.userRepository.isEmailInuseAsync(command.email);
   }
-} 
+}

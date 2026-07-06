@@ -1,8 +1,8 @@
-import { Repository } from "typeorm";
-import { Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { YoutubeVideo } from "../../domain/entities";
-import { IYoutubeVideoRepository } from "../../domain/repositories/iyoutubeVideo.repository";
+import { Repository } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { YoutubeVideo } from '../../domain/entities';
+import { IYoutubeVideoRepository } from '../../domain/repositories/iyoutubeVideo.repository';
 
 @Injectable()
 export class YoutubeVideoRepository implements IYoutubeVideoRepository {
@@ -27,7 +27,9 @@ export class YoutubeVideoRepository implements IYoutubeVideoRepository {
     return this.repo.find({ where: { accountId }, take: 1000 });
   }
 
-  async getByYoutubeVideoIdAsync(youtubeVideoId: string): Promise<YoutubeVideo | null> {
+  async getByYoutubeVideoIdAsync(
+    youtubeVideoId: string,
+  ): Promise<YoutubeVideo | null> {
     return this.repo.findOne({ where: { youtubeVideoId } });
   }
 

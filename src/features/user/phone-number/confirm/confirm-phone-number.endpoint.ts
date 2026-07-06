@@ -1,9 +1,16 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ConfirmPhoneNumberCommand } from "./confirm-phone-number.handler";
-import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { AuthenticatedAccountGuard } from "../../../../core/passport";
-import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ConfirmPhoneNumberCommand } from './confirm-phone-number.handler';
+import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AuthenticatedAccountGuard } from '../../../../core/passport';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 
 class ConfirmPhoneNumberModel {
   phoneNumber: string;
@@ -16,9 +23,7 @@ class ConfirmPhoneNumberModel {
   version: '1',
 })
 export class ConfirmPhoneNumberController {
-
-  constructor(private readonly queryBus: CommandBus) {
-  }
+  constructor(private readonly queryBus: CommandBus) {}
 
   @Post('phone-number/confirm')
   @UseGuards(AuthenticatedAccountGuard)
@@ -29,14 +34,17 @@ export class ConfirmPhoneNumberController {
   @ApiBody({ type: ConfirmPhoneNumberModel, required: true })
   public async Confirm(
     @Body() request: ConfirmPhoneNumberModel,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response> {
-    await this.queryBus.execute(new ConfirmPhoneNumberCommand({ 
-      phoneNumber: request.phoneNumber, 
-      token: request.token 
-    }));
-    res.status(HttpStatus.OK).send({ message: 'Phone number updated successfully' })
+    await this.queryBus.execute(
+      new ConfirmPhoneNumberCommand({
+        phoneNumber: request.phoneNumber,
+        token: request.token,
+      }),
+    );
+    res
+      .status(HttpStatus.OK)
+      .send({ message: 'Phone number updated successfully' });
     return res;
   }
 }
-

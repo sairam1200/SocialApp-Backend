@@ -1,17 +1,23 @@
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import _const from "../../../../core/utils/const";
-import { UserType } from "../../../../domain/enums";
-import { ManualProfile } from "../../../../domain/entities";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { UserNotFoundException } from "../../../../core/exceptions";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { mapToManualProfileModel } from "../../../../domain/mappers/manualProfile.mapper";
-import { IManualProfileRepository, IUserRepository } from "../../../../domain/repositories";
-import { CreateManualProfileModel, ManualProfileModel } from "../../../../domain/contracts/manualProfile.model";
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import _const from '../../../../core/utils/const';
+import { UserType } from '../../../../domain/enums';
+import { ManualProfile } from '../../../../domain/entities';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { UserNotFoundException } from '../../../../core/exceptions';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { mapToManualProfileModel } from '../../../../domain/mappers/manualProfile.mapper';
+import {
+  IManualProfileRepository,
+  IUserRepository,
+} from '../../../../domain/repositories';
+import {
+  CreateManualProfileModel,
+  ManualProfileModel,
+} from '../../../../domain/contracts/manualProfile.model';
 
 export class CreateManualProfileCommand {
-  model: CreateManualProfileModel
+  model: CreateManualProfileModel;
 
   constructor(request: Partial<CreateManualProfileCommand> = {}) {
     Object.assign(this, request);
@@ -25,18 +31,25 @@ const createUserValidations = Joi.object({
 });
 
 @CommandHandler(CreateManualProfileCommand)
-export class CreateManualProfileCommandHandler implements ICommandHandler<CreateManualProfileCommand, ManualProfileModel> {
+export class CreateManualProfileCommandHandler
+  implements ICommandHandler<CreateManualProfileCommand, ManualProfileModel>
+{
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
-    @Inject(_const.IMANUALPROFILE_REPOSITORY) private readonly manualProfileRepository: IManualProfileRepository,
-  ) { }
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+    @Inject(_const.IMANUALPROFILE_REPOSITORY)
+    private readonly manualProfileRepository: IManualProfileRepository,
+  ) {}
 
-  public async execute(command: CreateManualProfileCommand): Promise<ManualProfileModel> {
-
+  public async execute(
+    command: CreateManualProfileCommand,
+  ): Promise<ManualProfileModel> {
     const { model } = command;
     await createUserValidations.validateAsync(model);
 
-    const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
+    const user = await this.userRepository.getUserByIdAsync(
+      HttpContext.getCurrentUserId,
+    );
     if (!user || user.type !== UserType.User) {
       throw new UserNotFoundException();
     }
@@ -47,10 +60,10 @@ export class CreateManualProfileCommandHandler implements ICommandHandler<Create
         url: model.url,
         icon: model.icon,
         userId: user.id,
-        isActive: true
-      }));
-
+        isActive: true,
+      }),
+    );
 
     return mapToManualProfileModel(manualProfile);
   }
-} 
+}

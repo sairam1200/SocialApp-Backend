@@ -9,7 +9,6 @@ import { BaseEntity } from '../baseEntity';
 @Index(['impressions'])
 @Index(['reach'])
 export class FacebookPageAnalytics extends BaseEntity {
-
   @Column({ nullable: false })
   pageId: string;
 

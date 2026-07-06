@@ -1,5 +1,5 @@
-import { NotificationModel } from "../contracts/notification.model";
-import { Notification } from "../entities/notification/notification.entity";
+import { NotificationModel } from '../contracts/notification.model';
+import { Notification } from '../entities/notification/notification.entity';
 
 export function mapToNotificationModel(data: Notification): NotificationModel {
   return {
@@ -12,7 +12,6 @@ export function mapToNotificationModel(data: Notification): NotificationModel {
     sound: data.sound,
     type: data.type,
     metaData: data.metaData,
-    readAt: data.readAt
-
+    readAt: data.readAt,
   } as NotificationModel;
 }

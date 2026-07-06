@@ -1,12 +1,16 @@
-import configs from "../../../configs";
+import configs from '../../../configs';
 import * as nodemailer from 'nodemailer';
-import { Injectable } from "@nestjs/common";
-import { OnEvent } from "@nestjs/event-emitter";
-import { Globals } from "../../../core/globals";
-import logger from "../../../core/utils/winston.util";
-import fileUtil from "../../../core/utils/file.util";
-import { SendEmailEvent } from "../../../domain/events";
-import { TransactionalEmailsApi, SendSmtpEmail, TransactionalEmailsApiApiKeys } from '@getbrevo/brevo';
+import { Injectable } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
+import { Globals } from '../../../core/globals';
+import logger from '../../../core/utils/winston.util';
+import fileUtil from '../../../core/utils/file.util';
+import { SendEmailEvent } from '../../../domain/events';
+import {
+  TransactionalEmailsApi,
+  SendSmtpEmail,
+  TransactionalEmailsApiApiKeys,
+} from '@getbrevo/brevo';
 
 interface EmailAttachment {
   filename: string;
@@ -16,7 +20,6 @@ interface EmailAttachment {
 
 @Injectable()
 export class EmailListener {
-
   private readonly transporter: nodemailer.Transporter;
   private readonly apiInstance: TransactionalEmailsApi | null;
 
@@ -30,12 +33,12 @@ export class EmailListener {
         pass: configs.smtp.password,
       },
     });
-    console.log("THis is SMPT: ", configs.brevo)
+    console.log('THis is SMPT: ', configs.brevo);
     if (configs.brevo?.apiKey) {
       this.apiInstance = new TransactionalEmailsApi();
       this.apiInstance.setApiKey(
         TransactionalEmailsApiApiKeys.apiKey,
-        configs.brevo.apiKey
+        configs.brevo.apiKey,
       );
     } else {
       this.apiInstance = null;
@@ -56,7 +59,10 @@ export class EmailListener {
       await this.sendViaSMTP(from, to, subject, html, attachments);
       logger.info(`Email sent successfully`, { to, subject });
     } catch (error) {
-      logger.error('Failed to send email via SMTP, trying Brevo fallback:', error);
+      logger.error(
+        'Failed to send email via SMTP, trying Brevo fallback:',
+        error,
+      );
       await this.sendViaBrevoAPI(to, subject, html, attachments);
     }
   }
@@ -101,7 +107,10 @@ export class EmailListener {
 
       await this.apiInstance.sendTransacEmail(sendSmtpEmail);
 
-      logger.info(`Email sent successfully via Brevo fallback`, { to, subject });
+      logger.info(`Email sent successfully via Brevo fallback`, {
+        to,
+        subject,
+      });
     } catch (brevoError) {
       logger.error('Failed to send email via Brevo fallback:', brevoError);
       throw brevoError;
@@ -120,7 +129,9 @@ export class EmailListener {
       } else if (att.content) {
         content = Buffer.from(att.content).toString('base64');
       } else {
-        throw new Error(`Attachment ${att.filename} must have either path or content`);
+        throw new Error(
+          `Attachment ${att.filename} must have either path or content`,
+        );
       }
 
       return {

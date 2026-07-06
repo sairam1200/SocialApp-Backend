@@ -2,19 +2,26 @@ import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import _const from '../../core/utils/const';
 import { Globals } from '../../core/globals';
-import { UserType } from "../../domain/enums";
+import { UserType } from '../../domain/enums';
 import redis from '../../core/utils/redis.util';
-import logger from "../../core/utils/winston.util";
+import logger from '../../core/utils/winston.util';
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 
-function createAccountGuard(type?: UserType, allowTwoFARequired: boolean = false, ignoreExpiration: boolean = false) {
+function createAccountGuard(
+  type?: UserType,
+  allowTwoFARequired: boolean = false,
+  ignoreExpiration: boolean = false,
+) {
   @Injectable()
   class AccessLevelGuard implements CanActivate {
-
-    constructor(
-      public jwtService: JwtService
-    ) { }
+    constructor(public jwtService: JwtService) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
       const request = context.switchToHttp().getRequest();
@@ -22,53 +29,84 @@ function createAccountGuard(type?: UserType, allowTwoFARequired: boolean = false
 
       logger.info(`[AccountGuard] Checking access for URL: ${request.url}`);
       logger.info(`[AccountGuard] Expected user type: ${type || 'Any'}`);
-      logger.info(`[AccountGuard] Authorization header: ${request.headers.authorization ? 'Present' : 'Missing'}`);
+      logger.info(
+        `[AccountGuard] Authorization header: ${request.headers.authorization ? 'Present' : 'Missing'}`,
+      );
 
       const claimsPrinciple = HttpContext.user;
       if (!claimsPrinciple) {
         if (request.headers.authorization) {
-          throw new UnauthorizedException('Unauthorized: Invalid or expired token.');
+          throw new UnauthorizedException(
+            'Unauthorized: Invalid or expired token.',
+          );
         } else {
-          throw new UnauthorizedException('Unauthorized: You need to log in to access this resource.');
+          throw new UnauthorizedException(
+            'Unauthorized: You need to log in to access this resource.',
+          );
         }
       }
 
-      logger.info(`[AccountGuard] User validated. User type: ${claimsPrinciple[Globals.ClaimTypes.UserType]}`);
+      logger.info(
+        `[AccountGuard] User validated. User type: ${claimsPrinciple[Globals.ClaimTypes.UserType]}`,
+      );
 
-      if (claimsPrinciple[Globals.ClaimTypes.TwoFARequired] && !allowTwoFARequired) {
+      if (
+        claimsPrinciple[Globals.ClaimTypes.TwoFARequired] &&
+        !allowTwoFARequired
+      ) {
         logger.error('[AccountGuard] 2FA required but not allowed');
-        throw new UnauthorizedException('Unauthorized: Two-factor authentication code is required');
+        throw new UnauthorizedException(
+          'Unauthorized: Two-factor authentication code is required',
+        );
       }
 
       const userId = claimsPrinciple[Globals.ClaimTypes.UserId];
       const securityStamp = claimsPrinciple[Globals.ClaimTypes.SecurityStamp];
-      const concurrencyStamp = claimsPrinciple[Globals.ClaimTypes.ConcurrencyStamp];
-      const accountKey = redis.getRedisKey<string>(`${userId}${_const.REDIS.USER.ACCOUNT}`);
-      const userAccount = await redis.getFromRedisAsync<{ concurrencyStamp: string; securityStamp: string; }>(accountKey);
+      const concurrencyStamp =
+        claimsPrinciple[Globals.ClaimTypes.ConcurrencyStamp];
+      const accountKey = redis.getRedisKey<string>(
+        `${userId}${_const.REDIS.USER.ACCOUNT}`,
+      );
+      const userAccount = await redis.getFromRedisAsync<{
+        concurrencyStamp: string;
+        securityStamp: string;
+      }>(accountKey);
 
       if (userAccount) {
         if (concurrencyStamp !== userAccount.concurrencyStamp) {
           response.setHeader('X-Token-Refresh-Required', 'true');
-          logger.info(`[AccountGuard] ConcurrencyStamp changed for user ${userId}, token refresh recommended`);
+          logger.info(
+            `[AccountGuard] ConcurrencyStamp changed for user ${userId}, token refresh recommended`,
+          );
         }
 
         if (securityStamp !== userAccount.securityStamp) {
-          logger.warn(`[AccountGuard] SecurityStamp mismatch for user ${userId} - forcing re-authentication`);
+          logger.warn(
+            `[AccountGuard] SecurityStamp mismatch for user ${userId} - forcing re-authentication`,
+          );
           response.setHeader('X-Password-Change', 'true');
-          throw new UnauthorizedException('Your session has been invalidated. Please log in again.');
+          throw new UnauthorizedException(
+            'Your session has been invalidated. Please log in again.',
+          );
         }
       }
 
       if (type && type != undefined) {
-        const userType = claimsPrinciple[Globals.ClaimTypes.UserType] as UserType;
+        const userType = claimsPrinciple[
+          Globals.ClaimTypes.UserType
+        ] as UserType;
         const hasType = userType === type;
-        logger.info(`[AccountGuard] User type check: Expected=${type}, Actual=${userType}, Match=${hasType}`);
+        logger.info(
+          `[AccountGuard] User type check: Expected=${type}, Actual=${userType}, Match=${hasType}`,
+        );
         if (hasType) {
           logger.info('[AccountGuard] Access granted');
           return true;
         } else {
           logger.error(`[AccountGuard] Access denied: User type mismatch`);
-          throw new ForbiddenException('Forbidden: You do not have permission to access this resource.');
+          throw new ForbiddenException(
+            'Forbidden: You do not have permission to access this resource.',
+          );
         }
       } else {
         logger.info('[AccountGuard] Access granted (no type restriction)');

@@ -2,13 +2,27 @@ import users from '../features/user';
 import onboarding from '../features/onboarding';
 import { Module } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { CqrsModule } from "@nestjs/cqrs";
-import { TypeOrmModule } from "@nestjs/typeorm";
+import { CqrsModule } from '@nestjs/cqrs';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { EmailModule } from './email.module';
 import { dependency } from '../infrastructure/dependency';
 import { EmailCleanupCron } from '../infrastructure/background/cron/jobs/email-cleanup.cron';
-import { LinkedAccount, Role, RoleClaim, User, UserClaim, UserRole, UserLogin, DataProtectionKey, PlaylistMember, UserBiometric, Topic, UserTopic, UserPreference } from '../domain/entities';
-import { AuthModule } from "./auth.module";
+import {
+  LinkedAccount,
+  Role,
+  RoleClaim,
+  User,
+  UserClaim,
+  UserRole,
+  UserLogin,
+  DataProtectionKey,
+  PlaylistMember,
+  UserBiometric,
+  Topic,
+  UserTopic,
+  UserPreference,
+} from '../domain/entities';
+import { AuthModule } from './auth.module';
 @Module({
   imports: [
     CqrsModule,
@@ -27,13 +41,10 @@ import { AuthModule } from "./auth.module";
       UserBiometric,
       UserPreference,
       Topic,
-      UserTopic
-    ])
+      UserTopic,
+    ]),
   ],
-  controllers: [
-    ...users.addControllers(),
-    ...onboarding.addControllers()
-  ],
+  controllers: [...users.addControllers(), ...onboarding.addControllers()],
   providers: [
     JwtService,
     ...users.addHandlers(),
@@ -46,7 +57,7 @@ import { AuthModule } from "./auth.module";
     dependency.DataProtectionKeyRepository,
     dependency.TopicRepository,
     dependency.UserPreferenceRepository,
-    EmailCleanupCron
+    EmailCleanupCron,
   ],
   exports: [],
 })

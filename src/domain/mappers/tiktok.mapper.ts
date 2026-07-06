@@ -1,9 +1,15 @@
 import { LinkedAccount } from '../entities/linkedAccount.entity';
 import { UserContent } from '../entities/userContent.entity';
-import { TiktokProfileModel, TikTokContentModel } from '../contracts/tiktok.model';
+import {
+  TiktokProfileModel,
+  TikTokContentModel,
+} from '../contracts/tiktok.model';
 import _const from '../../core/utils/const';
 
-export function mapToTiktokProfileModel(linkedAccount: LinkedAccount, includeSensitiveFields: boolean): TiktokProfileModel {
+export function mapToTiktokProfileModel(
+  linkedAccount: LinkedAccount,
+  includeSensitiveFields: boolean,
+): TiktokProfileModel {
   return {
     id: linkedAccount.externalId,
     username: linkedAccount.userName,
@@ -22,7 +28,9 @@ export function mapToTikTokContentModel(data: UserContent): TikTokContentModel {
     id: data.id,
     type: data.type,
     url: data.metaData?.shareUrl || data.metaData?.embedUrl || '',
-    createdAt: data.metaData?.createTime ? new Date(data.metaData.createTime * 1000) : new Date(),
+    createdAt: data.metaData?.createTime
+      ? new Date(data.metaData.createTime * 1000)
+      : new Date(),
     mediaUrl: data.metaData?.mediaUrl || '',
     thumbnailUrl: data.metaData?.coverImageUrl || '',
     caption: data.metaData?.videoDescription || '',

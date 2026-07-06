@@ -53,7 +53,8 @@ export function mapFacebookOnlineResponseToContentStream(
   content: FacebookSearchItemModel,
 ): ContentStream {
   const facebookOnlineContent = new ContentStream();
-  const { type, externalId, title, ...rest } = mapToFacebookOnlineModel(content);
+  const { type, externalId, title, ...rest } =
+    mapToFacebookOnlineModel(content);
 
   facebookOnlineContent.type = StreamEntityType.Profile;
   facebookOnlineContent.subType = type;
@@ -65,26 +66,27 @@ export function mapFacebookOnlineResponseToContentStream(
   return facebookOnlineContent;
 }
 
-export function mapContentStreamToFacebookOnlineModel(content: ContentStream): FacebookOnlineModel {
-  const { type, externalId, title, ...rest } = content
+export function mapContentStreamToFacebookOnlineModel(
+  content: ContentStream,
+): FacebookOnlineModel {
+  const { type, externalId, title, ...rest } = content;
   return {
     id: content.id,
     type: content.subType,
     title: content.title,
     externalId: content.externalId,
-    ...rest.metaData
-  } as FacebookOnlineModel
+    ...rest.metaData,
+  } as FacebookOnlineModel;
 }
 
 export function mapUserContentToFacebookOnlineModel(
-  content: ContentStream | UserContent
+  content: ContentStream | UserContent,
 ): FacebookOnlineModel {
   const isContentStream = (
     c: ContentStream | UserContent,
   ): c is ContentStream => {
-    return "subType" in c;
+    return 'subType' in c;
   };
-
 
   const contentType = isContentStream(content) ? content.subType : content.type;
   const data = content as any; // Cast for easier access to optional normalized fields
@@ -94,18 +96,28 @@ export function mapUserContentToFacebookOnlineModel(
     title: content.title,
     type: contentType,
     externalId: content.externalId,
-    description: data.text || content.metaData?.description || content.metaData?.message,
-    picture: data.media?.[0]?.url || content.metaData?.imageUrl || content.metaData?.full_picture,
-    link: data.sourceUrl || content.metaData?.link || content.metaData?.permalinkUrl,
+    description:
+      data.text || content.metaData?.description || content.metaData?.message,
+    picture:
+      data.media?.[0]?.url ||
+      content.metaData?.imageUrl ||
+      content.metaData?.full_picture,
+    link:
+      data.sourceUrl ||
+      content.metaData?.link ||
+      content.metaData?.permalinkUrl,
     message: data.text || content.metaData?.message,
     story: content.metaData?.story,
     from: content.metaData?.from,
     reactions: content.metaData?.analytics?.reactions,
-    commentCount: data.engagement?.comments ?? content.metaData?.analytics?.comments,
+    commentCount:
+      data.engagement?.comments ?? content.metaData?.analytics?.comments,
     sharesCount: data.engagement?.shares ?? content.metaData?.analytics?.shares,
     permalinkUrl: data.sourceUrl || content.metaData?.permalink,
-    createdAt: data.publishedAt || content.metaData?.createdAt || content.metaData?.createdTime,
+    createdAt:
+      data.publishedAt ||
+      content.metaData?.createdAt ||
+      content.metaData?.createdTime,
     updatedAt: content.metaData?.updatedAt || content.metaData?.updated_time,
   } as FacebookOnlineModel;
-
 }

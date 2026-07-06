@@ -1,9 +1,8 @@
-import { Column, Entity } from "typeorm";
-import { BaseEntity } from "../baseEntity";
+import { Column, Entity } from 'typeorm';
+import { BaseEntity } from '../baseEntity';
 
 @Entity({ name: 'dataProtectionKeys' })
 export class DataProtectionKey extends BaseEntity {
-
   @Column({ nullable: true })
   userId?: string;
 

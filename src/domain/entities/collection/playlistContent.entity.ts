@@ -1,12 +1,11 @@
-import { BaseEntity } from "../../baseEntity";
-import { Playlist } from "./playlist.entity";
-import { PlaylistMember } from "./playlistMember.entity";
-import { Column, Entity, JoinColumn, ManyToOne } from "typeorm";
+import { BaseEntity } from '../../baseEntity';
+import { Playlist } from './playlist.entity';
+import { PlaylistMember } from './playlistMember.entity';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity('playlistContent')
 export class PlaylistContent extends BaseEntity {
-
-  @ManyToOne(() => Playlist, p => p.contents, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Playlist, (p) => p.contents, { onDelete: 'CASCADE' })
   playlist: Playlist;
 
   @Column({ type: 'varchar', length: 255 })

@@ -1,5 +1,5 @@
-import { FollowModel } from "../contracts/follow.model";
-import { UserFollow } from "../entities/userFollow.entity";
+import { FollowModel } from '../contracts/follow.model';
+import { UserFollow } from '../entities/userFollow.entity';
 
 export function mapToFollowModel(follow: UserFollow): FollowModel {
   return {
@@ -19,6 +19,6 @@ export function mapToFollowModel(follow: UserFollow): FollowModel {
       firstName: follow.followed?.firstName ?? '',
       lastName: follow.followed?.lastName ?? '',
       profileImage: follow.followed?.biometrics?.profileImageUrl,
-    }
+    },
   };
 }

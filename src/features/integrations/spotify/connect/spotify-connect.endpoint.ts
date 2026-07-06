@@ -1,11 +1,21 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import configs from "../../../../configs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { stringUtil } from "../../../../core/utils/string.util";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
-import { SpotifyConnectCallbackQuery, SpotifyConnectQuery } from "./spotify-connect.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import configs from '../../../../configs';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { stringUtil } from '../../../../core/utils/string.util';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  SpotifyConnectCallbackQuery,
+  SpotifyConnectQuery,
+} from './spotify-connect.handler';
 
 @ApiTags('Integrations')
 @Controller({
@@ -13,8 +23,7 @@ import { SpotifyConnectCallbackQuery, SpotifyConnectQuery } from "./spotify-conn
   version: '1',
 })
 export class SpotifyConnectController {
-
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
@@ -23,7 +32,6 @@ export class SpotifyConnectController {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Connect(@Res() res: Response): Promise<Response | void> {
-
     const scopes = [
       'user-read-email',
       'user-read-private',
@@ -35,7 +43,7 @@ export class SpotifyConnectController {
       'user-library-read',
       'playlist-read-private',
       'playlist-read-collaborative',
-      'user-follow-read'
+      'user-follow-read',
     ].join(',');
 
     const state = stringUtil.generateRandomString(16);
@@ -48,7 +56,9 @@ export class SpotifyConnectController {
     });
     const authorizeURL = `https://accounts.spotify.com/authorize?${params.toString()}`;
 
-    await this.commandBus.execute(new SpotifyConnectQuery({ model: { state } }));
+    await this.commandBus.execute(
+      new SpotifyConnectQuery({ model: { state } }),
+    );
 
     return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });
   }
@@ -61,9 +71,11 @@ export class SpotifyConnectController {
   public async Callback(
     @Query('code') code: string,
     @Query('state') state: string,
-    @Res() res: Response): Promise<Response | void> {
-
-    const result = await this.commandBus.execute(new SpotifyConnectCallbackQuery({ model: { code, state } }));
+    @Res() res: Response,
+  ): Promise<Response | void> {
+    const result = await this.commandBus.execute(
+      new SpotifyConnectCallbackQuery({ model: { code, state } }),
+    );
     return res.status(HttpStatus.OK).json(result);
   }
 }

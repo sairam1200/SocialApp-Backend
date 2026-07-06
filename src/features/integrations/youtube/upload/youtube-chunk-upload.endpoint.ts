@@ -1,10 +1,25 @@
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiTags, ApiResponse, ApiConsumes } from '@nestjs/swagger';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
-import { Controller, Post, Param, Body, UseGuards, BadRequestException, Headers, UploadedFile, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Param,
+  Body,
+  UseGuards,
+  BadRequestException,
+  Headers,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { InitChunkUploadCommand, AppendChunkCommand, CompleteChunkUploadCommand, AbortChunkUploadCommand } from './youtube-chunk-upload.handler';
+import {
+  InitChunkUploadCommand,
+  AppendChunkCommand,
+  CompleteChunkUploadCommand,
+  AbortChunkUploadCommand,
+} from './youtube-chunk-upload.handler';
 import { YoutubeValidationError } from '../../../../core/exceptions/youtube-publishing.exception';
 
 class InitUploadDto {
@@ -43,8 +58,16 @@ export class YoutubeChunkUploadController {
   @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 200, description: 'Upload session initialized' })
   async initUpload(@Body() body: InitUploadDto): Promise<{ uploadId: string }> {
-    if (!body.accountId || !body.title || !body.totalSize || !body.fileName || !body.totalChunks) {
-      throw new BadRequestException('accountId, title, totalSize, fileName, and totalChunks are required');
+    if (
+      !body.accountId ||
+      !body.title ||
+      !body.totalSize ||
+      !body.fileName ||
+      !body.totalChunks
+    ) {
+      throw new BadRequestException(
+        'accountId, title, totalSize, fileName, and totalChunks are required',
+      );
     }
     if (body.totalChunks < 1) {
       throw new BadRequestException('totalChunks must be at least 1');
@@ -74,7 +97,9 @@ export class YoutubeChunkUploadController {
     const total = parseInt(totalChunks, 10);
 
     if (isNaN(index) || isNaN(total) || index < 0 || total < 1) {
-      throw new BadRequestException('Invalid x-chunk-index or x-total-chunks headers');
+      throw new BadRequestException(
+        'Invalid x-chunk-index or x-total-chunks headers',
+      );
     }
 
     const result = await this.commandBus.execute(
@@ -83,7 +108,9 @@ export class YoutubeChunkUploadController {
 
     if (result.complete) {
       try {
-        const completeResult = await this.commandBus.execute(new CompleteChunkUploadCommand(uploadId));
+        const completeResult = await this.commandBus.execute(
+          new CompleteChunkUploadCommand(uploadId),
+        );
         return {
           ...result,
           videoId: completeResult.videoId,
@@ -92,7 +119,9 @@ export class YoutubeChunkUploadController {
           publishAt: completeResult.publishAt,
         };
       } catch (err) {
-        this.commandBus.execute(new AbortChunkUploadCommand(uploadId)).catch(() => {});
+        this.commandBus
+          .execute(new AbortChunkUploadCommand(uploadId))
+          .catch(() => {});
         throw err;
       }
     }
@@ -110,7 +139,9 @@ export class YoutubeChunkUploadController {
       throw new BadRequestException('uploadId is required');
     }
 
-    const result = await this.commandBus.execute(new CompleteChunkUploadCommand(uploadId));
+    const result = await this.commandBus.execute(
+      new CompleteChunkUploadCommand(uploadId),
+    );
 
     return {
       uploadId,
@@ -128,7 +159,9 @@ export class YoutubeChunkUploadController {
   @Post('upload/abort/:uploadId')
   @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 200, description: 'Upload aborted' })
-  async abortUpload(@Param('uploadId') uploadId: string): Promise<{ success: boolean }> {
+  async abortUpload(
+    @Param('uploadId') uploadId: string,
+  ): Promise<{ success: boolean }> {
     await this.commandBus.execute(new AbortChunkUploadCommand(uploadId));
     return { success: true };
   }

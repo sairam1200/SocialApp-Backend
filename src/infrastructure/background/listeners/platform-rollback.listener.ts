@@ -1,18 +1,22 @@
-import { Inject } from "@nestjs/common";
-import { OnEvent } from "@nestjs/event-emitter";
-import _const from "../../../core/utils/const";
-import logger from "../../../core/utils/winston.util";
-import { ContentStream } from "../../../domain/entities/contentStream.entity";
-import { LinkedAccount } from "../../../domain/entities/linkedAccount.entity";
-import { UserContent } from "../../../domain/entities/userContent.entity";
-import { INotificationService } from "../../../domain/services/inotification.service";
-import { IGeneralRepository } from "../../../domain/repositories/igeneral.repository";
-import { PlatformRollbackEvent } from "../../../domain/events/platform-rollback.event";
-import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
-import { NotificationStatus, NotificationType, StreamEntityType } from "../../../domain/enums";
-import { INotificationRepository } from "../../../domain/repositories/inotification.repository";
-import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
-import { PlatformConnectCleanupEvent } from "../../../domain/events/platform-connect-cleanup.event";
+import { Inject } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
+import _const from '../../../core/utils/const';
+import logger from '../../../core/utils/winston.util';
+import { ContentStream } from '../../../domain/entities/contentStream.entity';
+import { LinkedAccount } from '../../../domain/entities/linkedAccount.entity';
+import { UserContent } from '../../../domain/entities/userContent.entity';
+import { INotificationService } from '../../../domain/services/inotification.service';
+import { IGeneralRepository } from '../../../domain/repositories/igeneral.repository';
+import { PlatformRollbackEvent } from '../../../domain/events/platform-rollback.event';
+import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
+import {
+  NotificationStatus,
+  NotificationType,
+  StreamEntityType,
+} from '../../../domain/enums';
+import { INotificationRepository } from '../../../domain/repositories/inotification.repository';
+import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
+import { PlatformConnectCleanupEvent } from '../../../domain/events/platform-connect-cleanup.event';
 
 export class PlatformRollbackListener {
   constructor(
@@ -37,20 +41,32 @@ export class PlatformRollbackListener {
   }
 
   @OnEvent('platform.connect.cleanup', { async: true })
-  async handlePlatformConnectCleanup(event: PlatformConnectCleanupEvent): Promise<void> {
+  async handlePlatformConnectCleanup(
+    event: PlatformConnectCleanupEvent,
+  ): Promise<void> {
     const { account } = event.data;
     await this.cleanupUserContent(account, false);
   }
 
-  private async cleanupUserContent(account: LinkedAccount, updateNotifications: boolean): Promise<void> {
+  private async cleanupUserContent(
+    account: LinkedAccount,
+    updateNotifications: boolean,
+  ): Promise<void> {
     const userId = account.userId;
     const platform = account.platform;
 
-    logger.info(`[PlatformRollback] Starting ${updateNotifications ? 'rollback' : 'cleanup'} for user ${userId}, platform ${platform}`);
+    logger.info(
+      `[PlatformRollback] Starting ${updateNotifications ? 'rollback' : 'cleanup'} for user ${userId}, platform ${platform}`,
+    );
 
     try {
-      const userContents = await this.getUserContentsByPlatform(userId, platform);
-      logger.debug(`[PlatformRollback] Found ${userContents.length} user contents to process`);
+      const userContents = await this.getUserContentsByPlatform(
+        userId,
+        platform,
+      );
+      logger.debug(
+        `[PlatformRollback] Found ${userContents.length} user contents to process`,
+      );
 
       const contentsToMove: ContentStream[] = [];
       const externalIds: string[] = [];
@@ -73,20 +89,25 @@ export class PlatformRollbackListener {
           const isNew = newIds.includes(userContent.externalId);
 
           if (!isNew) {
-            const contentStream = this.mapUserContentToContentStream(userContent);
+            const contentStream =
+              this.mapUserContentToContentStream(userContent);
             contentsToMove.push(contentStream);
           }
         }
 
         if (contentsToMove.length > 0) {
-          logger.debug(`[PlatformRollback] Moving ${contentsToMove.length} items to ContentStream`);
+          logger.debug(
+            `[PlatformRollback] Moving ${contentsToMove.length} items to ContentStream`,
+          );
           await this.generalRepository.createAsync(contentsToMove);
         }
 
         for (const userContent of userContents) {
           await this.userContentRepository.deleteAsync(userContent);
         }
-        logger.debug(`[PlatformRollback] Deleted ${userContents.length} items from UserContent`);
+        logger.debug(
+          `[PlatformRollback] Deleted ${userContents.length} items from UserContent`,
+        );
       }
 
       if (updateNotifications) {
@@ -98,9 +119,13 @@ export class PlatformRollbackListener {
 
         await this.linkedAccountRepository.updateAsync(account);
 
-        const notifications = await this.notificationRepository.getAllAsync(userId);
+        const notifications =
+          await this.notificationRepository.getAllAsync(userId);
         const importNotifications = notifications.filter(
-          n => n.type === NotificationType.Import && n.isLive && n.metaData?.platform === platform,
+          (n) =>
+            n.type === NotificationType.Import &&
+            n.isLive &&
+            n.metaData?.platform === platform,
         );
 
         for (const notification of importNotifications) {
@@ -122,24 +147,33 @@ export class PlatformRollbackListener {
         await this.linkedAccountRepository.updateAsync(account);
       }
 
-      logger.info(`[PlatformRollback] ${updateNotifications ? 'Rollback' : 'Cleanup'} completed for user ${userId}, platform ${platform}`);
+      logger.info(
+        `[PlatformRollback] ${updateNotifications ? 'Rollback' : 'Cleanup'} completed for user ${userId}, platform ${platform}`,
+      );
     } catch (error) {
-      logger.error(`[PlatformRollback] Error during ${updateNotifications ? 'rollback' : 'cleanup'} for user ${userId}, platform ${platform}:`, error);
+      logger.error(
+        `[PlatformRollback] Error during ${updateNotifications ? 'rollback' : 'cleanup'} for user ${userId}, platform ${platform}:`,
+        error,
+      );
       throw error;
     }
   }
 
-  private async getUserContentsByPlatform(userId: string, platform: string): Promise<UserContent[]> {
+  private async getUserContentsByPlatform(
+    userId: string,
+    platform: string,
+  ): Promise<UserContent[]> {
     const allContents: UserContent[] = [];
     let cursor = '';
     let hasMore = true;
 
     while (hasMore) {
-      const [contents, nextCursor] = await this.userContentRepository.getByUserIdAsync(
-        userId,
-        platform,
-        cursor,
-      );
+      const [contents, nextCursor] =
+        await this.userContentRepository.getByUserIdAsync(
+          userId,
+          platform,
+          cursor,
+        );
 
       allContents.push(...contents);
 
@@ -153,14 +187,19 @@ export class PlatformRollbackListener {
     return allContents;
   }
 
-  private mapUserContentToContentStream(userContent: UserContent): ContentStream {
+  private mapUserContentToContentStream(
+    userContent: UserContent,
+  ): ContentStream {
     let type: StreamEntityType = StreamEntityType.Content;
     let subType = userContent.type;
 
     if (userContent.type === 'channel' || userContent.type === 'subscription') {
       type = StreamEntityType.Profile;
       subType = 'channel';
-    } else if (userContent.type === 'activity' || userContent.type === 'playlist') {
+    } else if (
+      userContent.type === 'activity' ||
+      userContent.type === 'playlist'
+    ) {
       type = StreamEntityType.Content;
     }
 
@@ -175,4 +214,3 @@ export class PlatformRollbackListener {
     });
   }
 }
-

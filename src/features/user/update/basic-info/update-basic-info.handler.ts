@@ -1,11 +1,11 @@
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../../core/utils/const";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { UserNotFoundException } from "../../../../core/exceptions";
-import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../../core/utils/const';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { UserNotFoundException } from '../../../../core/exceptions';
+import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
 
 export class UpdateBasicInfoModel {
   @ApiProperty()
@@ -41,15 +41,20 @@ const updateBasicInfoValidations = Joi.object({
 });
 
 @CommandHandler(UpdateBasicInfoCommand)
-export class UpdateBasicInfoCommandHandler implements ICommandHandler<UpdateBasicInfoCommand> {
+export class UpdateBasicInfoCommandHandler
+  implements ICommandHandler<UpdateBasicInfoCommand>
+{
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
-  ) { }
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+  ) {}
 
   public async execute(command: UpdateBasicInfoCommand): Promise<void> {
     await updateBasicInfoValidations.validateAsync(command.model);
 
-    const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
+    const user = await this.userRepository.getUserByIdAsync(
+      HttpContext.getCurrentUserId,
+    );
     if (!user) {
       throw new UserNotFoundException();
     }
@@ -62,4 +67,3 @@ export class UpdateBasicInfoCommandHandler implements ICommandHandler<UpdateBasi
     await this.userRepository.updateAsync(user);
   }
 }
-

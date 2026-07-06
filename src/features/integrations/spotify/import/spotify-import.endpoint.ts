@@ -1,11 +1,24 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { ImportResponseModel } from "../../../../domain/contracts/response.model";
-import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
-import { SpotifyImportCommand, SpotifyImportRequestModel } from "./spotify-import.handler";
-import { CancelSpotifyImportCommand, CancelSpotifyImportRequestModel } from "./cancel-spotify-import.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import { ImportResponseModel } from '../../../../domain/contracts/response.model';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  SpotifyImportCommand,
+  SpotifyImportRequestModel,
+} from './spotify-import.handler';
+import {
+  CancelSpotifyImportCommand,
+  CancelSpotifyImportRequestModel,
+} from './cancel-spotify-import.handler';
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
@@ -14,10 +27,7 @@ import { CancelSpotifyImportCommand, CancelSpotifyImportRequestModel } from "./c
   version: '1',
 })
 export class SpotifyImportController {
-
-  constructor(
-    private readonly commandBus: CommandBus
-  ) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('import')
   @ApiResponse({ status: 200, description: 'OK', type: ImportResponseModel })
@@ -27,15 +37,20 @@ export class SpotifyImportController {
   @ApiBody({ type: SpotifyImportRequestModel, required: false })
   public async Import(
     @Body() model: SpotifyImportRequestModel,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response | void> {
-
-    const result = await this.commandBus.execute(new SpotifyImportCommand({ model }));
+    const result = await this.commandBus.execute(
+      new SpotifyImportCommand({ model }),
+    );
     if (model.spotifyAccessToken) {
-      return res.status(HttpStatus.OK).json({ message: "Spotify import has begun." });
+      return res
+        .status(HttpStatus.OK)
+        .json({ message: 'Spotify import has begun.' });
     }
 
-    return res.status(HttpStatus.OK).json({ message: "Spotify import has begun.", ...result });
+    return res
+      .status(HttpStatus.OK)
+      .json({ message: 'Spotify import has begun.', ...result });
   }
 
   @Post('import/cancel')
@@ -46,9 +61,11 @@ export class SpotifyImportController {
   @ApiBody({ type: CancelSpotifyImportRequestModel })
   public async Cancel(
     @Body() model: CancelSpotifyImportRequestModel,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response | void> {
     await this.commandBus.execute(new CancelSpotifyImportCommand({ model }));
-    return res.status(HttpStatus.OK).json({ message: "Spotify import cancellation and rollback requested." });
+    return res
+      .status(HttpStatus.OK)
+      .json({ message: 'Spotify import cancellation and rollback requested.' });
   }
 }

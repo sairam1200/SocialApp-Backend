@@ -1,6 +1,6 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiBearerAuth, ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiBearerAuth, ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   Body,
   Controller,
@@ -8,31 +8,27 @@ import {
   Post,
   Res,
   UseGuards,
-} from "@nestjs/common";
+} from '@nestjs/common';
 
 import {
   CompleteOnboardingCommand,
   CompleteOnboardingModel,
-} from "./complete-onboarding.handler";
-import { AuthenticatedAccountGuard } from "core/passport/account.guard";
+} from './complete-onboarding.handler';
+import { AuthenticatedAccountGuard } from 'core/passport/account.guard';
 
-@ApiTags("Account")
+@ApiTags('Account')
 @Controller({
   path: `/account`,
-  version: "1",
-  
+  version: '1',
 })
 export class CompleteOnboardingController {
-
-  constructor(
-    private readonly commandBus: CommandBus
-  ) {}
-@ApiBearerAuth()
-@UseGuards(AuthenticatedAccountGuard)
-  @Post("onboarding/complete")
+  constructor(private readonly commandBus: CommandBus) {}
+  @ApiBearerAuth()
+  @UseGuards(AuthenticatedAccountGuard)
+  @Post('onboarding/complete')
   @ApiResponse({
     status: 200,
-    description: "OK",
+    description: 'OK',
   })
   @ApiBody({
     type: CompleteOnboardingModel,
@@ -42,16 +38,12 @@ export class CompleteOnboardingController {
     @Body() model: CompleteOnboardingModel,
     @Res() res: Response,
   ): Promise<Response> {
+    const result = await this.commandBus.execute(
+      new CompleteOnboardingCommand({
+        model,
+      }),
+    );
 
-    const result =
-      await this.commandBus.execute(
-        new CompleteOnboardingCommand({
-          model,
-        })
-      );
-
-    return res.status(
-      HttpStatus.OK
-    ).json(result);
+    return res.status(HttpStatus.OK).json(result);
   }
 }

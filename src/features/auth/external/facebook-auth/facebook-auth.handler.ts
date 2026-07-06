@@ -54,7 +54,6 @@ export class FacebookConnectCallbackQuery {
 
 // Facebook-specific token response model
 export class FacebookCallbackTokenResponseModel extends TokenResponseModel {
-
   @ApiProperty({ required: false })
   facebookAccessToken?: string;
 
@@ -69,21 +68,26 @@ export class FacebookCallbackTokenResponseModel extends TokenResponseModel {
 
 const facebookConnectCallbackValidations = Joi.object({
   code: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
-  state: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
+  state: Joi.string()
+    .required()
+    .messages({ 'any.required': 'Invalid request' }),
 });
 
 @CommandHandler(FacebookConnectQuery)
-export class FacebookConnectQueryHandler implements ICommandHandler<FacebookConnectQuery> {
+export class FacebookConnectQueryHandler
+  implements ICommandHandler<FacebookConnectQuery>
+{
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-  ) { }
+  ) {}
 
   public async execute(query: FacebookConnectQuery): Promise<void> {
     const { model } = query;
 
     // expires in 15 minutes
-    const expiresIn = Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
+    const expiresIn =
+      Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       JSON.stringify({
@@ -91,14 +95,16 @@ export class FacebookConnectQueryHandler implements ICommandHandler<FacebookConn
         userAgent: model.userAgent,
         ipAddress: model.ipAddress,
       }),
-      "", // No userId yet since this is login (not integration)
-      expiresIn
+      '', // No userId yet since this is login (not integration)
+      expiresIn,
     );
   }
 }
 
 @CommandHandler(FacebookConnectCallbackQuery)
-export class FacebookConnectCallbackQueryHandler implements ICommandHandler<FacebookConnectCallbackQuery> {
+export class FacebookConnectCallbackQueryHandler
+  implements ICommandHandler<FacebookConnectCallbackQuery>
+{
   constructor(
     @Inject(_const.ITOKEN_SERVICE)
     private readonly tokenService: ITokenService,
@@ -113,22 +119,25 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-  ) { }
+  ) {}
 
-  public async execute(query: FacebookConnectCallbackQuery): Promise<FacebookCallbackTokenResponseModel> {
+  public async execute(
+    query: FacebookConnectCallbackQuery,
+  ): Promise<FacebookCallbackTokenResponseModel> {
     const { model } = query;
     await facebookConnectCallbackValidations.validateAsync(model);
     const dataProtectionKey = await this.validateState(model.state);
     const parsedDataProtectionKeyValue = JSON.parse(dataProtectionKey.value);
 
     const shortLivedToken = await this.fetchShortLivedToken(model.code);
-    const { access_token, expires_in } = await this.fetchLongLivedToken(shortLivedToken);
+    const { access_token, expires_in } =
+      await this.fetchLongLivedToken(shortLivedToken);
 
     const userData = await this.fetchUserData(access_token);
 
     if (!userData.email) {
       throw new ApplicationException(
-        'Facebook did not return an email address. Please grant the email permission and try again.'
+        'Facebook did not return an email address. Please grant the email permission and try again.',
       );
     }
 
@@ -138,13 +147,16 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
 
     try {
       // 1. Search by provider account ID
-      const linkedAccountByProvider = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(
-        _const.PLATFORMS.FACEBOOK,
-        userData.id,
-      );
+      const linkedAccountByProvider =
+        await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(
+          _const.PLATFORMS.FACEBOOK,
+          userData.id,
+        );
 
       user = linkedAccountByProvider
-        ? await this.userRepository.getUserByIdAsync(linkedAccountByProvider.userId)
+        ? await this.userRepository.getUserByIdAsync(
+            linkedAccountByProvider.userId,
+          )
         : null;
 
       // 2. Search by email if not found by provider ID
@@ -157,9 +169,14 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         const firstName = userData.name?.split(' ')[0] || 'Facebook';
         const lastName = userData.name?.split(' ').slice(1).join(' ') || 'User';
 
-        const initials = stringUtil.extractInitialsFromName(`${firstName} ${lastName}`);
+        const initials = stringUtil.extractInitialsFromName(
+          `${firstName} ${lastName}`,
+        );
         const base64Image = generateInitialImage(initials);
-        const avatar = await uploadBase64ToCloudinaryAsync(base64Image, "users");
+        const avatar = await uploadBase64ToCloudinaryAsync(
+          base64Image,
+          'users',
+        );
         const defaultProfileImageUrl = avatar.secure_url;
 
         const entry = new User({
@@ -173,11 +190,14 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         user = await this.userRepository.createAsync(entry, '');
         createdUser = true;
 
-        await this.userRepository.upsertUserBiometricAsync(user.id, new UserBiometric({
-          profileImageUrl: userData.picture?.data?.url || null,
-          defaultProfileImageUrl: defaultProfileImageUrl,
-          privacy: ProfileImagePrivacy.Everyone,
-        }))
+        await this.userRepository.upsertUserBiometricAsync(
+          user.id,
+          new UserBiometric({
+            profileImageUrl: userData.picture?.data?.url || null,
+            defaultProfileImageUrl: defaultProfileImageUrl,
+            privacy: ProfileImagePrivacy.Everyone,
+          }),
+        );
 
         await this.sendWelcomeEmail(user);
       }
@@ -194,16 +214,18 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       result.facebookAccessTokenExpiresIn = expires_in;
 
       // Create or update LinkedAccount
-      const linkedAccount = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(
-        _const.PLATFORMS.FACEBOOK,
-        userData.id,
-      );
+      const linkedAccount =
+        await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(
+          _const.PLATFORMS.FACEBOOK,
+          userData.id,
+        );
       const userName = userData.name || '';
 
       if (linkedAccount) {
         linkedAccount.userName = userName;
         linkedAccount.profileImage = userData.picture?.data?.url;
-        linkedAccount.followingCount = userData.friends?.summary?.total_count || 0;
+        linkedAccount.followingCount =
+          userData.friends?.summary?.total_count || 0;
         linkedAccount.metaData = {
           name: userData.name,
           birthday: userData.birthday,
@@ -237,14 +259,17 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       }
 
       // Store Facebook tokens for future API access
-      let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(
-        user.id,
-        _const.PLATFORMS.FACEBOOK,
-      );
+      const existingAccountLogin =
+        await this.userLoginRepository.getByUserIdAndProviderAsync(
+          user.id,
+          _const.PLATFORMS.FACEBOOK,
+        );
       if (existingAccountLogin) {
         existingAccountLogin.tokenValue = access_token;
         existingAccountLogin.addedDateUtc = new Date();
-        existingAccountLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
+        existingAccountLogin.expiryDateUtc = new Date(
+          Date.now() + expires_in * 1000,
+        );
         await this.userLoginRepository.updateAsync(existingAccountLogin);
       } else {
         await this.userLoginRepository.createAysnc(
@@ -259,17 +284,26 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       }
 
       return result;
-
     } catch (error) {
       if (createdUser && user) {
-        try { await this.userRepository.deleteAsync(user); } catch { /* cleanup best-effort */ }
+        try {
+          await this.userRepository.deleteAsync(user);
+        } catch {
+          /* cleanup best-effort */
+        }
       }
       if (createdLinkedAccount) {
-        const toDelete = await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(
-          _const.PLATFORMS.FACEBOOK, userData.id,
-        );
+        const toDelete =
+          await this.linkedAccountRepository.getByPlatformAndExternalIdAsync(
+            _const.PLATFORMS.FACEBOOK,
+            userData.id,
+          );
         if (toDelete) {
-          try { await this.linkedAccountRepository.deleteAsync(toDelete); } catch { /* cleanup best-effort */ }
+          try {
+            await this.linkedAccountRepository.deleteAsync(toDelete);
+          } catch {
+            /* cleanup best-effort */
+          }
         }
       }
       throw error;
@@ -291,7 +325,9 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       return access_token;
     } catch (error) {
       logger.error('Error fetching short-lived token from Facebook', error);
-      throw new ApplicationException('Unexpected error during authentication with Facebook');
+      throw new ApplicationException(
+        'Unexpected error during authentication with Facebook',
+      );
     }
   }
 
@@ -313,32 +349,46 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       return response.data;
     } catch (error) {
       logger.error('Error fetching long-lived token from Facebook', error);
-      throw new ApplicationException('Unexpected error during authentication with Facebook');
+      throw new ApplicationException(
+        'Unexpected error during authentication with Facebook',
+      );
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<FacebookUserDataType> {
+  private async fetchUserData(
+    accessToken: string,
+  ): Promise<FacebookUserDataType> {
     try {
-      const response = await axios.get<FacebookUserDataType>(`${GRAPH_BASE}/me`, {
-        params: {
-          access_token: accessToken,
-          fields: 'id,name,email,picture,friends'
+      const response = await axios.get<FacebookUserDataType>(
+        `${GRAPH_BASE}/me`,
+        {
+          params: {
+            access_token: accessToken,
+            fields: 'id,name,email,picture,friends',
+          },
         },
-      });
+      );
 
       return response.data;
     } catch (error: unknown) {
       logger.error('Error fetching user data from Facebook', error);
-      const facebookError = error instanceof Error && 'response' in error
-        ? (error as { response: { data: unknown } }).response?.data || error.message
-        : error instanceof Error ? error.message : String(error);
+      const facebookError =
+        error instanceof Error && 'response' in error
+          ? (error as { response: { data: unknown } }).response?.data ||
+            error.message
+          : error instanceof Error
+            ? error.message
+            : String(error);
       logger.error('Facebook API Error Details:', facebookError);
-      throw new ApplicationException('Unexpected error during authentication with Facebook');
+      throw new ApplicationException(
+        'Unexpected error during authentication with Facebook',
+      );
     }
   }
 
   private async validateState(state: string): Promise<DataProtectionKey> {
-    const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
+    const dataProtectionKey =
+      await this.dataProtectionKeyRepository.getByKeyAsync(state);
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
     }
@@ -371,7 +421,10 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       model.ipAddress,
     );
 
-    await this.userRepository.cacheUserAccountAsync(user, _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC);
+    await this.userRepository.cacheUserAccountAsync(
+      user,
+      _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC,
+    );
 
     return new FacebookCallbackTokenResponseModel({
       access_token: access_token,
@@ -380,7 +433,9 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       succeeded: true,
       isLockedOut: false,
       isTwoFARequired: false,
-      refreshTokenExpiryTime: Math.floor(userToken.expiryDateUtc.getTime() / 1000),
+      refreshTokenExpiryTime: Math.floor(
+        userToken.expiryDateUtc.getTime() / 1000,
+      ),
       onboardingCompleted: String(user.onboardingStep) === 'Completed',
     });
   }
@@ -389,7 +444,9 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     return user.isLockedOut || !user.isActive;
   }
 
-  private handleLockedOrInactiveAccount(user: User): FacebookCallbackTokenResponseModel {
+  private handleLockedOrInactiveAccount(
+    user: User,
+  ): FacebookCallbackTokenResponseModel {
     const message = this.getAccountLockMessage(user);
     return this.createErrorResponse(message);
   }
@@ -404,16 +461,21 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       : 'Your account has been locked due to suspicious activity.';
   }
 
-  private createErrorResponse(message: string): FacebookCallbackTokenResponseModel {
-    return new FacebookCallbackTokenResponseModel({ message, succeeded: false });
+  private createErrorResponse(
+    message: string,
+  ): FacebookCallbackTokenResponseModel {
+    return new FacebookCallbackTokenResponseModel({
+      message,
+      succeeded: false,
+    });
   }
 
   private async sendWelcomeEmail(user: User): Promise<void> {
     try {
       await this.emailService.sendTemplatedAsync({
         to: user.email,
-        subject: "Welcome to Gaddr",
-        templatePath: "templates/email/welcome-email-v1.html",
+        subject: 'Welcome to Gaddr',
+        templatePath: 'templates/email/welcome-email-v1.html',
         context: {
           year: new Date().getFullYear(),
         },

@@ -1,13 +1,13 @@
-import { Inject } from "@nestjs/common";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import _const from "../../../../core/utils/const";
-import logger from "../../../../core/utils/winston.util";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
-import { NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { deserializeObject } from "../../../../core/utils/serialization.util";
-import { IQueueService } from "../../../../domain/services/iqueue.service";
+import { Inject } from '@nestjs/common';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import _const from '../../../../core/utils/const';
+import logger from '../../../../core/utils/winston.util';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
+import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { deserializeObject } from '../../../../core/utils/serialization.util';
+import { IQueueService } from '../../../../domain/services/iqueue.service';
 
 export class EnableTiktokSyncCommand {
   constructor(request: Partial<EnableTiktokSyncCommand> = {}) {
@@ -16,7 +16,9 @@ export class EnableTiktokSyncCommand {
 }
 
 @CommandHandler(EnableTiktokSyncCommand)
-export class EnableTiktokSyncCommandHandler implements ICommandHandler<EnableTiktokSyncCommand> {
+export class EnableTiktokSyncCommandHandler
+  implements ICommandHandler<EnableTiktokSyncCommand>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
@@ -24,35 +26,46 @@ export class EnableTiktokSyncCommandHandler implements ICommandHandler<EnableTik
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IQUEUE_SERVICE)
     private readonly queueService: IQueueService,
-  ) { }
+  ) {}
 
-  public async execute(command: EnableTiktokSyncCommand): Promise<{ syncEnabled: boolean }> {
+  public async execute(
+    command: EnableTiktokSyncCommand,
+  ): Promise<{ syncEnabled: boolean }> {
     const userId = HttpContext.getCurrentUserId;
 
-    const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-      _const.PLATFORMS.TIKTOK,
-      userId,
-    );
+    const account =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.TIKTOK,
+        userId,
+      );
 
     if (!account) {
-      throw new NotFoundException("No matching TikTok profile was found!");
+      throw new NotFoundException('No matching TikTok profile was found!');
     }
 
     account.syncEnabled = true;
     logger.info(`[TiktokSync] Sync enabled for user ${userId}`);
 
     try {
-      const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(
-        userId,
-        _const.PLATFORMS.TIKTOK,
-      );
+      const userLogin =
+        await this.userLoginRepository.getByUserIdAndProviderAsync(
+          userId,
+          _const.PLATFORMS.TIKTOK,
+        );
 
       if (!userLogin) {
-        throw new UnauthorizedException("No TikTok login found. Please reconnect your TikTok account.");
+        throw new UnauthorizedException(
+          'No TikTok login found. Please reconnect your TikTok account.',
+        );
       }
 
-      const tokenValue = deserializeObject<{ access_token: string }>(userLogin.tokenValue);
-      await this.queueService.enqueueTiktokImport(account, tokenValue.access_token);
+      const tokenValue = deserializeObject<{ access_token: string }>(
+        userLogin.tokenValue,
+      );
+      await this.queueService.enqueueTiktokImport(
+        account,
+        tokenValue.access_token,
+      );
       logger.info(`[TiktokSync] Import job enqueued for user ${userId}`);
 
       account.allowImport = true;
@@ -64,4 +77,3 @@ export class EnableTiktokSyncCommandHandler implements ICommandHandler<EnableTik
     return { syncEnabled: account.syncEnabled };
   }
 }
-

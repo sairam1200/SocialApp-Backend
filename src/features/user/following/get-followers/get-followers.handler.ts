@@ -1,10 +1,13 @@
-import { Inject } from "@nestjs/common";
-import { IQueryHandler, QueryHandler } from "@nestjs/cqrs";
-import _const from "../../../../core/utils/const";
-import { FollowModel } from "../../../../domain/contracts/follow.model";
-import { FollowStatus } from "../../../../domain/enums";
-import { mapToFollowModel } from "../../../../domain/mappers/follow.mapper";
-import { IUserFollowRepository, PaginatedResult } from "../../../../domain/repositories/iuserFollow.repository";
+import { Inject } from '@nestjs/common';
+import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
+import _const from '../../../../core/utils/const';
+import { FollowModel } from '../../../../domain/contracts/follow.model';
+import { FollowStatus } from '../../../../domain/enums';
+import { mapToFollowModel } from '../../../../domain/mappers/follow.mapper';
+import {
+  IUserFollowRepository,
+  PaginatedResult,
+} from '../../../../domain/repositories/iuserFollow.repository';
 
 export class GetFollowersQuery {
   constructor(
@@ -12,18 +15,28 @@ export class GetFollowersQuery {
     public status?: FollowStatus,
     public page: number = 1,
     public limit: number = 20,
-  ) { }
+  ) {}
 }
 
 @QueryHandler(GetFollowersQuery)
-export class GetFollowersQueryHandler implements IQueryHandler<GetFollowersQuery> {
+export class GetFollowersQueryHandler
+  implements IQueryHandler<GetFollowersQuery>
+{
   constructor(
-    @Inject(_const.IUSERFOLLOW_REPOSITORY) private readonly follows: IUserFollowRepository,
-  ) { }
+    @Inject(_const.IUSERFOLLOW_REPOSITORY)
+    private readonly follows: IUserFollowRepository,
+  ) {}
 
-  public async execute(query: GetFollowersQuery): Promise<PaginatedResult<FollowModel>> {
+  public async execute(
+    query: GetFollowersQuery,
+  ): Promise<PaginatedResult<FollowModel>> {
     const statusFilter = query.status ?? FollowStatus.Accepted;
-    const result = await this.follows.getFollowersPaginatedAsync(query.userId, query.page, query.limit, statusFilter);
+    const result = await this.follows.getFollowersPaginatedAsync(
+      query.userId,
+      query.page,
+      query.limit,
+      statusFilter,
+    );
 
     return {
       ...result,

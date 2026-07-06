@@ -1,12 +1,21 @@
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import _const from "../../../../core/utils/const";
-import { OnboardingStep } from "../../../../domain/enums";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { IUserRepository, ITopicRepository } from "../../../../domain/repositories";
-import { OnboardingStep2Model, OnboardingStatusModel } from "../../../../domain/contracts/onboarding.model";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { UserNotFoundException, ApplicationException } from "../../../../core/exceptions";
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import _const from '../../../../core/utils/const';
+import { OnboardingStep } from '../../../../domain/enums';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import {
+  IUserRepository,
+  ITopicRepository,
+} from '../../../../domain/repositories';
+import {
+  OnboardingStep2Model,
+  OnboardingStatusModel,
+} from '../../../../domain/contracts/onboarding.model';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import {
+  UserNotFoundException,
+  ApplicationException,
+} from '../../../../core/exceptions';
 
 export class OnboardingStep2Command {
   model: OnboardingStep2Model;
@@ -21,19 +30,25 @@ const step2Validations = Joi.object<OnboardingStep2Model>({
 });
 
 @CommandHandler(OnboardingStep2Command)
-export class OnboardingStep2CommandHandler implements ICommandHandler<OnboardingStep2Command, OnboardingStatusModel> {
+export class OnboardingStep2CommandHandler
+  implements ICommandHandler<OnboardingStep2Command, OnboardingStatusModel>
+{
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
-    @Inject(_const.ITOPIC_REPOSITORY) private readonly topicRepository: ITopicRepository,
-  ) { }
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+    @Inject(_const.ITOPIC_REPOSITORY)
+    private readonly topicRepository: ITopicRepository,
+  ) {}
 
-  public async execute(command: OnboardingStep2Command): Promise<OnboardingStatusModel> {
+  public async execute(
+    command: OnboardingStep2Command,
+  ): Promise<OnboardingStatusModel> {
     const { model } = command;
     await step2Validations.validateAsync(model);
 
     const userId = HttpContext.getCurrentUserId;
     const user = await this.userRepository.getUserByIdAsync(userId);
-    
+
     if (!user) {
       throw new UserNotFoundException();
     }
@@ -48,7 +63,10 @@ export class OnboardingStep2CommandHandler implements ICommandHandler<Onboarding
     await this.topicRepository.createUserTopicsAsync(userId, model.topicIds);
 
     // Update onboarding step
-    if (user.onboardingStep === OnboardingStep.ProfileData || user.onboardingStep === OnboardingStep.NotStarted) {
+    if (
+      user.onboardingStep === OnboardingStep.ProfileData ||
+      user.onboardingStep === OnboardingStep.NotStarted
+    ) {
       user.onboardingStep = OnboardingStep.Topics;
     }
 

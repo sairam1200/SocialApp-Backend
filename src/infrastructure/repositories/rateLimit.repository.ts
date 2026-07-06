@@ -1,24 +1,26 @@
-import { Repository } from "typeorm";
-import { Injectable } from "@nestjs/common";
-import { Globals } from "../../core/globals";
-import { InjectRepository } from "@nestjs/typeorm";
-import { RateLimit } from "../../domain/entities/rateLimit.entity";
-import { RateLimitLog } from "../../domain/entities/rateLimitLog.entity";
-import { HttpContext } from "../../core/middlewares/httpContext.middleware";
-import { IRateLimitRepository } from "../../domain/repositories/irateLimit.repository";
+import { Repository } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { Globals } from '../../core/globals';
+import { InjectRepository } from '@nestjs/typeorm';
+import { RateLimit } from '../../domain/entities/rateLimit.entity';
+import { RateLimitLog } from '../../domain/entities/rateLimitLog.entity';
+import { HttpContext } from '../../core/middlewares/httpContext.middleware';
+import { IRateLimitRepository } from '../../domain/repositories/irateLimit.repository';
 
 @Injectable()
 export class RateLimitRepository implements IRateLimitRepository {
-
   constructor(
     @InjectRepository(RateLimit)
     private readonly rateLimitContext: Repository<RateLimit>,
     @InjectRepository(RateLimitLog)
     private readonly rateLimitLogContext: Repository<RateLimitLog>,
-  ) { }
+  ) {}
 
-  public async createAsync(ip: string, route: string, expiresAt: Date): Promise<RateLimit> {
-
+  public async createAsync(
+    ip: string,
+    route: string,
+    expiresAt: Date,
+  ): Promise<RateLimit> {
     let rateLimit = await this.getAsync(ip, route);
 
     if (rateLimit) {
@@ -44,7 +46,6 @@ export class RateLimitRepository implements IRateLimitRepository {
   }
 
   public async updateAsync(rateLimit: RateLimit): Promise<void> {
-
     if (HttpContext.user && !rateLimit.userId) {
       const userId = HttpContext.user[Globals.ClaimTypes.UserId];
       rateLimit.userId = userId;
@@ -70,5 +71,4 @@ export class RateLimitRepository implements IRateLimitRepository {
 
     await this.rateLimitLogContext.save(rateLimitLog);
   }
-
 }

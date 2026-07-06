@@ -1,12 +1,12 @@
-import { Injectable, Inject } from "@nestjs/common";
-import axios from "axios";
+import { Injectable, Inject } from '@nestjs/common';
+import axios from 'axios';
 
-import _const from "../../../core/utils/const";
-import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
-import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
-import { UserContent } from "../../../domain/entities/userContent.entity";
+import _const from '../../../core/utils/const';
+import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
+import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
+import { UserContent } from '../../../domain/entities/userContent.entity';
 
-const BASE_URL = "https://api.pinterest.com/v5";
+const BASE_URL = 'https://api.pinterest.com/v5';
 
 @Injectable()
 export class PinterestImportService {
@@ -16,7 +16,7 @@ export class PinterestImportService {
 
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
-  ) { }
+  ) {}
 
   async importPinsAsync(
     userId: string,
@@ -34,10 +34,7 @@ export class PinterestImportService {
       Authorization: `Bearer ${accessToken}`,
     };
 
-    const boardsResponse = await axios.get(
-      `${BASE_URL}/boards`,
-      { headers },
-    );
+    const boardsResponse = await axios.get(`${BASE_URL}/boards`, { headers });
 
     const boards = boardsResponse.data?.items ?? [];
 
@@ -48,13 +45,12 @@ export class PinterestImportService {
           { headers },
         );
 
-
         const pins = pinsResponse.data?.items ?? [];
 
         for (const pin of pins) {
           const imageUrl =
-            pin.media?.images?.["1200x"]?.url ??
-            pin.media?.images?.["600x"]?.url ??
+            pin.media?.images?.['1200x']?.url ??
+            pin.media?.images?.['600x']?.url ??
             null;
 
           let analytics = {
@@ -69,46 +65,31 @@ export class PinterestImportService {
           ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 89);
 
           const analyticsStartDate =
-            pinCreatedAt > ninetyDaysAgo
-              ? pinCreatedAt
-              : ninetyDaysAgo;
+            pinCreatedAt > ninetyDaysAgo ? pinCreatedAt : ninetyDaysAgo;
           try {
             const analyticsResponse = await axios.get(
               `${BASE_URL}/pins/${pin.id}/analytics`,
               {
                 headers,
                 params: {
-                  start_date: analyticsStartDate
-                    .toISOString()
-                    .split("T")[0],
+                  start_date: analyticsStartDate.toISOString().split('T')[0],
 
-                  end_date: new Date()
-                    .toISOString()
-                    .split("T")[0],
-                  metric_types:
-                    "IMPRESSION,SAVE,PIN_CLICK,OUTBOUND_CLICK",
+                  end_date: new Date().toISOString().split('T')[0],
+                  metric_types: 'IMPRESSION,SAVE,PIN_CLICK,OUTBOUND_CLICK',
                 },
               },
             );
 
-            const analyticsData =
-              analyticsResponse.data;
-         console.log(analyticsData);
+            const analyticsData = analyticsResponse.data;
+            console.log(analyticsData);
             analytics = {
               impressions:
-                analyticsData?.IMPRESSION ??
-                analyticsData?.impression ??
-                0,
+                analyticsData?.IMPRESSION ?? analyticsData?.impression ?? 0,
 
-              saves:
-                analyticsData?.SAVE ??
-                analyticsData?.save ??
-                0,
+              saves: analyticsData?.SAVE ?? analyticsData?.save ?? 0,
 
               pinClicks:
-                analyticsData?.PIN_CLICK ??
-                analyticsData?.pin_click ??
-                0,
+                analyticsData?.PIN_CLICK ?? analyticsData?.pin_click ?? 0,
 
               outboundClicks:
                 analyticsData?.OUTBOUND_CLICK ??
@@ -126,13 +107,13 @@ export class PinterestImportService {
             new UserContent({
               userId,
               platform: _const.PLATFORMS.PINTEREST,
-              type: "PIN",
+              type: 'PIN',
               externalId: pin.id,
 
               title:
                 pin.title ||
                 pin.description?.substring(0, 150) ||
-                "Pinterest Pin",
+                'Pinterest Pin',
 
               metaData: {
                 description: pin.description,
@@ -149,8 +130,7 @@ export class PinterestImportService {
 
                 analytics,
 
-                importedAt:
-                  new Date().toISOString(),
+                importedAt: new Date().toISOString(),
               },
             }),
           );
@@ -163,8 +143,6 @@ export class PinterestImportService {
           error?.response?.data,
         );
       }
-
-
     }
 
     return importedCount;
@@ -175,66 +153,48 @@ export class PinterestImportService {
     accessToken: string,
     pinterestUserId: string,
   ): Promise<void> {
-    const response = await axios.get(
-      `${BASE_URL}/user_account`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+    const response = await axios.get(`${BASE_URL}/user_account`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
       },
-    );
+    });
 
     const profile = response.data;
 
     const linkedAccount =
-      await this.linkedAccountRepository
-        .getByPlatformAndUserIdAsync(
-          _const.PLATFORMS.PINTEREST,
-          userId,
-        );
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.PINTEREST,
+        userId,
+      );
 
     if (!linkedAccount) {
-      throw new Error(
-        "Pinterest linked account not found",
-      );
+      throw new Error('Pinterest linked account not found');
     }
 
-    linkedAccount.externalId =
-      profile.id;
+    linkedAccount.externalId = profile.id;
 
-    linkedAccount.userName =
-      profile.username;
+    linkedAccount.userName = profile.username;
 
-    linkedAccount.profileImage =
-      profile.profile_image;
+    linkedAccount.profileImage = profile.profile_image;
 
-    linkedAccount.followersCount =
-      profile.follower_count ?? 0;
+    linkedAccount.followersCount = profile.follower_count ?? 0;
 
-    linkedAccount.followingCount =
-      profile.following_count ?? 0;
+    linkedAccount.followingCount = profile.following_count ?? 0;
 
     linkedAccount.metaData = {
       ...(linkedAccount.metaData ?? {}),
 
-      monthlyViews:
-        profile.monthly_views ?? 0,
+      monthlyViews: profile.monthly_views ?? 0,
 
-      boardCount:
-        profile.board_count ?? 0,
+      boardCount: profile.board_count ?? 0,
 
-      pinCount:
-        profile.pin_count ?? 0,
+      pinCount: profile.pin_count ?? 0,
 
-      websiteUrl:
-        profile.website_url,
+      websiteUrl: profile.website_url,
 
-      about:
-        profile.about,
+      about: profile.about,
     };
 
-    await this.linkedAccountRepository.updateAsync(
-      linkedAccount,
-    );
+    await this.linkedAccountRepository.updateAsync(linkedAccount);
   }
 }

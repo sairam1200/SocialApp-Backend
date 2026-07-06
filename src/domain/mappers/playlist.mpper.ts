@@ -1,7 +1,11 @@
-import { Playlist } from "../entities/collection/playlist.entity";
-import { PlaylistMember } from "../entities/collection/playlistMember.entity";
-import { PlaylistContent } from "../entities/collection/playlistContent.entity";
-import { PlaylistContentModel, PlaylistMemberModel, PlaylistModel } from "../contracts/playlist.model";
+import { Playlist } from '../entities/collection/playlist.entity';
+import { PlaylistMember } from '../entities/collection/playlistMember.entity';
+import { PlaylistContent } from '../entities/collection/playlistContent.entity';
+import {
+  PlaylistContentModel,
+  PlaylistMemberModel,
+  PlaylistModel,
+} from '../contracts/playlist.model';
 
 export function mapToPlaylistModel(userCollection: Playlist): PlaylistModel {
   return {
@@ -9,17 +13,23 @@ export function mapToPlaylistModel(userCollection: Playlist): PlaylistModel {
     referenceId: userCollection.referenceId,
     name: userCollection.name,
     description: userCollection.description,
-    contents: userCollection.contents.map(content => (mapToPlaylistContentModel(content))),
+    contents: userCollection.contents.map((content) =>
+      mapToPlaylistContentModel(content),
+    ),
     owner: {
       id: userCollection.owner.id,
       userName: userCollection.owner.userName,
       displayName: `${userCollection.owner.firstName} ${userCollection.owner.lastName}`,
     },
-    members: userCollection.members.map(member => (mapToPlayListMemberModel(member))),
+    members: userCollection.members.map((member) =>
+      mapToPlayListMemberModel(member),
+    ),
   };
 }
 
-export function mapToPlayListMemberModel(member: PlaylistMember): PlaylistMemberModel {
+export function mapToPlayListMemberModel(
+  member: PlaylistMember,
+): PlaylistMemberModel {
   return {
     id: member.id,
     role: member.role,
@@ -30,7 +40,9 @@ export function mapToPlayListMemberModel(member: PlaylistMember): PlaylistMember
   };
 }
 
-export function mapToPlaylistContentModel(content: PlaylistContent): PlaylistContentModel {
+export function mapToPlaylistContentModel(
+  content: PlaylistContent,
+): PlaylistContentModel {
   return {
     id: content.id,
     type: content.type,

@@ -4,13 +4,9 @@ import { GetWeeklyStatsQueryHandler } from './get-weekly-stats/get-weekly-stats.
 export { GetWeeklyStatsController } from './get-weekly-stats/get-weekly-stats.endpoint';
 export { GetWeeklyStatsQueryHandler } from './get-weekly-stats/get-weekly-stats.handler';
 
-const controllers = [
-  GetWeeklyStatsController,
-];
+const controllers = [GetWeeklyStatsController];
 
-const handlers = [
-  GetWeeklyStatsQueryHandler,
-];
+const handlers = [GetWeeklyStatsQueryHandler];
 
 const analytics = {
   addControllers: () => controllers,

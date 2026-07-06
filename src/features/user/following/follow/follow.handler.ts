@@ -1,33 +1,44 @@
-import { Inject, BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { EventEmitter2 } from "@nestjs/event-emitter";
-import { FollowModel } from "../../../../domain/contracts/follow.model";
-import { FollowStatus } from "../../../../domain/enums";
-import { UserFollow } from "../../../../domain/entities/userFollow.entity";
-import { mapToFollowModel } from "../../../../domain/mappers/follow.mapper";
-import { FollowUpdatedEvent } from "../../../../domain/events/follow-updated.event";
-import _const from "../../../../core/utils/const";
-import { IUserRepository, IUserFollowRepository } from "../../../../domain/repositories";
-import { ProfileCacheService } from "../../../../infrastructure/services/profileCache.service";
-import configs from "../../../../configs";
-import { TooManyRequestsException } from "../../../../core/exceptions/tooManyRequest.exception";
-import redis from "../../../../core/utils/redis.util";
+import {
+  Inject,
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { FollowModel } from '../../../../domain/contracts/follow.model';
+import { FollowStatus } from '../../../../domain/enums';
+import { UserFollow } from '../../../../domain/entities/userFollow.entity';
+import { mapToFollowModel } from '../../../../domain/mappers/follow.mapper';
+import { FollowUpdatedEvent } from '../../../../domain/events/follow-updated.event';
+import _const from '../../../../core/utils/const';
+import {
+  IUserRepository,
+  IUserFollowRepository,
+} from '../../../../domain/repositories';
+import { ProfileCacheService } from '../../../../infrastructure/services/profileCache.service';
+import configs from '../../../../configs';
+import { TooManyRequestsException } from '../../../../core/exceptions/tooManyRequest.exception';
+import redis from '../../../../core/utils/redis.util';
 
 export class FollowUserCommand {
   constructor(
     public followerId: string,
     public targetUserId: string,
-  ) { }
+  ) {}
 }
 
 @CommandHandler(FollowUserCommand)
-export class FollowUserCommandHandler implements ICommandHandler<FollowUserCommand> {
+export class FollowUserCommandHandler
+  implements ICommandHandler<FollowUserCommand>
+{
   constructor(
     @Inject(_const.IUSER_REPOSITORY) private readonly users: IUserRepository,
-    @Inject(_const.IUSERFOLLOW_REPOSITORY) private readonly follows: IUserFollowRepository,
+    @Inject(_const.IUSERFOLLOW_REPOSITORY)
+    private readonly follows: IUserFollowRepository,
     private readonly profileCache: ProfileCacheService,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
   private getDailyFollowLimitKey(userId: string): string {
     const now = new Date();
@@ -41,14 +52,18 @@ export class FollowUserCommandHandler implements ICommandHandler<FollowUserComma
     try {
       const count = await redis.incrementInRedisAsync(key, 25 * 60 * 60);
       if (count > limit) {
-        throw new TooManyRequestsException('Daily follow limit reached. Please try again later.');
+        throw new TooManyRequestsException(
+          'Daily follow limit reached. Please try again later.',
+        );
       }
     } catch (error) {
       if (error instanceof TooManyRequestsException) {
         throw error;
       }
       if (error instanceof Error && error.message.includes('READONLY')) {
-        throw new TooManyRequestsException('Daily follow limit reached. Please try again later.');
+        throw new TooManyRequestsException(
+          'Daily follow limit reached. Please try again later.',
+        );
       }
     }
   }
@@ -65,7 +80,10 @@ export class FollowUserCommandHandler implements ICommandHandler<FollowUserComma
 
     await this.checkDailyFollowLimit(command.followerId);
 
-    const existing = await this.follows.getWithUsersAsync(command.followerId, command.targetUserId);
+    const existing = await this.follows.getWithUsersAsync(
+      command.followerId,
+      command.targetUserId,
+    );
     if (existing) {
       if (existing.status === FollowStatus.Blocked) {
         throw new ForbiddenException('You cannot follow this user.');
@@ -84,8 +102,14 @@ export class FollowUserCommandHandler implements ICommandHandler<FollowUserComma
     await this.invalidateCaches(command.targetUserId, command.followerId);
 
     const [targetFollowersCount, viewerFollowingCount] = await Promise.all([
-      this.follows.countFollowersAsync(command.targetUserId, FollowStatus.Accepted),
-      this.follows.countFollowingAsync(command.followerId, FollowStatus.Accepted),
+      this.follows.countFollowersAsync(
+        command.targetUserId,
+        FollowStatus.Accepted,
+      ),
+      this.follows.countFollowingAsync(
+        command.followerId,
+        FollowStatus.Accepted,
+      ),
     ]);
 
     this.eventEmitter.emit(
@@ -99,19 +123,34 @@ export class FollowUserCommandHandler implements ICommandHandler<FollowUserComma
       ),
     );
 
-    const hydrated = await this.follows.getWithUsersAsync(command.followerId, command.targetUserId);
-    return mapToFollowModel(hydrated ?? new UserFollow({
-      followerId: command.followerId,
-      followedId: command.targetUserId,
-      status: FollowStatus.Accepted,
-    }));
+    const hydrated = await this.follows.getWithUsersAsync(
+      command.followerId,
+      command.targetUserId,
+    );
+    return mapToFollowModel(
+      hydrated ??
+        new UserFollow({
+          followerId: command.followerId,
+          followedId: command.targetUserId,
+          status: FollowStatus.Accepted,
+        }),
+    );
   }
 
-  private async invalidateCaches(targetUserId: string, followerId: string): Promise<void> {
+  private async invalidateCaches(
+    targetUserId: string,
+    followerId: string,
+  ): Promise<void> {
     const targetKey = redis.getRedisKey('follow:counts', targetUserId);
     const followerKey = redis.getRedisKey('follow:counts', followerId);
-    const targetProfileKey = redis.getRedisKey('profile', `public:${targetUserId}`);
-    const followerProfileKey = redis.getRedisKey('profile', `public:${followerId}`);
+    const targetProfileKey = redis.getRedisKey(
+      'profile',
+      `public:${targetUserId}`,
+    );
+    const followerProfileKey = redis.getRedisKey(
+      'profile',
+      `public:${followerId}`,
+    );
     await Promise.all([
       redis.removeFromRedisAsync(targetKey),
       redis.removeFromRedisAsync(followerKey),

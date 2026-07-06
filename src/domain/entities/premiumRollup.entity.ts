@@ -3,7 +3,6 @@ import { BaseEntity } from '../baseEntity';
 
 @Entity({ name: 'premiumRollups', schema: 'analytics' })
 export class PremiumRollup extends BaseEntity {
-
   @Column()
   userId: string;
 

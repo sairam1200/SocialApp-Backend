@@ -1,8 +1,11 @@
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { AuthenticatedAccountGuard } from "../../../../core/passport";
-import { Body, Controller, Patch, UseGuards } from "@nestjs/common";
-import { UpdatePrivacySettingsCommand, UpdatePrivacySettingsRequestModel } from "./update-privacy-settings.handler";
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AuthenticatedAccountGuard } from '../../../../core/passport';
+import { Body, Controller, Patch, UseGuards } from '@nestjs/common';
+import {
+  UpdatePrivacySettingsCommand,
+  UpdatePrivacySettingsRequestModel,
+} from './update-privacy-settings.handler';
 
 @ApiTags('Account')
 @Controller({
@@ -10,9 +13,7 @@ import { UpdatePrivacySettingsCommand, UpdatePrivacySettingsRequestModel } from 
   version: '1',
 })
 export class UpdatePrivacySettingsController {
-  constructor(
-    private readonly commandBus: CommandBus
-  ) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Patch('privacy-settings')
   @UseGuards(AuthenticatedAccountGuard)

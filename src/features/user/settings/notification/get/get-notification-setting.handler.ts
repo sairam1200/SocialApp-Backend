@@ -1,10 +1,10 @@
-import { Inject } from "@nestjs/common";
-import _const from "../../../../../core/utils/const";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { HttpContext } from "../../../../../core/middlewares/httpContext.middleware";
-import { IUserPreferenceRepository } from "../../../../../domain/repositories/iuserPreference.repository";
-import { NotificationPreferenceModel } from "../../../../../domain/contracts/userPreference.model";
-import { NotificationChannel } from "../../../../../domain/enums";
+import { Inject } from '@nestjs/common';
+import _const from '../../../../../core/utils/const';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { HttpContext } from '../../../../../core/middlewares/httpContext.middleware';
+import { IUserPreferenceRepository } from '../../../../../domain/repositories/iuserPreference.repository';
+import { NotificationPreferenceModel } from '../../../../../domain/contracts/userPreference.model';
+import { NotificationChannel } from '../../../../../domain/enums';
 
 const defaultNotificationChannelsEnabled = [
   NotificationChannel.InApp,
@@ -12,7 +12,9 @@ const defaultNotificationChannelsEnabled = [
   NotificationChannel.Push,
 ];
 
-const normalizeChannels = (channels?: NotificationChannel[]): NotificationChannel[] => {
+const normalizeChannels = (
+  channels?: NotificationChannel[],
+): NotificationChannel[] => {
   if (!channels || channels.length === 0) {
     return [...defaultNotificationChannelsEnabled];
   }
@@ -20,7 +22,9 @@ const normalizeChannels = (channels?: NotificationChannel[]): NotificationChanne
   const enabled = new Set(channels);
   enabled.add(NotificationChannel.InApp);
 
-  return defaultNotificationChannelsEnabled.filter(channel => enabled.has(channel));
+  return defaultNotificationChannelsEnabled.filter((channel) =>
+    enabled.has(channel),
+  );
 };
 
 export class GetNotificationSettingQuery {
@@ -30,17 +34,25 @@ export class GetNotificationSettingQuery {
 }
 
 @CommandHandler(GetNotificationSettingQuery)
-export class GetNotificationSettingQueryHandler implements ICommandHandler<GetNotificationSettingQuery> {
+export class GetNotificationSettingQueryHandler
+  implements ICommandHandler<GetNotificationSettingQuery>
+{
   constructor(
-    @Inject(_const.IUSERPREFERENCE_REPOSITORY) private readonly userPreferenceRepository: IUserPreferenceRepository,
-  ) { }
+    @Inject(_const.IUSERPREFERENCE_REPOSITORY)
+    private readonly userPreferenceRepository: IUserPreferenceRepository,
+  ) {}
 
-  public async execute(_: GetNotificationSettingQuery): Promise<NotificationPreferenceModel> {
+  public async execute(
+    _: GetNotificationSettingQuery,
+  ): Promise<NotificationPreferenceModel> {
     const userId = HttpContext.getCurrentUserId;
-    const preferences = await this.userPreferenceRepository.getByUserIdAsync(userId);
+    const preferences =
+      await this.userPreferenceRepository.getByUserIdAsync(userId);
 
     return new NotificationPreferenceModel({
-      notificationChannelsEnabled: normalizeChannels(preferences?.notificationChannelsEnabled),
+      notificationChannelsEnabled: normalizeChannels(
+        preferences?.notificationChannelsEnabled,
+      ),
     });
   }
 }

@@ -1,8 +1,8 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { Controller, Get, Query, Res } from "@nestjs/common";
-import { ApiProperty, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { ManualProfileSearchResponseModel } from "../../../../domain/contracts/manualProfile.model";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { Controller, Get, Query, Res } from '@nestjs/common';
+import { ApiProperty, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ManualProfileSearchResponseModel } from '../../../../domain/contracts/manualProfile.model';
 
 export class ManualProfileSearchPagedResult {
   @ApiProperty({ type: [ManualProfileSearchResponseModel] })
@@ -18,12 +18,14 @@ export class ManualProfileSearchPagedResult {
   version: '1',
 })
 export class SearchManualProfileController {
-
-  constructor(private readonly queryBus: CommandBus) {
-  }
+  constructor(private readonly queryBus: CommandBus) {}
 
   @Get('manual-profile/search')
-  @ApiResponse({ status: 200, description: 'OK', type: ManualProfileSearchPagedResult })
+  @ApiResponse({
+    status: 200,
+    description: 'OK',
+    type: ManualProfileSearchPagedResult,
+  })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -40,7 +42,6 @@ export class SearchManualProfileController {
     @Query('orderBy') orderBy: string = 'id',
     @Query('searchTerm') searchTerm?: string,
   ): Promise<Response> {
-
     return res;
   }
 }

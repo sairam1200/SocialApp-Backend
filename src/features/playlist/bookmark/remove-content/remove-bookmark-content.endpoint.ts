@@ -1,12 +1,19 @@
-import { Response } from "express";
-import _const from "../../../../core/utils/const";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { PlaylistModel } from "../../../../domain/contracts/playlist.model";
-import { Controller, Delete, HttpStatus, Param, Res, UseGuards } from "@nestjs/common";
-import { GetPlaylistByNameQuery } from "../../get-playlist/get-playlist-by-name.handler";
-import { RemovePlaylistContentCommand } from "../../remove-content/remove-content.handler";
+import { Response } from 'express';
+import _const from '../../../../core/utils/const';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import { PlaylistModel } from '../../../../domain/contracts/playlist.model';
+import {
+  Controller,
+  Delete,
+  HttpStatus,
+  Param,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { GetPlaylistByNameQuery } from '../../get-playlist/get-playlist-by-name.handler';
+import { RemovePlaylistContentCommand } from '../../remove-content/remove-content.handler';
 
 @ApiTags('Bookmark')
 @UseGuards(UserAccoutGuard)
@@ -15,13 +22,12 @@ import { RemovePlaylistContentCommand } from "../../remove-content/remove-conten
   version: '1',
 })
 export class RemoveBookmarkContentController {
-
   constructor(
     private readonly commandBus: CommandBus,
-    private readonly queryBus: QueryBus
-  ) { }
+    private readonly queryBus: QueryBus,
+  ) {}
 
-  @Delete(":id/content/remove/:contentId")
+  @Delete(':id/content/remove/:contentId')
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -29,17 +35,18 @@ export class RemoveBookmarkContentController {
   @ApiResponse({ status: 204, description: 'NO_CONTENT' })
   public async Remove(
     @Param('contentId') contentId: string,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response> {
-
     const bookmark = await this.getBookmarkAsync();
     if (bookmark) {
-      await this.commandBus.execute(new RemovePlaylistContentCommand({
-        model: {
-          contentId,
-          playlistReferenceId: bookmark.referenceId
-        }
-      }));
+      await this.commandBus.execute(
+        new RemovePlaylistContentCommand({
+          model: {
+            contentId,
+            playlistReferenceId: bookmark.referenceId,
+          },
+        }),
+      );
     }
 
     res.status(HttpStatus.NO_CONTENT).send();
@@ -47,18 +54,17 @@ export class RemoveBookmarkContentController {
   }
 
   private async getBookmarkAsync(): Promise<PlaylistModel | null> {
-
     try {
-      return await this.queryBus.execute(new GetPlaylistByNameQuery({
-        model: {
-          playlistName: _const.COLLECTION.BOOKMARK.NAME,
-          userNameOrId: ""
-        }
-      }));
-
+      return await this.queryBus.execute(
+        new GetPlaylistByNameQuery({
+          model: {
+            playlistName: _const.COLLECTION.BOOKMARK.NAME,
+            userNameOrId: '',
+          },
+        }),
+      );
     } catch {
-      return null
+      return null;
     }
-
   }
 }

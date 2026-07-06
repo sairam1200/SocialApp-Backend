@@ -1,11 +1,11 @@
-import { Repository } from "typeorm";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Injectable } from "@nestjs/common";
-import { ContentStream } from "../../domain/entities";
-import { LinkedAccount } from "../../domain/entities";
-import { UserContent } from "../../domain/entities";
-import { IGeneralRepository } from "../../domain/repositories/igeneral.repository";
-import { DataSource } from "typeorm";
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Injectable } from '@nestjs/common';
+import { ContentStream } from '../../domain/entities';
+import { LinkedAccount } from '../../domain/entities';
+import { UserContent } from '../../domain/entities';
+import { IGeneralRepository } from '../../domain/repositories/igeneral.repository';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class GeneralRepository implements IGeneralRepository {
@@ -18,9 +18,12 @@ export class GeneralRepository implements IGeneralRepository {
     private readonly userContentContext: Repository<UserContent>,
 
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
-  public async checkExistingItemsAsync(listIds: String[], platform: string): Promise<string[]> {
+  public async checkExistingItemsAsync(
+    listIds: string[],
+    platform: string,
+  ): Promise<string[]> {
     if (listIds.length < 1) return [];
     const query = `
         WITH existing AS (
@@ -40,7 +43,6 @@ export class GeneralRepository implements IGeneralRepository {
         `;
     const result = await this.dataSource.query(query, [listIds, platform]);
     return result.map((row: { video_id: string }) => row.video_id);
-
   }
   public async createAsync(content: ContentStream[]): Promise<any> {
     if (content.length < 1) return;
@@ -54,12 +56,17 @@ export class GeneralRepository implements IGeneralRepository {
         SELECT * 
         FROM incoming
         RETURNING "id", "externalId";
-        `
-    const result = await this.dataSource.query(query, [JSON.stringify(content)]);
+        `;
+    const result = await this.dataSource.query(query, [
+      JSON.stringify(content),
+    ]);
     return result;
   }
 
-  public async updateContentRefreshTimestampAsync(externalIds: string[], platform: string): Promise<void> {
+  public async updateContentRefreshTimestampAsync(
+    externalIds: string[],
+    platform: string,
+  ): Promise<void> {
     if (externalIds.length === 0) {
       return;
     }
@@ -92,6 +99,4 @@ export class GeneralRepository implements IGeneralRepository {
         .execute(),
     ]);
   }
-
-
 }

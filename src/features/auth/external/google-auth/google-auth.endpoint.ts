@@ -12,7 +12,6 @@ import {
 } from './google-auth.handler';
 
 class ConnectResponseModel {
-
   @ApiProperty()
   authorizeURL: string;
 }
@@ -23,7 +22,7 @@ class ConnectResponseModel {
   version: '1',
 })
 export class GoogleAuthenticationController {
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Get('connect')
   @ApiResponse({ status: 200, description: 'OK', type: ConnectResponseModel })
@@ -72,7 +71,10 @@ export class GoogleAuthenticationController {
       prompt: 'consent',
     });
     const authorizeURL = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-    console.log('[OAuth-Debug-Connect] authorizeURL (truncated):', authorizeURL.substring(0, 250));
+    console.log(
+      '[OAuth-Debug-Connect] authorizeURL (truncated):',
+      authorizeURL.substring(0, 250),
+    );
 
     await this.commandBus.execute(
       new GoogleConnectQuery({
@@ -83,7 +85,11 @@ export class GoogleAuthenticationController {
   }
 
   @Get('connect-callback')
-  @ApiResponse({ status: 200, description: 'OK', type: GoogleCallbaclTokenResponseModel })
+  @ApiResponse({
+    status: 200,
+    description: 'OK',
+    type: GoogleCallbaclTokenResponseModel,
+  })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -96,7 +102,10 @@ export class GoogleAuthenticationController {
     @Res() res: Response,
   ): Promise<Response | void> {
     console.log('[OAuth-Debug-Callback] receivedState:', state);
-    console.log('[OAuth-Debug-Callback] receivedCode (truncated):', code ? code.substring(0, 50) : 'MISSING');
+    console.log(
+      '[OAuth-Debug-Callback] receivedCode (truncated):',
+      code ? code.substring(0, 50) : 'MISSING',
+    );
     console.log('[OAuth-Debug-Callback] headers:', {
       origin: req.headers.origin,
       host: req.headers.host,

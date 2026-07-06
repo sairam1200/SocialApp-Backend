@@ -13,7 +13,7 @@ export class QueueService implements IQueueService {
     private readonly youtubeImportQueue: Queue,
     @InjectQueue(_const.BULL_QUEUES.YOUTUBE_UPLOAD)
     private readonly youtubeUploadQueue: Queue,
-   /*  @InjectQueue(_const.BULL_QUEUES.SPOTIFY_IMPORT)
+    /*  @InjectQueue(_const.BULL_QUEUES.SPOTIFY_IMPORT)
     private readonly spotifyImportQueue: Queue, */
     @InjectQueue(_const.BULL_QUEUES.PINTEREST_IMPORT)
     private readonly pinterestImportQueue: Queue,
@@ -35,17 +35,26 @@ export class QueueService implements IQueueService {
     private readonly threadsImportQueue: Queue,
     @InjectQueue(_const.BULL_QUEUES.BEHANCE_IMPORT)
     private readonly behanceImportQueue: Queue, */
-  ) { }
+  ) {}
 
-  public async enqueueYoutubeImport(account: LinkedAccount, accessToken: string): Promise<string> {
-    const job = await this.youtubeImportQueue.add('youtube-import-job', {
-      account,
-      accessToken,
-    }, {
-      jobId: `youtube-import-${account.userId}`,
-    });
+  public async enqueueYoutubeImport(
+    account: LinkedAccount,
+    accessToken: string,
+  ): Promise<string> {
+    const job = await this.youtubeImportQueue.add(
+      'youtube-import-job',
+      {
+        account,
+        accessToken,
+      },
+      {
+        jobId: `youtube-import-${account.userId}`,
+      },
+    );
 
-    logger.info(`[QueueService] YouTube import job enqueued: ${job.id} for user ${account.userId}`);
+    logger.info(
+      `[QueueService] YouTube import job enqueued: ${job.id} for user ${account.userId}`,
+    );
     return job.id!;
   }
 
@@ -68,15 +77,23 @@ export class QueueService implements IQueueService {
     if (job) {
       if (await job.isActive()) {
         await job.remove();
-        logger.info(`[QueueService] Cancelled active YouTube import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Cancelled active YouTube import job ${jobId} for user ${userId}`,
+        );
       } else if (await job.isWaiting()) {
         await job.remove();
-        logger.info(`[QueueService] Removed waiting YouTube import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Removed waiting YouTube import job ${jobId} for user ${userId}`,
+        );
       } else {
-        logger.warn(`[QueueService] YouTube import job ${jobId} is not in a cancellable state`);
+        logger.warn(
+          `[QueueService] YouTube import job ${jobId} is not in a cancellable state`,
+        );
       }
     } else {
-      logger.warn(`[QueueService] YouTube import job ${jobId} not found for user ${userId}`);
+      logger.warn(
+        `[QueueService] YouTube import job ${jobId} not found for user ${userId}`,
+      );
     }
   }
 
@@ -86,13 +103,15 @@ export class QueueService implements IQueueService {
       try {
         const job = await this.youtubeUploadQueue.getJob(jobId);
         if (job) {
-          if (await job.isActive() || await job.isWaiting()) {
+          if ((await job.isActive()) || (await job.isWaiting())) {
             await job.remove();
             logger.info(`[QueueService] Removed YouTube upload job ${jobId}`);
           }
         }
       } catch (error: any) {
-        logger.warn(`[QueueService] Failed to cancel upload job ${jobId}: ${error.message}`);
+        logger.warn(
+          `[QueueService] Failed to cancel upload job ${jobId}: ${error.message}`,
+        );
       }
     }
   }
@@ -116,39 +135,66 @@ export class QueueService implements IQueueService {
     }
   } */
 
-  public async enqueuePinterestImport(account: LinkedAccount, accessToken: string): Promise<string> {
-    const job = await this.pinterestImportQueue.add('pinterest-import-job', {
-      account,
-      accessToken,
-    }, {
-      jobId: `pinterest-import-${account.userId}`,
-    });
+  public async enqueuePinterestImport(
+    account: LinkedAccount,
+    accessToken: string,
+  ): Promise<string> {
+    const job = await this.pinterestImportQueue.add(
+      'pinterest-import-job',
+      {
+        account,
+        accessToken,
+      },
+      {
+        jobId: `pinterest-import-${account.userId}`,
+      },
+    );
 
-    logger.info(`[QueueService] Pinterest import job enqueued: ${job.id} for user ${account.userId}`);
+    logger.info(
+      `[QueueService] Pinterest import job enqueued: ${job.id} for user ${account.userId}`,
+    );
     return job.id!;
   }
 
-  public async enqueueRedditImport(account: LinkedAccount, accessToken: string): Promise<string> {
-    const job = await this.redditImportQueue.add('reddit-import-job', {
-      account,
-      accessToken,
-    }, {
-      jobId: `reddit-import-${account.userId}`,
-    });
+  public async enqueueRedditImport(
+    account: LinkedAccount,
+    accessToken: string,
+  ): Promise<string> {
+    const job = await this.redditImportQueue.add(
+      'reddit-import-job',
+      {
+        account,
+        accessToken,
+      },
+      {
+        jobId: `reddit-import-${account.userId}`,
+      },
+    );
 
-    logger.info(`[QueueService] Reddit import job enqueued: ${job.id} for user ${account.userId}`);
+    logger.info(
+      `[QueueService] Reddit import job enqueued: ${job.id} for user ${account.userId}`,
+    );
     return job.id!;
   }
 
-  public async enqueueTwitterImport(account: LinkedAccount, accessToken: string): Promise<string> {
-    const job = await this.twitterImportQueue.add('twitter-import-job', {
-      account,
-      accessToken,
-    }, {
-      jobId: `twitter-import-${account.userId}`,
-    });
+  public async enqueueTwitterImport(
+    account: LinkedAccount,
+    accessToken: string,
+  ): Promise<string> {
+    const job = await this.twitterImportQueue.add(
+      'twitter-import-job',
+      {
+        account,
+        accessToken,
+      },
+      {
+        jobId: `twitter-import-${account.userId}`,
+      },
+    );
 
-    logger.info(`[QueueService] Twitter import job enqueued: ${job.id} for user ${account.userId}`);
+    logger.info(
+      `[QueueService] Twitter import job enqueued: ${job.id} for user ${account.userId}`,
+    );
     return job.id!;
   }
 
@@ -159,15 +205,23 @@ export class QueueService implements IQueueService {
     if (job) {
       if (await job.isActive()) {
         await job.remove();
-        logger.info(`[QueueService] Cancelled active Pinterest import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Cancelled active Pinterest import job ${jobId} for user ${userId}`,
+        );
       } else if (await job.isWaiting()) {
         await job.remove();
-        logger.info(`[QueueService] Removed waiting Pinterest import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Removed waiting Pinterest import job ${jobId} for user ${userId}`,
+        );
       } else {
-        logger.warn(`[QueueService] Pinterest import job ${jobId} is not in a cancellable state`);
+        logger.warn(
+          `[QueueService] Pinterest import job ${jobId} is not in a cancellable state`,
+        );
       }
     } else {
-      logger.warn(`[QueueService] Pinterest import job ${jobId} not found for user ${userId}`);
+      logger.warn(
+        `[QueueService] Pinterest import job ${jobId} not found for user ${userId}`,
+      );
     }
   }
 
@@ -178,15 +232,23 @@ export class QueueService implements IQueueService {
     if (job) {
       if (await job.isActive()) {
         await job.remove();
-        logger.info(`[QueueService] Cancelled active Reddit import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Cancelled active Reddit import job ${jobId} for user ${userId}`,
+        );
       } else if (await job.isWaiting()) {
         await job.remove();
-        logger.info(`[QueueService] Removed waiting Reddit import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Removed waiting Reddit import job ${jobId} for user ${userId}`,
+        );
       } else {
-        logger.warn(`[QueueService] Reddit import job ${jobId} is not in a cancellable state`);
+        logger.warn(
+          `[QueueService] Reddit import job ${jobId} is not in a cancellable state`,
+        );
       }
     } else {
-      logger.warn(`[QueueService] Reddit import job ${jobId} not found for user ${userId}`);
+      logger.warn(
+        `[QueueService] Reddit import job ${jobId} not found for user ${userId}`,
+      );
     }
   }
 
@@ -197,63 +259,107 @@ export class QueueService implements IQueueService {
     if (job) {
       if (await job.isActive()) {
         await job.remove();
-        logger.info(`[QueueService] Cancelled active Twitter import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Cancelled active Twitter import job ${jobId} for user ${userId}`,
+        );
       } else if (await job.isWaiting()) {
         await job.remove();
-        logger.info(`[QueueService] Removed waiting Twitter import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Removed waiting Twitter import job ${jobId} for user ${userId}`,
+        );
       } else {
-        logger.warn(`[QueueService] Twitter import job ${jobId} is not in a cancellable state`);
+        logger.warn(
+          `[QueueService] Twitter import job ${jobId} is not in a cancellable state`,
+        );
       }
     } else {
-      logger.warn(`[QueueService] Twitter import job ${jobId} not found for user ${userId}`);
+      logger.warn(
+        `[QueueService] Twitter import job ${jobId} not found for user ${userId}`,
+      );
     }
   }
 
-  public async enqueueTiktokImport(account: LinkedAccount, accessToken: string): Promise<string> {
-    const job = await this.tiktokImportQueue.add('tiktok-import-job', {
-      account,
-      accessToken,
-    }, {
-      jobId: `tiktok-import-${account.userId}`,
-    });
+  public async enqueueTiktokImport(
+    account: LinkedAccount,
+    accessToken: string,
+  ): Promise<string> {
+    const job = await this.tiktokImportQueue.add(
+      'tiktok-import-job',
+      {
+        account,
+        accessToken,
+      },
+      {
+        jobId: `tiktok-import-${account.userId}`,
+      },
+    );
 
-    logger.info(`[QueueService] TikTok import job enqueued: ${job.id} for user ${account.userId}`);
+    logger.info(
+      `[QueueService] TikTok import job enqueued: ${job.id} for user ${account.userId}`,
+    );
     return job.id!;
   }
 
-  public async enqueueInstagramImport(account: LinkedAccount, accessToken: string): Promise<string> {
-    const job = await this.instagramImportQueue.add('instagram-import-job', {
-      account,
-      accessToken,
-    }, {
-      jobId: `instagram-import-${account.userId}`,
-    });
+  public async enqueueInstagramImport(
+    account: LinkedAccount,
+    accessToken: string,
+  ): Promise<string> {
+    const job = await this.instagramImportQueue.add(
+      'instagram-import-job',
+      {
+        account,
+        accessToken,
+      },
+      {
+        jobId: `instagram-import-${account.userId}`,
+      },
+    );
 
-    logger.info(`[QueueService] Instagram import job enqueued: ${job.id} for user ${account.userId}`);
+    logger.info(
+      `[QueueService] Instagram import job enqueued: ${job.id} for user ${account.userId}`,
+    );
     return job.id!;
   }
 
-  public async enqueueFacebookImport(account: LinkedAccount, accessToken: string): Promise<string> {
-    const job = await this.facebookImportQueue.add('facebook-import-job', {
-      account,
-      accessToken,
-    }, {
-      jobId: `facebook-import-${account.userId}`,
-    });
+  public async enqueueFacebookImport(
+    account: LinkedAccount,
+    accessToken: string,
+  ): Promise<string> {
+    const job = await this.facebookImportQueue.add(
+      'facebook-import-job',
+      {
+        account,
+        accessToken,
+      },
+      {
+        jobId: `facebook-import-${account.userId}`,
+      },
+    );
 
-    logger.info(`[QueueService] Facebook import job enqueued: ${job.id} for user ${account.userId}`);
+    logger.info(
+      `[QueueService] Facebook import job enqueued: ${job.id} for user ${account.userId}`,
+    );
     return job.id!;
   }
 
-  public async enqueueLinkedInImport(account: LinkedAccount, accessToken: string): Promise<string> {
-    const job = await this.linkedinImportQueue.add('linkedin-import-job', {
-      account,
-      accessToken,
-    }, {
-      jobId: `linkedin-import-${account.userId}`,
-    });
+  public async enqueueLinkedInImport(
+    account: LinkedAccount,
+    accessToken: string,
+  ): Promise<string> {
+    const job = await this.linkedinImportQueue.add(
+      'linkedin-import-job',
+      {
+        account,
+        accessToken,
+      },
+      {
+        jobId: `linkedin-import-${account.userId}`,
+      },
+    );
 
-    logger.info(`[QueueService] LinkedIn import job enqueued: ${job.id} for user ${account.userId}`);
+    logger.info(
+      `[QueueService] LinkedIn import job enqueued: ${job.id} for user ${account.userId}`,
+    );
     return job.id!;
   }
 
@@ -264,15 +370,23 @@ export class QueueService implements IQueueService {
     if (job) {
       if (await job.isActive()) {
         await job.remove();
-        logger.info(`[QueueService] Cancelled active TikTok import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Cancelled active TikTok import job ${jobId} for user ${userId}`,
+        );
       } else if (await job.isWaiting()) {
         await job.remove();
-        logger.info(`[QueueService] Removed waiting TikTok import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Removed waiting TikTok import job ${jobId} for user ${userId}`,
+        );
       } else {
-        logger.warn(`[QueueService] TikTok import job ${jobId} is not in a cancellable state`);
+        logger.warn(
+          `[QueueService] TikTok import job ${jobId} is not in a cancellable state`,
+        );
       }
     } else {
-      logger.warn(`[QueueService] TikTok import job ${jobId} not found for user ${userId}`);
+      logger.warn(
+        `[QueueService] TikTok import job ${jobId} not found for user ${userId}`,
+      );
     }
   }
 
@@ -283,15 +397,23 @@ export class QueueService implements IQueueService {
     if (job) {
       if (await job.isActive()) {
         await job.remove();
-        logger.info(`[QueueService] Cancelled active Instagram import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Cancelled active Instagram import job ${jobId} for user ${userId}`,
+        );
       } else if (await job.isWaiting()) {
         await job.remove();
-        logger.info(`[QueueService] Removed waiting Instagram import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Removed waiting Instagram import job ${jobId} for user ${userId}`,
+        );
       } else {
-        logger.warn(`[QueueService] Instagram import job ${jobId} is not in a cancellable state`);
+        logger.warn(
+          `[QueueService] Instagram import job ${jobId} is not in a cancellable state`,
+        );
       }
     } else {
-      logger.warn(`[QueueService] Instagram import job ${jobId} not found for user ${userId}`);
+      logger.warn(
+        `[QueueService] Instagram import job ${jobId} not found for user ${userId}`,
+      );
     }
   }
 
@@ -302,15 +424,23 @@ export class QueueService implements IQueueService {
     if (job) {
       if (await job.isActive()) {
         await job.remove();
-        logger.info(`[QueueService] Cancelled active Facebook import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Cancelled active Facebook import job ${jobId} for user ${userId}`,
+        );
       } else if (await job.isWaiting()) {
         await job.remove();
-        logger.info(`[QueueService] Removed waiting Facebook import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Removed waiting Facebook import job ${jobId} for user ${userId}`,
+        );
       } else {
-        logger.warn(`[QueueService] Facebook import job ${jobId} is not in a cancellable state`);
+        logger.warn(
+          `[QueueService] Facebook import job ${jobId} is not in a cancellable state`,
+        );
       }
     } else {
-      logger.warn(`[QueueService] Facebook import job ${jobId} not found for user ${userId}`);
+      logger.warn(
+        `[QueueService] Facebook import job ${jobId} not found for user ${userId}`,
+      );
     }
   }
 
@@ -321,27 +451,44 @@ export class QueueService implements IQueueService {
     if (job) {
       if (await job.isActive()) {
         await job.remove();
-        logger.info(`[QueueService] Cancelled active LinkedIn import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Cancelled active LinkedIn import job ${jobId} for user ${userId}`,
+        );
       } else if (await job.isWaiting()) {
         await job.remove();
-        logger.info(`[QueueService] Removed waiting LinkedIn import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Removed waiting LinkedIn import job ${jobId} for user ${userId}`,
+        );
       } else {
-        logger.warn(`[QueueService] LinkedIn import job ${jobId} is not in a cancellable state`);
+        logger.warn(
+          `[QueueService] LinkedIn import job ${jobId} is not in a cancellable state`,
+        );
       }
     } else {
-      logger.warn(`[QueueService] LinkedIn import job ${jobId} not found for user ${userId}`);
+      logger.warn(
+        `[QueueService] LinkedIn import job ${jobId} not found for user ${userId}`,
+      );
     }
   }
 
-  public async enqueueSnapchatImport(account: LinkedAccount, accessToken: string): Promise<string> {
-    const job = await this.snapchatImportQueue.add('snapchat-import-job', {
-      account,
-      accessToken,
-    }, {
-      jobId: `snapchat-import-${account.userId}`,
-    });
+  public async enqueueSnapchatImport(
+    account: LinkedAccount,
+    accessToken: string,
+  ): Promise<string> {
+    const job = await this.snapchatImportQueue.add(
+      'snapchat-import-job',
+      {
+        account,
+        accessToken,
+      },
+      {
+        jobId: `snapchat-import-${account.userId}`,
+      },
+    );
 
-    logger.info(`[QueueService] Snapchat import job enqueued: ${job.id} for user ${account.userId}`);
+    logger.info(
+      `[QueueService] Snapchat import job enqueued: ${job.id} for user ${account.userId}`,
+    );
     return job.id!;
   }
 
@@ -376,19 +523,27 @@ export class QueueService implements IQueueService {
     if (job) {
       if (await job.isActive()) {
         await job.remove();
-        logger.info(`[QueueService] Cancelled active Snapchat import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Cancelled active Snapchat import job ${jobId} for user ${userId}`,
+        );
       } else if (await job.isWaiting()) {
         await job.remove();
-        logger.info(`[QueueService] Removed waiting Snapchat import job ${jobId} for user ${userId}`);
+        logger.info(
+          `[QueueService] Removed waiting Snapchat import job ${jobId} for user ${userId}`,
+        );
       } else {
-        logger.warn(`[QueueService] Snapchat import job ${jobId} is not in a cancellable state`);
+        logger.warn(
+          `[QueueService] Snapchat import job ${jobId} is not in a cancellable state`,
+        );
       }
     } else {
-      logger.warn(`[QueueService] Snapchat import job ${jobId} not found for user ${userId}`);
+      logger.warn(
+        `[QueueService] Snapchat import job ${jobId} not found for user ${userId}`,
+      );
     }
   }
 
- /*  public async cancelThreadsImport(userId: string): Promise<void> {
+  /*  public async cancelThreadsImport(userId: string): Promise<void> {
     const jobId = `threads-import-${userId}`;
     const job = await this.threadsImportQueue.getJob(jobId);
 

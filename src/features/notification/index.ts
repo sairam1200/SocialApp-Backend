@@ -1,10 +1,6 @@
-const controllers = [
-  
-];
+const controllers = [];
 
-const handlers = [
-  
-];
+const handlers = [];
 
 const notification = {
   addControllers: () => controllers,

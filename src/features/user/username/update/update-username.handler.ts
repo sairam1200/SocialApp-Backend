@@ -1,11 +1,14 @@
-import configs from "../../../../configs";
-import _const from "../../../../core/utils/const";
-import { Inject, UnauthorizedException } from "@nestjs/common";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { IUserRepository } from "../../../../domain/repositories";
-import { HttpContext } from "core/middlewares/httpContext.middleware";
-import { generateTimestampUUID } from "../../../../core/utils/time.util";
-import { ApplicationException, UserAlreadyExistsException } from "core/exceptions";
+import configs from '../../../../configs';
+import _const from '../../../../core/utils/const';
+import { Inject, UnauthorizedException } from '@nestjs/common';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { IUserRepository } from '../../../../domain/repositories';
+import { HttpContext } from 'core/middlewares/httpContext.middleware';
+import { generateTimestampUUID } from '../../../../core/utils/time.util';
+import {
+  ApplicationException,
+  UserAlreadyExistsException,
+} from 'core/exceptions';
 
 export class UpdateUserNameCommand {
   userName: string;
@@ -16,13 +19,18 @@ export class UpdateUserNameCommand {
 }
 
 @CommandHandler(UpdateUserNameCommand)
-export class UpdateUserNameCommandHandler implements ICommandHandler<UpdateUserNameCommand, void> {
+export class UpdateUserNameCommandHandler
+  implements ICommandHandler<UpdateUserNameCommand, void>
+{
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository) {
-  }
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+  ) {}
 
   async execute(command: UpdateUserNameCommand): Promise<void> {
-    const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
+    const user = await this.userRepository.getUserByIdAsync(
+      HttpContext.getCurrentUserId,
+    );
     if (!user) {
       throw new UnauthorizedException();
     }
@@ -31,12 +39,15 @@ export class UpdateUserNameCommandHandler implements ICommandHandler<UpdateUserN
     if (user.lastUserNameModifiedAt) {
       const cooldownDays = configs.user.profileChangeCooldownDays;
       const cooldownMilliseconds = cooldownDays * 24 * 60 * 60 * 1000;
-      const timeSinceLastChange = Date.now() - new Date(user.lastUserNameModifiedAt).getTime();
+      const timeSinceLastChange =
+        Date.now() - new Date(user.lastUserNameModifiedAt).getTime();
 
       if (timeSinceLastChange < cooldownMilliseconds) {
-        const daysRemaining = Math.ceil((cooldownMilliseconds - timeSinceLastChange) / (24 * 60 * 60 * 1000));
+        const daysRemaining = Math.ceil(
+          (cooldownMilliseconds - timeSinceLastChange) / (24 * 60 * 60 * 1000),
+        );
         throw new ApplicationException(
-          `You cannot change your username yet. Please wait ${daysRemaining} more day(s) before requesting another username change.`
+          `You cannot change your username yet. Please wait ${daysRemaining} more day(s) before requesting another username change.`,
         );
       }
     }
@@ -47,4 +58,4 @@ export class UpdateUserNameCommandHandler implements ICommandHandler<UpdateUserN
 
     await this.userRepository.updateAsync(user);
   }
-} 
+}

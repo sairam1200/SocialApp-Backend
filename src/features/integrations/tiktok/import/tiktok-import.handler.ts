@@ -5,10 +5,17 @@ import _const from '../../../../core/utils/const';
 import { UserLogin } from '../../../../domain/entities';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Inject,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import ApplicationException from '../../../../core/exceptions/application.exception';
-import { deserializeObject, serializeObject } from '../../../../core/utils/serialization.util';
+import {
+  deserializeObject,
+  serializeObject,
+} from '../../../../core/utils/serialization.util';
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { IQueueService } from '../../../../domain/services/iqueue.service';
@@ -20,7 +27,6 @@ export class TiktokImportRequestModel {
   tiktokAccessToken: string;
 }
 
-
 export class TiktokImportCommand {
   model: TiktokImportRequestModel;
 
@@ -30,8 +36,9 @@ export class TiktokImportCommand {
 }
 
 @CommandHandler(TiktokImportCommand)
-export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportCommand> {
-
+export class TiktokImportCommandHandler
+  implements ICommandHandler<TiktokImportCommand>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
@@ -39,11 +46,11 @@ export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportC
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IQUEUE_SERVICE)
     private readonly queueService: IQueueService,
-  ) { }
+  ) {}
 
-  public async execute(command: TiktokImportCommand)
-    : Promise<{ accessToken: string, expiresIn: number }> {
-
+  public async execute(
+    command: TiktokImportCommand,
+  ): Promise<{ accessToken: string; expiresIn: number }> {
     const { model } = command;
     let expiresIn: number;
     let accessToken: string | undefined;
@@ -54,8 +61,14 @@ export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportC
       const isTokenValid = await this.verifyAccessTokenAsync(tiktokAccessToken);
       if (!isTokenValid) {
         const userLogin = await this.getUserLoginAsync(userId);
-        const tokenValue = deserializeObject<{ access_token: string, expires_in: number, refresh_token: string }>(userLogin.tokenValue)
-        const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
+        const tokenValue = deserializeObject<{
+          access_token: string;
+          expires_in: number;
+          refresh_token: string;
+        }>(userLogin.tokenValue);
+        const isTokenValid = await this.verifyAccessTokenAsync(
+          tokenValue.access_token,
+        );
         if (!isTokenValid) {
           const {
             access_token,
@@ -67,9 +80,11 @@ export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportC
           userLogin.tokenValue = serializeObject({
             access_token,
             expires_in,
-            refresh_token
+            refresh_token,
           });
-          userLogin.expiryDateUtc = new Date(Date.now() + refresh_expires_in * 1000)
+          userLogin.expiryDateUtc = new Date(
+            Date.now() + refresh_expires_in * 1000,
+          );
           this.userLoginRepository.updateAsync(userLogin);
 
           accessToken = access_token;
@@ -78,28 +93,31 @@ export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportC
           accessToken = tokenValue.access_token;
           expiresIn = tokenValue.expires_in;
         }
-
       } else {
         accessToken = tiktokAccessToken;
       }
     } else {
       const userLogin = await this.getUserLoginAsync(userId);
-      const tokenValue = deserializeObject<{ access_token: string, expires_in: number, refresh_token: string }>(userLogin.tokenValue)
-      const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
+      const tokenValue = deserializeObject<{
+        access_token: string;
+        expires_in: number;
+        refresh_token: string;
+      }>(userLogin.tokenValue);
+      const isTokenValid = await this.verifyAccessTokenAsync(
+        tokenValue.access_token,
+      );
       if (!isTokenValid) {
-        const {
-          access_token,
-          expires_in,
-          refresh_token,
-          refresh_expires_in,
-        } = await this.refreshTokenAsync(tokenValue.refresh_token);
+        const { access_token, expires_in, refresh_token, refresh_expires_in } =
+          await this.refreshTokenAsync(tokenValue.refresh_token);
 
         userLogin.tokenValue = serializeObject({
           access_token,
           expires_in,
-          refresh_token
+          refresh_token,
         });
-        userLogin.expiryDateUtc = new Date(Date.now() + refresh_expires_in * 1000)
+        userLogin.expiryDateUtc = new Date(
+          Date.now() + refresh_expires_in * 1000,
+        );
         this.userLoginRepository.updateAsync(userLogin);
 
         accessToken = access_token;
@@ -110,9 +128,13 @@ export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportC
       }
     }
 
-    const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.TIKTOK, userId);
+    const account =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.TIKTOK,
+        userId,
+      );
     if (!account) {
-      throw new NotFoundException("No matching TikTok profile was found!");
+      throw new NotFoundException('No matching TikTok profile was found!');
     }
 
     account.allowImport = true;
@@ -122,38 +144,55 @@ export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportC
       await this.queueService.enqueueTiktokImport(account, accessToken);
       logger.info(`[TiktokImport] Import job enqueued for user ${userId}`);
     } catch (error) {
-      logger.error(`An error occurred while enqueuing the TikTok import job: 
-        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
-      throw new ApplicationException('Failed to initiate TikTok import. Please try again later.');
+      logger.error(
+        `An error occurred while enqueuing the TikTok import job: 
+        ${error instanceof Error ? error.message : JSON.stringify(error)}`,
+        { error },
+      );
+      throw new ApplicationException(
+        'Failed to initiate TikTok import. Please try again later.',
+      );
     }
 
     return {
       accessToken,
-      expiresIn
-    }
+      expiresIn,
+    };
   }
 
-  private async refreshTokenAsync(refreshToken: string): Promise<{ access_token: string, expires_in: number, refresh_token?: string, refresh_expires_in?: number }> {
+  private async refreshTokenAsync(refreshToken: string): Promise<{
+    access_token: string;
+    expires_in: number;
+    refresh_token?: string;
+    refresh_expires_in?: number;
+  }> {
     try {
-      const response = await axios.post(`${TIKTOK_BASE}/oauth/token/`, {
-        client_key: configs.tiktok.clientId,
-        client_secret: configs.tiktok.clientSecret,
-        grant_type: 'refresh_token',
-        refresh_token: refreshToken,
-      }, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Cache-Control': 'no-cache',
+      const response = await axios.post(
+        `${TIKTOK_BASE}/oauth/token/`,
+        {
+          client_key: configs.tiktok.clientId,
+          client_secret: configs.tiktok.clientSecret,
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
         },
-      });
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Cache-Control': 'no-cache',
+          },
+        },
+      );
 
       return response.data;
     } catch (error) {
-      logger.error(`An error occurred while processing the Tiktok import command: 
-        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
+      logger.error(
+        `An error occurred while processing the Tiktok import command: 
+        ${error instanceof Error ? error.message : JSON.stringify(error)}`,
+        { error },
+      );
 
       throw new UnauthorizedException(
-        'No Tiktok account linked to your user profile. Please re-link your Tiktok account to proceed.'
+        'No Tiktok account linked to your user profile. Please re-link your Tiktok account to proceed.',
       );
     }
   }
@@ -169,7 +208,8 @@ export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportC
         },
       });
 
-      const isValid = response.status === 200 && !!response.data?.data?.user?.open_id;
+      const isValid =
+        response.status === 200 && !!response.data?.data?.user?.open_id;
       return isValid;
     } catch (error: any) {
       logger.error('TikTok token verification failed in import handler', {
@@ -182,26 +222,25 @@ export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportC
   }
 
   private async getUserLoginAsync(userId: string): Promise<UserLogin> {
-
     const now = new Date();
-    const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(
-      userId,
-      _const.PLATFORMS.TIKTOK
-    );
+    const userLogin =
+      await this.userLoginRepository.getByUserIdAndProviderAsync(
+        userId,
+        _const.PLATFORMS.TIKTOK,
+      );
 
     if (!userLogin) {
       throw new UnauthorizedException(
-        'No Tiktok account linked to your user profile. Please link your Tiktok account to proceed.'
+        'No Tiktok account linked to your user profile. Please link your Tiktok account to proceed.',
       );
     }
 
     if (now > userLogin.expiryDateUtc) {
       throw new UnauthorizedException(
-        'Your Tiktok session has expired or the access token is invalid. Please log in to Tiktok again to continue.'
+        'Your Tiktok session has expired or the access token is invalid. Please log in to Tiktok again to continue.',
       );
     }
 
     return userLogin;
   }
-
 }

@@ -1,8 +1,11 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Body, Controller, HttpStatus, Post, Res } from "@nestjs/common";
-import { ResetPasswordCommand, ResetPasswordRequestModel } from "./reset-password.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, HttpStatus, Post, Res } from '@nestjs/common';
+import {
+  ResetPasswordCommand,
+  ResetPasswordRequestModel,
+} from './reset-password.handler';
 
 @ApiTags('Account')
 @Controller({
@@ -10,10 +13,7 @@ import { ResetPasswordCommand, ResetPasswordRequestModel } from "./reset-passwor
   version: '1',
 })
 export class ResetPasswordController {
-
-  constructor(
-    private readonly commandBus: CommandBus
-  ) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('reset-password')
   @ApiResponse({ status: 200, description: 'OK' })
@@ -24,8 +24,7 @@ export class ResetPasswordController {
     @Body() model: ResetPasswordRequestModel,
     @Res() res: Response,
   ): Promise<Response | void> {
-
     await this.commandBus.execute(new ResetPasswordCommand({ model }));
-    return res.status(HttpStatus.OK).json({ message: "" });
+    return res.status(HttpStatus.OK).json({ message: '' });
   }
 }

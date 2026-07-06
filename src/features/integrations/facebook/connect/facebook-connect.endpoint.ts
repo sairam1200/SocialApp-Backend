@@ -1,13 +1,23 @@
-import { Response } from "express";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
-import configs from "../../../../configs";
-import { stringUtil } from "../../../../core/utils/string.util";
-import { getRedirectUrl } from "../../../../core/utils/redirectUrl.util";
-import { ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { FacebookProfileModel } from "../../../../domain/contracts/facebook.model";
-import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
-import { FacebookConnectCallbackQuery, FacebookConnectQuery } from "./facebook-connect.handler";
+import { Response } from 'express';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import configs from '../../../../configs';
+import { stringUtil } from '../../../../core/utils/string.util';
+import { getRedirectUrl } from '../../../../core/utils/redirectUrl.util';
+import { ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import { FacebookProfileModel } from '../../../../domain/contracts/facebook.model';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  FacebookConnectCallbackQuery,
+  FacebookConnectQuery,
+} from './facebook-connect.handler';
 
 class ConnectResponseModel {
   @ApiProperty()
@@ -15,7 +25,7 @@ class ConnectResponseModel {
 }
 
 class FacebookConnectCallbackResponseModel {
-  @ApiProperty({ description: "Access token from facebook" })
+  @ApiProperty({ description: 'Access token from facebook' })
   accessToken: string;
   @ApiProperty()
   expiresIn: string;
@@ -28,14 +38,8 @@ class FacebookConnectCallbackResponseModel {
   path: `/integrations/facebook`,
   version: '1',
 })
-
-
 export class FacebookConnectController {
-
-
-  constructor(
-    private readonly commandBus: CommandBus,
-  ) { }
+  constructor(private readonly commandBus: CommandBus) {}
   @Get('connect')
   @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 200, description: 'OK', type: ConnectResponseModel })
@@ -43,7 +47,6 @@ export class FacebookConnectController {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Connect(@Res() res: Response): Promise<Response | void> {
-
     const scopes = [
       'public_profile',
       'email',
@@ -65,22 +68,29 @@ export class FacebookConnectController {
 
     const authorizeURL = `https://www.facebook.com/v23.0/dialog/oauth?${params.toString()}`;
 
-    await this.commandBus.execute(new FacebookConnectQuery({ model: { state } }));
+    await this.commandBus.execute(
+      new FacebookConnectQuery({ model: { state } }),
+    );
     return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });
   }
 
   @Get('connect-callback')
-  @ApiResponse({ status: 200, description: 'OK', type: FacebookConnectCallbackResponseModel })
+  @ApiResponse({
+    status: 200,
+    description: 'OK',
+    type: FacebookConnectCallbackResponseModel,
+  })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Callback(
     @Query('code') code: string,
     @Query('state') state: string,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response | void> {
-
-    const result = await this.commandBus.execute(new FacebookConnectCallbackQuery({ model: { code, state } }));
+    const result = await this.commandBus.execute(
+      new FacebookConnectCallbackQuery({ model: { code, state } }),
+    );
     return res.status(HttpStatus.OK).json(result);
   }
 }

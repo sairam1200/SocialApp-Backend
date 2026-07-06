@@ -1,8 +1,18 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
-import { SendVerificationEmailCommand, SendVerificationEmailRequestModel } from "./send-verification.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  SendVerificationEmailCommand,
+  SendVerificationEmailRequestModel,
+} from './send-verification.handler';
 
 @ApiTags('Account')
 @Controller({
@@ -10,9 +20,7 @@ import { SendVerificationEmailCommand, SendVerificationEmailRequestModel } from 
   version: '1',
 })
 export class SendVerificationEmailController {
-  constructor(
-    private readonly commandBus: CommandBus
-  ) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('email/send-verification')
   @ApiResponse({ status: 200, description: 'OK' })
@@ -25,7 +33,8 @@ export class SendVerificationEmailController {
     @Res() res: Response,
   ): Promise<Response | void> {
     await this.commandBus.execute(new SendVerificationEmailCommand({ model }));
-    return res.status(HttpStatus.OK).json({ message: "Verification email sent successfully" });
+    return res
+      .status(HttpStatus.OK)
+      .json({ message: 'Verification email sent successfully' });
   }
 }
-

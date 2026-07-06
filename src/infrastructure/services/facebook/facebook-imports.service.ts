@@ -1,10 +1,10 @@
-import { Injectable, Inject } from "@nestjs/common";
-import axios from "axios";
+import { Injectable, Inject } from '@nestjs/common';
+import axios from 'axios';
 
-import _const from "../../../core/utils/const";
-import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
-import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
-import { UserContent } from "../../../domain/entities/userContent.entity";
+import _const from '../../../core/utils/const';
+import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
+import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
+import { UserContent } from '../../../domain/entities/userContent.entity';
 
 @Injectable()
 export class FacebookImportService {
@@ -14,7 +14,7 @@ export class FacebookImportService {
 
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
-  ) { }
+  ) {}
 
   async importPagePostsAsync(
     userId: string,
@@ -34,7 +34,7 @@ export class FacebookImportService {
       {
         params: {
           fields:
-            "id,message,created_time,permalink_url,full_picture,attachments{media_type,type}",
+            'id,message,created_time,permalink_url,full_picture,attachments{media_type,type}',
           access_token: pageAccessToken,
         },
       },
@@ -42,46 +42,38 @@ export class FacebookImportService {
     const posts = postsResponse.data?.data ?? [];
 
     for (const post of posts) {
-     /*  let impressions = 0;
+      /*  let impressions = 0;
       let reach = 0;
       let engagedUsers = 0; */
-const statsResponse = await axios.get(
-  `https://graph.facebook.com/v23.0/${post.id}`,
-  {
-    params: {
-      fields:
-        "shares,reactions.summary(true),comments.summary(true)",
-      access_token: pageAccessToken,
-    },
-  },
-);
-const reactions =
-  statsResponse.data?.reactions?.summary?.total_count ?? 0;
+      const statsResponse = await axios.get(
+        `https://graph.facebook.com/v23.0/${post.id}`,
+        {
+          params: {
+            fields: 'shares,reactions.summary(true),comments.summary(true)',
+            access_token: pageAccessToken,
+          },
+        },
+      );
+      const reactions =
+        statsResponse.data?.reactions?.summary?.total_count ?? 0;
 
-const comments =
-  statsResponse.data?.comments?.summary?.total_count ?? 0;
+      const comments = statsResponse.data?.comments?.summary?.total_count ?? 0;
 
-const shares =
-  statsResponse.data?.shares?.count ?? 0;
-  const mediaType =
-  post.attachments?.data?.[0]?.media_type;
+      const shares = statsResponse.data?.shares?.count ?? 0;
+      const mediaType = post.attachments?.data?.[0]?.media_type;
 
-const attachmentType =
-  post.attachments?.data?.[0]?.type;
+      const attachmentType = post.attachments?.data?.[0]?.type;
       await this.userContentRepository.createAsync(
         new UserContent({
           userId,
 
-          platform:
-            _const.PLATFORMS.FACEBOOK,
+          platform: _const.PLATFORMS.FACEBOOK,
 
-          type: mediaType ?? attachmentType ?? "post",
+          type: mediaType ?? attachmentType ?? 'post',
 
           externalId: post.id,
 
-          title:
-            post.message?.substring(0, 120) ??
-            "Facebook Post",
+          title: post.message?.substring(0, 120) ?? 'Facebook Post',
 
           metaData: {
             message: post.message,
@@ -91,16 +83,13 @@ const attachmentType =
             createdTime: post.created_time,
 
             analytics: {
+              reactions,
+              comments,
+              shares,
+              engagement: reactions + comments + shares,
+            },
 
-  reactions,
-  comments,
-  shares,
-  engagement:
-    reactions + comments + shares,
-},
-
-            importedAt:
-              new Date().toISOString(),
+            importedAt: new Date().toISOString(),
           },
         }),
       );
@@ -120,8 +109,7 @@ const attachmentType =
       `https://graph.facebook.com/v23.0/${pageId}`,
       {
         params: {
-          fields:
-            "id,name,fan_count,followers_count",
+          fields: 'id,name,fan_count,followers_count',
           access_token: accessToken,
         },
       },
@@ -130,34 +118,25 @@ const attachmentType =
     const profile = response.data;
 
     const linkedAccount =
-      await this.linkedAccountRepository
-        .getByPlatformAndUserIdAsync(
-          _const.PLATFORMS.FACEBOOK,
-          userId,
-        );
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.FACEBOOK,
+        userId,
+      );
 
     if (!linkedAccount) {
-      throw new Error(
-        "Facebook linked account not found",
-      );
+      throw new Error('Facebook linked account not found');
     }
 
-    linkedAccount.externalId =
-      profile.id;
+    linkedAccount.externalId = profile.id;
 
-    linkedAccount.userName =
-      profile.name;
+    linkedAccount.userName = profile.name;
 
     linkedAccount.metaData = {
       ...(linkedAccount.metaData ?? {}),
-      fanCount:
-        profile.fan_count ?? 0,
-      followersCount:
-        profile.followers_count ?? 0,
+      fanCount: profile.fan_count ?? 0,
+      followersCount: profile.followers_count ?? 0,
     };
 
-    await this.linkedAccountRepository.updateAsync(
-      linkedAccount,
-    );
+    await this.linkedAccountRepository.updateAsync(linkedAccount);
   }
 }

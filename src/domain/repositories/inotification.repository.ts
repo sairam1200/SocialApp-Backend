@@ -1,4 +1,4 @@
-import { Notification } from "../entities/notification/notification.entity";
+import { Notification } from '../entities/notification/notification.entity';
 
 export interface INotificationRepository {
   createAsync(notification: Notification): Promise<Notification>;
@@ -12,7 +12,7 @@ export interface INotificationRepository {
     page: number,
     pageSize: number,
     orderBy: string,
-    order: "ASC" | "DESC",
+    order: 'ASC' | 'DESC',
     // add filter by type
   ): Promise<Notification[]>;
 }

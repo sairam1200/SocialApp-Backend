@@ -13,7 +13,7 @@ export type DiscordUserDataType = {
   accent_color: number | null;
   premium_type: number;
   public_flags: number;
-}
+};
 
 export class DiscordProfileModel {
   @ApiProperty()

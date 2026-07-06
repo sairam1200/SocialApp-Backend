@@ -1,16 +1,12 @@
-import { Injectable, NestMiddleware } from "@nestjs/common";
-import { NextFunction, Request, Response } from "express";
-import logger from "../utils/winston.util";
+import { Injectable, NestMiddleware } from '@nestjs/common';
+import { NextFunction, Request, Response } from 'express';
+import logger from '../utils/winston.util';
 
 @Injectable()
 export class BullBoardAuthMiddleware implements NestMiddleware {
-
-  constructor(
-
-  ) { }
+  constructor() {}
 
   async use(req: Request, res: Response, next: NextFunction): Promise<void> {
-
     const authHeader = req.get('authorization');
 
     if (!authHeader?.startsWith('Basic ')) {
@@ -23,8 +19,6 @@ export class BullBoardAuthMiddleware implements NestMiddleware {
     const [username, password] = decodedCreds.split(':');
 
     try {
-
-
     } catch (error) {
       logger.error(`Bull-board login - ${error}`);
       this.sendUnauthorizedResponse(res);

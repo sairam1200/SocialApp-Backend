@@ -1,11 +1,11 @@
-import * as path from "path";
-import { generateRandomColorSet } from "./color.util";
-import { ApplicationException } from "../../core/exceptions";
+import * as path from 'path';
+import { generateRandomColorSet } from './color.util';
+import { ApplicationException } from '../../core/exceptions';
 import { createCanvas, loadImage, registerFont } from 'canvas';
 
 const fontPath = path.resolve(
   process.cwd(),
-  'public/assets/fonts/Poppins/Poppins-Medium.ttf'
+  'public/assets/fonts/Poppins/Poppins-Medium.ttf',
 );
 registerFont(fontPath, {
   family: 'Poppins',
@@ -17,7 +17,6 @@ registerFont(fontPath, {
  * Canvas API used, available in browsers.
  */
 export function generateInitialImage(initials: string, size = 200): string {
-
   const { backgroundColor, textColor } = generateRandomColorSet();
   const canvas = createCanvas(size, size);
   const ctx = canvas.getContext('2d');

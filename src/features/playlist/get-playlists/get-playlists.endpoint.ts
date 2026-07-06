@@ -1,10 +1,17 @@
-import { Response } from "express"
-import { CommandBus } from "@nestjs/cqrs";
-import { GetPlaylistsQuery } from "./get-playlists.handler";
-import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../core/passport/account.guard";
-import { PlaylistModel } from "../../../domain/contracts/playlist.model";
-import { Controller, Get, HttpStatus, Param, Res, UseGuards } from "@nestjs/common";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { GetPlaylistsQuery } from './get-playlists.handler';
+import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../core/passport/account.guard';
+import { PlaylistModel } from '../../../domain/contracts/playlist.model';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Param,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 
 @ApiBearerAuth()
 @ApiTags('Playlists')
@@ -14,9 +21,7 @@ import { Controller, Get, HttpStatus, Param, Res, UseGuards } from "@nestjs/comm
   version: '1',
 })
 export class GetPlaylistsController {
-  constructor(
-    private readonly queryBus: CommandBus
-  ) { }
+  constructor(private readonly queryBus: CommandBus) {}
 
   @Get(':userNameOrId')
   @ApiResponse({ status: 200, description: 'OK', type: [PlaylistModel] })
@@ -25,14 +30,15 @@ export class GetPlaylistsController {
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Get(
     @Param('userNameOrId') userNameOrId: string,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response> {
-
-    const result = await this.queryBus.execute(new GetPlaylistsQuery({
-      model: {
-        userNameOrId
-      }
-    }));
+    const result = await this.queryBus.execute(
+      new GetPlaylistsQuery({
+        model: {
+          userNameOrId,
+        },
+      }),
+    );
 
     res.status(HttpStatus.OK).send(result);
     return res;

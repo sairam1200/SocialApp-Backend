@@ -1,10 +1,7 @@
-import { Globals } from "../../../core/globals";
-import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
+import { Globals } from '../../../core/globals';
+import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
 
-import {
-  IQueryHandler,
-  QueryHandler
-} from "@nestjs/cqrs";
+import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 
 interface CurrentUserSuccessResponse {
   id: string;
@@ -15,12 +12,12 @@ interface CurrentUserSuccessResponse {
   onboardingStep: string;
 }
 
-type CurrentUserResponse = CurrentUserSuccessResponse | { succeeded: false; message: string };
+type CurrentUserResponse =
+  | CurrentUserSuccessResponse
+  | { succeeded: false; message: string };
 
 export class CurrentUserQuery {
-  constructor(
-    request: Partial<CurrentUserQuery> = {}
-  ) {
+  constructor(request: Partial<CurrentUserQuery> = {}) {
     Object.assign(this, request);
   }
 }
@@ -35,28 +32,17 @@ export class CurrentUserQueryHandler
     if (!user) {
       return {
         succeeded: false,
-        message: "Unauthorized",
+        message: 'Unauthorized',
       };
     }
 
     return {
-      id: user[
-        Globals.ClaimTypes.UserId
-      ],
-      email: user[
-        Globals.ClaimTypes.Email
-      ],
-      firstName: user[
-        Globals.ClaimTypes.GivenName
-      ],
-      lastName: user[
-        Globals.ClaimTypes.FamilyName
-      ],
-      fullName: user[
-        Globals.ClaimTypes.FullName
-      ],
-      onboardingStep:
-        user.onboardingStep,
+      id: user[Globals.ClaimTypes.UserId],
+      email: user[Globals.ClaimTypes.Email],
+      firstName: user[Globals.ClaimTypes.GivenName],
+      lastName: user[Globals.ClaimTypes.FamilyName],
+      fullName: user[Globals.ClaimTypes.FullName],
+      onboardingStep: user.onboardingStep,
     };
   }
 }

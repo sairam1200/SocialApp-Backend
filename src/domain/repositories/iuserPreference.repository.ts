@@ -1,4 +1,4 @@
-import { UserPreference } from "../entities";
+import { UserPreference } from '../entities';
 
 export interface IUserPreferenceRepository {
   getByUserIdAsync(userId: string): Promise<UserPreference | null>;

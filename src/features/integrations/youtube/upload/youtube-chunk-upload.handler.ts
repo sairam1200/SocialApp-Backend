@@ -17,6 +17,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { Globals } from '../../../../core/globals';
+import { validateVideoFile } from '../../../../shared/validators/video-format.validator';
 
 const CHUNK_TEMP_DIR = path.join(os.tmpdir(), 'chunk-uploads');
 
@@ -36,17 +37,19 @@ interface ChunkMetadata {
 }
 
 export class InitChunkUploadCommand {
-  constructor(public readonly model: {
-    accountId: string;
-    title: string;
-    description?: string;
-    tags?: string[];
-    visibility?: string;
-    publishAt?: string;
-    totalSize: number;
-    fileName: string;
-    totalChunks: number;
-  }) {}
+  constructor(
+    public readonly model: {
+      accountId: string;
+      title: string;
+      description?: string;
+      tags?: string[];
+      visibility?: string;
+      publishAt?: string;
+      totalSize: number;
+      fileName: string;
+      totalChunks: number;
+    },
+  ) {}
 }
 
 export class AppendChunkCommand {
@@ -82,8 +85,12 @@ interface ChunkCompleteResponse {
 }
 
 @CommandHandler(InitChunkUploadCommand)
-export class InitChunkUploadCommandHandler implements ICommandHandler<InitChunkUploadCommand> {
-  async execute(command: InitChunkUploadCommand): Promise<{ uploadId: string }> {
+export class InitChunkUploadCommandHandler
+  implements ICommandHandler<InitChunkUploadCommand>
+{
+  async execute(
+    command: InitChunkUploadCommand,
+  ): Promise<{ uploadId: string }> {
     const uploadId = crypto.randomUUID();
     const sessionDir = path.join(CHUNK_TEMP_DIR, uploadId);
     fs.mkdirSync(sessionDir, { recursive: true });
@@ -94,15 +101,22 @@ export class InitChunkUploadCommandHandler implements ICommandHandler<InitChunkU
       userId,
       receivedChunks: 0,
     };
-    fs.writeFileSync(path.join(sessionDir, 'metadata.json'), JSON.stringify(metadata));
+    fs.writeFileSync(
+      path.join(sessionDir, 'metadata.json'),
+      JSON.stringify(metadata),
+    );
 
-    logger.info(`[ChunkUpload] Init: ${uploadId} totalChunks=${command.model.totalChunks} totalSize=${command.model.totalSize} fileName=${command.model.fileName}`);
+    logger.info(
+      `[ChunkUpload] Init: ${uploadId} totalChunks=${command.model.totalChunks} totalSize=${command.model.totalSize} fileName=${command.model.fileName}`,
+    );
     return { uploadId };
   }
 }
 
 @CommandHandler(AppendChunkCommand)
-export class AppendChunkCommandHandler implements ICommandHandler<AppendChunkCommand> {
+export class AppendChunkCommandHandler
+  implements ICommandHandler<AppendChunkCommand>
+{
   async execute(command: AppendChunkCommand): Promise<ChunkProgressResponse> {
     const { uploadId, chunkBuffer, chunkIndex, totalChunks } = command;
     const sessionDir = path.join(CHUNK_TEMP_DIR, uploadId);
@@ -115,7 +129,9 @@ export class AppendChunkCommandHandler implements ICommandHandler<AppendChunkCom
     fs.appendFileSync(videoPath, chunkBuffer);
 
     const metadataPath = path.join(sessionDir, 'metadata.json');
-    const metadata: ChunkMetadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+    const metadata: ChunkMetadata = JSON.parse(
+      fs.readFileSync(metadataPath, 'utf-8'),
+    );
 
     if (metadata.cancelled) {
       throw new YoutubeValidationError('Upload session was cancelled');
@@ -127,7 +143,9 @@ export class AppendChunkCommandHandler implements ICommandHandler<AppendChunkCom
 
     const progress = Math.round((metadata.receivedChunks / totalChunks) * 100);
 
-    logger.info(`[ChunkUpload] Chunk ${chunkIndex + 1}/${totalChunks} for ${uploadId} — progress: ${progress}%`);
+    logger.info(
+      `[ChunkUpload] Chunk ${chunkIndex + 1}/${totalChunks} for ${uploadId} — progress: ${progress}%`,
+    );
 
     return {
       uploadId,
@@ -140,7 +158,9 @@ export class AppendChunkCommandHandler implements ICommandHandler<AppendChunkCom
 }
 
 @CommandHandler(CompleteChunkUploadCommand)
-export class CompleteChunkUploadCommandHandler implements ICommandHandler<CompleteChunkUploadCommand> {
+export class CompleteChunkUploadCommandHandler
+  implements ICommandHandler<CompleteChunkUploadCommand>
+{
   constructor(
     @Inject(_const.IR2_STORAGE_SERVICE)
     private readonly r2Storage: R2StorageService,
@@ -154,7 +174,9 @@ export class CompleteChunkUploadCommandHandler implements ICommandHandler<Comple
     private readonly uploadQueue: Queue,
   ) {}
 
-  async execute(command: CompleteChunkUploadCommand): Promise<ChunkCompleteResponse> {
+  async execute(
+    command: CompleteChunkUploadCommand,
+  ): Promise<ChunkCompleteResponse> {
     const { uploadId } = command;
     const sessionDir = path.join(CHUNK_TEMP_DIR, uploadId);
 
@@ -162,7 +184,9 @@ export class CompleteChunkUploadCommandHandler implements ICommandHandler<Comple
       throw new YoutubeValidationError(`Upload session ${uploadId} not found`);
     }
 
-    const metadata: ChunkMetadata = JSON.parse(fs.readFileSync(path.join(sessionDir, 'metadata.json'), 'utf-8'));
+    const metadata: ChunkMetadata = JSON.parse(
+      fs.readFileSync(path.join(sessionDir, 'metadata.json'), 'utf-8'),
+    );
 
     if (metadata.cancelled) {
       throw new YoutubeValidationError('Upload session was cancelled');
@@ -175,7 +199,9 @@ export class CompleteChunkUploadCommandHandler implements ICommandHandler<Comple
     const videoPath = path.join(sessionDir, 'video.bin');
 
     if (!fs.existsSync(videoPath)) {
-      throw new YoutubeValidationError('No video data received for upload session');
+      throw new YoutubeValidationError(
+        'No video data received for upload session',
+      );
     }
 
     const stat = fs.statSync(videoPath);
@@ -183,24 +209,39 @@ export class CompleteChunkUploadCommandHandler implements ICommandHandler<Comple
       throw new YoutubeValidationError('Video file is empty');
     }
 
-    const r2Key = `videos/${metadata.accountId}/${crypto.randomUUID()}-${metadata.fileName || 'video.mp4'}`;
+    const fileName = metadata.fileName || 'video.mp4';
+    const validation = validateVideoFile(videoPath, fileName);
+    if (!validation.valid) {
+      throw new YoutubeValidationError(validation.error!);
+    }
+
+    const r2Key = `videos/${metadata.accountId}/${crypto.randomUUID()}-${fileName}`;
+    const contentType = validation.mimeType || 'video/mp4';
 
     try {
       const fileStream = fs.createReadStream(videoPath);
-      await this.r2Storage.uploadStream(r2Key, fileStream, 'video/mp4');
-      logger.info(`[ChunkUpload] Streamed to R2: ${r2Key} (${stat.size} bytes)`);
+      await this.r2Storage.uploadStream(r2Key, fileStream, contentType);
+      logger.info(
+        `[ChunkUpload] Streamed to R2: ${r2Key} (${stat.size} bytes) contentType=${contentType}`,
+      );
 
-      const linkedAccount = await this.linkedAccountRepo.getByIdAsync(metadata.accountId);
+      const linkedAccount = await this.linkedAccountRepo.getByIdAsync(
+        metadata.accountId,
+      );
       if (!linkedAccount) {
         throw new YoutubeValidationError('Linked account not found');
       }
 
       if (linkedAccount.userId !== metadata.userId) {
-        logger.error(`[ChunkUpload] Ownership mismatch: account userId=${linkedAccount.userId} metadata userId=${metadata.userId}`);
+        logger.error(
+          `[ChunkUpload] Ownership mismatch: account userId=${linkedAccount.userId} metadata userId=${metadata.userId}`,
+        );
         throw new YoutubeValidationError('Upload owner mismatch');
       }
 
-      const publishAt = metadata.publishAt ? new Date(metadata.publishAt) : undefined;
+      const publishAt = metadata.publishAt
+        ? new Date(metadata.publishAt)
+        : undefined;
 
       const video = new YoutubeVideo({
         accountId: linkedAccount.id,
@@ -225,7 +266,8 @@ export class CompleteChunkUploadCommandHandler implements ICommandHandler<Comple
       await this.uploadJobRepo.createAsync(uploadJob);
 
       try {
-        await this.uploadQueue.add('youtube-upload-job',
+        await this.uploadQueue.add(
+          'youtube-upload-job',
           {
             videoId: savedVideo.id,
             accountId: linkedAccount.id,
@@ -238,7 +280,10 @@ export class CompleteChunkUploadCommandHandler implements ICommandHandler<Comple
           },
         );
       } catch (queueError: unknown) {
-        const message = queueError instanceof Error ? queueError.message : 'Unknown queue error';
+        const message =
+          queueError instanceof Error
+            ? queueError.message
+            : 'Unknown queue error';
         logger.error(`[ChunkUpload] Failed to enqueue job: ${message}`);
         savedVideo.status = 'failed';
         await this.videoRepo.updateAsync(savedVideo);
@@ -248,7 +293,9 @@ export class CompleteChunkUploadCommandHandler implements ICommandHandler<Comple
         throw new YoutubeValidationError(`Upload queuing failed: ${message}`);
       }
 
-      logger.info(`[ChunkUpload] Completed: video=${savedVideo.id} r2Key=${r2Key}`);
+      logger.info(
+        `[ChunkUpload] Completed: video=${savedVideo.id} r2Key=${r2Key}`,
+      );
 
       return {
         videoId: savedVideo.id,
@@ -267,22 +314,31 @@ export class CompleteChunkUploadCommandHandler implements ICommandHandler<Comple
   private cleanupSession(sessionDir: string): void {
     try {
       fs.rmSync(sessionDir, { recursive: true, force: true });
-      logger.info(`[ChunkUpload] Cleaned up session: ${path.basename(sessionDir)}`);
+      logger.info(
+        `[ChunkUpload] Cleaned up session: ${path.basename(sessionDir)}`,
+      );
     } catch (err) {
-      logger.warn(`[ChunkUpload] Cleanup failed for session ${path.basename(sessionDir)}:`, err);
+      logger.warn(
+        `[ChunkUpload] Cleanup failed for session ${path.basename(sessionDir)}:`,
+        err,
+      );
     }
   }
 }
 
 @CommandHandler(AbortChunkUploadCommand)
-export class AbortChunkUploadCommandHandler implements ICommandHandler<AbortChunkUploadCommand> {
+export class AbortChunkUploadCommandHandler
+  implements ICommandHandler<AbortChunkUploadCommand>
+{
   async execute(command: AbortChunkUploadCommand): Promise<void> {
     const sessionDir = path.join(CHUNK_TEMP_DIR, command.uploadId);
     if (fs.existsSync(sessionDir)) {
       const metadataPath = path.join(sessionDir, 'metadata.json');
       if (fs.existsSync(metadataPath)) {
         try {
-          const metadata: ChunkMetadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+          const metadata: ChunkMetadata = JSON.parse(
+            fs.readFileSync(metadataPath, 'utf-8'),
+          );
           metadata.cancelled = true;
           fs.writeFileSync(metadataPath, JSON.stringify(metadata));
         } catch {}

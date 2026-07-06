@@ -1,10 +1,10 @@
-import { Injectable, Inject } from "@nestjs/common";
-import axios from "axios";
+import { Injectable, Inject } from '@nestjs/common';
+import axios from 'axios';
 
-import _const from "../../../core/utils/const";
-import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
-import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
-import { UserContent } from "../../../domain/entities/userContent.entity";
+import _const from '../../../core/utils/const';
+import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
+import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
+import { UserContent } from '../../../domain/entities/userContent.entity';
 
 @Injectable()
 export class TwitterImportService {
@@ -36,12 +36,9 @@ export class TwitterImportService {
         },
         params: {
           max_results: 10,
-          "tweet.fields":
-            "created_at,public_metrics,attachments,entities,text",
-          expansions:
-            "attachments.media_keys",
-          "media.fields":
-            "url,preview_image_url,type",
+          'tweet.fields': 'created_at,public_metrics,attachments,entities,text',
+          expansions: 'attachments.media_keys',
+          'media.fields': 'url,preview_image_url,type',
         },
       },
     );
@@ -50,78 +47,51 @@ export class TwitterImportService {
 
     const mediaMap = new Map();
 
-    (
-      tweetsResponse.data?.includes?.media ?? []
-    ).forEach((media: any) => {
+    (tweetsResponse.data?.includes?.media ?? []).forEach((media: any) => {
       mediaMap.set(media.media_key, media);
     });
 
     for (const tweet of tweets) {
-      const mediaKey =
-        tweet.attachments?.media_keys?.[0];
+      const mediaKey = tweet.attachments?.media_keys?.[0];
 
-      const media =
-        mediaKey
-          ? mediaMap.get(mediaKey)
-          : null;
+      const media = mediaKey ? mediaMap.get(mediaKey) : null;
 
-      const metrics =
-        tweet.public_metrics ?? {};
+      const metrics = tweet.public_metrics ?? {};
 
       await this.userContentRepository.createAsync(
         new UserContent({
           userId,
 
-          platform:
-            _const.PLATFORMS.TWITTER,
+          platform: _const.PLATFORMS.TWITTER,
 
-          type:
-            media?.type ??
-            "TWEET",
+          type: media?.type ?? 'TWEET',
 
-          externalId:
-            tweet.id,
+          externalId: tweet.id,
 
-          title:
-            tweet.text?.substring(
-              0,
-              150,
-            ) ?? "Tweet",
+          title: tweet.text?.substring(0, 150) ?? 'Tweet',
 
           metaData: {
             text: tweet.text,
 
-            mediaType:
-              media?.type,
+            mediaType: media?.type,
 
-            mediaUrl:
-              media?.url ??
-              media?.preview_image_url,
+            mediaUrl: media?.url ?? media?.preview_image_url,
 
-            thumbnailUrl:
-              media?.preview_image_url ??
-              media?.url,
+            thumbnailUrl: media?.preview_image_url ?? media?.url,
 
-            timestamp:
-              tweet.created_at,
+            timestamp: tweet.created_at,
 
-            importedAt:
-              new Date().toISOString(),
+            importedAt: new Date().toISOString(),
 
-            likeCount:
-              metrics.like_count ?? 0,
+            likeCount: metrics.like_count ?? 0,
 
-            replyCount:
-              metrics.reply_count ?? 0,
+            replyCount: metrics.reply_count ?? 0,
 
-            repostCount:
-              metrics.retweet_count ?? 0,
+            repostCount: metrics.retweet_count ?? 0,
 
-            quoteCount:
-              metrics.quote_count ?? 0,
+            quoteCount: metrics.quote_count ?? 0,
 
-            impressionCount:
-              metrics.impression_count ?? 0,
+            impressionCount: metrics.impression_count ?? 0,
 
             permalink: `https://twitter.com/i/web/status/${tweet.id}`,
           },
@@ -139,21 +109,16 @@ export class TwitterImportService {
     accessToken: string,
     twitterUserId: string,
   ): Promise<void> {
-    const response = await axios.get(
-      "https://api.twitter.com/2/users/me",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        params: {
-          "user.fields":
-            "profile_image_url,public_metrics,username,name",
-        },
+    const response = await axios.get('https://api.twitter.com/2/users/me', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
       },
-    );
+      params: {
+        'user.fields': 'profile_image_url,public_metrics,username,name',
+      },
+    });
 
-    const profile =
-      response.data?.data;
+    const profile = response.data?.data;
 
     const linkedAccount =
       await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
@@ -162,45 +127,29 @@ export class TwitterImportService {
       );
 
     if (!linkedAccount) {
-      throw new Error(
-        "Twitter linked account not found",
-      );
+      throw new Error('Twitter linked account not found');
     }
 
-    linkedAccount.externalId =
-      profile.id;
+    linkedAccount.externalId = profile.id;
 
-    linkedAccount.userName =
-      profile.username;
+    linkedAccount.userName = profile.username;
 
     linkedAccount.metaData = {
       ...(linkedAccount.metaData ?? {}),
 
-      displayName:
-        profile.name,
+      displayName: profile.name,
 
-      profileImage:
-        profile.profile_image_url,
+      profileImage: profile.profile_image_url,
 
-      followersCount:
-        profile.public_metrics
-          ?.followers_count ?? 0,
+      followersCount: profile.public_metrics?.followers_count ?? 0,
 
-      followingCount:
-        profile.public_metrics
-          ?.following_count ?? 0,
+      followingCount: profile.public_metrics?.following_count ?? 0,
 
-      tweetCount:
-        profile.public_metrics
-          ?.tweet_count ?? 0,
+      tweetCount: profile.public_metrics?.tweet_count ?? 0,
 
-      listedCount:
-        profile.public_metrics
-          ?.listed_count ?? 0,
+      listedCount: profile.public_metrics?.listed_count ?? 0,
     };
 
-    await this.linkedAccountRepository.updateAsync(
-      linkedAccount,
-    );
+    await this.linkedAccountRepository.updateAsync(linkedAccount);
   }
 }

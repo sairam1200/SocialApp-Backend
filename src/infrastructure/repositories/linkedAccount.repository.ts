@@ -1,28 +1,30 @@
-import { Repository } from "typeorm";
-import { Injectable } from "@nestjs/common";
-import { Globals } from "../../core/globals";
-import { InjectRepository } from "@nestjs/typeorm";
-import { QueryOptions } from "../../domain/types/queryOptions.type";
-import { LinkedAccount } from "../../domain/entities/linkedAccount.entity";
-import { HttpContext } from "../../core/middlewares/httpContext.middleware";
-import { ILinkedAccountRepository } from "../../domain/repositories/ilinkedAccount.repository";
-import { LinkedAccountAlreadyExistsException } from "../../core/exceptions/linkedAccount.exception";
+import { Repository } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { Globals } from '../../core/globals';
+import { InjectRepository } from '@nestjs/typeorm';
+import { QueryOptions } from '../../domain/types/queryOptions.type';
+import { LinkedAccount } from '../../domain/entities/linkedAccount.entity';
+import { HttpContext } from '../../core/middlewares/httpContext.middleware';
+import { ILinkedAccountRepository } from '../../domain/repositories/ilinkedAccount.repository';
+import { LinkedAccountAlreadyExistsException } from '../../core/exceptions/linkedAccount.exception';
 
 @Injectable()
 export class LinkedAccountRepository implements ILinkedAccountRepository {
-
   constructor(
     @InjectRepository(LinkedAccount)
-    private readonly linkedAccountContext: Repository<LinkedAccount>
-  ) { }
+    private readonly linkedAccountContext: Repository<LinkedAccount>,
+  ) {}
 
-  public async getEntriesAsync(params: QueryOptions): Promise<[LinkedAccount[], number]> {
+  public async getEntriesAsync(
+    params: QueryOptions,
+  ): Promise<[LinkedAccount[], number]> {
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;
     console.log('Query Options:', searchQuery);
-    const queryBuilder = this.linkedAccountContext.createQueryBuilder("account");
+    const queryBuilder =
+      this.linkedAccountContext.createQueryBuilder('account');
 
     if (!orderBy) {
-      orderBy = "userName";
+      orderBy = 'userName';
     }
 
     const whereConditions: string[] = [];
@@ -44,71 +46,72 @@ export class LinkedAccountRepository implements ILinkedAccountRepository {
     }
 
     if (filter?.platform) {
-      whereConditions.push("account.platform = :platform");
+      whereConditions.push('account.platform = :platform');
       parameters.platform = filter.platform;
     }
 
     if (filter?.verified) {
-      whereConditions.push("account.verified = :verified");
+      whereConditions.push('account.verified = :verified');
       parameters.verified = filter.verified;
     }
 
     if (filter?.externalId) {
-      whereConditions.push("account.externalId = :externalId");
+      whereConditions.push('account.externalId = :externalId');
       parameters.externalId = filter.externalId;
     }
 
     if (filter?.type) {
-      whereConditions.push("account.type = :type");
+      whereConditions.push('account.type = :type');
       parameters.type = filter.type;
     }
 
     if (whereConditions.length > 0) {
-      queryBuilder.where(whereConditions.join(" AND "), parameters);
+      queryBuilder.where(whereConditions.join(' AND '), parameters);
     }
 
     if (searchQuery) {
-      queryBuilder.orderBy(
-        `CASE WHEN account.userName ILIKE :exactSearch THEN 0 
+      queryBuilder
+        .orderBy(
+          `CASE WHEN account.userName ILIKE :exactSearch THEN 0 
                  WHEN account.userName ILIKE :searchQuery THEN 1 
                  ELSE 2 END`,
-        "ASC"
-      )
+          'ASC',
+        )
         .addOrderBy(`account.${orderBy}`, order)
-        .setParameter("exactSearch", searchQuery.toLowerCase());
+        .setParameter('exactSearch', searchQuery.toLowerCase());
     } else {
       queryBuilder.orderBy(`account.${orderBy}`, order);
     }
 
-    queryBuilder.skip((page - 1) * pageSize)
-      .take(pageSize);
+    queryBuilder.skip((page - 1) * pageSize).take(pageSize);
     const result = await queryBuilder.getManyAndCount();
     console.log('Query Result:', result);
-    return result
+    return result;
   }
 
-  public async createAsync(linkedAccount: LinkedAccount): Promise<LinkedAccount> {
-
+  public async createAsync(
+    linkedAccount: LinkedAccount,
+  ): Promise<LinkedAccount> {
     let existingAccount: LinkedAccount | null = null;
 
-if (linkedAccount.email) {
-    existingAccount = await this.getByPlatformAndEmailAsync(
+    if (linkedAccount.email) {
+      existingAccount = await this.getByPlatformAndEmailAsync(
         linkedAccount.platform,
-        linkedAccount.email
-    );
-} else {
-    existingAccount = await this.getByPlatformAndExternalIdAsync(
+        linkedAccount.email,
+      );
+    } else {
+      existingAccount = await this.getByPlatformAndExternalIdAsync(
         linkedAccount.platform,
-        linkedAccount.externalId
-    );
-}
+        linkedAccount.externalId,
+      );
+    }
 
-if (existingAccount) {
-    throw new LinkedAccountAlreadyExistsException(
+    if (existingAccount) {
+      throw new LinkedAccountAlreadyExistsException(
         linkedAccount.platform,
-        linkedAccount.email ?? linkedAccount.userName
-    );
-}
+        linkedAccount.email ?? linkedAccount.userName,
+      );
+    }
 
     if (HttpContext.user) {
       const userId = HttpContext.user[Globals.ClaimTypes.UserId];
@@ -134,24 +137,48 @@ if (existingAccount) {
     return await this.linkedAccountContext.findOne({ where: { id } });
   }
 
-  public async getByPlatformAndUserIdAsync(platform: string, userId: string): Promise<LinkedAccount | null> {
-    return await this.linkedAccountContext.findOne({ where: { platform, userId } });
+  public async getByPlatformAndUserIdAsync(
+    platform: string,
+    userId: string,
+  ): Promise<LinkedAccount | null> {
+    return await this.linkedAccountContext.findOne({
+      where: { platform, userId },
+    });
   }
 
-  public async getByPlatformAndEmailAsync(platform: string, email: string): Promise<LinkedAccount | null> {
+  public async getByPlatformAndEmailAsync(
+    platform: string,
+    email: string,
+  ): Promise<LinkedAccount | null> {
     const normalizedEmail = email?.toUpperCase();
-    return await this.linkedAccountContext.findOne({ where: { platform, email: normalizedEmail } });
+    return await this.linkedAccountContext.findOne({
+      where: { platform, email: normalizedEmail },
+    });
   }
 
-  public async getByPlatformAndUserNameAsync(platform: string, username: string): Promise<LinkedAccount | null> {
-    return await this.linkedAccountContext.findOne({ where: { platform, userName: username } });
+  public async getByPlatformAndUserNameAsync(
+    platform: string,
+    username: string,
+  ): Promise<LinkedAccount | null> {
+    return await this.linkedAccountContext.findOne({
+      where: { platform, userName: username },
+    });
   }
 
-  public async getByPlatformAndExternalIdAsync(platform: string, externalId: string): Promise<LinkedAccount | null> {
-    return await this.linkedAccountContext.findOne({ where: { platform, externalId } });
+  public async getByPlatformAndExternalIdAsync(
+    platform: string,
+    externalId: string,
+  ): Promise<LinkedAccount | null> {
+    return await this.linkedAccountContext.findOne({
+      where: { platform, externalId },
+    });
   }
 
-  public async getByPlatformAndMetaDataValueAsync(platform: string, metaKey: string, metaValue: string): Promise<LinkedAccount | null> {
+  public async getByPlatformAndMetaDataValueAsync(
+    platform: string,
+    metaKey: string,
+    metaValue: string,
+  ): Promise<LinkedAccount | null> {
     return await this.linkedAccountContext
       .createQueryBuilder('account')
       .where('account.platform = :platform', { platform })
@@ -161,11 +188,14 @@ if (existingAccount) {
 
   public async getByEmailAsync(email: string): Promise<LinkedAccount | null> {
     const normalizedEmail = email?.toUpperCase();
-    return await this.linkedAccountContext.findOne({ where: { email: normalizedEmail } });
+    return await this.linkedAccountContext.findOne({
+      where: { email: normalizedEmail },
+    });
   }
 
-  public async deleteAsync(linkedAccount: LinkedAccount): Promise<LinkedAccount> {
+  public async deleteAsync(
+    linkedAccount: LinkedAccount,
+  ): Promise<LinkedAccount> {
     return await this.linkedAccountContext.remove(linkedAccount);
   }
-
 }

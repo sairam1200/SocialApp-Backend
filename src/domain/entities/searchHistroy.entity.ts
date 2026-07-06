@@ -1,9 +1,8 @@
-import { Column, Entity } from "typeorm";
-import { BaseEntity } from "../baseEntity";
+import { Column, Entity } from 'typeorm';
+import { BaseEntity } from '../baseEntity';
 
-@Entity({ name: "searchHistories" })
+@Entity({ name: 'searchHistories' })
 export class SearchHistory extends BaseEntity {
-
   @Column()
   originalQuery: string;
 

@@ -1,5 +1,1 @@
-export interface INotificationEventRepository {
-
-
-
-}
+export interface INotificationEventRepository {}

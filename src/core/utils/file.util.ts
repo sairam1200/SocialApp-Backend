@@ -8,7 +8,9 @@ function readFileAsString(filePath: string): string {
     const absolutePath = path.resolve(path.join(basePath, filePath));
     return fs.readFileSync(absolutePath, 'utf-8');
   } catch (error) {
-    throw new ApplicationException(`Error reading file at ${filePath}: ${error.message}`);
+    throw new ApplicationException(
+      `Error reading file at ${filePath}: ${error.message}`,
+    );
   }
 }
 
@@ -18,7 +20,9 @@ async function readFileAsStringAsync(filePath: string): Promise<string> {
     const data = await fs.promises.readFile(absolutePath, 'utf-8');
     return data;
   } catch (error) {
-    throw new ApplicationException(`Error reading file at ${filePath}: ${error.message}`);
+    throw new ApplicationException(
+      `Error reading file at ${filePath}: ${error.message}`,
+    );
   }
 }
 
@@ -27,10 +31,11 @@ function readFileAsBuffer(filePath: string): Buffer {
     const absolutePath = path.resolve(path.join(basePath, filePath));
     return fs.readFileSync(absolutePath);
   } catch (error) {
-    throw new ApplicationException(`Error reading file at ${filePath}: ${error.message}`);
+    throw new ApplicationException(
+      `Error reading file at ${filePath}: ${error.message}`,
+    );
   }
 }
-
 
 async function readFileAsBufferAsync(filePath: string): Promise<Buffer> {
   try {
@@ -38,7 +43,9 @@ async function readFileAsBufferAsync(filePath: string): Promise<Buffer> {
     const data = await fs.promises.readFile(absolutePath);
     return data;
   } catch (error) {
-    throw new ApplicationException(`Error reading file at ${filePath}: ${error.message}`);
+    throw new ApplicationException(
+      `Error reading file at ${filePath}: ${error.message}`,
+    );
   }
 }
 
@@ -47,4 +54,4 @@ export default {
   readFileAsBuffer,
   readFileAsStringAsync,
   readFileAsBufferAsync,
-}
+};

@@ -1,10 +1,9 @@
-import { Column, Entity } from "typeorm";
-import { BaseEntity } from "../../baseEntity";
-import { NotificationType } from "../../enums";
+import { Column, Entity } from 'typeorm';
+import { BaseEntity } from '../../baseEntity';
+import { NotificationType } from '../../enums';
 
-@Entity({ name: "notifications", schema: "notification" })
+@Entity({ name: 'notifications', schema: 'notification' })
 export class Notification extends BaseEntity {
-
   @Column({ type: 'json', nullable: true })
   metaData?: Record<string, any>;
 

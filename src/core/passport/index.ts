@@ -4,9 +4,9 @@ export {
   GuestAccoutGuard,
   UserAccoutGuard,
   TwoFAVerificationGuard,
-  RefreshTokenGuard
-} from "./account.guard"
-export { TurnstileGuard, RequireTurnstile } from "./turnstile.guard";
-export { PermissionsGuard } from "./permissions.guard";
-export { OnboardingGuard } from "./onboarding.guard";
-export { JwtPayload } from "./jwtPayload";
+  RefreshTokenGuard,
+} from './account.guard';
+export { TurnstileGuard, RequireTurnstile } from './turnstile.guard';
+export { PermissionsGuard } from './permissions.guard';
+export { OnboardingGuard } from './onboarding.guard';
+export { JwtPayload } from './jwtPayload';

@@ -1,9 +1,16 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { PermissionsGuard } from "../../../core/passport/permissions.guard";
-import { ActivateUserRoleCommand } from "./activate-user-role.handler";
-import { Controller, HttpStatus, Patch, Query, Res, UseGuards } from "@nestjs/common";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { PermissionsGuard } from '../../../core/passport/permissions.guard';
+import { ActivateUserRoleCommand } from './activate-user-role.handler';
+import {
+  Controller,
+  HttpStatus,
+  Patch,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 
 @ApiTags('Users')
 @UseGuards(PermissionsGuard)
@@ -12,8 +19,7 @@ import { Controller, HttpStatus, Patch, Query, Res, UseGuards } from "@nestjs/co
   version: '1',
 })
 export class ActivateUserRoleController {
-
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Patch('role/activate')
   @UseGuards(PermissionsGuard)
@@ -26,10 +32,11 @@ export class ActivateUserRoleController {
   public async Activate(
     @Query('userId') userId: string,
     @Query('roleId') roleId: string,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<void> {
-    await this.commandBus.execute(new ActivateUserRoleCommand({ userId, roleId }));
+    await this.commandBus.execute(
+      new ActivateUserRoleCommand({ userId, roleId }),
+    );
     res.status(HttpStatus.NO_CONTENT).send(null);
   }
 }
-

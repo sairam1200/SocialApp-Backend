@@ -15,7 +15,10 @@ import { IFacebookVideoAnalyticsRepository } from '../../domain/repositories/ifa
 import { ILinkedAccountRepository } from '../../domain/repositories/ilinkedAccount.repository';
 import { IUserLoginRepository } from '../../domain/repositories/iuserLogin.repository';
 import { IFacebookAnalyticsService } from '../../domain/services/ifacebookAnalytics.service';
-import { deserializeObject, serializeObject } from '../../core/utils/serialization.util';
+import {
+  deserializeObject,
+  serializeObject,
+} from '../../core/utils/serialization.util';
 
 @Injectable()
 export class FacebookAnalyticsService implements IFacebookAnalyticsService {
@@ -40,18 +43,27 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
   ) {}
 
   public async syncAccountAnalyticsAsync(userId: string): Promise<void> {
-    logger.info(`[FacebookAnalyticsService] Starting Facebook analytics sync for user ${userId}`);
+    logger.info(
+      `[FacebookAnalyticsService] Starting Facebook analytics sync for user ${userId}`,
+    );
 
     let credentialsAvailable = false;
     let accessToken = '';
 
     try {
-      const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.FACEBOOK);
+      const userLogin =
+        await this.userLoginRepository.getByUserIdAndProviderAsync(
+          userId,
+          _const.PLATFORMS.FACEBOOK,
+        );
       if (userLogin && userLogin.tokenValue) {
         let tokenStr = userLogin.tokenValue;
         if (tokenStr.trim().startsWith('{')) {
           try {
-            const parsed = deserializeObject<{ access_token: string; expires_in: number }>(tokenStr);
+            const parsed = deserializeObject<{
+              access_token: string;
+              expires_in: number;
+            }>(tokenStr);
             if (parsed && parsed.access_token) {
               tokenStr = parsed.access_token;
             }
@@ -71,12 +83,16 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
                   access_token: refreshed.access_token,
                   expires_in: refreshed.expires_in,
                 });
-                userLogin.expiryDateUtc = new Date(Date.now() + refreshed.expires_in * 1000);
+                userLogin.expiryDateUtc = new Date(
+                  Date.now() + refreshed.expires_in * 1000,
+                );
                 await this.userLoginRepository.updateAsync(userLogin);
                 credentialsAvailable = true;
               }
             } catch (err) {
-              logger.warn(`[FacebookAnalyticsService] Could not refresh Facebook token for user ${userId}: ${err.message}`);
+              logger.warn(
+                `[FacebookAnalyticsService] Could not refresh Facebook token for user ${userId}: ${err.message}`,
+              );
             }
           } else {
             accessToken = tokenStr;
@@ -92,10 +108,11 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
 
     if (credentialsAvailable && accessToken) {
       try {
-        const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-          _const.PLATFORMS.FACEBOOK,
-          userId,
-        );
+        const account =
+          await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+            _const.PLATFORMS.FACEBOOK,
+            userId,
+          );
 
         if (!account) {
           throw new Error('No linked Facebook account found for this user.');
@@ -109,7 +126,7 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
         const pageResponse = await this.callFbApiWithRetryAsync(
           `/${pageId}`,
           { fields: 'followers_count,fan_count' },
-          accessToken
+          accessToken,
         );
 
         const pageData = pageResponse.data || {};
@@ -120,16 +137,26 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
         const insightsResponse = await this.callFbApiWithRetryAsync(
           `/${pageId}/insights`,
           {
-            metric: 'page_impressions,page_impressions_unique,page_post_engagements,page_views_total,page_total_actions',
-            period: 'day'
+            metric:
+              'page_impressions,page_impressions_unique,page_post_engagements,page_views_total,page_total_actions',
+            period: 'day',
           },
-          accessToken
+          accessToken,
         );
 
         const insightsData = insightsResponse.data?.data || [];
-        const impressions = this.getMetricValue(insightsData, 'page_impressions');
-        const reach = this.getMetricValue(insightsData, 'page_impressions_unique');
-        const engagement = this.getMetricValue(insightsData, 'page_post_engagements');
+        const impressions = this.getMetricValue(
+          insightsData,
+          'page_impressions',
+        );
+        const reach = this.getMetricValue(
+          insightsData,
+          'page_impressions_unique',
+        );
+        const engagement = this.getMetricValue(
+          insightsData,
+          'page_post_engagements',
+        );
         const pageViews = this.getMetricValue(insightsData, 'page_views_total');
         const clicks = this.getMetricValue(insightsData, 'page_total_actions');
 
@@ -176,9 +203,10 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
               const postDetailsResponse = await this.callFbApiWithRetryAsync(
                 `/${postId}`,
                 {
-                  fields: 'id,created_time,type,shares,comments.summary(total_count),reactions.summary(total_count),reactions.type(LIKE).limit(0).summary(total_count).as(like),reactions.type(LOVE).limit(0).summary(total_count).as(love),reactions.type(HAHA).limit(0).summary(total_count).as(haha),reactions.type(WOW).limit(0).summary(total_count).as(wow),reactions.type(SAD).limit(0).summary(total_count).as(sad),reactions.type(ANGRY).limit(0).summary(total_count).as(angry)'
+                  fields:
+                    'id,created_time,type,shares,comments.summary(total_count),reactions.summary(total_count),reactions.type(LIKE).limit(0).summary(total_count).as(like),reactions.type(LOVE).limit(0).summary(total_count).as(love),reactions.type(HAHA).limit(0).summary(total_count).as(haha),reactions.type(WOW).limit(0).summary(total_count).as(wow),reactions.type(SAD).limit(0).summary(total_count).as(sad),reactions.type(ANGRY).limit(0).summary(total_count).as(angry)',
                 },
-                accessToken
+                accessToken,
               );
 
               const postDetails = postDetailsResponse.data || {};
@@ -189,46 +217,77 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
               const postInsightsResponse = await this.callFbApiWithRetryAsync(
                 `/${postId}/insights`,
                 {
-                  metric: 'post_impressions,post_impressions_unique,post_engaged_users,post_clicks'
+                  metric:
+                    'post_impressions,post_impressions_unique,post_engaged_users,post_clicks',
                 },
-                accessToken
+                accessToken,
               );
 
               const postInsightsData = postInsightsResponse.data?.data || [];
-              const postImpressions = this.getMetricValue(postInsightsData, 'post_impressions');
-              const postReach = this.getMetricValue(postInsightsData, 'post_impressions_unique');
-              const postClicks = this.getMetricValue(postInsightsData, 'post_clicks');
+              const postImpressions = this.getMetricValue(
+                postInsightsData,
+                'post_impressions',
+              );
+              const postReach = this.getMetricValue(
+                postInsightsData,
+                'post_impressions_unique',
+              );
+              const postClicks = this.getMetricValue(
+                postInsightsData,
+                'post_clicks',
+              );
 
-              const reactionsCount = postDetails.reactions?.summary?.total_count || 0;
+              const reactionsCount =
+                postDetails.reactions?.summary?.total_count || 0;
               const likeCount = postDetails.like?.summary?.total_count || 0;
               const loveCount = postDetails.love?.summary?.total_count || 0;
               const hahaCount = postDetails.haha?.summary?.total_count || 0;
               const wowCount = postDetails.wow?.summary?.total_count || 0;
               const sadCount = postDetails.sad?.summary?.total_count || 0;
               const angryCount = postDetails.angry?.summary?.total_count || 0;
-              const commentCount = postDetails.comments?.summary?.total_count || 0;
+              const commentCount =
+                postDetails.comments?.summary?.total_count || 0;
               const shareCount = postDetails.shares?.count || 0;
 
               // Engagement rate calculation
-              const engagementRate = postReach > 0 ? parseFloat((((reactionsCount + commentCount + shareCount) / postReach) * 100).toFixed(2)) : 0;
+              const engagementRate =
+                postReach > 0
+                  ? parseFloat(
+                      (
+                        ((reactionsCount + commentCount + shareCount) /
+                          postReach) *
+                        100
+                      ).toFixed(2),
+                    )
+                  : 0;
 
               // Video post fields
               let videoViews = 0;
               let averageWatchTime = 0;
 
               if (isVideo) {
-                const videoInsightsResponse = await this.callFbApiWithRetryAsync(
-                  `/${postId}/insights`,
-                  {
-                    metric: 'post_video_views,post_video_avg_time_watched'
-                  },
-                  accessToken
+                const videoInsightsResponse =
+                  await this.callFbApiWithRetryAsync(
+                    `/${postId}/insights`,
+                    {
+                      metric: 'post_video_views,post_video_avg_time_watched',
+                    },
+                    accessToken,
+                  );
+                const videoInsightsData =
+                  videoInsightsResponse.data?.data || [];
+                videoViews = this.getMetricValue(
+                  videoInsightsData,
+                  'post_video_views',
                 );
-                const videoInsightsData = videoInsightsResponse.data?.data || [];
-                videoViews = this.getMetricValue(videoInsightsData, 'post_video_views');
                 // averageWatchTime in seconds (Meta returns average watch time in ms or seconds, we parse it as seconds)
-                const watchTimeRaw = this.getMetricValue(videoInsightsData, 'post_video_avg_time_watched');
-                averageWatchTime = Math.round(watchTimeRaw > 100 ? watchTimeRaw / 1000 : watchTimeRaw);
+                const watchTimeRaw = this.getMetricValue(
+                  videoInsightsData,
+                  'post_video_avg_time_watched',
+                );
+                averageWatchTime = Math.round(
+                  watchTimeRaw > 100 ? watchTimeRaw / 1000 : watchTimeRaw,
+                );
               }
 
               const postAnalytics = new FacebookPostAnalytics({
@@ -249,7 +308,11 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
                 clickCount: postClicks,
                 videoViews,
                 averageWatchTime,
-                publishedAt: post.publishedAt || (postDetails.created_time ? new Date(postDetails.created_time) : today),
+                publishedAt:
+                  post.publishedAt ||
+                  (postDetails.created_time
+                    ? new Date(postDetails.created_time)
+                    : today),
                 postType,
                 snapshotDate: today,
               });
@@ -259,25 +322,49 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
                 postAnalytics.reach = postReach;
               }
 
-              await this.postAnalyticsRepository.createOrUpdateAsync(postAnalytics);
+              await this.postAnalyticsRepository.createOrUpdateAsync(
+                postAnalytics,
+              );
 
               // 4. Video-specific analytics (if video type)
               if (isVideo) {
                 const vInsightsResponse = await this.callFbApiWithRetryAsync(
                   `/${postId}/insights`,
                   {
-                    metric: 'post_video_views_unique,post_video_views_3s,post_video_views_60s,post_video_view_time'
+                    metric:
+                      'post_video_views_unique,post_video_views_3s,post_video_views_60s,post_video_view_time',
                   },
-                  accessToken
+                  accessToken,
                 );
                 const vInsightsData = vInsightsResponse.data?.data || [];
-                const uniqueViewers = this.getMetricValue(vInsightsData, 'post_video_views_unique');
-                const threeSecondViews = this.getMetricValue(vInsightsData, 'post_video_views_3s');
-                const oneMinuteViews = this.getMetricValue(vInsightsData, 'post_video_views_60s');
-                const totalWatchTimeRaw = this.getMetricValue(vInsightsData, 'post_video_view_time');
-                const totalWatchTime = Math.round(totalWatchTimeRaw > 100 ? totalWatchTimeRaw / 1000 : totalWatchTimeRaw); // ensure seconds
+                const uniqueViewers = this.getMetricValue(
+                  vInsightsData,
+                  'post_video_views_unique',
+                );
+                const threeSecondViews = this.getMetricValue(
+                  vInsightsData,
+                  'post_video_views_3s',
+                );
+                const oneMinuteViews = this.getMetricValue(
+                  vInsightsData,
+                  'post_video_views_60s',
+                );
+                const totalWatchTimeRaw = this.getMetricValue(
+                  vInsightsData,
+                  'post_video_view_time',
+                );
+                const totalWatchTime = Math.round(
+                  totalWatchTimeRaw > 100
+                    ? totalWatchTimeRaw / 1000
+                    : totalWatchTimeRaw,
+                ); // ensure seconds
 
-                const completionRate = videoViews > 0 ? parseFloat(((oneMinuteViews / videoViews) * 100).toFixed(2)) : 0;
+                const completionRate =
+                  videoViews > 0
+                    ? parseFloat(
+                        ((oneMinuteViews / videoViews) * 100).toFixed(2),
+                      )
+                    : 0;
 
                 const videoAnalytics = new FacebookVideoAnalytics({
                   videoId: postId,
@@ -289,15 +376,23 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
                   averageWatchTime,
                   totalWatchTime: BigInt(totalWatchTime) as any,
                   completionRate,
-                  publishedAt: post.publishedAt || (postDetails.created_time ? new Date(postDetails.created_time) : today),
+                  publishedAt:
+                    post.publishedAt ||
+                    (postDetails.created_time
+                      ? new Date(postDetails.created_time)
+                      : today),
                   duration: '00:00:00', // placeholder
                   snapshotDate: today,
                 });
 
-                await this.videoAnalyticsRepository.createOrUpdateAsync(videoAnalytics);
+                await this.videoAnalyticsRepository.createOrUpdateAsync(
+                  videoAnalytics,
+                );
               }
             } catch (postErr) {
-              logger.warn(`[FacebookAnalyticsService] Failed to sync analytics for post ${postId}: ${postErr.message}`);
+              logger.warn(
+                `[FacebookAnalyticsService] Failed to sync analytics for post ${postId}: ${postErr.message}`,
+              );
             }
           }
 
@@ -305,7 +400,9 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
           pageNum++;
         }
 
-        logger.info(`[FacebookAnalyticsService] Successfully synced real Facebook Analytics for user ${userId}`);
+        logger.info(
+          `[FacebookAnalyticsService] Successfully synced real Facebook Analytics for user ${userId}`,
+        );
         return;
       } catch (apiErr) {
         logger.error(
@@ -320,7 +417,9 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
   }
 
   public async syncAllAccountsAnalyticsAsync(): Promise<void> {
-    logger.info(`[FacebookAnalyticsService] Starting background sync for all connected Facebook accounts`);
+    logger.info(
+      `[FacebookAnalyticsService] Starting background sync for all connected Facebook accounts`,
+    );
     try {
       const [accounts] = await this.linkedAccountRepository.getEntriesAsync({
         filter: { platform: _const.PLATFORMS.FACEBOOK },
@@ -338,14 +437,21 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
           );
         }
       }
-      logger.info(`[FacebookAnalyticsService] Completed background sync for all Facebook accounts`);
+      logger.info(
+        `[FacebookAnalyticsService] Completed background sync for all Facebook accounts`,
+      );
     } catch (err) {
-      logger.error(`[FacebookAnalyticsService] Error retrieving Facebook accounts for background sync:`, err);
+      logger.error(
+        `[FacebookAnalyticsService] Error retrieving Facebook accounts for background sync:`,
+        err,
+      );
     }
   }
 
   private async syncMockAnalyticsAsync(userId: string): Promise<void> {
-    logger.info(`[FacebookAnalyticsService] Generating mock Facebook analytics data for user ${userId}`);
+    logger.info(
+      `[FacebookAnalyticsService] Generating mock Facebook analytics data for user ${userId}`,
+    );
 
     const pageId = 'page_mock_' + userId.substring(0, 8);
     const mockPostIds = ['fb_post_mock_1', 'fb_post_mock_2', 'fb_post_mock_3'];
@@ -371,13 +477,17 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
       const date = new Date(today);
       date.setUTCDate(today.getUTCDate() - dayOffset);
 
-      const followerBase = 5000 + (30 - dayOffset) * 15 + Math.floor(Math.random() * 5);
+      const followerBase =
+        5000 + (30 - dayOffset) * 15 + Math.floor(Math.random() * 5);
       const fanBase = Math.floor(followerBase * 0.95);
-      const impressionsBase = 25000 + (30 - dayOffset) * 200 + Math.floor(Math.random() * 500);
+      const impressionsBase =
+        25000 + (30 - dayOffset) * 200 + Math.floor(Math.random() * 500);
       const reachBase = Math.floor(impressionsBase * 0.75);
       const engagementBase = 5 + Math.random() * 3; // percentage representation
-      const pageViewsBase = 400 + (30 - dayOffset) * 5 + Math.floor(Math.random() * 20);
-      const clicksBase = 80 + (30 - dayOffset) * 2 + Math.floor(Math.random() * 10);
+      const pageViewsBase =
+        400 + (30 - dayOffset) * 5 + Math.floor(Math.random() * 20);
+      const clicksBase =
+        80 + (30 - dayOffset) * 2 + Math.floor(Math.random() * 10);
 
       const pageAnalytics = new FacebookPageAnalytics({
         pageId,
@@ -399,7 +509,11 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
         const postId = postIds[pIdx];
         const pFactor = (pIdx + 1) * 1.2;
 
-        const pReach = Math.floor(800 * pFactor + (30 - dayOffset) * 40 * pFactor + Math.floor(Math.random() * 50));
+        const pReach = Math.floor(
+          800 * pFactor +
+            (30 - dayOffset) * 40 * pFactor +
+            Math.floor(Math.random() * 50),
+        );
         const pImpressions = Math.floor(pReach * 1.3);
         const pClicks = Math.floor(pReach * 0.05);
         const pLikes = Math.floor(pReach * 0.06);
@@ -408,12 +522,13 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
         const pWow = Math.floor(pLikes * 0.03);
         const pSad = Math.floor(pLikes * 0.01);
         const pAngry = Math.floor(pLikes * 0.005);
-        
+
         const pReactions = pLikes + pLove + pHaha + pWow + pSad + pAngry;
         const pComments = Math.floor(pReach * 0.02);
         const pShares = Math.floor(pReach * 0.01);
-        
-        const pEngagement = ((pReactions + pComments + pShares) / (pReach || 1)) * 100;
+
+        const pEngagement =
+          ((pReactions + pComments + pShares) / (pReach || 1)) * 100;
 
         const isVideo = pIdx % 2 === 0;
 
@@ -466,39 +581,51 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
             snapshotDate: date,
           });
 
-          await this.videoAnalyticsRepository.createOrUpdateAsync(videoAnalytics);
+          await this.videoAnalyticsRepository.createOrUpdateAsync(
+            videoAnalytics,
+          );
         }
       }
     }
 
-    logger.info(`[FacebookAnalyticsService] Successfully generated 30 days of mock Facebook Analytics for user ${userId}`);
+    logger.info(
+      `[FacebookAnalyticsService] Successfully generated 30 days of mock Facebook Analytics for user ${userId}`,
+    );
   }
 
   private async verifyAccessTokenAsync(accessToken: string): Promise<boolean> {
     try {
       const appAccessToken = `${configs.facebook.clientId}|${configs.facebook.clientSecret}`;
-      const response = await axios.get(`https://graph.facebook.com/v23.0/debug_token`, {
-        params: {
-          input_token: accessToken,
-          access_token: appAccessToken,
+      const response = await axios.get(
+        `https://graph.facebook.com/v23.0/debug_token`,
+        {
+          params: {
+            input_token: accessToken,
+            access_token: appAccessToken,
+          },
         },
-      });
+      );
       return response.data?.data?.is_valid === true;
     } catch {
       return false;
     }
   }
 
-  private async refreshTokenAsync(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
+  private async refreshTokenAsync(
+    refreshToken: string,
+  ): Promise<{ access_token: string; expires_in: number }> {
     try {
-      const response = await axios.get('https://graph.facebook.com/v23.0/oauth/access_token', {
-        params: {
-          grant_type: 'fb_exchange_token',
-          client_id: configs.facebook.clientId,
-          client_secret: configs.facebook.clientSecret,
-          fb_exchange_token: refreshToken,
+      const response = await axios.get(
+        'https://graph.facebook.com/v23.0/oauth/access_token',
+        {
+          params: {
+            grant_type: 'fb_exchange_token',
+            client_id: configs.facebook.clientId,
+            client_secret: configs.facebook.clientSecret,
+            fb_exchange_token: refreshToken,
+          },
         },
-      });
+      );
 
       const { access_token, expires_in } = response.data;
       if (!access_token) {
@@ -537,7 +664,7 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
           error.response?.data?.error?.code === 4 ||
           error.response?.data?.error?.code === 17;
         const isServerError = error.response?.status >= 500;
-        
+
         if ((isRateLimit || isServerError) && i < retries - 1) {
           logger.warn(
             `[FacebookAnalyticsService] Meta API request failed. Retrying in ${delay}ms...`,

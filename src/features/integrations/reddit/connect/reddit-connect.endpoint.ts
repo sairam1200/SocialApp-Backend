@@ -1,11 +1,21 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import configs from "../../../../configs";
-import { ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { stringUtil } from "../../../../core/utils/string.util";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
-import { RedditConnectQuery, RedditConnectCallbackQuery } from "./reddit-connect.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import configs from '../../../../configs';
+import { ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { stringUtil } from '../../../../core/utils/string.util';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  RedditConnectQuery,
+  RedditConnectCallbackQuery,
+} from './reddit-connect.handler';
 
 class ConnectResponseModel {
   @ApiProperty()
@@ -18,8 +28,7 @@ class ConnectResponseModel {
   version: '1',
 })
 export class RedditConnectController {
-
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
@@ -45,7 +54,7 @@ export class RedditConnectController {
       clientId: configs.reddit.clientId,
       redirectUri: configs.reddit.redirectUri,
       state,
-      authorizeURL
+      authorizeURL,
     });
 
     await this.commandBus.execute(new RedditConnectQuery({ model: { state } }));
@@ -61,11 +70,13 @@ export class RedditConnectController {
   public async Callback(
     @Query('code') code: string,
     @Query('state') state: string,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response | void> {
     console.log('Reddit callback received:', { code, state });
 
-    const result = await this.commandBus.execute(new RedditConnectCallbackQuery({ model: { code, state } }));
+    const result = await this.commandBus.execute(
+      new RedditConnectCallbackQuery({ model: { code, state } }),
+    );
     return res.status(HttpStatus.OK).json(result);
   }
 }

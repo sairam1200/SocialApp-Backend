@@ -1,9 +1,16 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport";
-import { DeleteManualProfileCommand } from "./delete-manual-profile.handler";
-import { Controller, Delete, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../../core/passport';
+import { DeleteManualProfileCommand } from './delete-manual-profile.handler';
+import {
+  Controller,
+  Delete,
+  HttpStatus,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 
 @ApiTags('User Profiles')
 @UseGuards(UserAccoutGuard)
@@ -12,10 +19,9 @@ import { Controller, Delete, HttpStatus, Query, Res, UseGuards } from "@nestjs/c
   version: '1',
 })
 export class DeleteManualProfileController {
+  constructor(private readonly commandBus: CommandBus) {}
 
-  constructor(private readonly commandBus: CommandBus) { }
-
-  @Delete("manual-profile/:id")
+  @Delete('manual-profile/:id')
   @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
@@ -23,7 +29,7 @@ export class DeleteManualProfileController {
   @ApiResponse({ status: 204, description: 'NO_CONTENT' })
   public async Delete(
     @Query('id') id: string,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response> {
     await this.commandBus.execute(new DeleteManualProfileCommand({ id }));
     res.status(HttpStatus.NO_CONTENT).send();

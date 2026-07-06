@@ -12,15 +12,18 @@ export class FacebookDisconnectCommand {
 
 @CommandHandler(FacebookDisconnectCommand)
 export class FacebookDisconnectCommandHandler
-  implements ICommandHandler<FacebookDisconnectCommand> {
+  implements ICommandHandler<FacebookDisconnectCommand>
+{
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,
-  ) { }
+  ) {}
 
   public async execute(command: FacebookDisconnectCommand): Promise<void> {
     const userId = HttpContext.getCurrentUserId;
-    await this.disconnectService.disconnectPlatformAsync(userId, _const.PLATFORMS.FACEBOOK);
+    await this.disconnectService.disconnectPlatformAsync(
+      userId,
+      _const.PLATFORMS.FACEBOOK,
+    );
   }
 }
-

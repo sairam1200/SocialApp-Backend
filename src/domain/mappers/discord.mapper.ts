@@ -1,7 +1,10 @@
-import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { DiscordProfileModel } from "../contracts/discord.model";
+import { LinkedAccount } from '../entities/linkedAccount.entity';
+import { DiscordProfileModel } from '../contracts/discord.model';
 
-export function mapToDiscordProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): DiscordProfileModel {
+export function mapToDiscordProfileModel(
+  data: LinkedAccount,
+  includeSensitiveFields: boolean = false,
+): DiscordProfileModel {
   return {
     id: data.id,
     userId: data.userId,

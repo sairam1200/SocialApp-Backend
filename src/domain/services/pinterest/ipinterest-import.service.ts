@@ -1,5 +1,4 @@
 export interface IPinterestImportService {
-
   importPinsAsync(
     userId: string,
     accessToken: string,

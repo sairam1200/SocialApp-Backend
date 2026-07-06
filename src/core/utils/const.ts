@@ -1,23 +1,23 @@
 export default {
   // Repository Interfaces
-  IUSER_REPOSITORY: "IUserRepository",
-  IROLE_REPOSITORY: "IRoleRepository",
-  IGENERAL_REPOSITORY: "IGeneralRepository",
-  IUSERROLE_REPOSITORY: "IUserRoleRepository",
-  IUSERFOLLOW_REPOSITORY: "IUserFollowRepository",
-  IPLAYLIST_REPOSITORY: "IPlaylistRepository",
-  IRATELIMIT_REPOSITORY: "IRateLimitRepository",
-  IROLECLAIM_REPOSITORY: "IRoleClaimRepository",
-  IUSERLOGIN_REPOSITORY: "IUserLoginRepository",
-  ISEARCHHISTORY_REPOSITORY: "ISearchRepository",
-  IUSERCONTENT_REPOSITORY: "IUserContentRepository",
-  INOTIFICATION_REPOSITORY: "INotificationRepository",
-  ILINKEDACCOUNT_REPOSITORY: "ILinkedAccountRepository",
-  ICONTENTSTREAM_REPOSITORY: "IContentStreamRepository",
-  IMANUALPROFILE_REPOSITORY: "IManualProfileRepository",
-  IDATAPROTECTIONKEY_REPOSITORY: "IDataProtectionKeyRepository",
-  ITOPIC_REPOSITORY: "ITopicRepository",
-  IUSERPREFERENCE_REPOSITORY: "IUserPreferenceRepository",
+  IUSER_REPOSITORY: 'IUserRepository',
+  IROLE_REPOSITORY: 'IRoleRepository',
+  IGENERAL_REPOSITORY: 'IGeneralRepository',
+  IUSERROLE_REPOSITORY: 'IUserRoleRepository',
+  IUSERFOLLOW_REPOSITORY: 'IUserFollowRepository',
+  IPLAYLIST_REPOSITORY: 'IPlaylistRepository',
+  IRATELIMIT_REPOSITORY: 'IRateLimitRepository',
+  IROLECLAIM_REPOSITORY: 'IRoleClaimRepository',
+  IUSERLOGIN_REPOSITORY: 'IUserLoginRepository',
+  ISEARCHHISTORY_REPOSITORY: 'ISearchRepository',
+  IUSERCONTENT_REPOSITORY: 'IUserContentRepository',
+  INOTIFICATION_REPOSITORY: 'INotificationRepository',
+  ILINKEDACCOUNT_REPOSITORY: 'ILinkedAccountRepository',
+  ICONTENTSTREAM_REPOSITORY: 'IContentStreamRepository',
+  IMANUALPROFILE_REPOSITORY: 'IManualProfileRepository',
+  IDATAPROTECTIONKEY_REPOSITORY: 'IDataProtectionKeyRepository',
+  ITOPIC_REPOSITORY: 'ITopicRepository',
+  IUSERPREFERENCE_REPOSITORY: 'IUserPreferenceRepository',
 
   // Service Interfaces
   IEMAIL_SERVICE: 'IEmailService',
@@ -28,10 +28,10 @@ export default {
   IQUEUE_SERVICE: 'IQueueService',
   IPLATFORM_DISCONNECT_SERVICE: 'IPlatformDisconnectService',
   IYOUTUBE_IMPORT_SERVICE: 'IYoutubeImportService',
-  IFACEBOOK_IMPORT_SERVICE:'IFacebookImportService',
+  IFACEBOOK_IMPORT_SERVICE: 'IFacebookImportService',
   IINSTAGRAM_IMPORT_SERVICE: 'IInstagramImportService',
-  ITWITTER_IMPORT_SERVICE:'ITwitterImportService',
-  IPINTEREST_IMPORT_SERVICE:'IPinterestImportService',
+  ITWITTER_IMPORT_SERVICE: 'ITwitterImportService',
+  IPINTEREST_IMPORT_SERVICE: 'IPinterestImportService',
   ILINKEDIN_IMPORT_SERVICE: 'ILinkedInImportService',
   IYOUTUBE_PUBLISHING_SERVICE: 'IYoutubePublishingService',
   IYOUTUBE_ANALYTICS_SERVICE: 'IYoutubeAnalyticsService',
@@ -129,8 +129,8 @@ export default {
     PURPOSE: {
       RESET_PASSWORD: 'resetpassword',
       CONFIRM_EMAIL: 'emailconfirmation',
-      CONFIRM_PHONE: 'phoneconfirmation'
-    }
+      CONFIRM_PHONE: 'phoneconfirmation',
+    },
   },
 
   SEARCH_CACHE: {
@@ -144,14 +144,14 @@ export default {
       ACCOUNT: '_user_account',
       PREFERENCES: 'preferences',
       ACCOUNT_SESSION_TTL_SEC: 604800,
-    }
+    },
   },
 
   COLLECTION: {
     BOOKMARK: {
       NAME: 'bookmark',
-      DESCRIPTION: ''
-    }
+      DESCRIPTION: '',
+    },
   },
 
   ANALYTICS_EVENTS: {
@@ -174,4 +174,4 @@ export default {
       UPDATED: 'profile.updated',
     },
   },
-}
+};

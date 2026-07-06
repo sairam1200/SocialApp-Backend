@@ -1,10 +1,10 @@
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import _const from "../../../core/utils/const";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { UserNotFoundException } from "../../../core/exceptions";
-import { IUserRepository } from "../../../domain/repositories/iuser.repository";
-import { randomUUID } from "crypto";
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import _const from '../../../core/utils/const';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { UserNotFoundException } from '../../../core/exceptions';
+import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { randomUUID } from 'crypto';
 export class DeactivateUserCommand {
   userId: string;
 
@@ -18,10 +18,13 @@ const deactivateUserValidations = Joi.object({
 });
 
 @CommandHandler(DeactivateUserCommand)
-export class DeactivateUserCommandHandler implements ICommandHandler<DeactivateUserCommand> {
+export class DeactivateUserCommandHandler
+  implements ICommandHandler<DeactivateUserCommand>
+{
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
-  ) { }
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+  ) {}
 
   public async execute(command: DeactivateUserCommand): Promise<void> {
     await deactivateUserValidations.validateAsync(command);
@@ -37,10 +40,8 @@ export class DeactivateUserCommandHandler implements ICommandHandler<DeactivateU
 
     user.isActive = false;
 
-
     user.securityStamp = randomUUID();
 
     await this.userRepository.updateAsync(user);
   }
 }
-

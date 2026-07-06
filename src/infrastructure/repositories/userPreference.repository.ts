@@ -1,11 +1,11 @@
-import _const from "../../core/utils/const";
-import redis from "../../core/utils/redis.util";
-import { Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { UserPreference } from "../../domain/entities";
-import { IUserPreferenceRepository } from "../../domain/repositories/iuserPreference.repository";
-import { NotificationChannel, Theme } from "../../domain/enums";
+import _const from '../../core/utils/const';
+import redis from '../../core/utils/redis.util';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { UserPreference } from '../../domain/entities';
+import { IUserPreferenceRepository } from '../../domain/repositories/iuserPreference.repository';
+import { NotificationChannel, Theme } from '../../domain/enums';
 
 interface UserPreferenceCacheModel {
   theme: Theme;
@@ -17,9 +17,11 @@ export class UserPreferenceRepository implements IUserPreferenceRepository {
   constructor(
     @InjectRepository(UserPreference)
     private readonly userPreferenceContext: Repository<UserPreference>,
-  ) { }
+  ) {}
 
-  public async getByUserIdAsync(userId: string): Promise<UserPreference | null> {
+  public async getByUserIdAsync(
+    userId: string,
+  ): Promise<UserPreference | null> {
     const cached = await this.getCachedPreferences(userId);
     if (cached) {
       return new UserPreference({
@@ -29,7 +31,9 @@ export class UserPreferenceRepository implements IUserPreferenceRepository {
       });
     }
 
-    const preferences = await this.userPreferenceContext.findOne({ where: { userId } });
+    const preferences = await this.userPreferenceContext.findOne({
+      where: { userId },
+    });
     if (preferences) {
       await this.setCachedPreferences(preferences);
     }
@@ -37,7 +41,9 @@ export class UserPreferenceRepository implements IUserPreferenceRepository {
     return preferences;
   }
 
-  public async createAsync(preferences: UserPreference): Promise<UserPreference> {
+  public async createAsync(
+    preferences: UserPreference,
+  ): Promise<UserPreference> {
     const saved = await this.userPreferenceContext.save(preferences);
     await this.setCachedPreferences(saved);
     return saved;
@@ -49,15 +55,21 @@ export class UserPreferenceRepository implements IUserPreferenceRepository {
   }
 
   private getCacheKey(userId: string): string {
-    return redis.getRedisKey<string>(`user:${userId}:${_const.REDIS.USER.PREFERENCES}`);
+    return redis.getRedisKey<string>(
+      `user:${userId}:${_const.REDIS.USER.PREFERENCES}`,
+    );
   }
 
-  private async getCachedPreferences(userId: string): Promise<UserPreferenceCacheModel | null> {
+  private async getCachedPreferences(
+    userId: string,
+  ): Promise<UserPreferenceCacheModel | null> {
     const key = this.getCacheKey(userId);
     return await redis.getFromRedisAsync<UserPreferenceCacheModel>(key);
   }
 
-  private async setCachedPreferences(preferences: UserPreference): Promise<void> {
+  private async setCachedPreferences(
+    preferences: UserPreference,
+  ): Promise<void> {
     const key = this.getCacheKey(preferences.userId);
     await redis.storeInRedisAsync(
       key,

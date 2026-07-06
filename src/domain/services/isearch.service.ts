@@ -13,17 +13,43 @@ import { SnapchatSearchResponseModel } from 'domain/contracts/snapchat.model';
 import { ThreadsSearchResponseModel } from 'domain/contracts/threads.model';
 
 export interface ISearchService {
-  searchFacebookAsync(params: PlatformSearchParamsModel): Promise<FacebookSearchResponseModel>;
-  searchInstagramAsync(params: PlatformSearchParamsModel): Promise<InstagramSearchResponseModel>;
-  searchPinterestAsync(params: PlatformSearchParamsModel): Promise<PinterestSearchResponseModel>;
-  searchBehanceAsync(params: PlatformSearchParamsModel): Promise<BehanceSearchResponseModel>;
-  searchSnapchatAsync(params: PlatformSearchParamsModel): Promise<SnapchatSearchResponseModel>;
-  searchThreadsAsync(params: PlatformSearchParamsModel): Promise<ThreadsSearchResponseModel>;
-  searchTwitterAsync(params: PlatformSearchParamsModel): Promise<TwitterSearchResponseModel>;
-  searchSpotifyAsync(params: PlatformSearchParamsModel): Promise<SpotifySearchResponseModel>;
-  searchYoutubeAsync(params: PlatformSearchParamsModel): Promise<YoutubeSearchResponseModel>;
-  searchRedditAsync(params: PlatformSearchParamsModel): Promise<RedditSearchResponseModel>;
-  searchTiktokAsync(params: PlatformSearchParamsModel): Promise<TiktokSearchResponseModel>;
-  searchLinkedInAsync(params: PlatformSearchParamsModel): Promise<LinkedInSearchResponseModel>;
-  searchSnapchatAsync(params: PlatformSearchParamsModel): Promise<SnapchatSearchResponseModel>;
+  searchFacebookAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<FacebookSearchResponseModel>;
+  searchInstagramAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<InstagramSearchResponseModel>;
+  searchPinterestAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<PinterestSearchResponseModel>;
+  searchBehanceAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<BehanceSearchResponseModel>;
+  searchSnapchatAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<SnapchatSearchResponseModel>;
+  searchThreadsAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<ThreadsSearchResponseModel>;
+  searchTwitterAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<TwitterSearchResponseModel>;
+  searchSpotifyAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<SpotifySearchResponseModel>;
+  searchYoutubeAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<YoutubeSearchResponseModel>;
+  searchRedditAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<RedditSearchResponseModel>;
+  searchTiktokAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<TiktokSearchResponseModel>;
+  searchLinkedInAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<LinkedInSearchResponseModel>;
+  searchSnapchatAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<SnapchatSearchResponseModel>;
 }

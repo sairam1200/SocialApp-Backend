@@ -1,65 +1,34 @@
-import { Response } from "express";
-import { ApiTags } from "@nestjs/swagger";
-import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
-import { Globals } from "../../../core/globals";
-import {
-  Controller,
-  Get,
-  HttpStatus,
-  Res,
-  UseGuards,
-} from "@nestjs/common";
-import { QueryBus } from "@nestjs/cqrs";
+import { Response } from 'express';
+import { ApiTags } from '@nestjs/swagger';
+import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
+import { Globals } from '../../../core/globals';
+import { Controller, Get, HttpStatus, Res, UseGuards } from '@nestjs/common';
+import { QueryBus } from '@nestjs/cqrs';
 
-import {
-  AuthenticatedAccountGuard,
-} from "../../../core/passport";
+import { AuthenticatedAccountGuard } from '../../../core/passport';
 
-import {
-  CurrentUserQuery,
-} from "./current-user.handler";
+import { CurrentUserQuery } from './current-user.handler';
 
-@ApiTags("Authentication")
+@ApiTags('Authentication')
 @Controller({
-  path: "/auth",
-  version: "1",
+  path: '/auth',
+  version: '1',
 })
 export class CurrentUserController {
-  constructor(
-    private readonly queryBus: QueryBus
-  ) {}
+  constructor(private readonly queryBus: QueryBus) {}
 
-  @Get("current")
-@UseGuards(
-  AuthenticatedAccountGuard
-)
-public async GetCurrentUser(
-  @Res() res: Response
-): Promise<Response> {
+  @Get('current')
+  @UseGuards(AuthenticatedAccountGuard)
+  public async GetCurrentUser(@Res() res: Response): Promise<Response> {
+    const user = HttpContext.user;
 
-  const user =
-    HttpContext.user;
-
-  return res.status(
-    HttpStatus.OK
-  ).send({
-    id: user[
-      Globals.ClaimTypes.UserId
-    ],
-    email: user[
-      Globals.ClaimTypes.Email
-    ],
-    firstName: user[
-      Globals.ClaimTypes.GivenName
-    ],
-    lastName: user[
-      Globals.ClaimTypes.FamilyName
-    ],
-    fullName: user[
-      Globals.ClaimTypes.FullName
-    ],
-    onboardingStep:
-      user.onboardingStep,
-  });
-}
+    return res.status(HttpStatus.OK).send({
+      id: user[Globals.ClaimTypes.UserId],
+      email: user[Globals.ClaimTypes.Email],
+      firstName: user[Globals.ClaimTypes.GivenName],
+      lastName: user[Globals.ClaimTypes.FamilyName],
+      fullName: user[Globals.ClaimTypes.FullName],
+      onboardingStep: user.onboardingStep,
+    });
+  }
 }

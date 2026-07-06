@@ -6,13 +6,14 @@ import { IPremiumRollupRepository } from '../../domain/repositories/ipremiumRoll
 
 @Injectable()
 export class PremiumRollupRepository implements IPremiumRollupRepository {
-
   constructor(
     @InjectRepository(PremiumRollup)
     private readonly rollupContext: Repository<PremiumRollup>,
-  ) { }
+  ) {}
 
-  async upsertRollupAsync(rollup: Partial<PremiumRollup>): Promise<PremiumRollup> {
+  async upsertRollupAsync(
+    rollup: Partial<PremiumRollup>,
+  ): Promise<PremiumRollup> {
     const existing = await this.rollupContext.findOne({
       where: { userId: rollup.userId, weekStartDate: rollup.weekStartDate },
     });

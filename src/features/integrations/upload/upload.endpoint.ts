@@ -1,9 +1,15 @@
-import { FileInterceptor } from "@nestjs/platform-express";
-import { ApiConsumes, ApiResponse, ApiTags, ApiBody } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../core/passport";
-import { CommandBus } from "@nestjs/cqrs";
-import { UploadMediaCommand } from "./upload.handler";
-import { Controller, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiConsumes, ApiResponse, ApiTags, ApiBody } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../core/passport';
+import { CommandBus } from '@nestjs/cqrs';
+import { UploadMediaCommand } from './upload.handler';
+import {
+  Controller,
+  Post,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
@@ -12,7 +18,7 @@ import { Controller, Post, UploadedFile, UseGuards, UseInterceptors } from "@nes
   version: '1',
 })
 export class UploadMediaController {
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
@@ -32,11 +38,7 @@ export class UploadMediaController {
   @ApiResponse({ status: 200, description: 'OK — Returns the media URL' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
-  public async Upload(
-    @UploadedFile() file: any,
-  ): Promise<{ url: string }> {
-    return this.commandBus.execute(
-      new UploadMediaCommand({ file })
-    );
+  public async Upload(@UploadedFile() file: any): Promise<{ url: string }> {
+    return this.commandBus.execute(new UploadMediaCommand({ file }));
   }
 }

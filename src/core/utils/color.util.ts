@@ -7,7 +7,7 @@ interface ColorSet {
  * Generate a random hex color.
  */
 function getRandomHexColor(): string {
-  const randomInt = Math.floor(Math.random() * 0xFFFFFF);
+  const randomInt = Math.floor(Math.random() * 0xffffff);
   return `#${randomInt.toString(16).padStart(6, '0')}`;
 }
 

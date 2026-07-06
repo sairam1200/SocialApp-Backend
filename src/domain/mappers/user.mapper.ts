@@ -1,11 +1,11 @@
-import { LinkedAccount } from "../entities";
-import { User } from "../entities";
-import { LinkedAccountModel, UserModel } from "../contracts/user.model";
+import { LinkedAccount } from '../entities';
+import { User } from '../entities';
+import { LinkedAccountModel, UserModel } from '../contracts/user.model';
 
 export function mapToUserModel(
   user: User,
   includeSensitiveFields: boolean = true,
-  profileImageUrl: string | null = null
+  profileImageUrl: string | null = null,
 ): UserModel {
   return {
     id: user.id,
@@ -20,7 +20,9 @@ export function mapToUserModel(
   } as UserModel;
 }
 
-export function mapToLinkedAccountsModel(linkedAccount: LinkedAccount): LinkedAccountModel {
+export function mapToLinkedAccountsModel(
+  linkedAccount: LinkedAccount,
+): LinkedAccountModel {
   return {
     id: linkedAccount.id,
     username: linkedAccount.userName,

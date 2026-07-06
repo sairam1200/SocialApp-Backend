@@ -65,7 +65,7 @@ export class BullMQConfig {
   static getWorkerOptions(
     queueName: string,
     concurrency: number = 1,
-    options?: Partial<WorkerOptions>
+    options?: Partial<WorkerOptions>,
   ): Partial<WorkerOptions> {
     return {
       connection: redis.getBullMQConnection(),
@@ -141,4 +141,3 @@ export const QueueConfigs = {
 };
 
 export default BullMQConfig;
-

@@ -1,16 +1,16 @@
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../core/utils/const";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { IUserRepository } from "../../../domain/repositories/iuser.repository";
-import { IDataProtectionKeyRepository } from "../../../domain/repositories/idataProtectionKey.repository";
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../core/utils/const';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IDataProtectionKeyRepository } from '../../../domain/repositories/idataProtectionKey.repository';
 
 export class VerifyCodeRequestModel {
-  @ApiProperty({ example: "user@example.com" })
+  @ApiProperty({ example: 'user@example.com' })
   email: string;
 
-  @ApiProperty({ example: "123456" })
+  @ApiProperty({ example: '123456' })
   code: string;
 
   @ApiProperty({ example: _const.TOKEN.PURPOSE.RESET_PASSWORD })
@@ -42,17 +42,19 @@ const verifyCodeValidations = Joi.object({
 const AllowedPurposes = new Set<string>(Object.values(_const.TOKEN.PURPOSE));
 
 @CommandHandler(VerifyCodeCommand)
-export class VerifyCodeCommandHandler implements ICommandHandler<VerifyCodeCommand, VerifyCodeResponseModel> {
-
+export class VerifyCodeCommandHandler
+  implements ICommandHandler<VerifyCodeCommand, VerifyCodeResponseModel>
+{
   constructor(
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-  ) { }
+  ) {}
 
-  public async execute(command: VerifyCodeCommand): Promise<VerifyCodeResponseModel> {
-
+  public async execute(
+    command: VerifyCodeCommand,
+  ): Promise<VerifyCodeResponseModel> {
     const { model } = command;
     await verifyCodeValidations.validateAsync(model);
     const currentTime = Math.floor(Date.now() / 1000);
@@ -62,22 +64,23 @@ export class VerifyCodeCommandHandler implements ICommandHandler<VerifyCodeComma
       return { isValid: false, expiresIn: null };
     }
 
-    const user = await this.userRepository.getUserByEmailAsync(model.email );
+    const user = await this.userRepository.getUserByEmailAsync(model.email);
     if (!user) {
       return { isValid: false, expiresIn: null };
     }
 
-    const verificationKeys = await this.dataProtectionKeyRepository.getByUserIdAsync(user.id);
+    const verificationKeys =
+      await this.dataProtectionKeyRepository.getByUserIdAsync(user.id);
     const dataProtectionKey = verificationKeys.find(
-      key =>
+      (key) =>
         key.key === purpose &&
         key.value === model.code &&
         key.expiresIn &&
-        key.expiresIn >= currentTime
+        key.expiresIn >= currentTime,
     );
 
     if (!dataProtectionKey) {
-      return { isValid: false, expiresIn: null }
+      return { isValid: false, expiresIn: null };
     }
 
     const remainingLifetime = dataProtectionKey.expiresIn

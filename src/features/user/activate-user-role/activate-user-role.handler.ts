@@ -1,13 +1,13 @@
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import _const from "../../../core/utils/const";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { UserNotFoundException } from "../../../core/exceptions";
-import { RoleNotFoundException } from "../../../core/exceptions/role.exception";
-import { IUserRepository } from "../../../domain/repositories/iuser.repository";
-import { IRoleRepository } from "../../../domain/repositories/irole.repository";
-import { IUserRoleRepository } from "../../../domain/repositories/iuserRole.repository";
-import { BadRequestException } from "@nestjs/common";
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import _const from '../../../core/utils/const';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { UserNotFoundException } from '../../../core/exceptions';
+import { RoleNotFoundException } from '../../../core/exceptions/role.exception';
+import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IRoleRepository } from '../../../domain/repositories/irole.repository';
+import { IUserRoleRepository } from '../../../domain/repositories/iuserRole.repository';
+import { BadRequestException } from '@nestjs/common';
 
 export class ActivateUserRoleCommand {
   userId: string;
@@ -24,12 +24,17 @@ const activateUserRoleValidations = Joi.object({
 });
 
 @CommandHandler(ActivateUserRoleCommand)
-export class ActivateUserRoleCommandHandler implements ICommandHandler<ActivateUserRoleCommand> {
+export class ActivateUserRoleCommandHandler
+  implements ICommandHandler<ActivateUserRoleCommand>
+{
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
-    @Inject(_const.IROLE_REPOSITORY) private readonly roleRepository: IRoleRepository,
-    @Inject(_const.IUSERROLE_REPOSITORY) private readonly userRoleRepository: IUserRoleRepository,
-  ) { }
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+    @Inject(_const.IROLE_REPOSITORY)
+    private readonly roleRepository: IRoleRepository,
+    @Inject(_const.IUSERROLE_REPOSITORY)
+    private readonly userRoleRepository: IUserRoleRepository,
+  ) {}
 
   public async execute(command: ActivateUserRoleCommand): Promise<void> {
     await activateUserRoleValidations.validateAsync(command);
@@ -44,7 +49,10 @@ export class ActivateUserRoleCommandHandler implements ICommandHandler<ActivateU
       throw new RoleNotFoundException('', command.roleId);
     }
 
-    let userRole = await this.userRoleRepository.getAsync(command.userId, command.roleId);
+    const userRole = await this.userRoleRepository.getAsync(
+      command.userId,
+      command.roleId,
+    );
     if (!userRole) {
       throw new BadRequestException('User role assignment not found.');
     }
@@ -59,4 +67,3 @@ export class ActivateUserRoleCommandHandler implements ICommandHandler<ActivateU
     await this.userRoleRepository.updateAsync(userRole);
   }
 }
-

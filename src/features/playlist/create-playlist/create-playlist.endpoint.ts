@@ -1,10 +1,20 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../core/passport/account.guard";
-import { PlaylistModel } from "../../../domain/contracts/playlist.model";
-import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
-import { CreatePlaylistCommand, CreatePlaylistModel } from "./create-playlist.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../core/passport/account.guard';
+import { PlaylistModel } from '../../../domain/contracts/playlist.model';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  CreatePlaylistCommand,
+  CreatePlaylistModel,
+} from './create-playlist.handler';
 
 @ApiTags('Playlists')
 @UseGuards(UserAccoutGuard)
@@ -13,8 +23,7 @@ import { CreatePlaylistCommand, CreatePlaylistModel } from "./create-playlist.ha
   version: '1',
 })
 export class CreatePlaylistController {
-
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post()
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
@@ -22,12 +31,15 @@ export class CreatePlaylistController {
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   @ApiResponse({ status: 409, description: 'CONFLICT' })
   @ApiResponse({ status: 201, description: 'CREATED', type: PlaylistModel })
-  public async Create(@Body() request: CreatePlaylistModel, @Res() res: Response
+  public async Create(
+    @Body() request: CreatePlaylistModel,
+    @Res() res: Response,
   ): Promise<Response> {
-
-    const result = await this.commandBus.execute(new CreatePlaylistCommand({
-      model: request
-    }));
+    const result = await this.commandBus.execute(
+      new CreatePlaylistCommand({
+        model: request,
+      }),
+    );
 
     res.status(HttpStatus.CREATED).send(result);
     return res;

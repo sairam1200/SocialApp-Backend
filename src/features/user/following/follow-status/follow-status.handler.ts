@@ -1,24 +1,27 @@
-import { Inject } from "@nestjs/common";
-import { IQueryHandler, QueryHandler } from "@nestjs/cqrs";
-import _const from "../../../../core/utils/const";
-import { FollowStatusModel } from "../../../../domain/contracts/follow-status.model";
-import { FollowStatus } from "../../../../domain/enums";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { IUserFollowRepository } from "../../../../domain/repositories/iuserFollow.repository";
+import { Inject } from '@nestjs/common';
+import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
+import _const from '../../../../core/utils/const';
+import { FollowStatusModel } from '../../../../domain/contracts/follow-status.model';
+import { FollowStatus } from '../../../../domain/enums';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { IUserFollowRepository } from '../../../../domain/repositories/iuserFollow.repository';
 
 export class GetFollowStatusQuery {
-  constructor(
-    public targetUserId: string,
-  ) { }
+  constructor(public targetUserId: string) {}
 }
 
 @QueryHandler(GetFollowStatusQuery)
-export class GetFollowStatusQueryHandler implements IQueryHandler<GetFollowStatusQuery, FollowStatusModel> {
+export class GetFollowStatusQueryHandler
+  implements IQueryHandler<GetFollowStatusQuery, FollowStatusModel>
+{
   constructor(
-    @Inject(_const.IUSERFOLLOW_REPOSITORY) private readonly follows: IUserFollowRepository,
-  ) { }
+    @Inject(_const.IUSERFOLLOW_REPOSITORY)
+    private readonly follows: IUserFollowRepository,
+  ) {}
 
-  public async execute(query: GetFollowStatusQuery): Promise<FollowStatusModel> {
+  public async execute(
+    query: GetFollowStatusQuery,
+  ): Promise<FollowStatusModel> {
     const viewerUserId = HttpContext.getCurrentUserId;
 
     if (!viewerUserId) {
@@ -37,7 +40,10 @@ export class GetFollowStatusQueryHandler implements IQueryHandler<GetFollowStatu
       };
     }
 
-    const existing = await this.follows.getAsync(viewerUserId, query.targetUserId);
+    const existing = await this.follows.getAsync(
+      viewerUserId,
+      query.targetUserId,
+    );
 
     if (!existing) {
       return {

@@ -1,19 +1,19 @@
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import { ApiProperty } from "@nestjs/swagger";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 
-import _const from "../../../../core/utils/const";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { UserNotFoundException } from "../../../../core/exceptions";
+import _const from '../../../../core/utils/const';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { UserNotFoundException } from '../../../../core/exceptions';
 
-import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
-import { OnboardingStep } from "../../../../domain/enums";
-import { ITokenService } from "../../../../domain/services/itoken.service";
+import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { OnboardingStep } from '../../../../domain/enums';
+import { ITokenService } from '../../../../domain/services/itoken.service';
 
 export class CompleteOnboardingResponse {
   succeeded: boolean;
-   data?: {
+  data?: {
     onboardingCompleted: boolean;
     accessToken?: string;
   };
@@ -51,8 +51,8 @@ export class CompleteOnboardingCommand {
 
 const completeOnboardingValidations = Joi.object({
   fullName: Joi.string().required(),
-  bio: Joi.string().allow("").optional(),
-  location: Joi.string().allow("").optional(),
+  bio: Joi.string().allow('').optional(),
+  location: Joi.string().allow('').optional(),
   interests: Joi.array().items(Joi.string()).required(),
   connectedAccounts: Joi.object().optional(),
 });
@@ -69,32 +69,26 @@ export class CompleteOnboardingCommandHandler
   ) {}
 
   public async execute(
-    command: CompleteOnboardingCommand
+    command: CompleteOnboardingCommand,
   ): Promise<CompleteOnboardingResponse> {
+    await completeOnboardingValidations.validateAsync(command.model);
 
-    await completeOnboardingValidations.validateAsync(
-      command.model
+    const user = await this.userRepository.getUserByIdAsync(
+      HttpContext.getCurrentUserId,
     );
-
-    const user =
-      await this.userRepository.getUserByIdAsync(
-        HttpContext.getCurrentUserId
-      );
 
     if (!user) {
       throw new UserNotFoundException();
     }
 
-    const [firstName, ...rest] =
-      command.model.fullName.trim().split(" ");
+    const [firstName, ...rest] = command.model.fullName.trim().split(' ');
 
     user.firstName = firstName;
-    user.lastName = rest.join(" ");
+    user.lastName = rest.join(' ');
 
     user.bio = command.model.bio;
 
-    user.onboardingStep =
-      OnboardingStep.Completed;
+    user.onboardingStep = OnboardingStep.Completed;
 
     await this.userRepository.updateAsync(user);
 

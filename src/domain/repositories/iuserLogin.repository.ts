@@ -1,32 +1,29 @@
-import { UserLogin } from "../entities";
+import { UserLogin } from '../entities';
 
 export interface IUserLoginRepository {
+  createAysnc(
+    provider: string,
+    userId: string,
+    deviceId: string,
+    userAgent: string,
+    ipAddress: string,
+    tokenValue?: string,
+    expiryDateUtc?: Date,
+  ): Promise<UserLogin>;
 
-    createAysnc(
-        provider: string,
-        userId: string,
-        deviceId: string,
-        userAgent: string,
-        ipAddress: string,
-        tokenValue?: string,
-        expiryDateUtc?: Date
-    ): Promise<UserLogin>;
+  getByTokenValueAndDeviceIdAsync(
+    tokenValue: string,
+    deviceId: string,
+  ): Promise<UserLogin>;
 
-    getByTokenValueAndDeviceIdAsync(
-        tokenValue: string,
-        deviceId: string
-    ): Promise<UserLogin>;
+  getByUserIdAndProviderAsync(
+    userId: string,
+    provider: string,
+  ): Promise<UserLogin>;
 
-    getByUserIdAndProviderAsync(
-        userId: string,
-        provider: string
-    ): Promise<UserLogin>;
+  getByUserIdAsync(userId: string): Promise<UserLogin[]>;
 
-    getByUserIdAsync(
-        userId: string
-    ): Promise<UserLogin[]>;
+  updateAsync(userLogin: UserLogin): Promise<void>;
 
-    updateAsync(userLogin: UserLogin): Promise<void>;
-
-    deleteAsync(userLogin: UserLogin): Promise<void>;
+  deleteAsync(userLogin: UserLogin): Promise<void>;
 }

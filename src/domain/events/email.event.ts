@@ -11,7 +11,6 @@ export class SendEmailEvent {
         content?: any;
         contentType?: string;
       }[];
-    }
-  ) { }
+    },
+  ) {}
 }
-

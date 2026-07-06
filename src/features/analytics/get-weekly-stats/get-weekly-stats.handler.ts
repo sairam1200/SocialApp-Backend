@@ -15,12 +15,13 @@ export class GetWeeklyStatsQuery {
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
 @QueryHandler(GetWeeklyStatsQuery)
-export class GetWeeklyStatsQueryHandler implements IQueryHandler<GetWeeklyStatsQuery> {
-
+export class GetWeeklyStatsQueryHandler
+  implements IQueryHandler<GetWeeklyStatsQuery>
+{
   constructor(
     @Inject(_const.IPREMIUMROLLUP_REPOSITORY)
     private readonly premiumRollupRepository: IPremiumRollupRepository,
-  ) { }
+  ) {}
 
   async execute(query: GetWeeklyStatsQuery): Promise<PremiumRollup[]> {
     return this.premiumRollupRepository.getRollupsByUserAsync(query.userId);

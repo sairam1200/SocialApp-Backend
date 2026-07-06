@@ -1,10 +1,10 @@
-import { Inject } from "@nestjs/common";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import _const from "../../../../core/utils/const";
-import logger from "../../../../core/utils/winston.util";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { NotFoundException } from "@nestjs/common";
+import { Inject } from '@nestjs/common';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import _const from '../../../../core/utils/const';
+import logger from '../../../../core/utils/winston.util';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
+import { NotFoundException } from '@nestjs/common';
 
 export class DisableLinkedInSyncCommand {
   constructor(request: Partial<DisableLinkedInSyncCommand> = {}) {
@@ -13,22 +13,27 @@ export class DisableLinkedInSyncCommand {
 }
 
 @CommandHandler(DisableLinkedInSyncCommand)
-export class DisableLinkedInSyncCommandHandler implements ICommandHandler<DisableLinkedInSyncCommand> {
+export class DisableLinkedInSyncCommandHandler
+  implements ICommandHandler<DisableLinkedInSyncCommand>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
-  ) { }
+  ) {}
 
-  public async execute(command: DisableLinkedInSyncCommand): Promise<{ syncEnabled: boolean }> {
+  public async execute(
+    command: DisableLinkedInSyncCommand,
+  ): Promise<{ syncEnabled: boolean }> {
     const userId = HttpContext.getCurrentUserId;
 
-    const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-      _const.PLATFORMS.LINKEDIN,
-      userId,
-    );
+    const account =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.LINKEDIN,
+        userId,
+      );
 
     if (!account) {
-      throw new NotFoundException("No matching LinkedIn profile was found!");
+      throw new NotFoundException('No matching LinkedIn profile was found!');
     }
 
     account.syncEnabled = false;
@@ -39,4 +44,3 @@ export class DisableLinkedInSyncCommandHandler implements ICommandHandler<Disabl
     return { syncEnabled: account.syncEnabled };
   }
 }
-

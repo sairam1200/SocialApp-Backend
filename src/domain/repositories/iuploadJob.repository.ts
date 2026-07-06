@@ -1,4 +1,4 @@
-import { UploadJob } from "../entities";
+import { UploadJob } from '../entities';
 
 export interface IUploadJobRepository {
   createAsync(job: UploadJob): Promise<UploadJob>;

@@ -1,24 +1,25 @@
-import { Repository, In, Brackets, Like } from "typeorm";
-import { Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { ContentStream } from "../../domain/entities";
-import { QueryOptions } from "../../domain/types/queryOptions.type";
-import { IContentStreamRepository } from "../../domain/repositories/icontentStream.repository";
+import { Repository, In, Brackets, Like } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { ContentStream } from '../../domain/entities';
+import { QueryOptions } from '../../domain/types/queryOptions.type';
+import { IContentStreamRepository } from '../../domain/repositories/icontentStream.repository';
 
 @Injectable()
 export class ContentStreamRepository implements IContentStreamRepository {
-
   constructor(
     @InjectRepository(ContentStream)
-    private readonly contentStreamContext: Repository<ContentStream>
-  ) { }
+    private readonly contentStreamContext: Repository<ContentStream>,
+  ) {}
 
-  public async getEntriesAsync(params: QueryOptions): Promise<[ContentStream[], number]> {
+  public async getEntriesAsync(
+    params: QueryOptions,
+  ): Promise<[ContentStream[], number]> {
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;
     const queryBuilder = this.contentStreamContext.createQueryBuilder('cs');
 
     if (!orderBy) {
-      orderBy = "title";
+      orderBy = 'title';
     }
 
     const whereConditions: string[] = [];
@@ -69,29 +70,37 @@ export class ContentStreamRepository implements IContentStreamRepository {
           `CASE WHEN cs.title ILIKE :exactSearch THEN 0 
                  WHEN cs.title ILIKE :searchQuery THEN 1 
                  ELSE 2 END`,
-          'ASC'
+          'ASC',
         )
         .addOrderBy(`cs.${orderBy}`, order)
-        .setParameter("exactSearch", `%${exactSearch}%`)
-        .setParameter("searchQuery", parameters.searchQuery);
+        .setParameter('exactSearch', `%${exactSearch}%`)
+        .setParameter('searchQuery', parameters.searchQuery);
     } else {
       queryBuilder.orderBy(`cs.${orderBy}`, order);
     }
 
-    const result = await queryBuilder.skip((page - 1) * pageSize)
-      .take(pageSize).getManyAndCount();
+    const result = await queryBuilder
+      .skip((page - 1) * pageSize)
+      .take(pageSize)
+      .getManyAndCount();
     console.log('Query Result:', result);
-    return result
+    return result;
   }
 
-  async deleteByPlatformAndExternalIdAsync(platform: string, externalId: string): Promise<void> {
+  async deleteByPlatformAndExternalIdAsync(
+    platform: string,
+    externalId: string,
+  ): Promise<void> {
     await this.contentStreamContext.delete({
       platform,
       externalId,
     });
   }
 
-  async deleteByPlatformAndExternalIdsAsync(platform: string, externalIds: string[]): Promise<void> {
+  async deleteByPlatformAndExternalIdsAsync(
+    platform: string,
+    externalIds: string[],
+  ): Promise<void> {
     if (externalIds.length === 0) return;
     await this.contentStreamContext.delete({
       platform,

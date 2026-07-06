@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class CreateSchemaIdentity implements MigrationInterface {
-  name = 'CreateSchemaIdentity1745256809081'
+  name = 'CreateSchemaIdentity1745256809081';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`CREATE SCHEMA IF NOT EXISTS identity`);

@@ -1,9 +1,9 @@
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import _const from "../../../core/utils/const";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { UserNotFoundException } from "../../../core/exceptions";
-import { IUserRepository } from "../../../domain/repositories/iuser.repository";
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import _const from '../../../core/utils/const';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { UserNotFoundException } from '../../../core/exceptions';
+import { IUserRepository } from '../../../domain/repositories/iuser.repository';
 
 export class ActivateUserCommand {
   userId: string;
@@ -18,10 +18,13 @@ const activateUserValidations = Joi.object({
 });
 
 @CommandHandler(ActivateUserCommand)
-export class ActivateUserCommandHandler implements ICommandHandler<ActivateUserCommand> {
+export class ActivateUserCommandHandler
+  implements ICommandHandler<ActivateUserCommand>
+{
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
-  ) { }
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+  ) {}
 
   public async execute(command: ActivateUserCommand): Promise<void> {
     await activateUserValidations.validateAsync(command);
@@ -39,4 +42,3 @@ export class ActivateUserCommandHandler implements ICommandHandler<ActivateUserC
     await this.userRepository.updateAsync(user);
   }
 }
-

@@ -1,18 +1,24 @@
-import axios from "axios";
-import { Inject } from "@nestjs/common";
-import configs from "../../../../configs";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../../core/utils/const";
-import fuseUtil from "../../../../core/utils/fuse.util";
-import logger from "../../../../core/utils/winston.util";
-import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
-import { SearchHistory } from "../../../../domain/entities";
-import { ApplicationException } from "../../../../core/exceptions";
-import { ISearchService } from "../../../../domain/services/isearch.service";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { YoutubeSearchResponseModel } from "../../../../domain/contracts/youtube.model";
-import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
-import { ISearchHistoryRepository, IUserLoginRepository } from "../../../../domain/repositories";
+import axios from 'axios';
+import { Inject } from '@nestjs/common';
+import configs from '../../../../configs';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../../core/utils/const';
+import fuseUtil from '../../../../core/utils/fuse.util';
+import logger from '../../../../core/utils/winston.util';
+import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+import { SearchHistory } from '../../../../domain/entities';
+import { ApplicationException } from '../../../../core/exceptions';
+import { ISearchService } from '../../../../domain/services/isearch.service';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { YoutubeSearchResponseModel } from '../../../../domain/contracts/youtube.model';
+import {
+  deserializeObject,
+  serializeObject,
+} from '../../../../core/utils/serialization.util';
+import {
+  ISearchHistoryRepository,
+  IUserLoginRepository,
+} from '../../../../domain/repositories';
 
 export class YoutubeSearchRequestModel {
   @ApiProperty()
@@ -34,8 +40,9 @@ export class YoutubeSearchQuery {
 }
 
 @QueryHandler(YoutubeSearchQuery)
-export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQuery> {
-
+export class YoutubeSearchQueryHandler
+  implements IQueryHandler<YoutubeSearchQuery>
+{
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,
@@ -43,26 +50,43 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
     private readonly searchHistoryRepository: ISearchHistoryRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-  ) { }
+  ) {}
 
-  public async execute(command: YoutubeSearchQuery): Promise<YoutubeSearchResponseModel> {
+  public async execute(
+    command: YoutubeSearchQuery,
+  ): Promise<YoutubeSearchResponseModel> {
     const { searchTerm, filter, youtubeAccessToken } = command.model;
 
     let accessToken: string | undefined;
     const userId = HttpContext.getCurrentUserId;
 
     if (youtubeAccessToken) {
-      const isTokenValid = await this.verifyAccessTokenAsync(youtubeAccessToken);
+      const isTokenValid =
+        await this.verifyAccessTokenAsync(youtubeAccessToken);
       if (!isTokenValid && userId) {
         const now = new Date();
-        const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.YOUTUBE);
+        const userLogin =
+          await this.userLoginRepository.getByUserIdAndProviderAsync(
+            userId,
+            _const.PLATFORMS.YOUTUBE,
+          );
 
         if (userLogin && now < userLogin.expiryDateUtc) {
-          const tokenValue = deserializeObject<{ access_token: string, refresh_token: string }>(userLogin.tokenValue);
-          const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
+          const tokenValue = deserializeObject<{
+            access_token: string;
+            refresh_token: string;
+          }>(userLogin.tokenValue);
+          const { access_token, expires_in } = await this.refreshTokenAsync(
+            tokenValue.refresh_token,
+          );
           if (accessToken !== '') {
-            userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
-            userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
+            userLogin.tokenValue = serializeObject({
+              access_token,
+              refresh_token: tokenValue.refresh_token,
+            });
+            userLogin.expiryDateUtc = new Date(
+              Date.now() + 100 * 24 * 60 * 60 * 1000,
+            ); // 100 days
             await this.userLoginRepository.updateAsync(userLogin);
           }
           accessToken = access_token;
@@ -71,18 +95,31 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
         accessToken = youtubeAccessToken;
       }
     } else if (userId) {
-      const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.YOUTUBE);
+      const userLogin =
+        await this.userLoginRepository.getByUserIdAndProviderAsync(
+          userId,
+          _const.PLATFORMS.YOUTUBE,
+        );
       if (userLogin) {
-        const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
-        const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
+        const tokenValue = deserializeObject<{
+          access_token: string;
+          refresh_token: string;
+          expires_in: number;
+        }>(userLogin.tokenValue);
+        const isTokenValid = await this.verifyAccessTokenAsync(
+          tokenValue.access_token,
+        );
         if (!isTokenValid) {
-          const {
+          const { access_token, expires_in } = await this.refreshTokenAsync(
+            tokenValue.refresh_token,
+          );
+          userLogin.tokenValue = serializeObject({
             access_token,
-            expires_in
-
-          } = await this.refreshTokenAsync(tokenValue.refresh_token);
-          userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
-          userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
+            refresh_token: tokenValue.refresh_token,
+          });
+          userLogin.expiryDateUtc = new Date(
+            Date.now() + 100 * 24 * 60 * 60 * 1000,
+          ); // 100 days
           await this.userLoginRepository.updateAsync(userLogin);
           accessToken = access_token;
         } else {
@@ -99,53 +136,60 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
       limit: 25,
       filters: filter,
       accessToken,
-      forceRefresh: command.model.forceRefresh || false
+      forceRefresh: command.model.forceRefresh || false,
     });
-    return data
+    return data;
   }
 
-  private async refreshTokenAsync(refreshToken: string)
-    : Promise<{ access_token: string, expires_in: number }> {
+  private async refreshTokenAsync(
+    refreshToken: string,
+  ): Promise<{ access_token: string; expires_in: number }> {
     try {
-
-      const response = await axios.post('https://oauth2.googleapis.com/token', new URLSearchParams({
-        client_id: configs.youtube.clientId,
-        client_secret: configs.youtube.clientSecret,
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token',
-      }).toString(), {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+      const response = await axios.post(
+        'https://oauth2.googleapis.com/token',
+        new URLSearchParams({
+          client_id: configs.youtube.clientId,
+          client_secret: configs.youtube.clientSecret,
+          refresh_token: refreshToken,
+          grant_type: 'refresh_token',
+        }).toString(),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
         },
-      });
+      );
       const { access_token, expires_in } = response.data;
       if (!access_token) {
-        throw new ApplicationException('Your Youtube session has expired or the access token is invalid. Please log in to Youtube again to continue.');
+        throw new ApplicationException(
+          'Your Youtube session has expired or the access token is invalid. Please log in to Youtube again to continue.',
+        );
       }
 
       return {
         access_token,
         expires_in,
       };
-
     } catch (error) {
-      logger.error("Error refreshing YouTube token", { error });
+      logger.error('Error refreshing YouTube token', { error });
     }
   }
 
   private async verifyAccessTokenAsync(accessToken: string): Promise<boolean> {
     try {
-      const response = await axios.get(`https://oauth2.googleapis.com/tokeninfo`, {
-        params: {
-          access_token: accessToken,
+      const response = await axios.get(
+        `https://oauth2.googleapis.com/tokeninfo`,
+        {
+          params: {
+            access_token: accessToken,
+          },
         },
-      });
+      );
 
       // If token is valid, response.data will contain info like expiry, user_id, scopes, etc.
       // If invalid, Google returns an error and axios will throw.
       return true;
     } catch (error) {
-
       return false;
     }
   }
@@ -157,14 +201,19 @@ export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQue
     }
 
     const similarQueries =
-      (await this.searchHistoryRepository.findSimilarQueriesAsync(trimmedQuery)) ?? [];
+      (await this.searchHistoryRepository.findSimilarQueriesAsync(
+        trimmedQuery,
+      )) ?? [];
 
     const candidateValues = similarQueries
       .map((item) => item.normalizedQuery)
       .filter(Boolean)
       .slice(0, 50);
 
-    const normalizedQuery = fuseUtil.normalizeSearchTerm(trimmedQuery, candidateValues);
+    const normalizedQuery = fuseUtil.normalizeSearchTerm(
+      trimmedQuery,
+      candidateValues,
+    );
 
     const hasExistingEntry = similarQueries.some((item) => {
       const original = (item.originalQuery ?? '').trim().toLowerCase();

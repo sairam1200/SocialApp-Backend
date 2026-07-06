@@ -1,7 +1,18 @@
-import { Response, Request } from "express";
-import { Controller, HttpStatus, Post, Res, Req, Get, Headers, HttpCode, Query, Body } from "@nestjs/common";
-import { ApiTags, ApiExcludeEndpoint } from "@nestjs/swagger";
-import logger from "../../../../core/utils/winston.util";
+import { Response, Request } from 'express';
+import {
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  Req,
+  Get,
+  Headers,
+  HttpCode,
+  Query,
+  Body,
+} from '@nestjs/common';
+import { ApiTags, ApiExcludeEndpoint } from '@nestjs/swagger';
+import logger from '../../../../core/utils/winston.util';
 
 @ApiTags('Integrations')
 @Controller({
@@ -9,7 +20,6 @@ import logger from "../../../../core/utils/winston.util";
   version: '1',
 })
 export class YoutubeWebhookController {
-
   @Get('webhook')
   @ApiExcludeEndpoint()
   public verifyWebhook(
@@ -27,16 +37,12 @@ export class YoutubeWebhookController {
       process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN || 'default_verify_token';
 
     if (verifyToken !== expectedToken) {
-      logger.warn(
-        `[YoutubeWebhook] Invalid verify token: ${verifyToken}`,
-      );
+      logger.warn(`[YoutubeWebhook] Invalid verify token: ${verifyToken}`);
 
       return res!.status(HttpStatus.FORBIDDEN).send('Invalid verify token');
     }
 
-    logger.info(
-      `[YoutubeWebhook] Subscription verified for topic: ${topic}`,
-    );
+    logger.info(`[YoutubeWebhook] Subscription verified for topic: ${topic}`);
 
     return res!.status(HttpStatus.OK).send(challenge);
   }
@@ -53,21 +59,26 @@ export class YoutubeWebhookController {
     @Headers('x-hub-signature') signature?: string,
     @Body() body?: any,
   ): Promise<Response | void> {
-    logger.debug(`[YoutubeWebhook] Received webhook request: mode=${mode}, topic=${topic}`);
+    logger.debug(
+      `[YoutubeWebhook] Received webhook request: mode=${mode}, topic=${topic}`,
+    );
     logger.info('======================');
     logger.info('YOUTUBE WEBHOOK HIT');
     logger.info(req.headers['content-type']);
     logger.info(body);
     logger.info('======================');
     if (mode === 'subscribe' || mode === 'unsubscribe') {
-      const expectedToken = process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN || 'default_verify_token';
+      const expectedToken =
+        process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN || 'default_verify_token';
 
       if (verifyToken !== expectedToken) {
         logger.warn(`[YoutubeWebhook] Invalid verify token: ${verifyToken}`);
         return res.status(HttpStatus.FORBIDDEN).send('Invalid verify token');
       }
 
-      logger.info(`[YoutubeWebhook] Subscription ${mode} verified for topic: ${topic}`);
+      logger.info(
+        `[YoutubeWebhook] Subscription ${mode} verified for topic: ${topic}`,
+      );
       return res.status(HttpStatus.OK).send(challenge);
     }
 
@@ -76,11 +87,16 @@ export class YoutubeWebhookController {
       return res.status(HttpStatus.OK).send('OK');
     } catch (error) {
       logger.error(`[YoutubeWebhook] Error processing notification:`, error);
-      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).send('Error processing notification');
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .send('Error processing notification');
     }
   }
 
-  private async processNotification(body: any, signature?: string): Promise<void> {
+  private async processNotification(
+    body: any,
+    signature?: string,
+  ): Promise<void> {
     logger.debug(`[YoutubeWebhook] Processing notification`);
 
     if (!body) {
@@ -97,4 +113,3 @@ export class YoutubeWebhookController {
     }
   }
 }
-

@@ -1,15 +1,14 @@
-import { UserType, ProfilePrivacy, OnboardingStep } from "../../enums";
-import { BaseEntity } from "../../baseEntity";
-import { Playlist } from "../collection/playlist.entity";
-import { Entity, Column, OneToMany, OneToOne } from "typeorm";
-import { PlaylistMember } from "../collection/playlistMember.entity";
-import { UserBiometric } from "./userBiometric.entity";
-import { UserFollow } from "../userFollow.entity";
-import { UserTopic } from "../userTopic.entity";
+import { UserType, ProfilePrivacy, OnboardingStep } from '../../enums';
+import { BaseEntity } from '../../baseEntity';
+import { Playlist } from '../collection/playlist.entity';
+import { Entity, Column, OneToMany, OneToOne } from 'typeorm';
+import { PlaylistMember } from '../collection/playlistMember.entity';
+import { UserBiometric } from './userBiometric.entity';
+import { UserFollow } from '../userFollow.entity';
+import { UserTopic } from '../userTopic.entity';
 
 @Entity({ name: 'users', schema: 'identity' })
 export class User extends BaseEntity {
-
   @Column()
   firstName: string;
 
@@ -119,25 +118,25 @@ export class User extends BaseEntity {
   })
   onboardingStep?: OnboardingStep;
 
-  @OneToOne(() => UserBiometric, biometrics => biometrics.user, { cascade: true, eager: false })
+  @OneToOne(() => UserBiometric, (biometrics) => biometrics.user, {
+    cascade: true,
+    eager: false,
+  })
   biometrics?: UserBiometric;
 
-  @OneToMany(() => Playlist, playlist => playlist.owner)
+  @OneToMany(() => Playlist, (playlist) => playlist.owner)
   ownedPlaylists: Playlist[];
 
-  @OneToMany(
-    () => PlaylistMember,
-    entry => entry.user
-  )
+  @OneToMany(() => PlaylistMember, (entry) => entry.user)
   playlistMemberships: PlaylistMember[];
 
-  @OneToMany(() => UserFollow, follow => follow.followed)
+  @OneToMany(() => UserFollow, (follow) => follow.followed)
   followers: UserFollow[];
 
-  @OneToMany(() => UserFollow, follow => follow.follower)
+  @OneToMany(() => UserFollow, (follow) => follow.follower)
   following: UserFollow[];
 
-  @OneToMany(() => UserTopic, userTopic => userTopic.user)
+  @OneToMany(() => UserTopic, (userTopic) => userTopic.user)
   userTopics: UserTopic[];
 
   constructor(request: Partial<User> = {}) {

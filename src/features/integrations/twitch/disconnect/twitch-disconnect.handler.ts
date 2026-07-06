@@ -12,15 +12,18 @@ export class TwitchDisconnectCommand {
 
 @CommandHandler(TwitchDisconnectCommand)
 export class TwitchDisconnectCommandHandler
-  implements ICommandHandler<TwitchDisconnectCommand> {
+  implements ICommandHandler<TwitchDisconnectCommand>
+{
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,
-  ) { }
+  ) {}
 
   public async execute(command: TwitchDisconnectCommand): Promise<void> {
     const userId = HttpContext.getCurrentUserId;
-    await this.disconnectService.disconnectPlatformAsync(userId, _const.PLATFORMS.TWITCH);
+    await this.disconnectService.disconnectPlatformAsync(
+      userId,
+      _const.PLATFORMS.TWITCH,
+    );
   }
 }
-

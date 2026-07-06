@@ -9,7 +9,7 @@ export class LinkedAccountAlreadyExistsException extends ConflictException {
     super(
       `Looks like your email (${email}) is already linked to a ${platform} account. Try logging in or choose a different account.`,
     );
-    
+
     this.name = 'LinkedAccountAlreadyExistsException';
   }
 }

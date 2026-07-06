@@ -1,9 +1,9 @@
-import { CommandBus } from "@nestjs/cqrs";
-import { Controller, Get, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { AuthenticatedAccountGuard } from "../../../../../../core/passport";
-import { ThemePreferenceModel } from "../../../../../../domain/contracts/userPreference.model";
-import { GetThemeQuery } from "./get-theme.handler";
+import { CommandBus } from '@nestjs/cqrs';
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AuthenticatedAccountGuard } from '../../../../../../core/passport';
+import { ThemePreferenceModel } from '../../../../../../domain/contracts/userPreference.model';
+import { GetThemeQuery } from './get-theme.handler';
 
 @ApiBearerAuth()
 @ApiTags('Settings')
@@ -13,9 +13,7 @@ import { GetThemeQuery } from "./get-theme.handler";
   version: '1',
 })
 export class GetThemeController {
-  constructor(
-    private readonly queryBus: CommandBus
-  ) { }
+  constructor(private readonly queryBus: CommandBus) {}
 
   @Get('preference/theme')
   @ApiResponse({ status: 200, description: 'OK', type: ThemePreferenceModel })

@@ -1,22 +1,21 @@
-import * as Joi from "joi";
-import configs from "../../../configs";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../core/utils/const";
-import { Globals } from "../../../core/globals";
-import ipUtil from "../../../core/utils/ip.util";
-import { TokenResponseModel } from "../../../domain/contracts/tokenResponse.model";
-import { Inject, UnauthorizedException } from "@nestjs/common";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { cryptoUtils } from "../../../core/utils/crypto.util";
-import { addDurationToNow } from "../../../core/utils/time.util";
-import { ITokenService } from "../../../domain/services/itoken.service";
-import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
-import { IUserRepository } from "../../../domain/repositories/iuser.repository";
-import { IUserLoginRepository } from "../../../domain/repositories/iuserLogin.repository";
-import { ApplicationException } from "core/exceptions";
+import * as Joi from 'joi';
+import configs from '../../../configs';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../core/utils/const';
+import { Globals } from '../../../core/globals';
+import ipUtil from '../../../core/utils/ip.util';
+import { TokenResponseModel } from '../../../domain/contracts/tokenResponse.model';
+import { Inject, UnauthorizedException } from '@nestjs/common';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { cryptoUtils } from '../../../core/utils/crypto.util';
+import { addDurationToNow } from '../../../core/utils/time.util';
+import { ITokenService } from '../../../domain/services/itoken.service';
+import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
+import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IUserLoginRepository } from '../../../domain/repositories/iuserLogin.repository';
+import { ApplicationException } from 'core/exceptions';
 
 export class RefreshTokenRequestModel {
-
   @ApiProperty()
   userAgent: string;
 
@@ -43,61 +42,92 @@ export class RefreshTokenCommand {
 }
 
 const refreshTokenValidations = Joi.object({
-  userAgent: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
-  ipAddress: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
-  deviceId: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
-  refreshToken: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  userAgent: Joi.string()
+    .required()
+    .messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  ipAddress: Joi.string()
+    .required()
+    .messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  deviceId: Joi.string()
+    .required()
+    .messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  refreshToken: Joi.string()
+    .required()
+    .messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
 });
 
 @CommandHandler(RefreshTokenCommand)
-export class RefreshTokenCommandHandler implements ICommandHandler<RefreshTokenCommand> {
+export class RefreshTokenCommandHandler
+  implements ICommandHandler<RefreshTokenCommand>
+{
   constructor(
     @Inject(_const.ITOKEN_SERVICE) private readonly tokenService: ITokenService,
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
-    @Inject(_const.IUSERLOGIN_REPOSITORY) private readonly userLoginRepository: IUserLoginRepository
-  ) { }
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+    @Inject(_const.IUSERLOGIN_REPOSITORY)
+    private readonly userLoginRepository: IUserLoginRepository,
+  ) {}
 
-  public async execute(command: RefreshTokenCommand): Promise<TokenResponseModel> {
-
+  public async execute(
+    command: RefreshTokenCommand,
+  ): Promise<TokenResponseModel> {
     const { model } = command;
     await refreshTokenValidations.validateAsync(command.model);
 
-    const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
+    const user = await this.userRepository.getUserByIdAsync(
+      HttpContext.getCurrentUserId,
+    );
     if (!user) {
-      throw new ApplicationException("User associated with the token does not exist.");
+      throw new ApplicationException(
+        'User associated with the token does not exist.',
+      );
     }
 
-    const userLogin = await this.userLoginRepository.getByTokenValueAndDeviceIdAsync(
-      model.refreshToken,
-      model.deviceId
-    );
+    const userLogin =
+      await this.userLoginRepository.getByTokenValueAndDeviceIdAsync(
+        model.refreshToken,
+        model.deviceId,
+      );
 
     if (!userLogin) {
-      throw new ApplicationException("Invalid refresh token or device mismatch.");
+      throw new ApplicationException(
+        'Invalid refresh token or device mismatch.',
+      );
     }
 
     const currentUtcDate = new Date();
     if (userLogin.expiryDateUtc < currentUtcDate) {
-      throw new ApplicationException("Refresh token has expired. Please log in again.");
+      throw new ApplicationException(
+        'Refresh token has expired. Please log in again.',
+      );
     }
 
-    if (user.securityStamp !== HttpContext.user[Globals.ClaimTypes.SecurityStamp]) {
+    if (
+      user.securityStamp !== HttpContext.user[Globals.ClaimTypes.SecurityStamp]
+    ) {
       userLogin.isValid = false;
       userLogin.expiryDateUtc = currentUtcDate;
       await this.userLoginRepository.updateAsync(userLogin);
-      throw new UnauthorizedException("Invalid security stamp. Please log in again.");
+      throw new UnauthorizedException(
+        'Invalid security stamp. Please log in again.',
+      );
     }
 
     // Always generate fresh JWT to include latest claims (e.g. onboardingStep)
     const accessToken = await this.tokenService.generateJwtAsync(user);
 
     userLogin.tokenValue = cryptoUtils.generateEncryptionKey(32);
-    userLogin.expiryDateUtc = addDurationToNow(configs.jwt.refreshTokenExpiration);
+    userLogin.expiryDateUtc = addDurationToNow(
+      configs.jwt.refreshTokenExpiration,
+    );
 
-    const hasChanged = ipUtil.hasIpChanged(model.ipAddress, userLogin.ipAddress);
+    const hasChanged = ipUtil.hasIpChanged(
+      model.ipAddress,
+      userLogin.ipAddress,
+    );
 
     if (hasChanged) {
-      // TODO: Send email notification of account access with new ipAddress  
+      // TODO: Send email notification of account access with new ipAddress
     }
 
     await this.userLoginRepository.updateAsync(userLogin);
@@ -107,7 +137,9 @@ export class RefreshTokenCommandHandler implements ICommandHandler<RefreshTokenC
       refresh_token: userLogin.tokenValue,
       succeeded: true,
       onboardingCompleted: String(user.onboardingStep) === 'Completed',
-      refreshTokenExpiryTime: Math.floor(userLogin.expiryDateUtc.getTime() / 1000),
+      refreshTokenExpiryTime: Math.floor(
+        userLogin.expiryDateUtc.getTime() / 1000,
+      ),
     });
   }
-} 
+}

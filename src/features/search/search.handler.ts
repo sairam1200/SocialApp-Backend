@@ -1,32 +1,58 @@
-import _const from "../../core/utils/const";
-import { ApiProperty } from "@nestjs/swagger";
-import fuseUtil from "../../core/utils/fuse.util";
-import { SearchHistory } from "../../domain/entities";
-import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
-import { Inject } from "@nestjs/common";
-import { ISearchService } from "../../domain/services/isearch.service";
-import { deserializeObject } from "../../core/utils/serialization.util";
-import { HttpContext } from "../../core/middlewares/httpContext.middleware";
-import { IAnalyticsService } from "../../domain/services/ianalytics.service";
-import { ISearchHistoryRepository, IUserLoginRepository, ILinkedAccountRepository } from "../../domain/repositories";
+import _const from '../../core/utils/const';
+import { ApiProperty } from '@nestjs/swagger';
+import fuseUtil from '../../core/utils/fuse.util';
+import { SearchHistory } from '../../domain/entities';
+import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+import { Inject } from '@nestjs/common';
+import { ISearchService } from '../../domain/services/isearch.service';
+import { deserializeObject } from '../../core/utils/serialization.util';
+import { HttpContext } from '../../core/middlewares/httpContext.middleware';
+import { IAnalyticsService } from '../../domain/services/ianalytics.service';
+import {
+  ISearchHistoryRepository,
+  IUserLoginRepository,
+  ILinkedAccountRepository,
+} from '../../domain/repositories';
 
 export class GlobalSearchRequestModel {
   @ApiProperty()
   searchTerm: string;
 
-  @ApiProperty({ required: false, description: "Array of platforms to search. If not provided, searches all available platforms.", example: ["facebook", "instagram", "twitter"] })
+  @ApiProperty({
+    required: false,
+    description:
+      'Array of platforms to search. If not provided, searches all available platforms.',
+    example: ['facebook', 'instagram', 'twitter'],
+  })
   platforms?: string[];
 
   @ApiProperty({ required: false })
   filter?: Record<string, any>;
 
-  @ApiProperty({ required: false, default: 1, description: "Page number for pagination (default: 1)" })
+  @ApiProperty({
+    required: false,
+    default: 1,
+    description: 'Page number for pagination (default: 1)',
+  })
   page?: number;
 
-  @ApiProperty({ required: false, default: 25, description: "Number of results per platform (default: 25)" })
+  @ApiProperty({
+    required: false,
+    default: 25,
+    description: 'Number of results per platform (default: 25)',
+  })
   limit?: number;
 
-  @ApiProperty({ required: false, description: "Platform-specific pagination tokens/cursors. Keys are platform names, values are their respective pagination tokens.", example: { "youtube": "CAoQAA", "facebook": "next_page_token", "instagram": "cursor_abc123" } })
+  @ApiProperty({
+    required: false,
+    description:
+      'Platform-specific pagination tokens/cursors. Keys are platform names, values are their respective pagination tokens.',
+    example: {
+      youtube: 'CAoQAA',
+      facebook: 'next_page_token',
+      instagram: 'cursor_abc123',
+    },
+  })
   paginationTokens?: Record<string, string>;
 
   @ApiProperty({ required: false, default: false })
@@ -61,7 +87,11 @@ export class GlobalSearchResponseModel {
     tiktok?: any;
   };
 
-  @ApiProperty({ type: Object, description: "Platform-specific pagination tokens/cursors for next page", example: { "youtube": "CAoQAA", "facebook": "next_page_token" } })
+  @ApiProperty({
+    type: Object,
+    description: 'Platform-specific pagination tokens/cursors for next page',
+    example: { youtube: 'CAoQAA', facebook: 'next_page_token' },
+  })
   paginationTokens: Record<string, string | null>;
 
   @ApiProperty()
@@ -85,8 +115,9 @@ export class GlobalSearchResponseModel {
 }
 
 @QueryHandler(GlobalSearchQuery)
-export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery> {
-
+export class GlobalSearchQueryHandler
+  implements IQueryHandler<GlobalSearchQuery>
+{
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,
@@ -98,10 +129,20 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IANALYTICS_SERVICE)
     private readonly analyticsService: IAnalyticsService,
-  ) { }
+  ) {}
 
-  public async execute(command: GlobalSearchQuery): Promise<GlobalSearchResponseModel> {
-    const { searchTerm, platforms, filter, page = 1, limit = 25, paginationTokens = {}, forceRefresh } = command.model;
+  public async execute(
+    command: GlobalSearchQuery,
+  ): Promise<GlobalSearchResponseModel> {
+    const {
+      searchTerm,
+      platforms,
+      filter,
+      page = 1,
+      limit = 25,
+      paginationTokens = {},
+      forceRefresh,
+    } = command.model;
     const userId = HttpContext.getCurrentUserId;
 
     await this.analyticsService.trackEvent(
@@ -111,28 +152,32 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
         platforms: platforms || [],
         page,
         limit,
-      }
+      },
     );
 
     const allPlatforms = Object.values(_const.PLATFORMS);
 
-    const normalizedPlatforms = platforms && platforms.length > 0
-      ? platforms.map(p => p.toLowerCase())
-      : null;
+    const normalizedPlatforms =
+      platforms && platforms.length > 0
+        ? platforms.map((p) => p.toLowerCase())
+        : null;
 
-    const platformsToSearch = normalizedPlatforms && normalizedPlatforms.length > 0
-      ? normalizedPlatforms.filter(p => allPlatforms.includes(p))
-      : allPlatforms;
+    const platformsToSearch =
+      normalizedPlatforms && normalizedPlatforms.length > 0
+        ? normalizedPlatforms.filter((p) => allPlatforms.includes(p))
+        : allPlatforms;
 
-    let tokenMap = new Map<string, string>();
+    const tokenMap = new Map<string, string>();
     if (userId) {
       try {
-        const linkedAccounts = await this.linkedAccountRepository.getByUserIdAsync(userId);
-        const platforms = linkedAccounts.map(acc => acc.platform);
+        const linkedAccounts =
+          await this.linkedAccountRepository.getByUserIdAsync(userId);
+        const platforms = linkedAccounts.map((acc) => acc.platform);
 
-        const loginPromises = platforms.map(platform =>
-          this.userLoginRepository.getByUserIdAndProviderAsync(userId, platform)
-            .catch(() => null)
+        const loginPromises = platforms.map((platform) =>
+          this.userLoginRepository
+            .getByUserIdAndProviderAsync(userId, platform)
+            .catch(() => null),
         );
 
         const userLogins = (await Promise.all(loginPromises)).filter(Boolean);
@@ -149,7 +194,7 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
 
     const normalizedQuery = await this.normalizeQueryAsync(searchTerm, userId);
 
-    const searchPromises = platformsToSearch.map(platform =>
+    const searchPromises = platformsToSearch.map((platform) =>
       this.searchPlatformOptimized(
         platform,
         searchTerm,
@@ -159,12 +204,16 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
         page,
         limit,
         paginationTokens[platform],
-        forceRefresh
-      )
-        .catch(error => {
-          console.error(`Error searching ${platform}:`, error);
-          return { platform, error: error.message, result: null, paginationToken: null };
-        })
+        forceRefresh,
+      ).catch((error) => {
+        console.error(`Error searching ${platform}:`, error);
+        return {
+          platform,
+          error: error.message,
+          result: null,
+          paginationToken: null,
+        };
+      }),
     );
 
     const searchResults = await Promise.all(searchPromises);
@@ -180,7 +229,10 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
       if (result && !error) {
         response.results[platform] = result;
         // Extract pagination token from platform-specific response
-        response.paginationTokens[platform] = this.extractPaginationToken(platform, result);
+        response.paginationTokens[platform] = this.extractPaginationToken(
+          platform,
+          result,
+        );
         // Count results based on platform response structure
         totalResults += this.countResults(platform, result);
       } else {
@@ -203,8 +255,13 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
     page: number,
     limit: number,
     paginationToken: string | undefined,
-    forceRefresh: boolean | undefined
-  ): Promise<{ platform: string; result: any; error?: string; paginationToken?: string | null }> {
+    forceRefresh: boolean | undefined,
+  ): Promise<{
+    platform: string;
+    result: any;
+    error?: string;
+    paginationToken?: string | null;
+  }> {
     try {
       // Access token is optional - some platforms support public search (YouTube, Reddit, Spotify)
 
@@ -259,12 +316,21 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
           result = await this.searchService.searchBehanceAsync(searchParams);
           break;
         default:
-          return { platform, result: null, error: `Unsupported platform: ${platform}` };
+          return {
+            platform,
+            result: null,
+            error: `Unsupported platform: ${platform}`,
+          };
       }
 
       return { platform, result, paginationToken: null };
     } catch (error: any) {
-      return { platform, result: null, error: error.message || 'Unknown error', paginationToken: null };
+      return {
+        platform,
+        result: null,
+        error: error.message || 'Unknown error',
+        paginationToken: null,
+      };
     }
   }
 
@@ -274,8 +340,11 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
     try {
       switch (platform) {
         case _const.PLATFORMS.FACEBOOK:
-          return result.results?.posts?.paging?.cursors?.after ||
-            result.results?.feeds?.paging?.cursors?.after || null;
+          return (
+            result.results?.posts?.paging?.cursors?.after ||
+            result.results?.feeds?.paging?.cursors?.after ||
+            null
+          );
         case _const.PLATFORMS.INSTAGRAM:
           return result.after || null;
         case _const.PLATFORMS.TWITTER:
@@ -290,7 +359,10 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
           return result.nextPageToken || null;
         case _const.PLATFORMS.SPOTIFY:
           // Spotify uses offset, calculate next offset
-          if (result.results?.tracks?.offset !== undefined && result.results?.tracks?.items) {
+          if (
+            result.results?.tracks?.offset !== undefined &&
+            result.results?.tracks?.items
+          ) {
             const currentOffset = result.results.tracks.offset || 0;
             const itemsLength = result.results.tracks.items?.length || 0;
             return String(currentOffset + itemsLength);
@@ -310,11 +382,17 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
     }
   }
 
-  private extractAccessToken(tokenValue: string | null | undefined): string | null {
+  private extractAccessToken(
+    tokenValue: string | null | undefined,
+  ): string | null {
     if (!tokenValue) return null;
 
     try {
-      const deserialized = deserializeObject<{ access_token?: string; refresh_token?: string; expires_in?: number }>(tokenValue);
+      const deserialized = deserializeObject<{
+        access_token?: string;
+        refresh_token?: string;
+        expires_in?: number;
+      }>(tokenValue);
       if (deserialized && deserialized.access_token) {
         return deserialized.access_token;
       }
@@ -354,8 +432,7 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
         case _const.PLATFORMS.TWITTER:
           const twResults = result.results as any;
           return (
-            (twResults.tweets?.length || 0) +
-            (twResults.users?.length || 0)
+            (twResults.tweets?.length || 0) + (twResults.users?.length || 0)
           );
         case _const.PLATFORMS.LINKEDIN:
           const liResults = result.results as any;
@@ -365,7 +442,7 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
             (liResults.companies?.length || 0)
           );
         case _const.PLATFORMS.YOUTUBE:
-          return (result.results?.length || 0);
+          return result.results?.length || 0;
         case _const.PLATFORMS.SPOTIFY:
           const spResults = result.results as any;
           return (
@@ -392,8 +469,7 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
         case _const.PLATFORMS.TIKTOK:
           const ttResults = result.results as any;
           return (
-            (ttResults.videos?.length || 0) +
-            (ttResults.users?.length || 0)
+            (ttResults.videos?.length || 0) + (ttResults.users?.length || 0)
           );
         default:
           return 0;
@@ -403,21 +479,29 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
     }
   }
 
-  private async normalizeQueryAsync(query: string, userId?: string | null): Promise<string> {
+  private async normalizeQueryAsync(
+    query: string,
+    userId?: string | null,
+  ): Promise<string> {
     const trimmedQuery = (query ?? '').trim();
     if (!trimmedQuery) {
       return '';
     }
 
     const similarQueries =
-      (await this.searchHistoryRepository.findSimilarQueriesAsync(trimmedQuery)) ?? [];
+      (await this.searchHistoryRepository.findSimilarQueriesAsync(
+        trimmedQuery,
+      )) ?? [];
 
     const candidateValues = similarQueries
       .map((item) => item.normalizedQuery)
       .filter(Boolean)
       .slice(0, 50);
 
-    const normalizedQuery = fuseUtil.normalizeSearchTerm(trimmedQuery, candidateValues);
+    const normalizedQuery = fuseUtil.normalizeSearchTerm(
+      trimmedQuery,
+      candidateValues,
+    );
 
     // Only save search history if user is logged in
     if (userId) {

@@ -1,11 +1,21 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import configs from "../../../../configs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { cryptoUtils } from "../../../../core/utils/crypto.util";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
-import { TwitchConnectQuery, TwitchConnectCallbackQuery } from "./twitch-connect.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import configs from '../../../../configs';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { cryptoUtils } from '../../../../core/utils/crypto.util';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  TwitchConnectQuery,
+  TwitchConnectCallbackQuery,
+} from './twitch-connect.handler';
 
 @ApiTags('Integrations')
 @Controller({
@@ -13,8 +23,7 @@ import { TwitchConnectQuery, TwitchConnectCallbackQuery } from "./twitch-connect
   version: '1',
 })
 export class TwitchConnectController {
-
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
@@ -23,10 +32,7 @@ export class TwitchConnectController {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Connect(@Res() res: Response): Promise<Response | void> {
-
-    const scopes = [
-      'user:read:email',
-    ].join(' ');
+    const scopes = ['user:read:email'].join(' ');
 
     const state = cryptoUtils.generateEncryptionKey(16);
 
@@ -51,11 +57,13 @@ export class TwitchConnectController {
   public async Callback(
     @Query('code') code: string,
     @Query('state') state: string,
-    @Res() res: Response): Promise<Response | void> {
-    const result = await this.commandBus.execute(new TwitchConnectCallbackQuery({
-      model: { code, state }
-    }));
+    @Res() res: Response,
+  ): Promise<Response | void> {
+    const result = await this.commandBus.execute(
+      new TwitchConnectCallbackQuery({
+        model: { code, state },
+      }),
+    );
     return res.status(HttpStatus.OK).json(result);
   }
 }
-

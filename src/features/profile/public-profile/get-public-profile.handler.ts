@@ -1,23 +1,23 @@
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import _const from "../../../core/utils/const";
-import { UserType, ProfilePrivacy, FollowStatus } from "../../../domain/enums";
-import { UserNotFoundException } from "../../../core/exceptions";
-import { PublicProfileModel } from "../../../domain/contracts/public-profile.model";
-import { PlaylistMember } from "../../../domain/entities/collection/playlistMember.entity";
-import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
-import { IUserRepository } from "../../../domain/repositories/iuser.repository";
-import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
-import { IManualProfileRepository } from "../../../domain/repositories/imanualProfile.repository";
-import { IUserFollowRepository } from "../../../domain/repositories/iuserFollow.repository";
-import { ProfileCacheService } from "../../../infrastructure/services/profileCache.service";
-import { getProfileImageUrl } from "../../../core/utils/profileImagePrivacy.util";
-import { mapToLinkedAccountsModel } from "../../../domain/mappers/user.mapper";
-import { mapToManualProfileModel } from "../../../domain/mappers/manualProfile.mapper";
-import { mapToPublicProfileModel } from "../../../domain/mappers/public-profile.mapper";
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import _const from '../../../core/utils/const';
+import { UserType, ProfilePrivacy, FollowStatus } from '../../../domain/enums';
+import { UserNotFoundException } from '../../../core/exceptions';
+import { PublicProfileModel } from '../../../domain/contracts/public-profile.model';
+import { PlaylistMember } from '../../../domain/entities/collection/playlistMember.entity';
+import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
+import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
+import { IManualProfileRepository } from '../../../domain/repositories/imanualProfile.repository';
+import { IUserFollowRepository } from '../../../domain/repositories/iuserFollow.repository';
+import { ProfileCacheService } from '../../../infrastructure/services/profileCache.service';
+import { getProfileImageUrl } from '../../../core/utils/profileImagePrivacy.util';
+import { mapToLinkedAccountsModel } from '../../../domain/mappers/user.mapper';
+import { mapToManualProfileModel } from '../../../domain/mappers/manualProfile.mapper';
+import { mapToPublicProfileModel } from '../../../domain/mappers/public-profile.mapper';
 
 export class GetPublicProfileQuery {
   userName: string;
@@ -29,22 +29,31 @@ export class GetPublicProfileQuery {
 
 const getPublicProfileQueryValidations = {
   params: Joi.object().keys({
-    userName: Joi.string().required()
-  })
+    userName: Joi.string().required(),
+  }),
 };
 
 @CommandHandler(GetPublicProfileQuery)
-export class GetPublicProfileQueryHandler implements ICommandHandler<GetPublicProfileQuery, PublicProfileModel> {
+export class GetPublicProfileQueryHandler
+  implements ICommandHandler<GetPublicProfileQuery, PublicProfileModel>
+{
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
-    @Inject(_const.ILINKEDACCOUNT_REPOSITORY) private readonly linkedAccountRepository: ILinkedAccountRepository,
-    @Inject(_const.IMANUALPROFILE_REPOSITORY) private readonly manualProfileRepository: IManualProfileRepository,
-    @Inject(_const.IUSERFOLLOW_REPOSITORY) private readonly userFollowRepository: IUserFollowRepository,
-    @InjectRepository(PlaylistMember) private readonly playlistMemberRepository: Repository<PlaylistMember>,
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+    @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
+    private readonly linkedAccountRepository: ILinkedAccountRepository,
+    @Inject(_const.IMANUALPROFILE_REPOSITORY)
+    private readonly manualProfileRepository: IManualProfileRepository,
+    @Inject(_const.IUSERFOLLOW_REPOSITORY)
+    private readonly userFollowRepository: IUserFollowRepository,
+    @InjectRepository(PlaylistMember)
+    private readonly playlistMemberRepository: Repository<PlaylistMember>,
     private readonly profileCache: ProfileCacheService,
-  ) { }
+  ) {}
 
-  public async execute(query: GetPublicProfileQuery): Promise<PublicProfileModel> {
+  public async execute(
+    query: GetPublicProfileQuery,
+  ): Promise<PublicProfileModel> {
     await getPublicProfileQueryValidations.params.validateAsync(query);
 
     const decodedUserName = decodeURIComponent(query.userName);
@@ -72,14 +81,19 @@ export class GetPublicProfileQueryHandler implements ICommandHandler<GetPublicPr
       if (!viewerUserId) {
         throw new UserNotFoundException(query.userName, 'username');
       }
-      const follow = await this.userFollowRepository.getAsync(viewerUserId, user.id);
+      const follow = await this.userFollowRepository.getAsync(
+        viewerUserId,
+        user.id,
+      );
       if (!follow || follow.status !== FollowStatus.Accepted) {
         throw new UserNotFoundException(query.userName, 'username');
       }
     }
 
-    const linkedAccounts = await this.linkedAccountRepository.getByUserIdAsync(user.id) || [];
-    const manualProfiles = await this.manualProfileRepository.getByUserIdAsync(user.id) || [];
+    const linkedAccounts =
+      (await this.linkedAccountRepository.getByUserIdAsync(user.id)) || [];
+    const manualProfiles =
+      (await this.manualProfileRepository.getByUserIdAsync(user.id)) || [];
 
     let profileImageUrl: string | null = null;
     if (user.biometrics) {
@@ -89,12 +103,18 @@ export class GetPublicProfileQueryHandler implements ICommandHandler<GetPublicPr
         user.biometrics.privacy,
         user.id,
         viewerUserId,
-        this.playlistMemberRepository
+        this.playlistMemberRepository,
       );
     }
 
-    const followersCount = await this.userFollowRepository.countFollowersAsync(user.id, FollowStatus.Accepted);
-    const followingCount = await this.userFollowRepository.countFollowingAsync(user.id, FollowStatus.Accepted);
+    const followersCount = await this.userFollowRepository.countFollowersAsync(
+      user.id,
+      FollowStatus.Accepted,
+    );
+    const followingCount = await this.userFollowRepository.countFollowingAsync(
+      user.id,
+      FollowStatus.Accepted,
+    );
 
     const follow = viewerUserId
       ? await this.userFollowRepository.getAsync(viewerUserId, user.id)

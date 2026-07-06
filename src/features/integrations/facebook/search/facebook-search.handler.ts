@@ -11,7 +11,10 @@ import { ApplicationException } from '../../../../core/exceptions';
 import { ISearchService } from '../../../../domain/services/isearch.service';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { FacebookSearchResponseModel } from '../../../../domain/contracts/facebook.model';
-import { ISearchHistoryRepository, IUserLoginRepository } from '../../../../domain/repositories';
+import {
+  ISearchHistoryRepository,
+  IUserLoginRepository,
+} from '../../../../domain/repositories';
 
 export class FacebookSearchRequestModel {
   @ApiProperty()
@@ -34,7 +37,8 @@ export class FacebookSearchQuery {
 
 @QueryHandler(FacebookSearchQuery)
 export class FacebookSearchQueryHandler
-  implements IQueryHandler<FacebookSearchQuery, FacebookSearchResponseModel> {
+  implements IQueryHandler<FacebookSearchQuery, FacebookSearchResponseModel>
+{
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,
@@ -42,9 +46,11 @@ export class FacebookSearchQueryHandler
     private readonly searchHistoryRepository: ISearchHistoryRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-  ) { }
+  ) {}
 
-  public async execute(command: FacebookSearchQuery): Promise<FacebookSearchResponseModel> {
+  public async execute(
+    command: FacebookSearchQuery,
+  ): Promise<FacebookSearchResponseModel> {
     const { searchTerm, filter, facebookAccessToken } = command.model;
 
     let expiresIn: number;
@@ -194,14 +200,19 @@ export class FacebookSearchQueryHandler
     }
 
     const similarQueries =
-      (await this.searchHistoryRepository.findSimilarQueriesAsync(trimmedQuery)) ?? [];
+      (await this.searchHistoryRepository.findSimilarQueriesAsync(
+        trimmedQuery,
+      )) ?? [];
 
     const candidateValues = similarQueries
       .map((item) => item.normalizedQuery)
       .filter(Boolean)
       .slice(0, 50);
 
-    const normalizedQuery = fuseUtil.normalizeSearchTerm(trimmedQuery, candidateValues);
+    const normalizedQuery = fuseUtil.normalizeSearchTerm(
+      trimmedQuery,
+      candidateValues,
+    );
 
     const hasExistingEntry = similarQueries.some((item) => {
       const original = (item.originalQuery ?? '').trim().toLowerCase();

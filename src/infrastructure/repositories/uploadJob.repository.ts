@@ -1,8 +1,8 @@
-import { Repository, LessThan } from "typeorm";
-import { Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { UploadJob } from "../../domain/entities";
-import { IUploadJobRepository } from "../../domain/repositories/iuploadJob.repository";
+import { Repository, LessThan } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { UploadJob } from '../../domain/entities';
+import { IUploadJobRepository } from '../../domain/repositories/iuploadJob.repository';
 
 @Injectable()
 export class UploadJobRepository implements IUploadJobRepository {
@@ -24,7 +24,10 @@ export class UploadJobRepository implements IUploadJobRepository {
   }
 
   async getByVideoIdAsync(videoId: string): Promise<UploadJob | null> {
-    return this.repo.findOne({ where: { videoId }, order: { createdOn: 'DESC' } });
+    return this.repo.findOne({
+      where: { videoId },
+      order: { createdOn: 'DESC' },
+    });
   }
 
   async getPendingRetriesAsync(): Promise<UploadJob[]> {
@@ -36,6 +39,6 @@ export class UploadJobRepository implements IUploadJobRepository {
 
   async deleteByVideoIdsAsync(videoIds: string[]): Promise<void> {
     if (videoIds.length === 0) return;
-    await this.repo.delete(videoIds.map(id => ({ videoId: id })));
+    await this.repo.delete(videoIds.map((id) => ({ videoId: id })));
   }
 }

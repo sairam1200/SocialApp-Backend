@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { FollowStatus } from "../enums";
+import { ApiProperty } from '@nestjs/swagger';
+import { FollowStatus } from '../enums';
 
 export class FollowUserSummaryModel {
   @ApiProperty()

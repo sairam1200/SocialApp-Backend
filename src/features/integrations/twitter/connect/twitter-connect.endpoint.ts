@@ -1,11 +1,21 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import configs from "../../../../configs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { cryptoUtils } from "../../../../core/utils/crypto.util";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
-import { TwitterConnectCallbackQuery, TwitterConnectQuery } from "./twitter-connect.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import configs from '../../../../configs';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { cryptoUtils } from '../../../../core/utils/crypto.util';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  TwitterConnectCallbackQuery,
+  TwitterConnectQuery,
+} from './twitter-connect.handler';
 
 @ApiTags('Integrations')
 @Controller({
@@ -13,8 +23,7 @@ import { TwitterConnectCallbackQuery, TwitterConnectQuery } from "./twitter-conn
   version: '1',
 })
 export class TwitterConnectController {
-
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
@@ -23,14 +32,11 @@ export class TwitterConnectController {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Connect(@Res() res: Response): Promise<Response | void> {
-
     const scopes = [
       'tweet.read',
       'users.read',
       'offline.access',
       'like.read',
-
-
     ].join(' ');
 
     const state = cryptoUtils.generateEncryptionKey(16);
@@ -44,11 +50,13 @@ export class TwitterConnectController {
       scope: scopes,
       state: state,
       code_challenge: challenge,
-      code_challenge_method: 'S256'
+      code_challenge_method: 'S256',
     });
     const authorizeURL = `https://x.com/i/oauth2/authorize?${params.toString()}`;
 
-    await this.commandBus.execute(new TwitterConnectQuery({ model: { state, codeVerifier } }));
+    await this.commandBus.execute(
+      new TwitterConnectQuery({ model: { state, codeVerifier } }),
+    );
     return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });
   }
 
@@ -60,11 +68,14 @@ export class TwitterConnectController {
   public async Callback(
     @Query('code') code: string,
     @Query('state') state: string,
-    @Res() res: Response): Promise<Response | void> {
-       console.log("TWITTER CALLBACK HIT");
-    const result = await this.commandBus.execute(new TwitterConnectCallbackQuery({
-      model: { code, state }
-    }));
+    @Res() res: Response,
+  ): Promise<Response | void> {
+    console.log('TWITTER CALLBACK HIT');
+    const result = await this.commandBus.execute(
+      new TwitterConnectCallbackQuery({
+        model: { code, state },
+      }),
+    );
     return res.status(HttpStatus.OK).json(result);
   }
 }

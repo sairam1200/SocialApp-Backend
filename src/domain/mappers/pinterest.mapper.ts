@@ -1,9 +1,15 @@
-import { PinterestContentModel, PinterestProfileModel } from "../contracts/pinterest.model";
-import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { UserContent } from "../entities/userContent.entity";
-import _const from "../../core/utils/const";
+import {
+  PinterestContentModel,
+  PinterestProfileModel,
+} from '../contracts/pinterest.model';
+import { LinkedAccount } from '../entities/linkedAccount.entity';
+import { UserContent } from '../entities/userContent.entity';
+import _const from '../../core/utils/const';
 
-export function mapToPinterestProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): PinterestProfileModel {
+export function mapToPinterestProfileModel(
+  data: LinkedAccount,
+  includeSensitiveFields: boolean = false,
+): PinterestProfileModel {
   return {
     id: data.id,
     userId: data.userId,
@@ -21,7 +27,9 @@ export function mapToPinterestProfileModel(data: LinkedAccount, includeSensitive
   } as PinterestProfileModel;
 }
 
-export function mapToPinterestContentModel(data: UserContent): PinterestContentModel {
+export function mapToPinterestContentModel(
+  data: UserContent,
+): PinterestContentModel {
   return {
     id: data.id,
     title: data.title,

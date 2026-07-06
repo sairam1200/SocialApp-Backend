@@ -1,12 +1,22 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import configs from "../../../../configs";
-import { stringUtil } from "../../../../core/utils/string.util";
-import { ApiProperty, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Controller, Get, HttpStatus, Query, Res, UseGuards } from "@nestjs/common";
-import { ThreadsProfileModel } from "../../../../domain/contracts/threads.model";
-import { ThreadsConnectCallbackQuery, ThreadsConnectQuery } from "../../threads/connect/threads-connect.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import configs from '../../../../configs';
+import { stringUtil } from '../../../../core/utils/string.util';
+import { ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { ThreadsProfileModel } from '../../../../domain/contracts/threads.model';
+import {
+  ThreadsConnectCallbackQuery,
+  ThreadsConnectQuery,
+} from '../../threads/connect/threads-connect.handler';
 
 class ThreadsConnectCallbackResponseModel {
   @ApiProperty()
@@ -28,8 +38,7 @@ class ConnectResponseModel {
   version: '1',
 })
 export class ThreadsConnectController {
-
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Get('connect')
   @UseGuards(UserAccoutGuard)
@@ -38,12 +47,11 @@ export class ThreadsConnectController {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Connect(@Res() res: Response): Promise<Response | void> {
-
     const scopes = [
       'threads_basic',
       'threads_content_publish',
       'threads_read_replies',
-      'threads_manage_insights'
+      'threads_manage_insights',
     ].join(',');
 
     const state = stringUtil.generateRandomString(16);
@@ -57,21 +65,29 @@ export class ThreadsConnectController {
 
     const authorizeURL = `https://www.threads.net/oauth/authorize?${params.toString()}`;
 
-    await this.commandBus.execute(new ThreadsConnectQuery({ model: { state } }));
+    await this.commandBus.execute(
+      new ThreadsConnectQuery({ model: { state } }),
+    );
     return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });
   }
 
   @Get('connect-callback')
-  @ApiResponse({ status: 200, description: 'OK', type: ThreadsConnectCallbackResponseModel })
+  @ApiResponse({
+    status: 200,
+    description: 'OK',
+    type: ThreadsConnectCallbackResponseModel,
+  })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Callback(
     @Query('code') code: string,
     @Query('state') state: string,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response | void> {
-    const result = await this.commandBus.execute(new ThreadsConnectCallbackQuery({ model: { code, state } }));
+    const result = await this.commandBus.execute(
+      new ThreadsConnectCallbackQuery({ model: { code, state } }),
+    );
     return res.status(HttpStatus.OK).json(result);
   }
 }

@@ -11,7 +11,7 @@ export type PinterestUserDataType = {
   follower_count: number;
   following_count: number;
   monthly_views: number;
-}
+};
 
 export class PinterestProfileModel {
   @ApiProperty()

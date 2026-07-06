@@ -5,13 +5,17 @@ import { FacebookVideoAnalytics } from '../../domain/entities/facebookVideoAnaly
 import { IFacebookVideoAnalyticsRepository } from '../../domain/repositories/ifacebookVideoAnalytics.repository';
 
 @Injectable()
-export class FacebookVideoAnalyticsRepository implements IFacebookVideoAnalyticsRepository {
+export class FacebookVideoAnalyticsRepository
+  implements IFacebookVideoAnalyticsRepository
+{
   constructor(
     @InjectRepository(FacebookVideoAnalytics)
     private readonly videoAnalyticsContext: Repository<FacebookVideoAnalytics>,
   ) {}
 
-  async createOrUpdateAsync(analytics: FacebookVideoAnalytics): Promise<FacebookVideoAnalytics> {
+  async createOrUpdateAsync(
+    analytics: FacebookVideoAnalytics,
+  ): Promise<FacebookVideoAnalytics> {
     const existing = await this.videoAnalyticsContext.findOne({
       where: {
         videoId: analytics.videoId,
@@ -28,14 +32,18 @@ export class FacebookVideoAnalyticsRepository implements IFacebookVideoAnalytics
     return await this.videoAnalyticsContext.save(newEntity);
   }
 
-  async getLatestByVideoIdAsync(videoId: string): Promise<FacebookVideoAnalytics | null> {
+  async getLatestByVideoIdAsync(
+    videoId: string,
+  ): Promise<FacebookVideoAnalytics | null> {
     return await this.videoAnalyticsContext.findOne({
       where: { videoId },
       order: { snapshotDate: 'DESC' },
     });
   }
 
-  async getLatestByUserIdAsync(userId: string): Promise<FacebookVideoAnalytics[]> {
+  async getLatestByUserIdAsync(
+    userId: string,
+  ): Promise<FacebookVideoAnalytics[]> {
     const subQuery = this.videoAnalyticsContext
       .createQueryBuilder('sub')
       .select('sub.id')
@@ -52,7 +60,11 @@ export class FacebookVideoAnalyticsRepository implements IFacebookVideoAnalytics
       .getMany();
   }
 
-  async getTrendsAsync(videoId: string, startDate: Date, endDate: Date): Promise<FacebookVideoAnalytics[]> {
+  async getTrendsAsync(
+    videoId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<FacebookVideoAnalytics[]> {
     return await this.videoAnalyticsContext.find({
       where: {
         videoId,
@@ -62,7 +74,10 @@ export class FacebookVideoAnalyticsRepository implements IFacebookVideoAnalytics
     });
   }
 
-  async getTopVideosAsync(userId: string, limit: number): Promise<FacebookVideoAnalytics[]> {
+  async getTopVideosAsync(
+    userId: string,
+    limit: number,
+  ): Promise<FacebookVideoAnalytics[]> {
     const subQuery = this.videoAnalyticsContext
       .createQueryBuilder('sub')
       .select('sub.id')

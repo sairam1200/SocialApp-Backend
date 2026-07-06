@@ -6,7 +6,6 @@ import { Topic } from './topic.entity';
 @Entity({ name: 'userTopics' })
 @Unique(['userId', 'topicId'])
 export class UserTopic extends BaseEntity {
-
   @Column()
   @Index('idx_user_topics_user')
   userId: string;
@@ -15,10 +14,10 @@ export class UserTopic extends BaseEntity {
   @Index('idx_user_topics_topic')
   topicId: string;
 
-  @ManyToOne(() => User, user => user.userTopics, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, (user) => user.userTopics, { onDelete: 'CASCADE' })
   user: User;
 
-  @ManyToOne(() => Topic, topic => topic.userTopics, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Topic, (topic) => topic.userTopics, { onDelete: 'CASCADE' })
   topic: Topic;
 
   constructor(request: Partial<UserTopic> = {}) {

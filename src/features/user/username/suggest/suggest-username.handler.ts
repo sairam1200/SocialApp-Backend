@@ -1,8 +1,8 @@
-import { Inject } from "@nestjs/common";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../../core/utils/const";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { IUserRepository } from "../../../../domain/repositories";
+import { Inject } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../../core/utils/const';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { IUserRepository } from '../../../../domain/repositories';
 
 export class SuggestUserNameResponseModel {
   @ApiProperty({ type: [String] })
@@ -29,13 +29,21 @@ export class SuggestUserNameCommand {
 }
 
 @CommandHandler(SuggestUserNameCommand)
-export class SuggestUserNameCommandHandler implements ICommandHandler<SuggestUserNameCommand, SuggestUserNameResponseModel> {
+export class SuggestUserNameCommandHandler
+  implements
+    ICommandHandler<SuggestUserNameCommand, SuggestUserNameResponseModel>
+{
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository) {
-  }
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+  ) {}
 
-  async execute(command: SuggestUserNameCommand): Promise<SuggestUserNameResponseModel> {
-    const base = (command.userName || command.hint || '').toLowerCase().replace(/\s+/g, '');
+  async execute(
+    command: SuggestUserNameCommand,
+  ): Promise<SuggestUserNameResponseModel> {
+    const base = (command.userName || command.hint || '')
+      .toLowerCase()
+      .replace(/\s+/g, '');
 
     if (!base) {
       const suggestion = await this.generateUniqueUsername('user');
@@ -54,13 +62,14 @@ export class SuggestUserNameCommandHandler implements ICommandHandler<SuggestUse
       });
     }
 
-    const takenUsernames = await this.userRepository.getSimilarUserNamesAsync(base);
+    const takenUsernames =
+      await this.userRepository.getSimilarUserNamesAsync(base);
     const suggestions: string[] = [];
     let attempts = 0;
 
     while (suggestions.length < 5 && attempts < 100) {
       const suggestion = `${base}${Math.floor(100 + Math.random() * 8999)}`;
-      const isUsed = takenUsernames.some(u => u.toLowerCase() === suggestion);
+      const isUsed = takenUsernames.some((u) => u.toLowerCase() === suggestion);
       if (!isUsed && !suggestions.includes(suggestion)) {
         suggestions.push(suggestion);
       }
@@ -72,7 +81,6 @@ export class SuggestUserNameCommandHandler implements ICommandHandler<SuggestUse
       message: 'Username already exists. Here are some suggestions.',
       usernames: suggestions,
     });
-
   }
 
   private async generateUniqueUsername(prefix: string): Promise<string> {
@@ -89,4 +97,4 @@ export class SuggestUserNameCommandHandler implements ICommandHandler<SuggestUse
 
     return suggestion!;
   }
-} 
+}

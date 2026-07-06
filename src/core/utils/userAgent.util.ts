@@ -8,7 +8,6 @@ interface ParsedUserAgent {
   isDesktop: boolean;
 }
 
-
 export function parseUserAgent(userAgentString: string): ParsedUserAgent {
   const agent = useragent.parse(userAgentString);
 
@@ -19,4 +18,4 @@ export function parseUserAgent(userAgentString: string): ParsedUserAgent {
     isMobile: agent.isMobile,
     isDesktop: !agent.isMobile,
   };
-} 
+}

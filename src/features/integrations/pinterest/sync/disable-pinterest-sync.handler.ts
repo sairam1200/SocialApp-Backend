@@ -1,10 +1,10 @@
-import { Inject } from "@nestjs/common";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import _const from "../../../../core/utils/const";
-import logger from "../../../../core/utils/winston.util";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { NotFoundException } from "@nestjs/common";
+import { Inject } from '@nestjs/common';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import _const from '../../../../core/utils/const';
+import logger from '../../../../core/utils/winston.util';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
+import { NotFoundException } from '@nestjs/common';
 
 export class DisablePinterestSyncCommand {
   constructor(request: Partial<DisablePinterestSyncCommand> = {}) {
@@ -13,22 +13,27 @@ export class DisablePinterestSyncCommand {
 }
 
 @CommandHandler(DisablePinterestSyncCommand)
-export class DisablePinterestSyncCommandHandler implements ICommandHandler<DisablePinterestSyncCommand> {
+export class DisablePinterestSyncCommandHandler
+  implements ICommandHandler<DisablePinterestSyncCommand>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
-  ) { }
+  ) {}
 
-  public async execute(command: DisablePinterestSyncCommand): Promise<{ syncEnabled: boolean }> {
+  public async execute(
+    command: DisablePinterestSyncCommand,
+  ): Promise<{ syncEnabled: boolean }> {
     const userId = HttpContext.getCurrentUserId;
 
-    const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-      _const.PLATFORMS.PINTEREST,
-      userId,
-    );
+    const account =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.PINTEREST,
+        userId,
+      );
 
     if (!account) {
-      throw new NotFoundException("No matching Pinterest profile was found!");
+      throw new NotFoundException('No matching Pinterest profile was found!');
     }
 
     account.syncEnabled = false;
@@ -39,4 +44,3 @@ export class DisablePinterestSyncCommandHandler implements ICommandHandler<Disab
     return { syncEnabled: account.syncEnabled };
   }
 }
-

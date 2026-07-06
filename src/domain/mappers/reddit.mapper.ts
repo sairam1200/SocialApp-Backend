@@ -1,9 +1,15 @@
-import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { UserContent } from "../entities/userContent.entity";
-import { RedditContentModel, RedditProfileModel } from "../contracts/reddit.model";
-import _const from "../../core/utils/const";
+import { LinkedAccount } from '../entities/linkedAccount.entity';
+import { UserContent } from '../entities/userContent.entity';
+import {
+  RedditContentModel,
+  RedditProfileModel,
+} from '../contracts/reddit.model';
+import _const from '../../core/utils/const';
 
-export function mapToRedditProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): RedditProfileModel {
+export function mapToRedditProfileModel(
+  data: LinkedAccount,
+  includeSensitiveFields: boolean = false,
+): RedditProfileModel {
   return {
     id: data.id,
     userId: data.userId,
@@ -19,7 +25,9 @@ export function mapToRedditProfileModel(data: LinkedAccount, includeSensitiveFie
     isVerified: data.metaData.verified,
     isGold: data.metaData.isGold,
     isMod: data.metaData.isMod,
-    hasVerifiedEmail: includeSensitiveFields ? data.metaData.hasVerifiedEmail : null,
+    hasVerifiedEmail: includeSensitiveFields
+      ? data.metaData.hasVerifiedEmail
+      : null,
     over18: data.metaData.over18,
     redditUrl: data.metaData.redditUrl,
     description: data.metaData.description,

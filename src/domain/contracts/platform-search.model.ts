@@ -19,10 +19,13 @@ export class PlatformSearchParamsModel {
   @ApiProperty()
   filters?: Record<string, any>;
 
-  @ApiProperty({ required: false, description: 'Platform-agnostic pagination token. Can be a string (cursor/pageToken) or numeric string (offset/start). Will be mapped to platform-specific fields internally.' })
+  @ApiProperty({
+    required: false,
+    description:
+      'Platform-agnostic pagination token. Can be a string (cursor/pageToken) or numeric string (offset/start). Will be mapped to platform-specific fields internally.',
+  })
   paginationToken?: string;
 
   @ApiProperty({ required: false, default: false })
   forceRefresh?: boolean;
 }
-

@@ -25,7 +25,7 @@ export type FacebookUserDataType = {
     name: string;
   };
   link?: string;
-}
+};
 
 export class FacebookOnlineModel {
   @ApiProperty()
@@ -62,7 +62,7 @@ export class FacebookOnlineModel {
 
   @ApiProperty({ required: false, type: Object })
   reactionsByType?: Record<string, number>;
-  
+
   @ApiProperty({ required: false, type: Object })
   from?: Record<string, any>;
 
@@ -164,7 +164,7 @@ export type FacebookSearchItemModel = {
   is_popular?: boolean;
   is_hidden?: boolean;
   via?: Record<string, any>;
-}
+};
 
 export interface FacebookPaging {
   cursors?: {
@@ -205,7 +205,7 @@ export class FacebookSearchResponseModel {
       events: { data: [], paging: undefined },
       people: { data: [], paging: undefined },
       videos: { data: [], paging: undefined },
-      accounts: []
+      accounts: [],
     };
   }
 }

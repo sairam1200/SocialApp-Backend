@@ -1,10 +1,15 @@
-import { BadRequestException, ConflictException, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 
 export class PlaylistNotFoundException extends NotFoundException {
   constructor(referenceId?: string) {
     const message = referenceId
       ? `No playlist found with the reference ID "${referenceId}".`
-      : "No playlist found";
+      : 'No playlist found';
     super(message);
     this.name = 'PlaylistNotFoundException';
   }
@@ -19,7 +24,10 @@ export class PlaylistAlreadyExistsException extends ConflictException {
 }
 
 export class PlaylistUpdateNotAllowedException extends UnauthorizedException {
-  constructor(referenceId?: string, reason?: 'not-member' | 'viewer' | 'not-owner') {
+  constructor(
+    referenceId?: string,
+    reason?: 'not-member' | 'viewer' | 'not-owner',
+  ) {
     let message = 'Updating the playlist is not allowed.';
 
     if (referenceId) {

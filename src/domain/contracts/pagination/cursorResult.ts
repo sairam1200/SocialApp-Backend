@@ -1,13 +1,20 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CursorResult<T> {
   @ApiProperty({ type: Array, description: 'Array of items' })
   contents: T[];
 
-  @ApiProperty({ type: String, nullable: true, description: 'Cursor for the next page. Null if no more pages' })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Cursor for the next page. Null if no more pages',
+  })
   nextCursor: string | null;
 
-  @ApiProperty({ type: Boolean, description: 'Whether there are more items to fetch' })
+  @ApiProperty({
+    type: Boolean,
+    description: 'Whether there are more items to fetch',
+  })
   hasMore: boolean;
 
   constructor(contents: T[], nextCursor: string | null, hasMore: boolean) {
@@ -16,4 +23,3 @@ export class CursorResult<T> {
     this.hasMore = hasMore;
   }
 }
-

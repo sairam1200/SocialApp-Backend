@@ -3,9 +3,22 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import { ImportResponseModel } from '../../../../domain/contracts/response.model';
-import { Body, Controller, HttpStatus, Post, Res, UseGuards } from '@nestjs/common';
-import { TiktokImportCommand, TiktokImportRequestModel } from './tiktok-import.handler';
-import { CancelTiktokImportCommand, CancelTiktokImportRequestModel } from './cancel-tiktok-import.handler';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  TiktokImportCommand,
+  TiktokImportRequestModel,
+} from './tiktok-import.handler';
+import {
+  CancelTiktokImportCommand,
+  CancelTiktokImportRequestModel,
+} from './cancel-tiktok-import.handler';
 
 @ApiTags('Integrations')
 @Controller({
@@ -13,7 +26,7 @@ import { CancelTiktokImportCommand, CancelTiktokImportRequestModel } from './can
   version: '1',
 })
 export class TikTokImportController {
-  constructor(private readonly commandBus: CommandBus) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('import')
   @UseGuards(UserAccoutGuard)
@@ -24,14 +37,20 @@ export class TikTokImportController {
   @ApiBody({ type: TiktokImportRequestModel, required: false })
   public async Import(
     @Body() model: TiktokImportRequestModel,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response | void> {
-    const result = await this.commandBus.execute(new TiktokImportCommand({ model }));
+    const result = await this.commandBus.execute(
+      new TiktokImportCommand({ model }),
+    );
     if (model.tiktokAccessToken) {
-      return res.status(HttpStatus.OK).json({ message: "Tiktok import has begun." });
+      return res
+        .status(HttpStatus.OK)
+        .json({ message: 'Tiktok import has begun.' });
     }
-    
-    return res.status(HttpStatus.OK).json({ message: "Tiktok import has begun.", ...result });
+
+    return res
+      .status(HttpStatus.OK)
+      .json({ message: 'Tiktok import has begun.', ...result });
   }
 
   @Post('import/cancel')
@@ -43,9 +62,11 @@ export class TikTokImportController {
   @ApiBody({ type: CancelTiktokImportRequestModel })
   public async Cancel(
     @Body() model: CancelTiktokImportRequestModel,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response | void> {
     await this.commandBus.execute(new CancelTiktokImportCommand({ model }));
-    return res.status(HttpStatus.OK).json({ message: "TikTok import cancellation and rollback requested." });
+    return res
+      .status(HttpStatus.OK)
+      .json({ message: 'TikTok import cancellation and rollback requested.' });
   }
 }

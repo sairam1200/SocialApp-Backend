@@ -13,12 +13,19 @@ export class YoutubeAnalyticsCron {
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handleDailySync(): Promise<void> {
-    logger.info('[YoutubeAnalyticsCron] Starting scheduled YouTube Analytics daily sync job');
+    logger.info(
+      '[YoutubeAnalyticsCron] Starting scheduled YouTube Analytics daily sync job',
+    );
     try {
       await this.youtubeAnalyticsService.syncAllAccountsAnalyticsAsync();
-      logger.info('[YoutubeAnalyticsCron] Scheduled YouTube Analytics daily sync job completed successfully');
+      logger.info(
+        '[YoutubeAnalyticsCron] Scheduled YouTube Analytics daily sync job completed successfully',
+      );
     } catch (error) {
-      logger.error('[YoutubeAnalyticsCron] Error occurred during scheduled YouTube Analytics sync:', error);
+      logger.error(
+        '[YoutubeAnalyticsCron] Error occurred during scheduled YouTube Analytics sync:',
+        error,
+      );
     }
   }
 }

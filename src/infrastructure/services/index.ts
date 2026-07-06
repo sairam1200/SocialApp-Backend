@@ -1,14 +1,12 @@
-export { DataSeeder } from "./data.seeder";
-export { EmailService } from "./email.service";
-export { TokenService } from "./token.service";
-export { SearchService } from "./search.service";
-export { SearchCacheService } from "./searchCache.service";
-export { NotificationService } from "./notification.service";
-export { YoutubeWebhookService } from "./webhooks/youtube-webhook.service";
-export { QueueService } from "./queue.service";
-export { PlatformDisconnectService } from "./platform-disconnect.service";
-export { AnalyticsService } from "./analytics.service";
-export { YoutubeAnalyticsService } from "./youtubeAnalytics.service";
-export { FacebookAnalyticsService } from "./facebookAnalytics.service";
-
-
+export { DataSeeder } from './data.seeder';
+export { EmailService } from './email.service';
+export { TokenService } from './token.service';
+export { SearchService } from './search.service';
+export { SearchCacheService } from './searchCache.service';
+export { NotificationService } from './notification.service';
+export { YoutubeWebhookService } from './webhooks/youtube-webhook.service';
+export { QueueService } from './queue.service';
+export { PlatformDisconnectService } from './platform-disconnect.service';
+export { AnalyticsService } from './analytics.service';
+export { YoutubeAnalyticsService } from './youtubeAnalytics.service';
+export { FacebookAnalyticsService } from './facebookAnalytics.service';

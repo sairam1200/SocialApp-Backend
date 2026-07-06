@@ -4,6 +4,6 @@ export class ContentImportedEvent {
       userId: string;
       platform: string;
       payload: any;
-    }
-  ) { }
+    },
+  ) {}
 }

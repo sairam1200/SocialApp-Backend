@@ -3,7 +3,6 @@ import { BaseEntity } from '../baseEntity';
 
 @Entity({ name: 'analyticsEvents', schema: 'analytics' })
 export class AnalyticsEvent extends BaseEntity {
-
   @Column()
   eventName: string;
 

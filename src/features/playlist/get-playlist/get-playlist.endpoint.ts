@@ -1,11 +1,19 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { GetPlaylistByIdQuery } from "./get-playlist-by-id.handler";
-import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../core/passport/account.guard";
-import { GetPlaylistByNameQuery } from "./get-playlist-by-name.handler";
-import { PlaylistModel } from "../../../domain/contracts/playlist.model";
-import { Controller, Get, HttpStatus, Param, Query, Res, UseGuards } from "@nestjs/common";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { GetPlaylistByIdQuery } from './get-playlist-by-id.handler';
+import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../core/passport/account.guard';
+import { GetPlaylistByNameQuery } from './get-playlist-by-name.handler';
+import { PlaylistModel } from '../../../domain/contracts/playlist.model';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Param,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 
 @ApiBearerAuth()
 @ApiTags('Playlists')
@@ -15,9 +23,7 @@ import { Controller, Get, HttpStatus, Param, Query, Res, UseGuards } from "@nest
   version: '1',
 })
 export class GetPlaylistController {
-  constructor(
-    private readonly queryBus: CommandBus
-  ) { }
+  constructor(private readonly queryBus: CommandBus) {}
 
   @Get('get-by-id')
   @ApiResponse({ status: 200, description: 'OK', type: PlaylistModel })
@@ -26,14 +32,15 @@ export class GetPlaylistController {
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async GetById(
     @Query('playlistReferenceId') playlistReferenceId: string,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response> {
-
-    const result = await this.queryBus.execute(new GetPlaylistByIdQuery({
-      model: {
-        playlistReferenceId
-      }
-    }));
+    const result = await this.queryBus.execute(
+      new GetPlaylistByIdQuery({
+        model: {
+          playlistReferenceId,
+        },
+      }),
+    );
 
     res.status(HttpStatus.OK).send(result);
     return res;
@@ -47,15 +54,16 @@ export class GetPlaylistController {
   public async GetByName(
     @Param('userNameOrId') userNameOrId: string,
     @Query('playlistName') playlistName: string,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response> {
-
-    const result = await this.queryBus.execute(new GetPlaylistByNameQuery({
-      model: {
-        playlistName,
-        userNameOrId
-      }
-    }));
+    const result = await this.queryBus.execute(
+      new GetPlaylistByNameQuery({
+        model: {
+          playlistName,
+          userNameOrId,
+        },
+      }),
+    );
 
     res.status(HttpStatus.OK).send(result);
     return res;

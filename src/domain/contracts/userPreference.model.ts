@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { NotificationChannel, Theme } from "../enums";
+import { ApiProperty } from '@nestjs/swagger';
+import { NotificationChannel, Theme } from '../enums';
 
 export class UserPreferenceModel {
   @ApiProperty({ enum: Theme })

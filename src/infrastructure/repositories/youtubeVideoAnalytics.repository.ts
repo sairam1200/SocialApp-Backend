@@ -2,16 +2,23 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { YoutubeVideoAnalytics } from '../../domain/entities/youtubeVideoAnalytics.entity';
-import { IYoutubeVideoAnalyticsRepository, VideoMetricsAggregate } from '../../domain/repositories/iyoutubeVideoAnalytics.repository';
+import {
+  IYoutubeVideoAnalyticsRepository,
+  VideoMetricsAggregate,
+} from '../../domain/repositories/iyoutubeVideoAnalytics.repository';
 
 @Injectable()
-export class YoutubeVideoAnalyticsRepository implements IYoutubeVideoAnalyticsRepository {
+export class YoutubeVideoAnalyticsRepository
+  implements IYoutubeVideoAnalyticsRepository
+{
   constructor(
     @InjectRepository(YoutubeVideoAnalytics)
     private readonly videoAnalyticsContext: Repository<YoutubeVideoAnalytics>,
   ) {}
 
-  async createOrUpdateAsync(analytics: YoutubeVideoAnalytics): Promise<YoutubeVideoAnalytics> {
+  async createOrUpdateAsync(
+    analytics: YoutubeVideoAnalytics,
+  ): Promise<YoutubeVideoAnalytics> {
     const existing = await this.videoAnalyticsContext.findOne({
       where: {
         videoId: analytics.videoId,
@@ -28,21 +35,28 @@ export class YoutubeVideoAnalyticsRepository implements IYoutubeVideoAnalyticsRe
     return await this.videoAnalyticsContext.save(newEntity);
   }
 
-  async getLatestByVideoIdAsync(videoId: string): Promise<YoutubeVideoAnalytics | null> {
+  async getLatestByVideoIdAsync(
+    videoId: string,
+  ): Promise<YoutubeVideoAnalytics | null> {
     return await this.videoAnalyticsContext.findOne({
       where: { videoId },
       order: { snapshotDate: 'DESC' },
     });
   }
 
-  async getLatestByUserIdAndVideoIdAsync(userId: string, videoId: string): Promise<YoutubeVideoAnalytics | null> {
+  async getLatestByUserIdAndVideoIdAsync(
+    userId: string,
+    videoId: string,
+  ): Promise<YoutubeVideoAnalytics | null> {
     return await this.videoAnalyticsContext.findOne({
       where: { userId, videoId },
       order: { snapshotDate: 'DESC' },
     });
   }
 
-  async getLatestByUserIdAsync(userId: string): Promise<YoutubeVideoAnalytics[]> {
+  async getLatestByUserIdAsync(
+    userId: string,
+  ): Promise<YoutubeVideoAnalytics[]> {
     const subQuery = this.videoAnalyticsContext
       .createQueryBuilder('sub')
       .select('sub.id')
@@ -59,7 +73,11 @@ export class YoutubeVideoAnalyticsRepository implements IYoutubeVideoAnalyticsRe
       .getMany();
   }
 
-  async getTrendsAsync(videoId: string, startDate: Date, endDate: Date): Promise<YoutubeVideoAnalytics[]> {
+  async getTrendsAsync(
+    videoId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<YoutubeVideoAnalytics[]> {
     return await this.videoAnalyticsContext.find({
       where: {
         videoId,
@@ -69,7 +87,12 @@ export class YoutubeVideoAnalyticsRepository implements IYoutubeVideoAnalyticsRe
     });
   }
 
-  async getTrendsByUserIdAndVideoIdAsync(userId: string, videoId: string, startDate: Date, endDate: Date): Promise<YoutubeVideoAnalytics[]> {
+  async getTrendsByUserIdAndVideoIdAsync(
+    userId: string,
+    videoId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<YoutubeVideoAnalytics[]> {
     return await this.videoAnalyticsContext.find({
       where: {
         userId,
@@ -80,7 +103,10 @@ export class YoutubeVideoAnalyticsRepository implements IYoutubeVideoAnalyticsRe
     });
   }
 
-  async getTopVideosAsync(userId: string, limit: number): Promise<YoutubeVideoAnalytics[]> {
+  async getTopVideosAsync(
+    userId: string,
+    limit: number,
+  ): Promise<YoutubeVideoAnalytics[]> {
     const subQuery = this.videoAnalyticsContext
       .createQueryBuilder('sub')
       .select('sub.id')
@@ -98,7 +124,11 @@ export class YoutubeVideoAnalyticsRepository implements IYoutubeVideoAnalyticsRe
       .getMany();
   }
 
-  async getTopVideosByVideoIdsAsync(userId: string, videoIds: string[], limit: number): Promise<YoutubeVideoAnalytics[]> {
+  async getTopVideosByVideoIdsAsync(
+    userId: string,
+    videoIds: string[],
+    limit: number,
+  ): Promise<YoutubeVideoAnalytics[]> {
     if (videoIds.length === 0) {
       return [];
     }
@@ -121,12 +151,22 @@ export class YoutubeVideoAnalyticsRepository implements IYoutubeVideoAnalyticsRe
       .getMany();
   }
 
-  async getAggregatedVideoMetricsAsync(userId: string, startDate: Date, endDate: Date): Promise<VideoMetricsAggregate> {
+  async getAggregatedVideoMetricsAsync(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<VideoMetricsAggregate> {
     const raw = await this.videoAnalyticsContext
       .createQueryBuilder('va')
       .select('COALESCE(SUM(va.viewCount), 0)', 'viewCount')
-      .addSelect('COALESCE(SUM(va.estimatedMinutesWatched), 0)', 'estimatedMinutesWatched')
-      .addSelect('COALESCE(AVG(va.averageViewDurationSeconds), 0)', 'averageViewDurationSeconds')
+      .addSelect(
+        'COALESCE(SUM(va.estimatedMinutesWatched), 0)',
+        'estimatedMinutesWatched',
+      )
+      .addSelect(
+        'COALESCE(AVG(va.averageViewDurationSeconds), 0)',
+        'averageViewDurationSeconds',
+      )
       .addSelect('COALESCE(SUM(va.likeCount), 0)', 'likes')
       .addSelect('COALESCE(SUM(va.commentCount), 0)', 'comments')
       .addSelect('COALESCE(SUM(va.shares), 0)', 'shares')
@@ -147,7 +187,11 @@ export class YoutubeVideoAnalyticsRepository implements IYoutubeVideoAnalyticsRe
     };
   }
 
-  async getTopVideosByVideoIdsSortedAsync(userId: string, videoIds: string[], limit: number): Promise<YoutubeVideoAnalytics[]> {
+  async getTopVideosByVideoIdsSortedAsync(
+    userId: string,
+    videoIds: string[],
+    limit: number,
+  ): Promise<YoutubeVideoAnalytics[]> {
     if (videoIds.length === 0) {
       return [];
     }

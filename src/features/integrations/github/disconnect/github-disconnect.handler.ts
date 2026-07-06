@@ -12,14 +12,18 @@ export class GithubDisconnectCommand {
 
 @CommandHandler(GithubDisconnectCommand)
 export class GithubDisconnectCommandHandler
-  implements ICommandHandler<GithubDisconnectCommand> {
+  implements ICommandHandler<GithubDisconnectCommand>
+{
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,
-  ) { }
+  ) {}
 
   public async execute(command: GithubDisconnectCommand): Promise<void> {
     const userId = HttpContext.getCurrentUserId;
-    await this.disconnectService.disconnectPlatformAsync(userId, _const.PLATFORMS.GITHUB);
+    await this.disconnectService.disconnectPlatformAsync(
+      userId,
+      _const.PLATFORMS.GITHUB,
+    );
   }
 }

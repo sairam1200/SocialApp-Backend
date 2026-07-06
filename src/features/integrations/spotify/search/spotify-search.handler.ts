@@ -1,17 +1,23 @@
-import axios from "axios";
-import { Inject, UnauthorizedException } from "@nestjs/common";
-import configs from "../../../../configs";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../../core/utils/const";
-import fuseUtil from "../../../../core/utils/fuse.util";
-import logger from "../../../../core/utils/winston.util";
-import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
-import { SearchHistory } from "../../../../domain/entities";
-import { ApplicationException } from "../../../../core/exceptions";
-import { ISearchService } from "../../../../domain/services/isearch.service";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
-import { ISearchHistoryRepository, IUserLoginRepository } from "../../../../domain/repositories";
+import axios from 'axios';
+import { Inject, UnauthorizedException } from '@nestjs/common';
+import configs from '../../../../configs';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../../core/utils/const';
+import fuseUtil from '../../../../core/utils/fuse.util';
+import logger from '../../../../core/utils/winston.util';
+import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+import { SearchHistory } from '../../../../domain/entities';
+import { ApplicationException } from '../../../../core/exceptions';
+import { ISearchService } from '../../../../domain/services/isearch.service';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import {
+  deserializeObject,
+  serializeObject,
+} from '../../../../core/utils/serialization.util';
+import {
+  ISearchHistoryRepository,
+  IUserLoginRepository,
+} from '../../../../domain/repositories';
 
 export class SpotifySearchRequestModel {
   @ApiProperty()
@@ -33,8 +39,9 @@ export class SpotifySearchQuery {
 }
 
 @QueryHandler(SpotifySearchQuery)
-export class SpotifySearchQueryHandler implements IQueryHandler<SpotifySearchQuery> {
-
+export class SpotifySearchQueryHandler
+  implements IQueryHandler<SpotifySearchQuery>
+{
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,
@@ -42,7 +49,7 @@ export class SpotifySearchQueryHandler implements IQueryHandler<SpotifySearchQue
     private readonly searchHistoryRepository: ISearchHistoryRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
-  ) { }
+  ) {}
 
   public async execute(command: SpotifySearchQuery): Promise<any> {
     const { searchTerm, filter, spotifyAccessToken } = command.model;
@@ -52,16 +59,29 @@ export class SpotifySearchQueryHandler implements IQueryHandler<SpotifySearchQue
     const userId = HttpContext.getCurrentUserId;
 
     if (spotifyAccessToken) {
-      const isTokenValid = await this.verifyAccessTokenAsync(spotifyAccessToken);
+      const isTokenValid =
+        await this.verifyAccessTokenAsync(spotifyAccessToken);
       if (!isTokenValid && userId) {
         const now = new Date();
-        const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.SPOTIFY);
+        const userLogin =
+          await this.userLoginRepository.getByUserIdAndProviderAsync(
+            userId,
+            _const.PLATFORMS.SPOTIFY,
+          );
 
         if (userLogin && now < userLogin.expiryDateUtc) {
-          const tokenValue = deserializeObject<{ access_token: string, refresh_token: string }>(userLogin.tokenValue);
-          const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
+          const tokenValue = deserializeObject<{
+            access_token: string;
+            refresh_token: string;
+          }>(userLogin.tokenValue);
+          const { access_token, expires_in } = await this.refreshTokenAsync(
+            tokenValue.refresh_token,
+          );
           if (access_token) {
-            userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
+            userLogin.tokenValue = serializeObject({
+              access_token,
+              refresh_token: tokenValue.refresh_token,
+            });
             userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
             await this.userLoginRepository.updateAsync(userLogin);
           }
@@ -72,13 +92,28 @@ export class SpotifySearchQueryHandler implements IQueryHandler<SpotifySearchQue
         accessToken = spotifyAccessToken;
       }
     } else if (userId) {
-      const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.SPOTIFY);
+      const userLogin =
+        await this.userLoginRepository.getByUserIdAndProviderAsync(
+          userId,
+          _const.PLATFORMS.SPOTIFY,
+        );
       if (userLogin) {
-        const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
-        const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
+        const tokenValue = deserializeObject<{
+          access_token: string;
+          refresh_token: string;
+          expires_in: number;
+        }>(userLogin.tokenValue);
+        const isTokenValid = await this.verifyAccessTokenAsync(
+          tokenValue.access_token,
+        );
         if (!isTokenValid) {
-          const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
-          userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token });
+          const { access_token, expires_in } = await this.refreshTokenAsync(
+            tokenValue.refresh_token,
+          );
+          userLogin.tokenValue = serializeObject({
+            access_token,
+            refresh_token: tokenValue.refresh_token,
+          });
           userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
           await this.userLoginRepository.updateAsync(userLogin);
           accessToken = access_token;
@@ -103,10 +138,13 @@ export class SpotifySearchQueryHandler implements IQueryHandler<SpotifySearchQue
     return data;
   }
 
-  private async refreshTokenAsync(refreshToken: string)
-    : Promise<{ access_token: string, expires_in: number }> {
+  private async refreshTokenAsync(
+    refreshToken: string,
+  ): Promise<{ access_token: string; expires_in: number }> {
     try {
-      const basicAuth = Buffer.from(`${configs.spotify.clientId}:${configs.spotify.clientSecret}`).toString('base64');
+      const basicAuth = Buffer.from(
+        `${configs.spotify.clientId}:${configs.spotify.clientSecret}`,
+      ).toString('base64');
 
       const response = await axios.post(
         'https://accounts.spotify.com/api/token',
@@ -114,14 +152,16 @@ export class SpotifySearchQueryHandler implements IQueryHandler<SpotifySearchQue
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${basicAuth}`,
+            Authorization: `Basic ${basicAuth}`,
           },
         },
       );
 
       const { access_token, expires_in } = response.data;
       if (!access_token) {
-        throw new ApplicationException('Your Spotify session has expired or the access token is invalid. Please log in to Spotify again to continue.');
+        throw new ApplicationException(
+          'Your Spotify session has expired or the access token is invalid. Please log in to Spotify again to continue.',
+        );
       }
 
       return {
@@ -129,8 +169,10 @@ export class SpotifySearchQueryHandler implements IQueryHandler<SpotifySearchQue
         expires_in,
       };
     } catch (error) {
-      logger.error("Error refreshing Spotify token", { error });
-      throw new UnauthorizedException('Your Spotify session has expired or the access token is invalid. Please log in to Spotify again to continue.');
+      logger.error('Error refreshing Spotify token', { error });
+      throw new UnauthorizedException(
+        'Your Spotify session has expired or the access token is invalid. Please log in to Spotify again to continue.',
+      );
     }
   }
 
@@ -155,14 +197,19 @@ export class SpotifySearchQueryHandler implements IQueryHandler<SpotifySearchQue
     }
 
     const similarQueries =
-      (await this.searchHistoryRepository.findSimilarQueriesAsync(trimmedQuery)) ?? [];
+      (await this.searchHistoryRepository.findSimilarQueriesAsync(
+        trimmedQuery,
+      )) ?? [];
 
     const candidateValues = similarQueries
       .map((item) => item.normalizedQuery)
       .filter(Boolean)
       .slice(0, 50);
 
-    const normalizedQuery = fuseUtil.normalizeSearchTerm(trimmedQuery, candidateValues);
+    const normalizedQuery = fuseUtil.normalizeSearchTerm(
+      trimmedQuery,
+      candidateValues,
+    );
 
     const hasExistingEntry = similarQueries.some((item) => {
       const original = (item.originalQuery ?? '').trim().toLowerCase();
@@ -186,4 +233,3 @@ export class SpotifySearchQueryHandler implements IQueryHandler<SpotifySearchQue
     return normalizedQuery;
   }
 }
-

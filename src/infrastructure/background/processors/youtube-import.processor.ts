@@ -1,17 +1,20 @@
-import { Inject } from "@nestjs/common";
+import { Inject } from '@nestjs/common';
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import _const from "../../../core/utils/const";
-import logger from "../../../core/utils/winston.util";
-import { IYoutubeImportService } from "../../../domain/services/youtube/iyoutube-import.services";
-import BullMQConfig from "../../../core/config/bullmq.config";
+import _const from '../../../core/utils/const';
+import logger from '../../../core/utils/winston.util';
+import { IYoutubeImportService } from '../../../domain/services/youtube/iyoutube-import.services';
+import BullMQConfig from '../../../core/config/bullmq.config';
 
 interface YoutubeImportJobData {
   account: any;
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.YOUTUBE_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.YOUTUBE_IMPORT, 1))
+@Processor(
+  _const.BULL_QUEUES.YOUTUBE_IMPORT,
+  BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.YOUTUBE_IMPORT, 1),
+)
 export class YoutubeImportProcessor extends WorkerHost {
   constructor(
     @Inject(_const.IYOUTUBE_IMPORT_SERVICE)
@@ -38,8 +41,12 @@ export class YoutubeImportProcessor extends WorkerHost {
 
   public async process(job: Job<YoutubeImportJobData>): Promise<void> {
     const { account, accessToken } = job.data;
-    logger.info(`[YoutubeImport] Starting job ${job.id} for user ${account.userId}`);
+    logger.info(
+      `[YoutubeImport] Starting job ${job.id} for user ${account.userId}`,
+    );
     await this.youtubeImportService.importFullAsync(account, accessToken, job);
-    logger.info(`[YoutubeImport] Finished job ${job.id} for user ${account.userId}`);
+    logger.info(
+      `[YoutubeImport] Finished job ${job.id} for user ${account.userId}`,
+    );
   }
 }

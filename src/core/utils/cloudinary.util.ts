@@ -16,7 +16,7 @@ interface UploadResult {
 }
 
 function makeFolderPath(folder?: string) {
-  const prefix = configs.env;    
+  const prefix = configs.env;
   return folder ? `${prefix}/${folder}` : prefix;
 }
 
@@ -29,7 +29,7 @@ function makeFolderPath(folder?: string) {
 export async function uploadToCloudinaryAsync(
   filePath: string,
   folder?: string,
-  options: object = {}
+  options: object = {},
 ): Promise<UploadResult> {
   const uploadOptions = {
     folder: makeFolderPath(folder),
@@ -46,9 +46,11 @@ export async function uploadToCloudinaryAsync(
  */
 export async function deleteFromCloudinaryAsync(
   publicId: string,
-  resourceType: 'image' | 'video' | 'raw' = 'image'
+  resourceType: 'image' | 'video' | 'raw' = 'image',
 ): Promise<any> {
-  return await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+  return await cloudinary.uploader.destroy(publicId, {
+    resource_type: resourceType,
+  });
 }
 
 /**
@@ -58,7 +60,7 @@ export async function deleteFromCloudinaryAsync(
  */
 export function getCloudinaryUrl(
   publicId: string,
-  options: Object = {}
+  options: object = {},
 ): string {
   return cloudinary.url(publicId, options);
 }
@@ -70,7 +72,7 @@ export function getCloudinaryUrl(
  */
 export async function uploadBase64ToCloudinaryAsync(
   base64Data: string,
-  folder?: string
+  folder?: string,
 ): Promise<UploadResult> {
   return await cloudinary.uploader.upload(base64Data, {
     folder: makeFolderPath(folder),
@@ -84,7 +86,7 @@ export async function uploadBase64ToCloudinaryAsync(
  */
 export async function renameCloudinaryAssetAsync(
   fromPublicId: string,
-  toPublicId: string
+  toPublicId: string,
 ): Promise<any> {
   return await cloudinary.uploader.rename(fromPublicId, toPublicId);
 }

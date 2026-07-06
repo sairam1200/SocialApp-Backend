@@ -1,16 +1,22 @@
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import _const from "../../../../core/utils/const";
-import { UserType } from "../../../../domain/enums";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { ApplicationException, UserNotFoundException } from "../../../../core/exceptions";
-import { IAnalyticsService } from "../../../../domain/services/ianalytics.service";
-import { IManualProfileRepository, IUserRepository } from "../../../../domain/repositories";
-import { UpdateManualProfileModel } from "../../../../domain/contracts/manualProfile.model";
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import _const from '../../../../core/utils/const';
+import { UserType } from '../../../../domain/enums';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import {
+  ApplicationException,
+  UserNotFoundException,
+} from '../../../../core/exceptions';
+import { IAnalyticsService } from '../../../../domain/services/ianalytics.service';
+import {
+  IManualProfileRepository,
+  IUserRepository,
+} from '../../../../domain/repositories';
+import { UpdateManualProfileModel } from '../../../../domain/contracts/manualProfile.model';
 
 export class UpdateManualProfileCommand {
-  model: UpdateManualProfileModel
+  model: UpdateManualProfileModel;
 
   constructor(request: Partial<UpdateManualProfileCommand> = {}) {
     Object.assign(this, request);
@@ -25,7 +31,9 @@ const updateUserValidations = Joi.object({
 });
 
 @CommandHandler(UpdateManualProfileCommand)
-export class UpdateManualProfileCommandHandler implements ICommandHandler<UpdateManualProfileCommand, void> {
+export class UpdateManualProfileCommandHandler
+  implements ICommandHandler<UpdateManualProfileCommand, void>
+{
   constructor(
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
@@ -33,21 +41,25 @@ export class UpdateManualProfileCommandHandler implements ICommandHandler<Update
     private readonly manualProfileRepository: IManualProfileRepository,
     @Inject(_const.IANALYTICS_SERVICE)
     private readonly analyticsService: IAnalyticsService,
-  ) { }
+  ) {}
 
   public async execute(command: UpdateManualProfileCommand): Promise<void> {
     const { model } = command;
 
     await updateUserValidations.validateAsync(model);
 
-    const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
+    const user = await this.userRepository.getUserByIdAsync(
+      HttpContext.getCurrentUserId,
+    );
     if (!user || user.type !== UserType.User) {
       throw new UserNotFoundException();
     }
 
-    const manualProfile = await this.manualProfileRepository.getByIdAsync(model.id);
+    const manualProfile = await this.manualProfileRepository.getByIdAsync(
+      model.id,
+    );
     if (!manualProfile || manualProfile.userId !== user.id) {
-      throw new ApplicationException('Prevented: Manual profile not found.')
+      throw new ApplicationException('Prevented: Manual profile not found.');
     }
 
     manualProfile.icon = model.icon;
@@ -61,7 +73,7 @@ export class UpdateManualProfileCommandHandler implements ICommandHandler<Update
       {
         profileId: manualProfile.id,
         platform: manualProfile.platform,
-      }
+      },
     );
   }
 }

@@ -1,5 +1,4 @@
 export interface IFacebookImportService {
-
   importPagePostsAsync(
     userId: string,
     accessToken: string,
@@ -10,6 +9,6 @@ export interface IFacebookImportService {
   refreshPageProfileAsync(
     userId: string,
     accessToken: string,
-      pageId: string,
+    pageId: string,
   ): Promise<void>;
 }

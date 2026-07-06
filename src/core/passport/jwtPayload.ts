@@ -1,4 +1,4 @@
-import { Globals } from "../../core/globals";
+import { Globals } from '../../core/globals';
 
 export interface JwtPayload {
   [key: string]: any;

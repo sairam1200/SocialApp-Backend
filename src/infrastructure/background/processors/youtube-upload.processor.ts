@@ -18,7 +18,10 @@ interface YoutubeUploadJobData {
   r2Key: string;
 }
 
-@Processor(_const.BULL_QUEUES.YOUTUBE_UPLOAD, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.YOUTUBE_UPLOAD, 1))
+@Processor(
+  _const.BULL_QUEUES.YOUTUBE_UPLOAD,
+  BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.YOUTUBE_UPLOAD, 1),
+)
 export class YoutubeUploadProcessor extends WorkerHost {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
@@ -39,7 +42,9 @@ export class YoutubeUploadProcessor extends WorkerHost {
 
   @OnWorkerEvent('active')
   onActive(job: Job) {
-    logger.info(`[YoutubeUploadProcessor] Processing job ${job.id} for video ${job.data.videoId}`);
+    logger.info(
+      `[YoutubeUploadProcessor] Processing job ${job.id} for video ${job.data.videoId}`,
+    );
   }
 
   @OnWorkerEvent('completed')
@@ -52,7 +57,11 @@ export class YoutubeUploadProcessor extends WorkerHost {
     logger.error(`[YoutubeUploadProcessor] Job ${job.id} failed:`, error);
   }
 
-  private async updateProgress(uploadJob: UploadJob, progress: number, statusMessage: string): Promise<void> {
+  private async updateProgress(
+    uploadJob: UploadJob,
+    progress: number,
+    statusMessage: string,
+  ): Promise<void> {
     uploadJob.progress = progress;
     uploadJob.statusMessage = statusMessage;
     await this.uploadJobRepo.updateAsync(uploadJob);
@@ -69,25 +78,50 @@ export class YoutubeUploadProcessor extends WorkerHost {
 
     const linkedAccount = await this.linkedAccountRepo.getByIdAsync(accountId);
     if (!linkedAccount) {
-      logger.error('[YoutubeUploadProcessor] No YouTube integration record found for user', { accountId, found: false });
+      logger.error(
+        '[YoutubeUploadProcessor] No YouTube integration record found for user',
+        { accountId, found: false },
+      );
       throw new Error('YouTube integration account not found');
     }
     if (linkedAccount.platform !== _const.PLATFORMS.YOUTUBE) {
-      logger.error('[YoutubeUploadProcessor] Linked account platform mismatch', { accountId, expected: 'youtube', actual: linkedAccount.platform });
+      logger.error(
+        '[YoutubeUploadProcessor] Linked account platform mismatch',
+        { accountId, expected: 'youtube', actual: linkedAccount.platform },
+      );
       throw new Error('YouTube integration account not found');
     }
 
-    const account = await this.accountRepo.getByUserIdAsync(linkedAccount.userId);
+    const account = await this.accountRepo.getByUserIdAsync(
+      linkedAccount.userId,
+    );
     if (!account) {
-      logger.error('[YoutubeUploadProcessor] No YouTube integration record found for user', { userId: linkedAccount.userId, linkedAccountId: linkedAccount.id, found: false });
+      logger.error(
+        '[YoutubeUploadProcessor] No YouTube integration record found for user',
+        {
+          userId: linkedAccount.userId,
+          linkedAccountId: linkedAccount.id,
+          found: false,
+        },
+      );
       throw new Error('YouTube integration account not found');
     }
     if (!account.connected) {
-      logger.error('[YoutubeUploadProcessor] YouTube integration exists but disconnected', { userId: linkedAccount.userId, youtubeAccountId: account.id, connected: account.connected });
+      logger.error(
+        '[YoutubeUploadProcessor] YouTube integration exists but disconnected',
+        {
+          userId: linkedAccount.userId,
+          youtubeAccountId: account.id,
+          connected: account.connected,
+        },
+      );
       throw new Error('YouTube account is disconnected');
     }
     if (!account.refreshToken) {
-      logger.error('[YoutubeUploadProcessor] YouTube integration exists but refresh token missing', { userId: linkedAccount.userId, youtubeAccountId: account.id });
+      logger.error(
+        '[YoutubeUploadProcessor] YouTube integration exists but refresh token missing',
+        { userId: linkedAccount.userId, youtubeAccountId: account.id },
+      );
       throw new Error('YouTube account token missing');
     }
 
@@ -103,16 +137,20 @@ export class YoutubeUploadProcessor extends WorkerHost {
     }
 
     if (video.youtubeVideoId) {
-      logger.info(`[YoutubeUploadProcessor] Video ${videoId} already uploaded (youtubeVideoId=${video.youtubeVideoId}), skipping`);
+      logger.info(
+        `[YoutubeUploadProcessor] Video ${videoId} already uploaded (youtubeVideoId=${video.youtubeVideoId}), skipping`,
+      );
       return;
     }
 
-    let uploadJob = await this.uploadJobRepo.getByVideoIdAsync(videoId);
+    const uploadJob = await this.uploadJobRepo.getByVideoIdAsync(videoId);
     if (!uploadJob) {
       throw new Error('Upload job not found');
     }
 
-    logger.info(`[UPLOAD JOB STARTED] videoId=${videoId} r2Key=${r2Key} fileSize=${uploadJob.fileSize}`);
+    logger.info(
+      `[UPLOAD JOB STARTED] videoId=${videoId} r2Key=${r2Key} fileSize=${uploadJob.fileSize}`,
+    );
 
     try {
       video.status = 'uploading';
@@ -125,20 +163,29 @@ export class YoutubeUploadProcessor extends WorkerHost {
       await this.updateProgress(uploadJob, 5, 'Initiating upload...');
       await job.updateProgress(5);
 
-      const { youtubeVideoId, youtubeUrl } = await this.publishingService.uploadVideoFromR2(
-        account,
-        video,
-        r2Key,
-        uploadJob.fileSize,
-        (progress: number, message: string) => {
-          this.updateProgress(uploadJob, progress, message).catch((err) =>
-            logger.warn('[YoutubeUploadProcessor] Failed to update progress', err),
-          );
-          job.updateProgress(progress).catch((err) =>
-            logger.warn('[YoutubeUploadProcessor] Failed to update BullMQ progress', err),
-          );
-        },
-      );
+      const { youtubeVideoId, youtubeUrl } =
+        await this.publishingService.uploadVideoFromR2(
+          account,
+          video,
+          r2Key,
+          uploadJob.fileSize,
+          (progress: number, message: string) => {
+            this.updateProgress(uploadJob, progress, message).catch((err) =>
+              logger.warn(
+                '[YoutubeUploadProcessor] Failed to update progress',
+                err,
+              ),
+            );
+            job
+              .updateProgress(progress)
+              .catch((err) =>
+                logger.warn(
+                  '[YoutubeUploadProcessor] Failed to update BullMQ progress',
+                  err,
+                ),
+              );
+          },
+        );
 
       video.youtubeVideoId = youtubeVideoId;
       video.youtubeUrl = youtubeUrl;
@@ -162,7 +209,9 @@ export class YoutubeUploadProcessor extends WorkerHost {
       uploadJob.nextRetryAt = undefined;
       await this.uploadJobRepo.updateAsync(uploadJob);
 
-      logger.info(`[UPLOAD JOB COMPLETED] videoId=${videoId} youtubeVideoId=${youtubeVideoId} youtubeUrl=${youtubeUrl}`);
+      logger.info(
+        `[UPLOAD JOB COMPLETED] videoId=${videoId} youtubeVideoId=${youtubeVideoId} youtubeUrl=${youtubeUrl}`,
+      );
 
       // Cleanup R2 only on success — file is now on YouTube
       await this.cleanupR2(r2Key, videoId, job.id!);
@@ -171,7 +220,9 @@ export class YoutubeUploadProcessor extends WorkerHost {
       await this.videoRepo.updateAsync(video);
 
       const attemptCount = (uploadJob.attempts || 0) + 1;
-      const delays = [60000, 300000, 900000, 1800000, 3600000, 21600000, 86400000];
+      const delays = [
+        60000, 300000, 900000, 1800000, 3600000, 21600000, 86400000,
+      ];
       const delayIndex = Math.min(attemptCount - 1, delays.length - 1);
       const nextRetry = new Date(Date.now() + delays[delayIndex]);
 
@@ -179,28 +230,44 @@ export class YoutubeUploadProcessor extends WorkerHost {
       uploadJob.progress = 0;
       uploadJob.statusMessage = 'Upload failed';
       uploadJob.attempts = attemptCount;
-      uploadJob.lastError = error instanceof Error ? error.message : 'Unknown error';
+      uploadJob.lastError =
+        error instanceof Error ? error.message : 'Unknown error';
       uploadJob.nextRetryAt = attemptCount >= 10 ? undefined : nextRetry;
       await this.uploadJobRepo.updateAsync(uploadJob);
 
-      logger.error(`[UPLOAD JOB FAILED] videoId=${videoId} attempt=${attemptCount} error=${error instanceof Error ? error.message : String(error)}`);
+      logger.error(
+        `[UPLOAD JOB FAILED] videoId=${videoId} attempt=${attemptCount} error=${error instanceof Error ? error.message : String(error)}`,
+      );
 
       throw error;
     }
   }
 
-  private async cleanupR2(r2Key: string, videoId: string, jobId: string): Promise<void> {
+  private async cleanupR2(
+    r2Key: string,
+    videoId: string,
+    jobId: string,
+  ): Promise<void> {
     logger.info(`[R2Storage] Cleanup started`, { videoId, r2Key, jobId });
     try {
       const exists = await this.r2Storage.fileExists(r2Key);
       if (!exists) {
-        logger.info(`[R2Storage] Cleanup skipped (file missing)`, { videoId, r2Key, jobId });
+        logger.info(`[R2Storage] Cleanup skipped (file missing)`, {
+          videoId,
+          r2Key,
+          jobId,
+        });
         return;
       }
       await this.r2Storage.deleteFile(r2Key);
       logger.info(`[R2Storage] Cleanup successful`, { videoId, r2Key, jobId });
     } catch (cleanupError) {
-      logger.warn(`[R2Storage] Cleanup failed`, { videoId, r2Key, jobId, error: cleanupError });
+      logger.warn(`[R2Storage] Cleanup failed`, {
+        videoId,
+        r2Key,
+        jobId,
+        error: cleanupError,
+      });
     }
   }
 }

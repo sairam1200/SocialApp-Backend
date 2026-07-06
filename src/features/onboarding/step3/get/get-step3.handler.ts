@@ -1,11 +1,11 @@
-import { Inject } from "@nestjs/common";
-import _const from "../../../../core/utils/const";
-import { OnboardingStep } from "../../../../domain/enums";
-import { QueryHandler, IQueryHandler } from "@nestjs/cqrs";
-import { IUserRepository } from "../../../../domain/repositories";
-import { OnboardingStatusModel } from "../../../../domain/contracts/onboarding.model";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { UserNotFoundException } from "../../../../core/exceptions";
+import { Inject } from '@nestjs/common';
+import _const from '../../../../core/utils/const';
+import { OnboardingStep } from '../../../../domain/enums';
+import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+import { IUserRepository } from '../../../../domain/repositories';
+import { OnboardingStatusModel } from '../../../../domain/contracts/onboarding.model';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { UserNotFoundException } from '../../../../core/exceptions';
 
 export class GetOnboardingStep3Query {
   constructor(request: Partial<GetOnboardingStep3Query> = {}) {
@@ -14,15 +14,20 @@ export class GetOnboardingStep3Query {
 }
 
 @QueryHandler(GetOnboardingStep3Query)
-export class GetOnboardingStep3QueryHandler implements IQueryHandler<GetOnboardingStep3Query, OnboardingStatusModel> {
+export class GetOnboardingStep3QueryHandler
+  implements IQueryHandler<GetOnboardingStep3Query, OnboardingStatusModel>
+{
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
-  ) { }
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+  ) {}
 
-  public async execute(query: GetOnboardingStep3Query): Promise<OnboardingStatusModel> {
+  public async execute(
+    query: GetOnboardingStep3Query,
+  ): Promise<OnboardingStatusModel> {
     const userId = HttpContext.getCurrentUserId;
     const user = await this.userRepository.getUserByIdAsync(userId);
-    
+
     if (!user) {
       throw new UserNotFoundException();
     }

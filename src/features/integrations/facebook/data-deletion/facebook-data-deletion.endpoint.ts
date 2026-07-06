@@ -15,12 +15,14 @@ class FacebookDataDeletionResponseModel {
   version: '1',
 })
 export class FacebookDataDeletionController {
-  constructor(
-    private readonly commandBus: CommandBus,
-  ) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('data-deletion')
-  @ApiResponse({ status: 200, description: 'OK', type: FacebookDataDeletionResponseModel })
+  @ApiResponse({
+    status: 200,
+    description: 'OK',
+    type: FacebookDataDeletionResponseModel,
+  })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   public async handleDataDeletion(
     @Body('signed_request') signedRequest: string,

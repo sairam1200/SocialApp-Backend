@@ -9,7 +9,17 @@ import { AuthGuardsModule } from './authGuard.module';
 import { dependency } from '../infrastructure/dependency';
 import { NotificationModule } from './notification.module';
 import { AnalyticsModule } from './analytics.module';
-import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, DataProtectionKey, UserBiometric } from '../domain/entities';
+import {
+  UserClaim,
+  User,
+  Role,
+  UserRole,
+  RoleClaim,
+  UserLogin,
+  LinkedAccount,
+  DataProtectionKey,
+  UserBiometric,
+} from '../domain/entities';
 
 @Module({
   imports: [
@@ -43,11 +53,7 @@ import { UserClaim, User, Role, UserRole, RoleClaim, UserLogin, LinkedAccount, D
     dependency.LinkedAccountRepository,
     dependency.DataProtectionKeyRepository,
   ],
-  controllers: [
-    ...authentication.addControllers()
-  ],
-  exports: [
-    dependency.TokenService,
-  ],
+  controllers: [...authentication.addControllers()],
+  exports: [dependency.TokenService],
 })
-export class AuthModule { }
+export class AuthModule {}

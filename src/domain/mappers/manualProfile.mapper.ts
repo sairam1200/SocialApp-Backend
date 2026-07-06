@@ -1,7 +1,12 @@
-import { ManualProfileModel, ManualProfileSearchResponseModel } from "../contracts/manualProfile.model";
-import { ManualProfile } from "../entities";
+import {
+  ManualProfileModel,
+  ManualProfileSearchResponseModel,
+} from '../contracts/manualProfile.model';
+import { ManualProfile } from '../entities';
 
-export function mapToManualProfileModel(data: ManualProfile): ManualProfileModel {
+export function mapToManualProfileModel(
+  data: ManualProfile,
+): ManualProfileModel {
   return {
     id: data.id,
     icon: data.icon,
@@ -13,7 +18,7 @@ export function mapToManualProfileModel(data: ManualProfile): ManualProfileModel
 
 export function mapToManualProfileSearchResponseModel(
   data: ManualProfile,
-  profileImageUrl: string | null = null
+  profileImageUrl: string | null = null,
 ): ManualProfileSearchResponseModel {
   return {
     id: data.id,
@@ -25,7 +30,7 @@ export function mapToManualProfileSearchResponseModel(
       firstName: data.user?.firstName,
       lastName: data.user?.lastName,
       profileImage: profileImageUrl || null,
-      userName: data.user?.userName
-    }
+      userName: data.user?.userName,
+    },
   } as ManualProfileSearchResponseModel;
 }

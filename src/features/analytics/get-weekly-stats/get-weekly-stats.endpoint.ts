@@ -13,8 +13,7 @@ import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
   version: '1',
 })
 export class GetWeeklyStatsController {
-
-  constructor(private readonly queryBus: QueryBus) { }
+  constructor(private readonly queryBus: QueryBus) {}
 
   @Get('weekly-stats')
   @UseGuards(AuthenticatedAccountGuard)
@@ -23,7 +22,9 @@ export class GetWeeklyStatsController {
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async getWeeklyStats(@Res() res: Response): Promise<Response> {
     const userId = HttpContext.getCurrentUserId;
-    const result = await this.queryBus.execute(new GetWeeklyStatsQuery({ userId }));
+    const result = await this.queryBus.execute(
+      new GetWeeklyStatsQuery({ userId }),
+    );
     return res.status(HttpStatus.OK).send(result);
   }
 }

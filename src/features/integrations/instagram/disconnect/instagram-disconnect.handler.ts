@@ -12,15 +12,18 @@ export class InstagramDisconnectCommand {
 
 @CommandHandler(InstagramDisconnectCommand)
 export class InstagramDisconnectCommandHandler
-  implements ICommandHandler<InstagramDisconnectCommand> {
+  implements ICommandHandler<InstagramDisconnectCommand>
+{
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,
-  ) { }
+  ) {}
 
   public async execute(command: InstagramDisconnectCommand): Promise<void> {
     const userId = HttpContext.getCurrentUserId;
-    await this.disconnectService.disconnectPlatformAsync(userId, _const.PLATFORMS.INSTAGRAM);
+    await this.disconnectService.disconnectPlatformAsync(
+      userId,
+      _const.PLATFORMS.INSTAGRAM,
+    );
   }
 }
-

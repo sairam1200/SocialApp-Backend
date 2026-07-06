@@ -1,5 +1,10 @@
 import { Inject } from '@nestjs/common';
-import { CommandHandler, ICommandHandler, QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+import {
+  CommandHandler,
+  ICommandHandler,
+  QueryHandler,
+  IQueryHandler,
+} from '@nestjs/cqrs';
 import _const from '../../../../core/utils/const';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { Globals } from '../../../../core/globals';
@@ -83,7 +88,9 @@ export class GetFacebookGrowthQuery {
 // --- Handlers Implementation ---
 
 @CommandHandler(SyncFacebookAnalyticsCommand)
-export class SyncFacebookAnalyticsCommandHandler implements ICommandHandler<SyncFacebookAnalyticsCommand> {
+export class SyncFacebookAnalyticsCommandHandler
+  implements ICommandHandler<SyncFacebookAnalyticsCommand>
+{
   constructor(
     @Inject(_const.IFACEBOOKANALYTICS_SERVICE)
     private readonly analyticsService: IFacebookAnalyticsService,
@@ -97,7 +104,9 @@ export class SyncFacebookAnalyticsCommandHandler implements ICommandHandler<Sync
 }
 
 @QueryHandler(GetFacebookPageAnalyticsQuery)
-export class GetFacebookPageAnalyticsQueryHandler implements IQueryHandler<GetFacebookPageAnalyticsQuery> {
+export class GetFacebookPageAnalyticsQueryHandler
+  implements IQueryHandler<GetFacebookPageAnalyticsQuery>
+{
   constructor(
     @Inject(_const.IFACEBOOKPAGEANALYTICS_REPOSITORY)
     private readonly pageAnalyticsRepository: IFacebookPageAnalyticsRepository,
@@ -105,54 +114,77 @@ export class GetFacebookPageAnalyticsQueryHandler implements IQueryHandler<GetFa
 
   async execute(): Promise<FacebookPageAnalytics> {
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-    const latest = await this.pageAnalyticsRepository.getLatestByUserIdAsync(userId);
+    const latest =
+      await this.pageAnalyticsRepository.getLatestByUserIdAsync(userId);
     if (!latest) {
-      throw new NotFoundException('No Facebook page analytics record found for this account.');
+      throw new NotFoundException(
+        'No Facebook page analytics record found for this account.',
+      );
     }
     return latest;
   }
 }
 
 @QueryHandler(GetFacebookPostAnalyticsQuery)
-export class GetFacebookPostAnalyticsQueryHandler implements IQueryHandler<GetFacebookPostAnalyticsQuery> {
+export class GetFacebookPostAnalyticsQueryHandler
+  implements IQueryHandler<GetFacebookPostAnalyticsQuery>
+{
   constructor(
     @Inject(_const.IFACEBOOKPOSTANALYTICS_REPOSITORY)
     private readonly postAnalyticsRepository: IFacebookPostAnalyticsRepository,
   ) {}
 
-  async execute(query: GetFacebookPostAnalyticsQuery): Promise<FacebookPostAnalytics> {
-    const latest = await this.postAnalyticsRepository.getLatestByPostIdAsync(query.postId);
+  async execute(
+    query: GetFacebookPostAnalyticsQuery,
+  ): Promise<FacebookPostAnalytics> {
+    const latest = await this.postAnalyticsRepository.getLatestByPostIdAsync(
+      query.postId,
+    );
     if (!latest) {
-      throw new NotFoundException(`No analytics record found for Facebook post: ${query.postId}`);
+      throw new NotFoundException(
+        `No analytics record found for Facebook post: ${query.postId}`,
+      );
     }
     return latest;
   }
 }
 
 @QueryHandler(GetFacebookVideoAnalyticsQuery)
-export class GetFacebookVideoAnalyticsQueryHandler implements IQueryHandler<GetFacebookVideoAnalyticsQuery> {
+export class GetFacebookVideoAnalyticsQueryHandler
+  implements IQueryHandler<GetFacebookVideoAnalyticsQuery>
+{
   constructor(
     @Inject(_const.IFACEBOOKVIDEOANALYTICS_REPOSITORY)
     private readonly videoAnalyticsRepository: IFacebookVideoAnalyticsRepository,
   ) {}
 
-  async execute(query: GetFacebookVideoAnalyticsQuery): Promise<FacebookVideoAnalytics> {
-    const latest = await this.videoAnalyticsRepository.getLatestByVideoIdAsync(query.videoId);
+  async execute(
+    query: GetFacebookVideoAnalyticsQuery,
+  ): Promise<FacebookVideoAnalytics> {
+    const latest = await this.videoAnalyticsRepository.getLatestByVideoIdAsync(
+      query.videoId,
+    );
     if (!latest) {
-      throw new NotFoundException(`No analytics record found for Facebook video: ${query.videoId}`);
+      throw new NotFoundException(
+        `No analytics record found for Facebook video: ${query.videoId}`,
+      );
     }
     return latest;
   }
 }
 
 @QueryHandler(GetFacebookAnalyticsTrendsQuery)
-export class GetFacebookAnalyticsTrendsQueryHandler implements IQueryHandler<GetFacebookAnalyticsTrendsQuery> {
+export class GetFacebookAnalyticsTrendsQueryHandler
+  implements IQueryHandler<GetFacebookAnalyticsTrendsQuery>
+{
   constructor(
     @Inject(_const.IFACEBOOKPAGEANALYTICS_REPOSITORY)
     private readonly pageAnalyticsRepository: IFacebookPageAnalyticsRepository,
   ) {}
 
-  async execute(query: GetFacebookAnalyticsTrendsQuery): Promise<FacebookPageAnalytics[]> {
+  async execute(
+    query: GetFacebookAnalyticsTrendsQuery,
+  ): Promise<FacebookPageAnalytics[]> {
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
 
     const today = new Date();
@@ -164,23 +196,34 @@ export class GetFacebookAnalyticsTrendsQueryHandler implements IQueryHandler<Get
     const start = query.startDate ? new Date(query.startDate) : thirtyDaysAgo;
     const end = query.endDate ? new Date(query.endDate) : today;
 
-    const pageRecord = await this.pageAnalyticsRepository.getLatestByUserIdAsync(userId);
+    const pageRecord =
+      await this.pageAnalyticsRepository.getLatestByUserIdAsync(userId);
     if (!pageRecord) {
-      throw new NotFoundException('No Facebook page analytics records found to fetch trends.');
+      throw new NotFoundException(
+        'No Facebook page analytics records found to fetch trends.',
+      );
     }
 
-    return await this.pageAnalyticsRepository.getTrendsAsync(pageRecord.pageId, start, end);
+    return await this.pageAnalyticsRepository.getTrendsAsync(
+      pageRecord.pageId,
+      start,
+      end,
+    );
   }
 }
 
 @QueryHandler(GetFacebookTopPostsQuery)
-export class GetFacebookTopPostsQueryHandler implements IQueryHandler<GetFacebookTopPostsQuery> {
+export class GetFacebookTopPostsQueryHandler
+  implements IQueryHandler<GetFacebookTopPostsQuery>
+{
   constructor(
     @Inject(_const.IFACEBOOKPOSTANALYTICS_REPOSITORY)
     private readonly postAnalyticsRepository: IFacebookPostAnalyticsRepository,
   ) {}
 
-  async execute(query: GetFacebookTopPostsQuery): Promise<FacebookPostAnalytics[]> {
+  async execute(
+    query: GetFacebookTopPostsQuery,
+  ): Promise<FacebookPostAnalytics[]> {
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
     const limit = query.limit || 5;
     return await this.postAnalyticsRepository.getTopPostsAsync(userId, limit);
@@ -188,13 +231,17 @@ export class GetFacebookTopPostsQueryHandler implements IQueryHandler<GetFaceboo
 }
 
 @QueryHandler(GetFacebookTopVideosQuery)
-export class GetFacebookTopVideosQueryHandler implements IQueryHandler<GetFacebookTopVideosQuery> {
+export class GetFacebookTopVideosQueryHandler
+  implements IQueryHandler<GetFacebookTopVideosQuery>
+{
   constructor(
     @Inject(_const.IFACEBOOKVIDEOANALYTICS_REPOSITORY)
     private readonly videoAnalyticsRepository: IFacebookVideoAnalyticsRepository,
   ) {}
 
-  async execute(query: GetFacebookTopVideosQuery): Promise<FacebookVideoAnalytics[]> {
+  async execute(
+    query: GetFacebookTopVideosQuery,
+  ): Promise<FacebookVideoAnalytics[]> {
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
     const limit = query.limit || 5;
     return await this.videoAnalyticsRepository.getTopVideosAsync(userId, limit);
@@ -202,7 +249,9 @@ export class GetFacebookTopVideosQueryHandler implements IQueryHandler<GetFacebo
 }
 
 @QueryHandler(GetFacebookGrowthQuery)
-export class GetFacebookGrowthQueryHandler implements IQueryHandler<GetFacebookGrowthQuery> {
+export class GetFacebookGrowthQueryHandler
+  implements IQueryHandler<GetFacebookGrowthQuery>
+{
   constructor(
     @Inject(_const.IFACEBOOKPAGEANALYTICS_REPOSITORY)
     private readonly pageAnalyticsRepository: IFacebookPageAnalyticsRepository,
@@ -220,12 +269,19 @@ export class GetFacebookGrowthQueryHandler implements IQueryHandler<GetFacebookG
     const start = query.startDate ? new Date(query.startDate) : thirtyDaysAgo;
     const end = query.endDate ? new Date(query.endDate) : today;
 
-    const pageRecord = await this.pageAnalyticsRepository.getLatestByUserIdAsync(userId);
+    const pageRecord =
+      await this.pageAnalyticsRepository.getLatestByUserIdAsync(userId);
     if (!pageRecord) {
-      throw new NotFoundException('No Facebook page analytics records found to fetch growth.');
+      throw new NotFoundException(
+        'No Facebook page analytics records found to fetch growth.',
+      );
     }
 
-    const trends = await this.pageAnalyticsRepository.getTrendsAsync(pageRecord.pageId, start, end);
+    const trends = await this.pageAnalyticsRepository.getTrendsAsync(
+      pageRecord.pageId,
+      start,
+      end,
+    );
     return trends.map((t) => ({
       snapshotDate: t.snapshotDate,
       followerCount: t.followerCount,
@@ -235,7 +291,9 @@ export class GetFacebookGrowthQueryHandler implements IQueryHandler<GetFacebookG
 }
 
 @QueryHandler(GetFacebookCompareQuery)
-export class GetFacebookCompareQueryHandler implements IQueryHandler<GetFacebookCompareQuery> {
+export class GetFacebookCompareQueryHandler
+  implements IQueryHandler<GetFacebookCompareQuery>
+{
   constructor(
     @Inject(_const.IFACEBOOKPAGEANALYTICS_REPOSITORY)
     private readonly pageAnalyticsRepository: IFacebookPageAnalyticsRepository,
@@ -244,9 +302,12 @@ export class GetFacebookCompareQueryHandler implements IQueryHandler<GetFacebook
   async execute(query: GetFacebookCompareQuery): Promise<any> {
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
 
-    const pageRecord = await this.pageAnalyticsRepository.getLatestByUserIdAsync(userId);
+    const pageRecord =
+      await this.pageAnalyticsRepository.getLatestByUserIdAsync(userId);
     if (!pageRecord) {
-      throw new NotFoundException('No Facebook page analytics records found to perform comparison.');
+      throw new NotFoundException(
+        'No Facebook page analytics records found to perform comparison.',
+      );
     }
 
     const start1 = new Date(query.startDate1);
@@ -254,8 +315,16 @@ export class GetFacebookCompareQueryHandler implements IQueryHandler<GetFacebook
     const start2 = new Date(query.startDate2);
     const end2 = new Date(query.endDate2);
 
-    const trends1 = await this.pageAnalyticsRepository.getTrendsAsync(pageRecord.pageId, start1, end1);
-    const trends2 = await this.pageAnalyticsRepository.getTrendsAsync(pageRecord.pageId, start2, end2);
+    const trends1 = await this.pageAnalyticsRepository.getTrendsAsync(
+      pageRecord.pageId,
+      start1,
+      end1,
+    );
+    const trends2 = await this.pageAnalyticsRepository.getTrendsAsync(
+      pageRecord.pageId,
+      start2,
+      end2,
+    );
 
     const aggregates1 = this.calculateAggregates(trends1);
     const aggregates2 = this.calculateAggregates(trends2);
@@ -272,13 +341,34 @@ export class GetFacebookCompareQueryHandler implements IQueryHandler<GetFacebook
         ...aggregates2,
       },
       comparison: {
-        followerGrowthPercent: this.calculatePercentageChange(aggregates1.followers, aggregates2.followers),
-        fanGrowthPercent: this.calculatePercentageChange(aggregates1.likes, aggregates2.likes),
-        impressionsGrowthPercent: this.calculatePercentageChange(aggregates1.impressions, aggregates2.impressions),
-        reachGrowthPercent: this.calculatePercentageChange(aggregates1.reach, aggregates2.reach),
-        engagementGrowthPercent: this.calculatePercentageChange(aggregates1.engagement, aggregates2.engagement),
-        pageViewsGrowthPercent: this.calculatePercentageChange(aggregates1.pageViews, aggregates2.pageViews),
-        clicksGrowthPercent: this.calculatePercentageChange(aggregates1.clicks, aggregates2.clicks),
+        followerGrowthPercent: this.calculatePercentageChange(
+          aggregates1.followers,
+          aggregates2.followers,
+        ),
+        fanGrowthPercent: this.calculatePercentageChange(
+          aggregates1.likes,
+          aggregates2.likes,
+        ),
+        impressionsGrowthPercent: this.calculatePercentageChange(
+          aggregates1.impressions,
+          aggregates2.impressions,
+        ),
+        reachGrowthPercent: this.calculatePercentageChange(
+          aggregates1.reach,
+          aggregates2.reach,
+        ),
+        engagementGrowthPercent: this.calculatePercentageChange(
+          aggregates1.engagement,
+          aggregates2.engagement,
+        ),
+        pageViewsGrowthPercent: this.calculatePercentageChange(
+          aggregates1.pageViews,
+          aggregates2.pageViews,
+        ),
+        clicksGrowthPercent: this.calculatePercentageChange(
+          aggregates1.clicks,
+          aggregates2.clicks,
+        ),
       },
     };
   }

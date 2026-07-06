@@ -1,12 +1,12 @@
-import * as Joi from "joi";
-import { ApiProperty } from "@nestjs/swagger";
-import { Inject, UnauthorizedException } from "@nestjs/common";
-import _const from "../../../core/utils/const";
-import logger from "../../../core/utils/winston.util";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { HttpContext } from "../../../core/middlewares/httpContext.middleware";
-import { IAnalyticsService } from "../../../domain/services/ianalytics.service";
-import { IUserLoginRepository } from "../../../domain/repositories/iuserLogin.repository";
+import * as Joi from 'joi';
+import { ApiProperty } from '@nestjs/swagger';
+import { Inject, UnauthorizedException } from '@nestjs/common';
+import _const from '../../../core/utils/const';
+import logger from '../../../core/utils/winston.util';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
+import { IAnalyticsService } from '../../../domain/services/ianalytics.service';
+import { IUserLoginRepository } from '../../../domain/repositories/iuserLogin.repository';
 
 export class LogoutRequestModel {
   @ApiProperty()
@@ -22,16 +22,19 @@ export class LogoutCommand {
 }
 
 const logoutValidations = Joi.object({
-  deviceId: Joi.string().required().messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
+  deviceId: Joi.string()
+    .required()
+    .messages({ 'any.required': ' Prevented: Adulterated Request Received!' }),
 });
 
 @CommandHandler(LogoutCommand)
 export class LogoutCommandHandler implements ICommandHandler<LogoutCommand> {
-
   constructor(
-    @Inject(_const.IUSERLOGIN_REPOSITORY) private readonly userLoginRepository: IUserLoginRepository,
-    @Inject(_const.IANALYTICS_SERVICE) private readonly analyticsService: IAnalyticsService,
-  ) { }
+    @Inject(_const.IUSERLOGIN_REPOSITORY)
+    private readonly userLoginRepository: IUserLoginRepository,
+    @Inject(_const.IANALYTICS_SERVICE)
+    private readonly analyticsService: IAnalyticsService,
+  ) {}
 
   public async execute(command: LogoutCommand): Promise<void> {
     const { model } = command;
@@ -39,11 +42,13 @@ export class LogoutCommandHandler implements ICommandHandler<LogoutCommand> {
 
     const userId = HttpContext.getCurrentUserId;
     if (!userId) {
-      throw new UnauthorizedException("User not logged In");
+      throw new UnauthorizedException('User not logged In');
     }
 
     const userLogins = await this.userLoginRepository.getByUserIdAsync(userId);
-    const userLogin = userLogins.find(login => login.deviceId === model.deviceId);
+    const userLogin = userLogins.find(
+      (login) => login.deviceId === model.deviceId,
+    );
 
     if (userLogin) {
       const currentDate = new Date();
@@ -53,7 +58,7 @@ export class LogoutCommandHandler implements ICommandHandler<LogoutCommand> {
 
       await this.analyticsService.trackEvent(
         _const.ANALYTICS_EVENTS.AUTH.LOGOUT,
-        { deviceId: model.deviceId }
+        { deviceId: model.deviceId },
       );
 
       logger.info(`User ${userId} logged out from device: ${model.deviceId}`);

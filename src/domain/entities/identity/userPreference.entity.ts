@@ -1,12 +1,6 @@
-import {
-  Entity,
-  Column,
-  PrimaryColumn,
-  OneToOne,
-  JoinColumn,
-} from "typeorm";
-import { User } from "./user.entity";
-import { NotificationChannel, Theme } from "../../enums";
+import { Entity, Column, PrimaryColumn, OneToOne, JoinColumn } from 'typeorm';
+import { User } from './user.entity';
+import { NotificationChannel, Theme } from '../../enums';
 
 @Entity({ name: 'userPreferences' })
 export class UserPreference {

@@ -1,29 +1,35 @@
-import axios from "axios";
-import configs from "../../../../configs";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../../core/utils/const";
-import { Globals } from "../../../../core/globals";
-import { UserLogin } from "../../../../domain/entities";
-import logger from "../../../../core/utils/winston.util";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { Inject, NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { IQueueService } from "../../../../domain/services/iqueue.service";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import ApplicationException from "../../../../core/exceptions/application.exception";
-import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
-import { deserializeObject, serializeObject } from "../../../../core/utils/serialization.util";
-import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { IYoutubeWebhookService } from "../../../../domain/services/webhooks/iyoutube-webhook.service";
-import { IYoutubeImportService } from "domain/services/youtube/iyoutube-import.services";
-import { IYoutubeAnalyticsService } from "../../../../domain/services/iyoutubeAnalytics.service";
+import axios from 'axios';
+import configs from '../../../../configs';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../../core/utils/const';
+import { Globals } from '../../../../core/globals';
+import { UserLogin } from '../../../../domain/entities';
+import logger from '../../../../core/utils/winston.util';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import {
+  Inject,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { IQueueService } from '../../../../domain/services/iqueue.service';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import ApplicationException from '../../../../core/exceptions/application.exception';
+import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
+import {
+  deserializeObject,
+  serializeObject,
+} from '../../../../core/utils/serialization.util';
+import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
+import { IYoutubeWebhookService } from '../../../../domain/services/webhooks/iyoutube-webhook.service';
+import { IYoutubeImportService } from 'domain/services/youtube/iyoutube-import.services';
+import { IYoutubeAnalyticsService } from '../../../../domain/services/iyoutubeAnalytics.service';
 export class YoutubeImportRequestModel {
   @ApiProperty()
   youtubeAccessToken: string;
 }
 
 export class YoutubeImportCommand {
-
-  model: YoutubeImportRequestModel
+  model: YoutubeImportRequestModel;
 
   constructor(request: Partial<YoutubeImportCommand> = {}) {
     Object.assign(this, request);
@@ -31,8 +37,9 @@ export class YoutubeImportCommand {
 }
 
 @CommandHandler(YoutubeImportCommand)
-export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImportCommand> {
-
+export class YoutubeImportCommandHandler
+  implements ICommandHandler<YoutubeImportCommand>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
@@ -46,11 +53,11 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     private readonly youtubeImportService: IYoutubeImportService,
     @Inject(_const.IYOUTUBEANALYTICS_SERVICE)
     private readonly youtubeAnalyticsService: IYoutubeAnalyticsService,
-  ) { }
+  ) {}
 
-  public async execute(command: YoutubeImportCommand)
-    : Promise<{ accessToken: string, expiresIn: number }> {
-
+  public async execute(
+    command: YoutubeImportCommand,
+  ): Promise<{ accessToken: string; expiresIn: number }> {
     let expiresIn: number;
     const { youtubeAccessToken } = command.model;
     let accessToken: string | undefined;
@@ -62,32 +69,40 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
       );
 
     if (!account) {
-      throw new NotFoundException(
-        "No matching Youtube profile was found!",
-      );
+      throw new NotFoundException('No matching Youtube profile was found!');
     }
 
     const channelId = account.metaData?.channel?.id;
-    console.log("check", channelId
-    );
+    console.log('check', channelId);
     if (!channelId) {
       throw new NotFoundException(
-        "No YouTube channel ID found for this account.",
+        'No YouTube channel ID found for this account.',
       );
     }
 
     if (youtubeAccessToken) {
-      const isTokenValid = await this.verifyAccessTokenAsync(youtubeAccessToken, channelId);
+      const isTokenValid = await this.verifyAccessTokenAsync(
+        youtubeAccessToken,
+        channelId,
+      );
       if (!isTokenValid) {
         const userLogin = await this.getUserLoginAsync(userId);
-        const tokenValue = deserializeObject<{ access_token: string, refresh_token: string }>(userLogin.tokenValue);
-        const {
-          access_token,
-          expires_in
-        } = await this.refreshTokenAsync(tokenValue.refresh_token);
+        const tokenValue = deserializeObject<{
+          access_token: string;
+          refresh_token: string;
+        }>(userLogin.tokenValue);
+        const { access_token, expires_in } = await this.refreshTokenAsync(
+          tokenValue.refresh_token,
+        );
         if (access_token) {
-          userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token, expires_in });
-          userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
+          userLogin.tokenValue = serializeObject({
+            access_token,
+            refresh_token: tokenValue.refresh_token,
+            expires_in,
+          });
+          userLogin.expiryDateUtc = new Date(
+            Date.now() + 100 * 24 * 60 * 60 * 1000,
+          ); // 100 days
           await this.userLoginRepository.updateAsync(userLogin);
         }
         accessToken = access_token;
@@ -97,12 +112,27 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
       }
     } else {
       const userLogin = await this.getUserLoginAsync(userId);
-      const tokenValue = deserializeObject<{ access_token: string, refresh_token: string, expires_in: number }>(userLogin.tokenValue);
-      const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token, channelId);
+      const tokenValue = deserializeObject<{
+        access_token: string;
+        refresh_token: string;
+        expires_in: number;
+      }>(userLogin.tokenValue);
+      const isTokenValid = await this.verifyAccessTokenAsync(
+        tokenValue.access_token,
+        channelId,
+      );
       if (!isTokenValid) {
-        const { access_token, expires_in } = await this.refreshTokenAsync(tokenValue.refresh_token);
-        userLogin.tokenValue = serializeObject({ access_token, refresh_token: tokenValue.refresh_token, expires_in });
-        userLogin.expiryDateUtc = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
+        const { access_token, expires_in } = await this.refreshTokenAsync(
+          tokenValue.refresh_token,
+        );
+        userLogin.tokenValue = serializeObject({
+          access_token,
+          refresh_token: tokenValue.refresh_token,
+          expires_in,
+        });
+        userLogin.expiryDateUtc = new Date(
+          Date.now() + 100 * 24 * 60 * 60 * 1000,
+        ); // 100 days
         await this.userLoginRepository.updateAsync(userLogin);
 
         accessToken = access_token;
@@ -112,23 +142,34 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
         expiresIn = tokenValue.expires_in;
       }
     }
-    logger.info("[YoutubeImport] Importing uploads...");
+    logger.info('[YoutubeImport] Importing uploads...');
     let importCount = 0;
     try {
       importCount = await this.youtubeImportService.importUploadsAsync(
         account.userId,
         accessToken,
       );
-      logger.info(`[YoutubeImport] Imported ${importCount} videos for user ${account.userId}`);
+      logger.info(
+        `[YoutubeImport] Imported ${importCount} videos for user ${account.userId}`,
+      );
     } catch (importError: any) {
-      logger.error(`[YoutubeImport] Import failed: ${importError.message}`, { stack: importError.stack });
-      throw new ApplicationException('Youtube import failed. Please try again later.');
+      logger.error(`[YoutubeImport] Import failed: ${importError.message}`, {
+        stack: importError.stack,
+      });
+      throw new ApplicationException(
+        'Youtube import failed. Please try again later.',
+      );
     }
 
     if (!account.syncEnabled && configs.youtube.webhookUrl) {
       try {
-        await this.youtubeWebhookService.subscribeAsync(channelId, configs.youtube.webhookUrl);
-        logger.info(`[YoutubeImport] Webhook subscription successful for channel ${channelId}`);
+        await this.youtubeWebhookService.subscribeAsync(
+          channelId,
+          configs.youtube.webhookUrl,
+        );
+        logger.info(
+          `[YoutubeImport] Webhook subscription successful for channel ${channelId}`,
+        );
         account.syncEnabled = true;
       } catch (error) {
         logger.warn(`[YoutubeImport] Webhook subscription failed:`, error);
@@ -139,51 +180,63 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     await this.linkedAccountRepository.updateAsync(account);
 
     try {
-      await this.youtubeAnalyticsService.syncAccountAnalyticsAsync(account.userId, { forceRefresh: true });
-      logger.info(`[YoutubeImport] Analytics sync completed for user ${account.userId}`);
+      await this.youtubeAnalyticsService.syncAccountAnalyticsAsync(
+        account.userId,
+        { forceRefresh: true },
+      );
+      logger.info(
+        `[YoutubeImport] Analytics sync completed for user ${account.userId}`,
+      );
     } catch (analyticsError: any) {
-      logger.warn(`[YoutubeImport] Analytics sync failed after import: ${analyticsError.message}`);
+      logger.warn(
+        `[YoutubeImport] Analytics sync failed after import: ${analyticsError.message}`,
+      );
     }
 
     return {
       accessToken,
-      expiresIn
-    }
+      expiresIn,
+    };
   }
 
-  private async refreshTokenAsync(refreshToken: string)
-    : Promise<{ access_token: string, expires_in: number }> {
-
+  private async refreshTokenAsync(
+    refreshToken: string,
+  ): Promise<{ access_token: string; expires_in: number }> {
     try {
-
-      const response = await axios.post('https://oauth2.googleapis.com/token', new URLSearchParams({
-        client_id: configs.youtube.clientId,
-        client_secret: configs.youtube.clientSecret,
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token',
-      }).toString(), {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+      const response = await axios.post(
+        'https://oauth2.googleapis.com/token',
+        new URLSearchParams({
+          client_id: configs.youtube.clientId,
+          client_secret: configs.youtube.clientSecret,
+          refresh_token: refreshToken,
+          grant_type: 'refresh_token',
+        }).toString(),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
         },
-      });
+      );
 
       const { access_token, expires_in } = response.data;
       if (!access_token) {
-        throw new ApplicationException('Your Youtube session has expired or the access token is invalid. Please log in to Youtube again to continue.');
+        throw new ApplicationException(
+          'Your Youtube session has expired or the access token is invalid. Please log in to Youtube again to continue.',
+        );
       }
 
       return {
         access_token,
         expires_in,
       };
-
     } catch (error) {
-      logger.error(`An error occurred while processing the Youtube import command: 
-        ${error instanceof Error ? error.message : JSON.stringify(error)}`, { error });
-
-      throw new UnauthorizedException(
-        "RECONNECT_REQUIRED"
+      logger.error(
+        `An error occurred while processing the Youtube import command: 
+        ${error instanceof Error ? error.message : JSON.stringify(error)}`,
+        { error },
       );
+
+      throw new UnauthorizedException('RECONNECT_REQUIRED');
     }
   }
 
@@ -193,13 +246,13 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
   ): Promise<boolean> {
     try {
       const response = await axios.get(
-        "https://www.googleapis.com/youtube/v3/channels",
+        'https://www.googleapis.com/youtube/v3/channels',
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
           params: {
-            part: "id",
+            part: 'id',
             mine: true,
           },
         },
@@ -218,25 +271,22 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
   }
 
   private async getUserLoginAsync(userId: string): Promise<UserLogin> {
-
     const now = new Date();
-    const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(
-      userId,
-      _const.PLATFORMS.YOUTUBE
-    );
+    const userLogin =
+      await this.userLoginRepository.getByUserIdAndProviderAsync(
+        userId,
+        _const.PLATFORMS.YOUTUBE,
+      );
 
     if (!userLogin) {
       throw new UnauthorizedException(
-        'No Youtube account linked to your user profile. Please link your Youtube account to proceed.'
+        'No Youtube account linked to your user profile. Please link your Youtube account to proceed.',
       );
     }
 
     if (now > userLogin.expiryDateUtc) {
-      throw new UnauthorizedException(
-        "RECONNECT_REQUIRED"
-      );
+      throw new UnauthorizedException('RECONNECT_REQUIRED');
     }
     return userLogin;
   }
-
 }

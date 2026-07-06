@@ -1,5 +1,5 @@
-import { Job } from "bullmq";
-import { AxiosRequestConfig } from "axios";
+import { Job } from 'bullmq';
+import { AxiosRequestConfig } from 'axios';
 
 export interface ProgressReport {
   totalItem: number;
@@ -33,17 +33,33 @@ export interface YoutubePlaylistItem {
 export interface IYoutubeImportService {
   importUploadsAsync(userId: string, accessToken: string): Promise<number>;
 
-  importSubscriptionsAsync(userId: string, accessToken: string): Promise<number>;
+  importSubscriptionsAsync(
+    userId: string,
+    accessToken: string,
+  ): Promise<number>;
 
-  refreshChannelProfileAsync(userId: string, accessToken: string): Promise<void>;
+  refreshChannelProfileAsync(
+    userId: string,
+    accessToken: string,
+  ): Promise<void>;
 
   importFullAsync(account: any, accessToken: string, job?: Job): Promise<void>;
 
   parseDurationToSeconds(duration: string): number;
 
-  callYouTubeApiWithRetry<T>(config: AxiosRequestConfig, retries?: number): Promise<{ data: T; headers: any }>;
+  callYouTubeApiWithRetry<T>(
+    config: AxiosRequestConfig,
+    retries?: number,
+  ): Promise<{ data: T; headers: any }>;
 
-  fetchPlaylistVideos(accessToken: string, playlistId: string): Promise<YoutubePlaylistItem[]>;
+  fetchPlaylistVideos(
+    accessToken: string,
+    playlistId: string,
+  ): Promise<YoutubePlaylistItem[]>;
 
-  fetchPlaylistVideosPage(accessToken: string, playlistId: string, pageToken?: string | null): Promise<{ items: YoutubePlaylistItem[]; nextPageToken: string | null }>;
+  fetchPlaylistVideosPage(
+    accessToken: string,
+    playlistId: string,
+    pageToken?: string | null,
+  ): Promise<{ items: YoutubePlaylistItem[]; nextPageToken: string | null }>;
 }

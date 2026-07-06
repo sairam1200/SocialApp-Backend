@@ -1,23 +1,23 @@
-import axios from "axios";
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import configs from "../../../../configs";
-import _const from "../../../../core/utils/const";
-import { Globals } from "../../../../core/globals";
-import { EventEmitter2 } from "@nestjs/event-emitter";
-import logger from "../../../../core/utils/winston.util";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { UserNotFoundException } from "../../../../core/exceptions";
-import { PlatformConnectCleanupEvent } from "../../../../domain/events";
-import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
-import ApplicationException from "../../../../core/exceptions/application.exception";
-import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey.entity";
-import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
-import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
-import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
+import axios from 'axios';
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import configs from '../../../../configs';
+import _const from '../../../../core/utils/const';
+import { Globals } from '../../../../core/globals';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import logger from '../../../../core/utils/winston.util';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { UserNotFoundException } from '../../../../core/exceptions';
+import { PlatformConnectCleanupEvent } from '../../../../domain/events';
+import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import ApplicationException from '../../../../core/exceptions/application.exception';
+import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
+import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
+import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
+import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
+import { IContentStreamRepository } from '../../../../domain/repositories/icontentStream.repository';
 
 export class RedditConnectQuery {
   model: { state: string };
@@ -35,31 +35,38 @@ export class RedditConnectCallbackQuery {
 
 const redditConnectCallbackValidations = Joi.object({
   code: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
-  state: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
+  state: Joi.string()
+    .required()
+    .messages({ 'any.required': 'Invalid request' }),
 });
 
 @CommandHandler(RedditConnectQuery)
-export class RedditConnectQueryHandler implements ICommandHandler<RedditConnectQuery> {
+export class RedditConnectQueryHandler
+  implements ICommandHandler<RedditConnectQuery>
+{
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-  ) { }
+  ) {}
 
   public async execute(command: RedditConnectQuery): Promise<void> {
     const { model } = command;
-    const expiresIn = Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
+    const expiresIn =
+      Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
 
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
-      "",
+      '',
       HttpContext.user[Globals.ClaimTypes.UserId],
-      expiresIn
+      expiresIn,
     );
   }
 }
 
 @CommandHandler(RedditConnectCallbackQuery)
-export class RedditConnectCallbackQueryHandler implements ICommandHandler<RedditConnectCallbackQuery> {
+export class RedditConnectCallbackQueryHandler
+  implements ICommandHandler<RedditConnectCallbackQuery>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
@@ -72,10 +79,11 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
     @Inject(_const.ICONTENTSTREAM_REPOSITORY)
     private readonly contentStreamRepository: IContentStreamRepository,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
-  public async execute(query: RedditConnectCallbackQuery)
-    : Promise<{ accessToken: string; expiresIn: number; profile: any }> {
+  public async execute(
+    query: RedditConnectCallbackQuery,
+  ): Promise<{ accessToken: string; expiresIn: number; profile: any }> {
     const { model } = query;
 
     // Validate incoming request
@@ -91,29 +99,38 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
     const userData = await this.fetchUserData(access_token);
 
     // Get local user by ID
-    const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
+    const user = await this.userRepository.getUserByIdAsync(
+      dataProtectionKey.userId,
+    );
     if (!user || user.id !== dataProtectionKey.userId) {
       throw new UserNotFoundException(userData.id);
     }
 
     // Find existing linked account or create a new one
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-      _const.PLATFORMS.REDDIT,
-      user.id
-    );
+    let linkedAccount =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.REDDIT,
+        user.id,
+      );
 
     const newExternalId = userData.id;
     if (linkedAccount) {
       const oldExternalId = linkedAccount.externalId;
 
       if (oldExternalId !== newExternalId) {
-        logger.info(`[RedditConnect] User ${user.id} changed Reddit account from ${oldExternalId} to ${newExternalId}`);
-        this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
+        logger.info(
+          `[RedditConnect] User ${user.id} changed Reddit account from ${oldExternalId} to ${newExternalId}`,
+        );
+        this.eventEmitter.emit(
+          'platform.connect.cleanup',
+          new PlatformConnectCleanupEvent({ account: linkedAccount }),
+        );
       }
 
       linkedAccount.externalId = newExternalId;
       linkedAccount.userName = userData.name;
-      linkedAccount.profileImage = userData.snoovatar_img || userData.icon_img || '';
+      linkedAccount.profileImage =
+        userData.snoovatar_img || userData.icon_img || '';
       linkedAccount.metaData = {
         karma: userData.total_karma,
         isEmployee: userData.is_employee,
@@ -130,41 +147,46 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
         _const.PLATFORMS.REDDIT,
         userData.id,
       );
-      linkedAccount = await this.linkedAccountRepository.createAsync(new LinkedAccount({
-        platform: _const.PLATFORMS.REDDIT,
-        userId: user.id,
-        email: user.email,
-        externalId: userData.id,
-        userName: userData.name,
-        profileImage: userData.snoovatar_img || userData.icon_img || '',
-        metaData: {
-          karma: userData.total_karma,
-          isEmployee: userData.is_employee,
-          isGold: userData.is_gold,
-          created: userData.created,
-        }
-      }));
+      linkedAccount = await this.linkedAccountRepository.createAsync(
+        new LinkedAccount({
+          platform: _const.PLATFORMS.REDDIT,
+          userId: user.id,
+          email: user.email,
+          externalId: userData.id,
+          userName: userData.name,
+          profileImage: userData.snoovatar_img || userData.icon_img || '',
+          metaData: {
+            karma: userData.total_karma,
+            isEmployee: userData.is_employee,
+            isGold: userData.is_gold,
+            created: userData.created,
+          },
+        }),
+      );
     }
 
-    let existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(
-      user.id,
-      _const.PLATFORMS.REDDIT
-    );
+    let existingAccountLogin =
+      await this.userLoginRepository.getByUserIdAndProviderAsync(
+        user.id,
+        _const.PLATFORMS.REDDIT,
+      );
 
     if (existingAccountLogin) {
       existingAccountLogin.tokenValue = access_token;
       existingAccountLogin.addedDateUtc = new Date();
-      existingAccountLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
+      existingAccountLogin.expiryDateUtc = new Date(
+        Date.now() + expires_in * 1000,
+      );
       await this.userLoginRepository.updateAsync(existingAccountLogin);
     } else {
       existingAccountLogin = await this.userLoginRepository.createAysnc(
         _const.PLATFORMS.REDDIT,
         user.id,
-        "",
-        "",
-        "",
+        '',
+        '',
+        '',
         access_token,
-        new Date(Date.now() + expires_in * 1000)
+        new Date(Date.now() + expires_in * 1000),
       );
     }
 
@@ -178,27 +200,29 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
         isGold: userData.is_gold,
         verified: userData.verified,
         created: userData.created,
-        profileImage: userData.snoovatar_img || userData.icon_img || ''
-      }
+        profileImage: userData.snoovatar_img || userData.icon_img || '',
+      },
     };
   }
 
   private async fetchToken(code: string) {
-    const credentials = Buffer.from(`${configs.reddit.clientId}:${configs.reddit.clientSecret}`).toString('base64');
+    const credentials = Buffer.from(
+      `${configs.reddit.clientId}:${configs.reddit.clientSecret}`,
+    ).toString('base64');
 
     const response = await axios.post(
       `https://www.reddit.com/api/v1/access_token`,
       new URLSearchParams({
         code,
         grant_type: 'authorization_code',
-        redirect_uri: configs.reddit.redirectUri
+        redirect_uri: configs.reddit.redirectUri,
       }),
       {
         headers: {
           Authorization: `Basic ${credentials}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      }
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      },
     );
 
     return response.data;
@@ -206,7 +230,7 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
 
   private async fetchUserData(accessToken: string) {
     const response = await axios.get(`https://oauth.reddit.com/api/v1/me`, {
-      headers: { Authorization: `Bearer ${accessToken}` }
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     const data = response.data;
@@ -214,7 +238,7 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
     return {
       id: data.id,
       name: data.name,
-      total_karma: data.total_karma ?? (data.link_karma + data.comment_karma),
+      total_karma: data.total_karma ?? data.link_karma + data.comment_karma,
       is_employee: data.is_employee,
       is_gold: data.is_gold,
       verified: data.verified,
@@ -225,13 +249,19 @@ export class RedditConnectCallbackQueryHandler implements ICommandHandler<Reddit
   }
 
   private async validateState(state: string): Promise<DataProtectionKey> {
-    const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
-    if (!dataProtectionKey) throw new ApplicationException('Invalid state parameter');
-    if (new Date(dataProtectionKey.createdOn.getTime() + dataProtectionKey.expiresIn * 1000) < new Date()) {
+    const dataProtectionKey =
+      await this.dataProtectionKeyRepository.getByKeyAsync(state);
+    if (!dataProtectionKey)
+      throw new ApplicationException('Invalid state parameter');
+    if (
+      new Date(
+        dataProtectionKey.createdOn.getTime() +
+          dataProtectionKey.expiresIn * 1000,
+      ) < new Date()
+    ) {
       throw new ApplicationException('State parameter has expired');
     }
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
     return dataProtectionKey;
   }
-
 }

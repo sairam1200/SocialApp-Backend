@@ -6,7 +6,7 @@ export type SnapchatUserDataType = {
   display_name: string;
   profile_image?: string;
   external_id?: string;
-}
+};
 
 export class SnapchatProfileModel {
   @ApiProperty()

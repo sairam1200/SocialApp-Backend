@@ -1,5 +1,5 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
+import { Inject, Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
@@ -7,24 +7,27 @@ import {
   WebSocketGateway,
   WebSocketServer,
   OnGatewayConnection,
-  OnGatewayDisconnect
-} from "@nestjs/websockets";
+  OnGatewayDisconnect,
+} from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import _const from "../../../core/utils/const";
-import { NotificationModel } from "../../../domain/contracts/notification.model";
-import { INotificationService } from "../../../domain/services/inotification.service";
-import logger from "../../../core/utils/winston.util";
-import { BaseGateway } from "./base.gateway";
+import _const from '../../../core/utils/const';
+import { NotificationModel } from '../../../domain/contracts/notification.model';
+import { INotificationService } from '../../../domain/services/inotification.service';
+import logger from '../../../core/utils/winston.util';
+import { BaseGateway } from './base.gateway';
 
 @Injectable()
 @WebSocketGateway({
   namespace: '/notifications',
   cors: {
     origin: '*',
-    credentials: true
-  }
+    credentials: true,
+  },
 })
-export class NotificationGateway extends BaseGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class NotificationGateway
+  extends BaseGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -35,7 +38,7 @@ export class NotificationGateway extends BaseGateway implements OnGatewayConnect
   constructor(
     jwtService: JwtService,
     @Inject(_const.INOTIFICATION_SERVICE)
-    private readonly notificationService: INotificationService
+    private readonly notificationService: INotificationService,
   ) {
     super(jwtService);
   }
@@ -44,8 +47,14 @@ export class NotificationGateway extends BaseGateway implements OnGatewayConnect
     const authResult = await this.authenticateClient(client);
 
     if (!authResult) {
-      logger.warn(`[${this.gatewayName}] Failed to authenticate connection from ${client.handshake.address}`);
-      this.emitError(client, 'AUTHENTICATION_FAILED', 'Invalid or missing authentication token');
+      logger.warn(
+        `[${this.gatewayName}] Failed to authenticate connection from ${client.handshake.address}`,
+      );
+      this.emitError(
+        client,
+        'AUTHENTICATION_FAILED',
+        'Invalid or missing authentication token',
+      );
       client.disconnect();
       return;
     }
@@ -62,7 +71,9 @@ export class NotificationGateway extends BaseGateway implements OnGatewayConnect
     this.connectedUsers.get(userId)!.add(client.id);
 
     client.emit('connected', { connectedUserId: userId });
-    logger.info(`[${this.gatewayName}] User ${userId} connected (socket: ${client.id})`);
+    logger.info(
+      `[${this.gatewayName}] User ${userId} connected (socket: ${client.id})`,
+    );
   }
 
   async handleDisconnect(client: Socket) {
@@ -75,7 +86,9 @@ export class NotificationGateway extends BaseGateway implements OnGatewayConnect
           this.connectedUsers.delete(userId);
         }
       }
-      logger.info(`[${this.gatewayName}] User ${userId} disconnected (socket: ${client.id})`);
+      logger.info(
+        `[${this.gatewayName}] User ${userId} disconnected (socket: ${client.id})`,
+      );
     }
   }
 
@@ -83,7 +96,9 @@ export class NotificationGateway extends BaseGateway implements OnGatewayConnect
   handleJoin(@MessageBody() userId: string, @ConnectedSocket() client: Socket) {
     if (!this.validateUserId(client, userId)) {
       this.emitError(client, 'UNAUTHORIZED', 'Cannot join other user rooms');
-      logger.warn(`[${this.gatewayName}] User ${client.data.userId} attempted to join room ${userId}`);
+      logger.warn(
+        `[${this.gatewayName}] User ${client.data.userId} attempted to join room ${userId}`,
+      );
       return;
     }
 
@@ -106,28 +121,51 @@ export class NotificationGateway extends BaseGateway implements OnGatewayConnect
   @SubscribeMessage('mark-as-read')
   async handleMarkAsRead(
     @MessageBody() payload: { notificationId: string },
-    @ConnectedSocket() client: Socket
+    @ConnectedSocket() client: Socket,
   ) {
     const userId = client.data.userId;
 
     if (!userId) {
       this.emitError(client, 'UNAUTHORIZED', 'Not authenticated');
-      logger.warn(`[${this.gatewayName}] Unauthorized mark-as-read attempt from socket ${client.id}`);
+      logger.warn(
+        `[${this.gatewayName}] Unauthorized mark-as-read attempt from socket ${client.id}`,
+      );
       return;
     }
 
-    if (!payload?.notificationId || typeof payload.notificationId !== 'string') {
-      this.emitError(client, 'INVALID_PAYLOAD', 'notificationId is required and must be a string');
+    if (
+      !payload?.notificationId ||
+      typeof payload.notificationId !== 'string'
+    ) {
+      this.emitError(
+        client,
+        'INVALID_PAYLOAD',
+        'notificationId is required and must be a string',
+      );
       return;
     }
 
     try {
-      await this.notificationService.markAsReadAsync(payload.notificationId, userId);
-      client.emit('mark-as-read:success', { notificationId: payload.notificationId });
-      logger.debug(`[${this.gatewayName}] Notification ${payload.notificationId} marked as read by user ${userId}`);
+      await this.notificationService.markAsReadAsync(
+        payload.notificationId,
+        userId,
+      );
+      client.emit('mark-as-read:success', {
+        notificationId: payload.notificationId,
+      });
+      logger.debug(
+        `[${this.gatewayName}] Notification ${payload.notificationId} marked as read by user ${userId}`,
+      );
     } catch (error) {
-      logger.error(`[${this.gatewayName}] Error marking notification as read`, error);
-      this.emitError(client, 'INTERNAL_ERROR', 'Failed to mark notification as read');
+      logger.error(
+        `[${this.gatewayName}] Error marking notification as read`,
+        error,
+      );
+      this.emitError(
+        client,
+        'INTERNAL_ERROR',
+        'Failed to mark notification as read',
+      );
     }
   }
 
@@ -137,32 +175,49 @@ export class NotificationGateway extends BaseGateway implements OnGatewayConnect
 
     if (!userId) {
       this.emitError(client, 'UNAUTHORIZED', 'Not authenticated');
-      logger.warn(`[${this.gatewayName}] Unauthorized mark-all-as-read attempt from socket ${client.id}`);
+      logger.warn(
+        `[${this.gatewayName}] Unauthorized mark-all-as-read attempt from socket ${client.id}`,
+      );
       return;
     }
 
     try {
       await this.notificationService.markAllAsRead(userId);
       client.emit('mark-all-as-read:success');
-      logger.debug(`[${this.gatewayName}] All notifications marked as read by user ${userId}`);
+      logger.debug(
+        `[${this.gatewayName}] All notifications marked as read by user ${userId}`,
+      );
     } catch (error) {
-      logger.error(`[${this.gatewayName}] Error marking all notifications as read`, error);
-      this.emitError(client, 'INTERNAL_ERROR', 'Failed to mark all notifications as read');
+      logger.error(
+        `[${this.gatewayName}] Error marking all notifications as read`,
+        error,
+      );
+      this.emitError(
+        client,
+        'INTERNAL_ERROR',
+        'Failed to mark all notifications as read',
+      );
     }
   }
 
-  emitFollowUpdated(userId: string, payload: {
-    targetUserId: string;
-    viewerUserId: string;
-    isFollowing: boolean;
-    targetFollowersCount: number;
-    viewerFollowingCount: number;
-  }) {
+  emitFollowUpdated(
+    userId: string,
+    payload: {
+      targetUserId: string;
+      viewerUserId: string;
+      isFollowing: boolean;
+      targetFollowersCount: number;
+      viewerFollowingCount: number;
+    },
+  ) {
     this.safeEmit(userId, 'follow.updated', payload);
   }
 
   isUserConnected(userId: string): boolean {
-    return this.connectedUsers.has(userId) && this.connectedUsers.get(userId)!.size > 0;
+    return (
+      this.connectedUsers.has(userId) &&
+      this.connectedUsers.get(userId)!.size > 0
+    );
   }
 
   getConnectedUserCount(): number {

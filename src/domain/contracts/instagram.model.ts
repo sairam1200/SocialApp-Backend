@@ -12,7 +12,7 @@ export type InstagramUserDataType = {
   followers_count?: number;
   follows_count?: number;
   account_type?: string;
-}
+};
 
 export class InstagramProfileModel {
   @ApiProperty()

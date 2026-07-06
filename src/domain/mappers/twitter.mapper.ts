@@ -1,8 +1,15 @@
-import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { TwitterProfileModel, UserLikedTweetModel, UserTweetModel } from "../contracts/twitter.model";
-import { UserContent } from "domain/entities";
+import { LinkedAccount } from '../entities/linkedAccount.entity';
+import {
+  TwitterProfileModel,
+  UserLikedTweetModel,
+  UserTweetModel,
+} from '../contracts/twitter.model';
+import { UserContent } from 'domain/entities';
 
-export function mapToTwitterProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): TwitterProfileModel {
+export function mapToTwitterProfileModel(
+  data: LinkedAccount,
+  includeSensitiveFields: boolean = false,
+): TwitterProfileModel {
   return {
     id: data.id,
     userId: data.userId,
@@ -28,7 +35,7 @@ export function mapToTwitterProfileModel(data: LinkedAccount, includeSensitiveFi
   } as TwitterProfileModel;
 }
 
-export function mapToUserTweetModel(data: UserContent): UserTweetModel{
+export function mapToUserTweetModel(data: UserContent): UserTweetModel {
   return {
     id: data.id,
     type: 'tweet',
@@ -39,7 +46,9 @@ export function mapToUserTweetModel(data: UserContent): UserTweetModel{
     createdAt: data.publishedAt || data.metaData?.created_at,
     publicMetrics: data.engagement || data.metaData?.public_metrics,
     entities: data.metaData?.entities,
-    media: data.media || (data.metaData?.attachments ? [data.metaData.attachments] : []),
+    media:
+      data.media ||
+      (data.metaData?.attachments ? [data.metaData.attachments] : []),
   } as UserTweetModel;
 }
 
@@ -54,6 +63,8 @@ export function mapToLikedTweetModel(data: UserContent): UserLikedTweetModel {
     createdAt: data.publishedAt || data.metaData?.created_at,
     publicMetrics: data.engagement || data.metaData?.public_metrics,
     entities: data.metaData?.entities,
-    media: data.media || (data.metaData?.attachments ? [data.metaData.attachments] : []),
+    media:
+      data.media ||
+      (data.metaData?.attachments ? [data.metaData.attachments] : []),
   } as UserLikedTweetModel;
 }

@@ -12,14 +12,18 @@ export class ThreadsDisconnectCommand {
 
 @CommandHandler(ThreadsDisconnectCommand)
 export class ThreadsDisconnectCommandHandler
-  implements ICommandHandler<ThreadsDisconnectCommand> {
+  implements ICommandHandler<ThreadsDisconnectCommand>
+{
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,
-  ) { }
+  ) {}
 
   public async execute(command: ThreadsDisconnectCommand): Promise<void> {
     const userId = HttpContext.getCurrentUserId;
-    await this.disconnectService.disconnectPlatformAsync(userId, _const.PLATFORMS.THREADS);
+    await this.disconnectService.disconnectPlatformAsync(
+      userId,
+      _const.PLATFORMS.THREADS,
+    );
   }
 }

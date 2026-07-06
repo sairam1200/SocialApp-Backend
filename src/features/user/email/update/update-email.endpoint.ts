@@ -1,9 +1,16 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { UpdateEmailCommand } from "./update-email.handler";
-import { ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { AuthenticatedAccountGuard } from "../../../../core/passport";
-import { Controller, HttpStatus, Patch, Query, Res, UseGuards } from "@nestjs/common";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { UpdateEmailCommand } from './update-email.handler';
+import { ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AuthenticatedAccountGuard } from '../../../../core/passport';
+import {
+  Controller,
+  HttpStatus,
+  Patch,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 
 @ApiTags('Account')
 @Controller({
@@ -11,9 +18,7 @@ import { Controller, HttpStatus, Patch, Query, Res, UseGuards } from "@nestjs/co
   version: '1',
 })
 export class UpdateEmailController {
-
-  constructor(private readonly queryBus: CommandBus) {
-  }
+  constructor(private readonly queryBus: CommandBus) {}
 
   @Patch('email/update')
   @UseGuards(AuthenticatedAccountGuard)
@@ -24,10 +29,10 @@ export class UpdateEmailController {
   @ApiQuery({ name: 'email', required: true, type: String })
   public async Update(
     @Res() res: Response,
-    @Query('email') email?: string
+    @Query('email') email?: string,
   ): Promise<Response> {
     await this.queryBus.execute(new UpdateEmailCommand({ email }));
-    res.status(HttpStatus.NO_CONTENT).send({})
+    res.status(HttpStatus.NO_CONTENT).send({});
     return res;
   }
 }

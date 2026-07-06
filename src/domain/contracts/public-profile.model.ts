@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 import { LinkedAccountModel } from './linked-account.model';
 
 export class PublicProfileModel {
@@ -13,7 +13,7 @@ export class PublicProfileModel {
 
   @ApiProperty()
   lastName: string;
-  
+
   @ApiProperty()
   DisplayName: string;
 
@@ -31,9 +31,9 @@ export class PublicProfileModel {
 
   @ApiProperty({ default: 0 })
   connectedPlatformsCount: number;
-  
-   @ApiProperty({ required: false, type: [LinkedAccountModel] })
-linkedAccounts?: LinkedAccountModel[];
+
+  @ApiProperty({ required: false, type: [LinkedAccountModel] })
+  linkedAccounts?: LinkedAccountModel[];
 
   @ApiProperty({ default: 0 })
   totalPosts: number;

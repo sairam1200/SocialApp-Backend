@@ -4,7 +4,6 @@ import { UserTopic } from './userTopic.entity';
 
 @Entity({ name: 'topics' })
 export class Topic extends BaseEntity {
-
   @Column({ unique: true })
   name: string;
 
@@ -17,7 +16,7 @@ export class Topic extends BaseEntity {
   @Column({ default: true })
   isActive: boolean;
 
-  @OneToMany(() => UserTopic, userTopic => userTopic.topic)
+  @OneToMany(() => UserTopic, (userTopic) => userTopic.topic)
   userTopics: UserTopic[];
 
   constructor(request: Partial<Topic> = {}) {

@@ -12,15 +12,18 @@ export class PinterestDisconnectCommand {
 
 @CommandHandler(PinterestDisconnectCommand)
 export class PinterestDisconnectCommandHandler
-  implements ICommandHandler<PinterestDisconnectCommand> {
+  implements ICommandHandler<PinterestDisconnectCommand>
+{
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,
-  ) { }
+  ) {}
 
   public async execute(command: PinterestDisconnectCommand): Promise<void> {
     const userId = HttpContext.getCurrentUserId;
-    await this.disconnectService.disconnectPlatformAsync(userId, _const.PLATFORMS.PINTEREST);
+    await this.disconnectService.disconnectPlatformAsync(
+      userId,
+      _const.PLATFORMS.PINTEREST,
+    );
   }
 }
-

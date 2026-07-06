@@ -37,7 +37,9 @@ export class YoutubePublishingService {
       return cryptoUtils.decrypt(account.accessToken);
     }
 
-    logger.info(`[YoutubePublishing] Token expired for channel ${account.channelId}, refreshing...`);
+    logger.info(
+      `[YoutubePublishing] Token expired for channel ${account.channelId}, refreshing...`,
+    );
     const refreshToken = cryptoUtils.decrypt(account.refreshToken);
 
     try {
@@ -71,7 +73,9 @@ export class YoutubePublishingService {
   ): Promise<{ youtubeVideoId: string; youtubeUrl: string }> {
     const accessToken = await this.ensureValidAccessToken(account);
 
-    logger.info(`[YOUTUBE UPLOAD START] videoId=${video.id} title="${video.title}" r2Key=${r2Key} fileSize=${fileSize}`);
+    logger.info(
+      `[YOUTUBE UPLOAD START] videoId=${video.id} title="${video.title}" r2Key=${r2Key} fileSize=${fileSize}`,
+    );
 
     onProgress?.(10, 'Initiating resumable upload...');
     const uploadUrl = await this.initResumableUpload(accessToken, video);
@@ -80,15 +84,26 @@ export class YoutubePublishingService {
     logger.info(`[YOUTUBE UPLOAD] Upload Started`);
 
     onProgress?.(30, 'Uploading video to YouTube...');
-    const youtubeVideoId = await this.streamUploadToYouTube(uploadUrl, accessToken, r2Key, fileSize, onProgress);
+    const youtubeVideoId = await this.streamUploadToYouTube(
+      uploadUrl,
+      accessToken,
+      r2Key,
+      fileSize,
+      onProgress,
+    );
 
     const youtubeUrl = `https://youtube.com/watch?v=${youtubeVideoId}`;
-    logger.info(`[YOUTUBE UPLOAD COMPLETED] videoId=${video.id} youtubeVideoId=${youtubeVideoId}`);
+    logger.info(
+      `[YOUTUBE UPLOAD COMPLETED] videoId=${video.id} youtubeVideoId=${youtubeVideoId}`,
+    );
 
     return { youtubeVideoId, youtubeUrl };
   }
 
-  private async initResumableUpload(accessToken: string, video: YoutubeVideo): Promise<string> {
+  private async initResumableUpload(
+    accessToken: string,
+    video: YoutubeVideo,
+  ): Promise<string> {
     const metadata = {
       snippet: {
         title: video.title,
@@ -96,7 +111,9 @@ export class YoutubePublishingService {
         tags: video.tags || [],
       },
       status: {
-        privacyStatus: video.publishAt ? 'private' : (video.visibility || 'public'),
+        privacyStatus: video.publishAt
+          ? 'private'
+          : video.visibility || 'public',
         publishAt: video.publishAt ? video.publishAt.toISOString() : undefined,
       },
     };
@@ -108,7 +125,7 @@ export class YoutubePublishingService {
         hostname: 'www.googleapis.com',
         path: '/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json; charset=UTF-8',
           'X-Upload-Content-Length': '0',
           'X-Upload-Content-Type': 'video/*',
@@ -118,19 +135,35 @@ export class YoutubePublishingService {
       });
 
       req.on('response', (res) => {
-        if ((res.statusCode === 200 || res.statusCode === 201) && res.headers.location) {
+        if (
+          (res.statusCode === 200 || res.statusCode === 201) &&
+          res.headers.location
+        ) {
           resolve(res.headers.location);
         } else {
           let body = '';
           res.on('data', (chunk: Buffer) => (body += chunk.toString()));
           res.on('end', () => {
-            reject(new YoutubeUploadError(`YouTube resumable init failed (${res.statusCode}): ${body.substring(0, 300)}`));
+            reject(
+              new YoutubeUploadError(
+                `YouTube resumable init failed (${res.statusCode}): ${body.substring(0, 300)}`,
+              ),
+            );
           });
         }
       });
 
-      req.on('error', (err) => reject(new YoutubeUploadError(`Resumable init connection error: ${err.message}`)));
-      req.on('timeout', () => { req.destroy(); reject(new YoutubeUploadError('Resumable init timed out')); });
+      req.on('error', (err) =>
+        reject(
+          new YoutubeUploadError(
+            `Resumable init connection error: ${err.message}`,
+          ),
+        ),
+      );
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new YoutubeUploadError('Resumable init timed out'));
+      });
 
       req.write(metadataBody);
       req.end();
@@ -144,7 +177,7 @@ export class YoutubePublishingService {
     fileSize: number | undefined,
     onProgress?: (progress: number, message: string) => void,
   ): Promise<string> {
-    const r2Stream = await this.r2Storage.getStream(r2Key);
+    const { stream: r2Stream } = await this.r2Storage.getStream(r2Key);
 
     let buffer = Buffer.alloc(0);
     let bytesUploaded = 0;
@@ -154,8 +187,14 @@ export class YoutubePublishingService {
       endOfStream: boolean,
       settle: (err?: any, result?: string) => void,
     ): Promise<boolean> => {
-      while (buffer.length >= CHUNK_SIZE || (endOfStream && buffer.length > 0)) {
-        const sliceSize = endOfStream && buffer.length < CHUNK_SIZE ? buffer.length : CHUNK_SIZE;
+      while (
+        buffer.length >= CHUNK_SIZE ||
+        (endOfStream && buffer.length > 0)
+      ) {
+        const sliceSize =
+          endOfStream && buffer.length < CHUNK_SIZE
+            ? buffer.length
+            : CHUNK_SIZE;
         const slice = buffer.subarray(0, sliceSize);
         buffer = buffer.subarray(sliceSize);
 
@@ -164,8 +203,11 @@ export class YoutubePublishingService {
         const endByte = bytesUploaded + slice.length - 1;
 
         const videoId = await this.uploadChunk(
-          uploadUrl, accessToken, slice,
-          startByte, endByte,
+          uploadUrl,
+          accessToken,
+          slice,
+          startByte,
+          endByte,
           fileSize || bytesUploaded + slice.length,
           isFinal,
         );
@@ -175,8 +217,15 @@ export class YoutubePublishingService {
         if (fileSize && fileSize > 0) {
           const pct = Math.round((bytesUploaded / fileSize) * 100);
           const elapsedSec = (Date.now() - uploadStartTime) / 1000;
-          const speed = elapsedSec > 0 ? parseFloat((bytesUploaded / elapsedSec / (1024 * 1024)).toFixed(2)) : 0;
-          logger.info(`[YOUTUBE UPLOAD] Progress: ${pct}% Speed: ${speed} MB/s`);
+          const speed =
+            elapsedSec > 0
+              ? parseFloat(
+                  (bytesUploaded / elapsedSec / (1024 * 1024)).toFixed(2),
+                )
+              : 0;
+          logger.info(
+            `[YOUTUBE UPLOAD] Progress: ${pct}% Speed: ${speed} MB/s`,
+          );
           const progressValue = Math.min(30 + Math.round(pct * 0.55), 85);
           onProgress?.(progressValue, `Uploading... ${pct}%`);
         }
@@ -230,7 +279,11 @@ export class YoutubePublishingService {
             flushing = false;
           }
           if (!settled) {
-            settle(new YoutubeUploadError('Upload finished but no video ID received'));
+            settle(
+              new YoutubeUploadError(
+                'Upload finished but no video ID received',
+              ),
+            );
           }
         };
         doEndFlush();
@@ -262,7 +315,7 @@ export class YoutubePublishingService {
         hostname: url.hostname,
         path: url.pathname + url.search,
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'video/*',
           'Content-Length': String(chunkData.length),
           'Content-Range': contentRange,
@@ -280,20 +333,36 @@ export class YoutubePublishingService {
               const parsed = JSON.parse(body);
               resolve(parsed.id);
             } catch {
-              reject(new YoutubeUploadError('YouTube upload response parse error'));
+              reject(
+                new YoutubeUploadError('YouTube upload response parse error'),
+              );
             }
           } else {
             if (res.statusCode === 429 || res.statusCode === 403) {
-              reject(new YoutubeRateLimitError('YouTube upload rate limit exceeded'));
+              reject(
+                new YoutubeRateLimitError('YouTube upload rate limit exceeded'),
+              );
             } else {
-              reject(new YoutubeUploadError(`YouTube upload failed (${res.statusCode}): ${body.substring(0, 500)}`));
+              reject(
+                new YoutubeUploadError(
+                  `YouTube upload failed (${res.statusCode}): ${body.substring(0, 500)}`,
+                ),
+              );
             }
           }
         });
-        res.on('error', (err) => reject(new YoutubeUploadError(`Upload response error: ${err.message}`)));
+        res.on('error', (err) =>
+          reject(
+            new YoutubeUploadError(`Upload response error: ${err.message}`),
+          ),
+        );
       });
 
-      req.on('error', (err) => reject(new YoutubeUploadError(`Upload connection error: ${err.message}`)));
+      req.on('error', (err) =>
+        reject(
+          new YoutubeUploadError(`Upload connection error: ${err.message}`),
+        ),
+      );
 
       req.write(chunkData);
       req.end();
@@ -305,7 +374,10 @@ export class YoutubePublishingService {
       await this.r2Storage.deleteFile(r2Key);
       logger.info(`[YoutubePublishing] Deleted from R2: ${r2Key}`);
     } catch (err) {
-      logger.warn(`[YoutubePublishing] Failed to delete from R2: ${r2Key}`, err);
+      logger.warn(
+        `[YoutubePublishing] Failed to delete from R2: ${r2Key}`,
+        err,
+      );
     }
   }
 }

@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
 export type GoogleUserDataType = {
   id: string;
@@ -9,13 +9,13 @@ export type GoogleUserDataType = {
   picture: string;
   locale: string;
   hd?: string;
-}
+};
 
 export type YoutubeChannelDataType = {
   kind: string;
   etag: string;
   items: YoutubeChannelModel[];
-}
+};
 
 interface YoutubeChannelModel {
   kind: string;
@@ -38,8 +38,8 @@ interface YoutubeChannelModel {
   };
   contentDetails: {
     relatedPlaylists: {
-      uploads: string; 
-      likes: string;// Playlist ID for the user's uploaded videos
+      uploads: string;
+      likes: string; // Playlist ID for the user's uploaded videos
     };
   };
   brandingSettings: {
@@ -136,7 +136,7 @@ export type YouTubeSearchResponseDataType = {
   items: any[];
   nextPageToken?: string;
   prevPageToken?: string;
-}
+};
 
 export class YoutubeSearchResponseModel {
   query: string;
@@ -193,6 +193,6 @@ export class YouTubeContentModel {
 
   @ApiProperty({ required: false })
   duration?: string;
-  @ApiProperty({required: false})
+  @ApiProperty({ required: false })
   shorts?: boolean;
 }

@@ -1,12 +1,12 @@
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import { ApiProperty } from "@nestjs/swagger";
-import _const from "../../../../core/utils/const";
-import { UserType } from "../../../../domain/enums";
-import { ForbiddenException } from "@nestjs/common";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { UserNotFoundException } from "../../../../core/exceptions";
-import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
+import _const from '../../../../core/utils/const';
+import { UserType } from '../../../../domain/enums';
+import { ForbiddenException } from '@nestjs/common';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { UserNotFoundException } from '../../../../core/exceptions';
+import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
 
 export class UpdateTypeModel {
   @ApiProperty()
@@ -30,14 +30,19 @@ export class UpdateTypeCommand {
 
 const updateTypeValidations = Joi.object({
   id: Joi.string().required(),
-  type: Joi.string().valid(...Object.values(UserType)).required(),
+  type: Joi.string()
+    .valid(...Object.values(UserType))
+    .required(),
 });
 
 @CommandHandler(UpdateTypeCommand)
-export class UpdateTypeCommandHandler implements ICommandHandler<UpdateTypeCommand> {
+export class UpdateTypeCommandHandler
+  implements ICommandHandler<UpdateTypeCommand>
+{
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
-  ) { }
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+  ) {}
 
   public async execute(command: UpdateTypeCommand): Promise<void> {
     await updateTypeValidations.validateAsync(command.model);

@@ -1,36 +1,38 @@
-import _const from "../../core/utils/const";
-import { Brackets, Repository } from "typeorm";
-import { InjectRepository } from "@nestjs/typeorm";
-import { ManualProfile } from "../../domain/entities";
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { IManualProfileRepository } from "../../domain/repositories";
-import { HttpContext } from "../../core/middlewares/httpContext.middleware";
+import _const from '../../core/utils/const';
+import { Brackets, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { ManualProfile } from '../../domain/entities';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { IManualProfileRepository } from '../../domain/repositories';
+import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 
 @Injectable()
 export class ManualProfileRepository implements IManualProfileRepository {
-
   constructor(
     @InjectRepository(ManualProfile)
-    private readonly manualProfileContext: Repository<ManualProfile>
-  ) { }
+    private readonly manualProfileContext: Repository<ManualProfile>,
+  ) {}
 
   public async getByUserIdAsync(userId: string): Promise<ManualProfile[]> {
     return await this.manualProfileContext.find({
       where: { userId },
-      order: { displayOrder: 'ASC' }
+      order: { displayOrder: 'ASC' },
     });
   }
 
   public async getByIdAsync(id: string): Promise<ManualProfile | null> {
     return await this.manualProfileContext.findOne({
-      where: { id }
+      where: { id },
     });
   }
 
-  public async getByUserIdAndPlatformAsync(userId: string, platform: string): Promise<ManualProfile> {
+  public async getByUserIdAndPlatformAsync(
+    userId: string,
+    platform: string,
+  ): Promise<ManualProfile> {
     return await this.manualProfileContext.findOne({
-      where: { platform, userId }
-    })
+      where: { platform, userId },
+    });
   }
 
   public async updateAsync(manualProfile: ManualProfile): Promise<void> {
@@ -57,7 +59,9 @@ export class ManualProfileRepository implements IManualProfileRepository {
     await this.normalizeDisplayOrdersAsync(userId);
   }
 
-  public async createAsync(manualProfile: Partial<ManualProfile>): Promise<ManualProfile> {
+  public async createAsync(
+    manualProfile: Partial<ManualProfile>,
+  ): Promise<ManualProfile> {
     if (HttpContext.user) {
       manualProfile.setCurrentUser(HttpContext.getCurrentUserId);
     }
@@ -65,7 +69,9 @@ export class ManualProfileRepository implements IManualProfileRepository {
     if (manualProfile.displayOrder == 0 || manualProfile.displayOrder == null) {
       const countResult = await this.manualProfileContext
         .createQueryBuilder('manualProfile')
-        .where('manualProfile.userId = :userId', { userId: manualProfile.userId })
+        .where('manualProfile.userId = :userId', {
+          userId: manualProfile.userId,
+        })
         .getCount();
 
       manualProfile.displayOrder = countResult + 1;
@@ -74,8 +80,13 @@ export class ManualProfileRepository implements IManualProfileRepository {
     return await this.manualProfileContext.save(manualProfile);
   }
 
-  public async reorderAsync(id: string, newDisplayOrder: number): Promise<void> {
-    const profileToMove = await this.manualProfileContext.findOne({ where: { id } });
+  public async reorderAsync(
+    id: string,
+    newDisplayOrder: number,
+  ): Promise<void> {
+    const profileToMove = await this.manualProfileContext.findOne({
+      where: { id },
+    });
 
     if (!profileToMove) {
       throw new NotFoundException(`ManualProfile not found`);
@@ -106,10 +117,13 @@ export class ManualProfileRepository implements IManualProfileRepository {
         .update()
         .set({ displayOrder: () => 'displayOrder + 1' })
         .where('userId = :userId', { userId })
-        .andWhere('displayOrder >= :targetDisplayOrder AND displayOrder < :oldDisplayOrder', {
-          targetDisplayOrder,
-          oldDisplayOrder,
-        })
+        .andWhere(
+          'displayOrder >= :targetDisplayOrder AND displayOrder < :oldDisplayOrder',
+          {
+            targetDisplayOrder,
+            oldDisplayOrder,
+          },
+        )
         .andWhere('id != :id', { id })
         .execute();
     } else {
@@ -118,10 +132,13 @@ export class ManualProfileRepository implements IManualProfileRepository {
         .update()
         .set({ displayOrder: () => 'displayOrder - 1' })
         .where('userId = :userId', { userId })
-        .andWhere('displayOrder <= :targetDisplayOrder AND displayOrder > :oldDisplayOrder', {
-          targetDisplayOrder,
-          oldDisplayOrder,
-        })
+        .andWhere(
+          'displayOrder <= :targetDisplayOrder AND displayOrder > :oldDisplayOrder',
+          {
+            targetDisplayOrder,
+            oldDisplayOrder,
+          },
+        )
         .andWhere('id != :id', { id })
         .execute();
     }
@@ -133,10 +150,9 @@ export class ManualProfileRepository implements IManualProfileRepository {
   }
 
   private async normalizeDisplayOrdersAsync(userId: string): Promise<void> {
-
     const profiles = await this.manualProfileContext.find({
       where: { userId },
-      order: { displayOrder: 'ASC' }
+      order: { displayOrder: 'ASC' },
     });
 
     for (let i = 0; i < profiles.length; i++) {
@@ -151,7 +167,7 @@ export class ManualProfileRepository implements IManualProfileRepository {
   public async searchAsync(
     page: number,
     pageSize: number,
-    searchTerm?: string
+    searchTerm?: string,
   ): Promise<[ManualProfile[], number]> {
     if (!searchTerm || !searchTerm.trim()) {
       return [[], 0];
@@ -161,30 +177,29 @@ export class ManualProfileRepository implements IManualProfileRepository {
     const take = pageSize;
 
     const queryBuilder = this.manualProfileContext
-      .createQueryBuilder("manualProfile")
-      .leftJoin("manualProfile.user", "user")
+      .createQueryBuilder('manualProfile')
+      .leftJoin('manualProfile.user', 'user')
       .addSelect([
-        "user.id",
-        "user.userName",
-        "user.firstName",
-        "user.lastName",
-        "user.profileImage"
+        'user.id',
+        'user.userName',
+        'user.firstName',
+        'user.lastName',
+        'user.profileImage',
       ])
-      .where("manualProfile.url IS NOT NULL")
-      .andWhere("manualProfile.url NOT ILIKE ANY(:platforms)", {
-        platforms: _const.KNOWN_PLATFORMS_URIS.map(p => `%${p}%`),
+      .where('manualProfile.url IS NOT NULL')
+      .andWhere('manualProfile.url NOT ILIKE ANY(:platforms)', {
+        platforms: _const.KNOWN_PLATFORMS_URIS.map((p) => `%${p}%`),
       })
       .andWhere(
-        new Brackets(qb => {
+        new Brackets((qb) => {
           qb.where(
             `REGEXP_REPLACE(manualProfile.url, '^.*(?:/user/|/@|/u/|/c/|/)?([^/?#]+).*$','\\1') ILIKE :searchTerm`,
-            { searchTerm }
-          )
-            .orWhere(
-              `REGEXP_REPLACE(manualProfile.url, '^https?://([^/]+).*$','\\1') ILIKE :searchTerm`,
-              { searchTerm }
-            );
-        })
+            { searchTerm },
+          ).orWhere(
+            `REGEXP_REPLACE(manualProfile.url, '^https?://([^/]+).*$','\\1') ILIKE :searchTerm`,
+            { searchTerm },
+          );
+        }),
       )
       .skip(skip)
       .take(take);

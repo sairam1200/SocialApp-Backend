@@ -2,35 +2,59 @@ import * as bcrypt from 'bcrypt';
 import configs from '../../configs';
 import _const from '../../core/utils/const';
 import redis from '../../core/utils/redis.util';
-import { InjectRepository } from "@nestjs/typeorm";
-import { Like, Repository, SelectQueryBuilder } from "typeorm";
+import { InjectRepository } from '@nestjs/typeorm';
+import { Like, Repository, SelectQueryBuilder } from 'typeorm';
 import { cryptoUtils } from '../../core/utils/crypto.util';
-import { User, UserClaim, UserRole, UserBiometric } from '../../domain/entities';
+import {
+  User,
+  UserClaim,
+  UserRole,
+  UserBiometric,
+} from '../../domain/entities';
 import { ProfileImagePrivacy, UserType } from '../../domain/enums';
 import { generateTimestampUUID } from '../../core/utils/time.util';
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
-import { BadRequestException, forwardRef, Inject, Injectable } from "@nestjs/common";
-import { IRoleRepository, IUserRepository, IUserRoleRepository } from '../../domain/repositories';
+import {
+  BadRequestException,
+  forwardRef,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
+import {
+  IRoleRepository,
+  IUserRepository,
+  IUserRoleRepository,
+} from '../../domain/repositories';
 import { SearchUserProjection } from '../../domain/repositories/iuser.repository';
-import { RoleNotFoundException, ClaimAlreadyExistsException, ApplicationException, UserAlreadyExistsException, UserAlreadyInRoleException, ClaimNotFoundException } from "../../core/exceptions";
+import {
+  RoleNotFoundException,
+  ClaimAlreadyExistsException,
+  ApplicationException,
+  UserAlreadyExistsException,
+  UserAlreadyInRoleException,
+  ClaimNotFoundException,
+} from '../../core/exceptions';
 
 @Injectable()
 export class UserRepository implements IUserRepository {
-
   constructor(
     @InjectRepository(User) private readonly userContext: Repository<User>,
-    @InjectRepository(UserClaim) private readonly userClaimContext: Repository<UserClaim>,
-    @InjectRepository(UserBiometric) private readonly userBiometricsContext: Repository<UserBiometric>,
-    @Inject(forwardRef(() => _const.IROLE_REPOSITORY)) private readonly roleRepository: IRoleRepository,
-    @Inject(forwardRef(() => _const.IUSERROLE_REPOSITORY)) private readonly userRoleRepository: IUserRoleRepository
-  ) { }
+    @InjectRepository(UserClaim)
+    private readonly userClaimContext: Repository<UserClaim>,
+    @InjectRepository(UserBiometric)
+    private readonly userBiometricsContext: Repository<UserBiometric>,
+    @Inject(forwardRef(() => _const.IROLE_REPOSITORY))
+    private readonly roleRepository: IRoleRepository,
+    @Inject(forwardRef(() => _const.IUSERROLE_REPOSITORY))
+    private readonly userRoleRepository: IUserRoleRepository,
+  ) {}
 
   public async getSimilarUserNamesAsync(userName: string): Promise<string[]> {
     const users = await this.userContext.find({
       where: { userName: Like(`%${userName}%`) },
       select: ['userName'],
     });
-    return users.map(user => user.userName);
+    return users.map((user) => user.userName);
   }
 
   public async getAsync(): Promise<User[]> {
@@ -38,7 +62,6 @@ export class UserRepository implements IUserRepository {
   }
 
   public async createAsync(user: User, password: string): Promise<User> {
-
     if (await this.getUserByEmailAsync(user.email)) {
       throw new UserAlreadyExistsException(user.email, 'email');
     }
@@ -60,63 +83,90 @@ export class UserRepository implements IUserRepository {
   }
 
   public async updateAsync(user: User): Promise<boolean> {
-
     const existingUserByEmail = await this.getUserByEmailAsync(user.email);
     if (existingUserByEmail && existingUserByEmail.id !== user.id) {
-      throw new UserAlreadyExistsException(user.email, 'email')
+      throw new UserAlreadyExistsException(user.email, 'email');
     }
 
     if (user.userName) {
-      const existingUserByUsername = await this.getUserByNameAsync(user.userName);
+      const existingUserByUsername = await this.getUserByNameAsync(
+        user.userName,
+      );
       if (existingUserByUsername && existingUserByUsername.id !== user.id) {
-        throw new UserAlreadyExistsException(user.userName, 'username')
+        throw new UserAlreadyExistsException(user.userName, 'username');
       }
     }
 
     user.concurrencyStamp = generateTimestampUUID();
     await this.userContext.save(user);
-    const key = redis.getRedisKey<string>(`${user.id}${_const.REDIS.USER.ACCOUNT}`);
+    const key = redis.getRedisKey<string>(
+      `${user.id}${_const.REDIS.USER.ACCOUNT}`,
+    );
     const existingCache = await redis.getFromRedisAsync(key);
     if (existingCache) {
-      await redis.storeInRedisAsync(key, {
-        concurrencyStamp: user.concurrencyStamp,
-        securityStamp: user.securityStamp,
-        useronboardingStep: user.onboardingStep
-        // Add more user account related 
-      }, _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC);
+      await redis.storeInRedisAsync(
+        key,
+        {
+          concurrencyStamp: user.concurrencyStamp,
+          securityStamp: user.securityStamp,
+          useronboardingStep: user.onboardingStep,
+          // Add more user account related
+        },
+        _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC,
+      );
     }
     return true;
   }
 
   public async cacheUserAccountAsync(user: User, ttl?: number): Promise<void> {
-    const key = redis.getRedisKey<string>(`${user.id}${_const.REDIS.USER.ACCOUNT}`);
+    const key = redis.getRedisKey<string>(
+      `${user.id}${_const.REDIS.USER.ACCOUNT}`,
+    );
     const cacheTtl = ttl ?? _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC;
-    await redis.storeInRedisAsync(key, {
-      concurrencyStamp: user.concurrencyStamp,
-      securityStamp: user.securityStamp,
-      // Add more user account related 
-    }, cacheTtl);
+    await redis.storeInRedisAsync(
+      key,
+      {
+        concurrencyStamp: user.concurrencyStamp,
+        securityStamp: user.securityStamp,
+        // Add more user account related
+      },
+      cacheTtl,
+    );
   }
 
   // TODO: Carry out checks before proceeding.
   public async deleteAsync(user: User): Promise<void> {
-    const key = redis.getRedisKey<string>(`${user.id}${_const.REDIS.USER.ACCOUNT}`);
+    const key = redis.getRedisKey<string>(
+      `${user.id}${_const.REDIS.USER.ACCOUNT}`,
+    );
     await redis.removeFromRedisAsync(key);
-    // TODO: Handle proper delete 
+    // TODO: Handle proper delete
     await this.userContext.remove(user);
   }
 
   public async getUserByIdAsync(id: string): Promise<User | null> {
-    return await this.userContext.findOne({ where: { id }, relations: { biometrics: true } });
+    return await this.userContext.findOne({
+      where: { id },
+      relations: { biometrics: true },
+    });
   }
 
   public async getUserByGoogleIdAsync(googleId: string): Promise<User | null> {
-    return await this.userContext.findOne({ where: { googleId }, relations: { biometrics: true } });
+    return await this.userContext.findOne({
+      where: { googleId },
+      relations: { biometrics: true },
+    });
   }
 
-  public async getUserByEmailAsync(email: string, includeNewEmail?: boolean): Promise<User | null> {
+  public async getUserByEmailAsync(
+    email: string,
+    includeNewEmail?: boolean,
+  ): Promise<User | null> {
     const normalizedEmail = email?.toUpperCase();
-    const user = await this.userContext.findOne({ where: { normalizedEmail }, relations: { biometrics: true } });
+    const user = await this.userContext.findOne({
+      where: { normalizedEmail },
+      relations: { biometrics: true },
+    });
 
     if (user || !includeNewEmail) {
       return user;
@@ -131,51 +181,62 @@ export class UserRepository implements IUserRepository {
 
   public async getUserByNameAsync(userName: string): Promise<User | null> {
     const normalizedUserName = userName?.toUpperCase();
-    return await this.userContext.findOne({ where: { normalizedUserName }, relations: ['biometrics'] });
+    return await this.userContext.findOne({
+      where: { normalizedUserName },
+      relations: ['biometrics'],
+    });
   }
 
   public async getEntriesAsync(
     page: number,
     pageSize: number,
     orderBy: string,
-    order: "ASC" | "DESC",
-    searchTerm?: string
+    order: 'ASC' | 'DESC',
+    searchTerm?: string,
   ): Promise<[User[], number]> {
-
     const skip = (page - 1) * pageSize;
     const take = pageSize;
 
     const queryBuilder: SelectQueryBuilder<User> = this.userContext
-      .createQueryBuilder("user")
-      .leftJoinAndSelect("user.biometrics", "biometrics")
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.biometrics', 'biometrics')
       .orderBy(`user.${orderBy}`, order)
       .skip(skip)
       .take(take);
 
     // Apply filter criteria to the query
     if (searchTerm) {
-      queryBuilder.andWhere("user.email LIKE :email", { email: `%${searchTerm}%` });
+      queryBuilder.andWhere('user.email LIKE :email', {
+        email: `%${searchTerm}%`,
+      });
     }
 
     return await queryBuilder.getManyAndCount();
-
   }
 
-  public async getDiscoverCreatorsAsync(page: number, pageSize: number): Promise<[User[], number]> {
+  public async getDiscoverCreatorsAsync(
+    page: number,
+    pageSize: number,
+  ): Promise<[User[], number]> {
     const skip = (page - 1) * pageSize;
     const queryBuilder = this.userContext
-      .createQueryBuilder("user")
-      .leftJoinAndSelect("user.biometrics", "biometrics")
-      .where("user.type = :type", { type: UserType.User })
-      .orderBy("user.registeredOn", "DESC")
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.biometrics', 'biometrics')
+      .where('user.type = :type', { type: UserType.User })
+      .orderBy('user.registeredOn', 'DESC')
       .skip(skip)
       .take(pageSize);
 
     return queryBuilder.getManyAndCount();
   }
 
-  public async searchGlobalAsync(keyword: string, viewerUserId: string, page: number, limit: number): Promise<[SearchUserProjection[], number]> {
-    const escapedKeyword = keyword.replace(/[\\%_]/g, "\\$&");
+  public async searchGlobalAsync(
+    keyword: string,
+    viewerUserId: string,
+    page: number,
+    limit: number,
+  ): Promise<[SearchUserProjection[], number]> {
+    const escapedKeyword = keyword.replace(/[\\%_]/g, '\\$&');
     const pattern = `%${escapedKeyword}%`;
     const visibility = `(user.profilePrivacy = 'Public'
     OR user.id = CAST(:viewerUserId AS uuid)
@@ -186,65 +247,95 @@ export class UserRepository implements IUserRepository {
           AND f."followedId" = user.id AND f.status = 'accepted'
     ))`;
     const matches = `(user.firstName ILIKE :pattern ESCAPE '\\' OR user.lastName ILIKE :pattern ESCAPE '\\' OR user.userName ILIKE :pattern ESCAPE '\\')`;
-    const qb = this.userContext.createQueryBuilder("user")
+    const qb = this.userContext
+      .createQueryBuilder('user')
       .select([
-        "user.id AS id",
-        "user.firstName AS \"firstName\"",
-        "user.lastName AS \"lastName\"",
-        "user.userName AS \"userName\"",
-        "user.bio AS bio",
-        "biometrics.\"profileImageUrl\" AS \"profileImage\"",
+        'user.id AS id',
+        'user.firstName AS "firstName"',
+        'user.lastName AS "lastName"',
+        'user.userName AS "userName"',
+        'user.bio AS bio',
+        'biometrics."profileImageUrl" AS "profileImage"',
       ])
-      .addSelect(`(SELECT COUNT(1) FROM "identity"."user_follows" f WHERE f."followedId" = user.id AND f.status = 'accepted')`, "followersCount")
-      .addSelect(`(SELECT COUNT(1) FROM "identity"."user_follows" f WHERE f."followerId" = user.id AND f.status = 'accepted')`, "followingCount")
-      .addSelect(`(SELECT EXISTS(SELECT 1 FROM "identity"."user_follows" f WHERE f."followerId" = CAST(:viewerUserId AS uuid) AND f."followedId" = user.id AND f.status = 'accepted'))`, "isFollowing")
-      .addSelect(`(SELECT COALESCE(json_agg(json_build_object('id', la.id, 'platform', la.platform, 'verified', la.verified) ORDER BY la.platform) FILTER (WHERE la.id IS NOT NULL), '[]'::json) FROM "linkedAccounts" la WHERE la."userId" = CAST(user.id AS text))`, "linkedAccounts")
-      .addSelect(`(SELECT EXISTS(SELECT 1 FROM "linkedAccounts" la WHERE la."userId" = CAST(user.id AS text) AND la.verified = true))`, "verified")
-      .leftJoin(UserBiometric, "biometrics", "biometrics.\"userId\" = user.id")
-      .where("user.isActive = true")
-      .andWhere("user.type = :userType", { userType: UserType.User })
+      .addSelect(
+        `(SELECT COUNT(1) FROM "identity"."user_follows" f WHERE f."followedId" = user.id AND f.status = 'accepted')`,
+        'followersCount',
+      )
+      .addSelect(
+        `(SELECT COUNT(1) FROM "identity"."user_follows" f WHERE f."followerId" = user.id AND f.status = 'accepted')`,
+        'followingCount',
+      )
+      .addSelect(
+        `(SELECT EXISTS(SELECT 1 FROM "identity"."user_follows" f WHERE f."followerId" = CAST(:viewerUserId AS uuid) AND f."followedId" = user.id AND f.status = 'accepted'))`,
+        'isFollowing',
+      )
+      .addSelect(
+        `(SELECT COALESCE(json_agg(json_build_object('id', la.id, 'platform', la.platform, 'verified', la.verified) ORDER BY la.platform) FILTER (WHERE la.id IS NOT NULL), '[]'::json) FROM "linkedAccounts" la WHERE la."userId" = CAST(user.id AS text))`,
+        'linkedAccounts',
+      )
+      .addSelect(
+        `(SELECT EXISTS(SELECT 1 FROM "linkedAccounts" la WHERE la."userId" = CAST(user.id AS text) AND la.verified = true))`,
+        'verified',
+      )
+      .leftJoin(UserBiometric, 'biometrics', 'biometrics."userId" = user.id')
+      .where('user.isActive = true')
+      .andWhere('user.type = :userType', { userType: UserType.User })
       .andWhere(visibility, { viewerUserId })
       .andWhere(matches, { pattern })
-      .orderBy(`CASE
+      .orderBy(
+        `CASE
         WHEN LOWER(user.userName) = LOWER(:keyword)
           OR LOWER(CONCAT_WS(' ', user.firstName, user.lastName)) = LOWER(:keyword) THEN 0
         WHEN user.userName ILIKE :prefix ESCAPE '\\'
           OR user.firstName ILIKE :prefix ESCAPE '\\' OR user.lastName ILIKE :prefix ESCAPE '\\' THEN 1
-        ELSE 2 END`, "ASC")
-      .addOrderBy("user.userName", "ASC")
+        ELSE 2 END`,
+        'ASC',
+      )
+      .addOrderBy('user.userName', 'ASC')
       .setParameters({ keyword, prefix: `${escapedKeyword}%` });
     const [countSql, countParams] = this.userContext
-      .createQueryBuilder("user")
-      .where("user.isActive = true")
-      .andWhere("user.type = :userType", { userType: UserType.User })
+      .createQueryBuilder('user')
+      .where('user.isActive = true')
+      .andWhere('user.type = :userType', { userType: UserType.User })
       .andWhere(visibility, { viewerUserId })
       .andWhere(matches, { pattern })
       .getQueryAndParameters();
     const wrappedSql = `SELECT COUNT(1) AS "cnt" FROM (${countSql}) AS "_sub"`;
-    console.log("=== DEBUG COUNT SQL ===");
+    console.log('=== DEBUG COUNT SQL ===');
     console.log(wrappedSql);
-    console.log("=== DEBUG COUNT PARAMS ===");
+    console.log('=== DEBUG COUNT PARAMS ===');
     console.log(JSON.stringify(countParams));
-    const countResult = await this.userContext.query(
-      wrappedSql,
-      countParams,
-    );
+    const countResult = await this.userContext.query(wrappedSql, countParams);
     const count = parseInt(countResult[0].cnt, 10);
-    const rows = await qb.offset((page - 1) * limit).limit(limit).getRawMany<SearchUserProjection>();
+    const rows = await qb
+      .offset((page - 1) * limit)
+      .limit(limit)
+      .getRawMany<SearchUserProjection>();
     return [rows, count];
   }
 
-  public async checkPasswordAsync(user: User, password: string): Promise<boolean> {
+  public async checkPasswordAsync(
+    user: User,
+    password: string,
+  ): Promise<boolean> {
     return await bcrypt.compare(password, user.passwordHash!);
   }
 
-  public async changePasswordAsync(user: User, currentPassword: string, newPassword: string): Promise<boolean> {
-
+  public async changePasswordAsync(
+    user: User,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<boolean> {
     if (currentPassword === newPassword) {
-      throw new ApplicationException("The new password cannot be the same as the current password.")
+      throw new ApplicationException(
+        'The new password cannot be the same as the current password.',
+      );
     }
 
-    const isCurrentPasswordValid = await this.checkPasswordAsync(user, currentPassword);
+    const isCurrentPasswordValid = await this.checkPasswordAsync(
+      user,
+      currentPassword,
+    );
     if (!isCurrentPasswordValid) {
       throw new ApplicationException('The current password is incorrect.');
     }
@@ -252,14 +343,18 @@ export class UserRepository implements IUserRepository {
     return await this.updatePassword(user, newPassword);
   }
 
-  public async updatePassword(user: User, newPassword: string): Promise<boolean> {
-
+  public async updatePassword(
+    user: User,
+    newPassword: string,
+  ): Promise<boolean> {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.passwordHash = hashedPassword;
     user.lastPasswordModifiedAt = new Date();
     user.securityStamp = cryptoUtils.generateEncryptionKey(32);
     await this.userContext.save(user);
-    const key = redis.getRedisKey<string>(`${user.id}${_const.REDIS.USER.ACCOUNT}`);
+    const key = redis.getRedisKey<string>(
+      `${user.id}${_const.REDIS.USER.ACCOUNT}`,
+    );
     await redis.removeFromRedisAsync(key);
 
     return true;
@@ -270,7 +365,7 @@ export class UserRepository implements IUserRepository {
     const currentUserId = HttpContext.getCurrentUserId;
 
     const userByEmail = await this.userContext.findOne({
-      where: { normalizedEmail }
+      where: { normalizedEmail },
     });
 
     if (userByEmail) {
@@ -295,7 +390,9 @@ export class UserRepository implements IUserRepository {
     return false; // Email is not in use
   }
 
-  public async cleanupExpiredEmailChangesAsync(expirationHours: number = 24): Promise<number> {
+  public async cleanupExpiredEmailChangesAsync(
+    expirationHours: number = 24,
+  ): Promise<number> {
     const expirationDate = new Date();
     expirationDate.setHours(expirationDate.getHours() - expirationHours);
 
@@ -313,14 +410,15 @@ export class UserRepository implements IUserRepository {
   }
 
   public async setEmailAsync(user: User, email: string): Promise<boolean> {
-
     const duplicateUser = await this.getUserByEmailAsync(email);
     if (duplicateUser) {
       if (duplicateUser.id === user.id) {
         return true;
       }
 
-      throw new BadRequestException("This email is already associated with another account.")
+      throw new BadRequestException(
+        'This email is already associated with another account.',
+      );
     }
 
     user.email = email;
@@ -332,20 +430,27 @@ export class UserRepository implements IUserRepository {
     return true;
   }
 
-  public async changeEmailAsync(newEmail: string, token: string): Promise<boolean> {
-
-    const purpose = _const.TOKEN.PURPOSE.CONFIRM_EMAIL + ":" + newEmail;
+  public async changeEmailAsync(
+    newEmail: string,
+    token: string,
+  ): Promise<boolean> {
+    const purpose = _const.TOKEN.PURPOSE.CONFIRM_EMAIL + ':' + newEmail;
     const { isValid, userId } = await this.verifyUserTokenAsync(purpose, token);
     const user = await this.getUserByIdAsync(userId);
 
     if (!isValid || !user) {
-      throw new BadRequestException('The provided token is invalid or expired.');
+      throw new BadRequestException(
+        'The provided token is invalid or expired.',
+      );
     }
 
     return await this.setEmailAsync(user, newEmail);
   }
 
-  public async setPhoneNumberAsync(user: User, phoneNumber: string): Promise<boolean> {
+  public async setPhoneNumberAsync(
+    user: User,
+    phoneNumber: string,
+  ): Promise<boolean> {
     user.phoneNumber = phoneNumber;
     user.newPhoneNumber = null;
     user.lastPhoneNumberModifiedAt = new Date();
@@ -354,24 +459,37 @@ export class UserRepository implements IUserRepository {
     return true;
   }
 
-  public async changePhoneNumberAsync(newPhoneNumber: string, token: string): Promise<boolean> {
-    const purpose = _const.TOKEN.PURPOSE.CONFIRM_PHONE + ":" + newPhoneNumber;
+  public async changePhoneNumberAsync(
+    newPhoneNumber: string,
+    token: string,
+  ): Promise<boolean> {
+    const purpose = _const.TOKEN.PURPOSE.CONFIRM_PHONE + ':' + newPhoneNumber;
     const { isValid, userId } = await this.verifyUserTokenAsync(purpose, token);
     const user = await this.getUserByIdAsync(userId);
 
     if (!isValid || !user) {
-      throw new BadRequestException('The provided token is invalid or expired.');
+      throw new BadRequestException(
+        'The provided token is invalid or expired.',
+      );
     }
 
     if (user.newPhoneNumber !== newPhoneNumber) {
-      throw new BadRequestException('The phone number does not match the pending change request.');
+      throw new BadRequestException(
+        'The phone number does not match the pending change request.',
+      );
     }
 
     return await this.setPhoneNumberAsync(user, newPhoneNumber);
   }
 
-  public async generatePhoneConfirmationTokenAsync(user: User, newPhoneNumber: string): Promise<string> {
-    return await this.generateUserTokenAsync(user, _const.TOKEN.PURPOSE.CONFIRM_PHONE + ":" + newPhoneNumber);
+  public async generatePhoneConfirmationTokenAsync(
+    user: User,
+    newPhoneNumber: string,
+  ): Promise<string> {
+    return await this.generateUserTokenAsync(
+      user,
+      _const.TOKEN.PURPOSE.CONFIRM_PHONE + ':' + newPhoneNumber,
+    );
   }
 
   public async getRolesAsync(user: User): Promise<string[]> {
@@ -384,14 +502,16 @@ export class UserRepository implements IUserRepository {
       userRoles.map(async (userRole: UserRole) => {
         const role = await this.roleRepository.getByIdAsync(userRole.roleId);
         return role?.name;
-      })
+      }),
     );
 
-    return roleNames.filter(name => name !== null) as string[];
+    return roleNames.filter((name) => name !== null) as string[];
   }
 
-  public async addToRoleAsync(user: User, roleName: string): Promise<UserRole | null> {
-
+  public async addToRoleAsync(
+    user: User,
+    roleName: string,
+  ): Promise<UserRole | null> {
     if (await this.isInRoleAsync(user, roleName)) {
       throw new UserAlreadyInRoleException(user.email, '', roleName);
     }
@@ -399,7 +519,7 @@ export class UserRepository implements IUserRepository {
     const role = await this.roleRepository.getByNameAsync(roleName);
     const userRole = new UserRole({
       userId: user.id,
-      roleId: role.id
+      roleId: role.id,
     });
 
     user.concurrencyStamp = generateTimestampUUID();
@@ -408,10 +528,15 @@ export class UserRepository implements IUserRepository {
     return await this.userRoleRepository.createAsync(userRole);
   }
 
-  public async isInRoleAsync(user: User, roleName: string): Promise<UserRole | null> {
-
-    const role = await this.roleRepository.getByNameAsync(roleName)
-      ?? (() => { throw new RoleNotFoundException('', roleName); })();
+  public async isInRoleAsync(
+    user: User,
+    roleName: string,
+  ): Promise<UserRole | null> {
+    const role =
+      (await this.roleRepository.getByNameAsync(roleName)) ??
+      (() => {
+        throw new RoleNotFoundException('', roleName);
+      })();
 
     return await this.userRoleRepository.getAsync(user.id, role.id);
   }
@@ -421,9 +546,12 @@ export class UserRepository implements IUserRepository {
   }
 
   public async addClaimAsync(user: User, claim: UserClaim): Promise<UserClaim> {
-
     const existingClaim = await this.userClaimContext.findOne({
-      where: { userId: user.id?.toString(), claimType: claim.claimType, claimValue: claim.claimValue }
+      where: {
+        userId: user.id?.toString(),
+        claimType: claim.claimType,
+        claimValue: claim.claimValue,
+      },
     });
 
     if (existingClaim) {
@@ -433,10 +561,12 @@ export class UserRepository implements IUserRepository {
     return await this.userClaimContext.save(claim);
   }
 
-  public async addClaimsAsync(user: User, claims: UserClaim[]): Promise<UserClaim[]> {
-
+  public async addClaimsAsync(
+    user: User,
+    claims: UserClaim[],
+  ): Promise<UserClaim[]> {
     const resultList: UserClaim[] = [];
-    for (let claim of claims) {
+    for (const claim of claims) {
       const result = await this.addClaimAsync(user, claim);
       resultList.push(result);
     }
@@ -444,39 +574,54 @@ export class UserRepository implements IUserRepository {
     return resultList;
   }
 
-  public async removeClaimAsync(user: User, claim: UserClaim): Promise<boolean> {
-
+  public async removeClaimAsync(
+    user: User,
+    claim: UserClaim,
+  ): Promise<boolean> {
     const existingClaim = await this.userClaimContext.findOne({
-      where: { userId: user.id?.toString(), claimType: claim.claimType, claimValue: claim.claimValue }
+      where: {
+        userId: user.id?.toString(),
+        claimType: claim.claimType,
+        claimValue: claim.claimValue,
+      },
     });
 
     if (!existingClaim) {
-      throw new ClaimNotFoundException()
+      throw new ClaimNotFoundException();
     }
 
     const result = await this.userClaimContext.delete(existingClaim);
     return result.affected > 0;
   }
 
-  public async removeClaimsAsync(user: User, claims: UserClaim[]): Promise<{ claimType: string; succeeded: boolean }[]> {
-
+  public async removeClaimsAsync(
+    user: User,
+    claims: UserClaim[],
+  ): Promise<{ claimType: string; succeeded: boolean }[]> {
     const resultList: { claimType: string; succeeded: boolean }[] = [];
-    for (let claim of claims) {
+    for (const claim of claims) {
       const result = await this.removeClaimAsync(user, claim);
-      resultList.push({ succeeded: result, claimType: claim.claimType, });
+      resultList.push({ succeeded: result, claimType: claim.claimType });
     }
 
     return resultList;
   }
 
-  public async replaceClaimAsync(user: User, claim: UserClaim, newClaim: UserClaim): Promise<boolean> {
-
+  public async replaceClaimAsync(
+    user: User,
+    claim: UserClaim,
+    newClaim: UserClaim,
+  ): Promise<boolean> {
     const existingClaim = await this.userClaimContext.findOne({
-      where: { userId: user.id?.toString(), claimType: claim.claimType, claimValue: claim.claimValue }
+      where: {
+        userId: user.id?.toString(),
+        claimType: claim.claimType,
+        claimValue: claim.claimValue,
+      },
     });
 
     if (!existingClaim) {
-      throw new ClaimNotFoundException()
+      throw new ClaimNotFoundException();
     }
 
     existingClaim.claimType = newClaim.claimType;
@@ -486,23 +631,38 @@ export class UserRepository implements IUserRepository {
     return true;
   }
 
-  public async generateUserTokenAsync(user: User, purpose: string): Promise<string> {
-
-    const expiresAt = Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
+  public async generateUserTokenAsync(
+    user: User,
+    purpose: string,
+  ): Promise<string> {
+    const expiresAt =
+      Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
     const tokenPayload = { userId: user.id, purpose, expiresAt };
 
     return cryptoUtils.encrypt(JSON.stringify(tokenPayload));
   }
 
   public async generatePasswordResetTokenAsync(user: User): Promise<string> {
-    return await this.generateUserTokenAsync(user, _const.TOKEN.PURPOSE.RESET_PASSWORD);
+    return await this.generateUserTokenAsync(
+      user,
+      _const.TOKEN.PURPOSE.RESET_PASSWORD,
+    );
   }
 
-  public async generateEmailConfirmationTokenAsync(user: User, newEmail: string): Promise<string> {
-    return await this.generateUserTokenAsync(user, _const.TOKEN.PURPOSE.CONFIRM_EMAIL + ":" + newEmail);
+  public async generateEmailConfirmationTokenAsync(
+    user: User,
+    newEmail: string,
+  ): Promise<string> {
+    return await this.generateUserTokenAsync(
+      user,
+      _const.TOKEN.PURPOSE.CONFIRM_EMAIL + ':' + newEmail,
+    );
   }
 
-  public async verifyUserTokenAsync(purpose: string, token: string): Promise<{ isValid: boolean, userId: string }> {
+  public async verifyUserTokenAsync(
+    purpose: string,
+    token: string,
+  ): Promise<{ isValid: boolean; userId: string }> {
     const decryptedToken = this.decryptToken(token);
     if (!decryptedToken) {
       return { isValid: false, userId: '' }; // Token is invalid
@@ -517,20 +677,31 @@ export class UserRepository implements IUserRepository {
   }
 
   // UserBiometric methods
-  public async getUserBiometricAsync(userId: string): Promise<UserBiometric | null> {
-    return await this.userBiometricsContext.findOne({ where: { userId }, relations: ['user'] });
+  public async getUserBiometricAsync(
+    userId: string,
+  ): Promise<UserBiometric | null> {
+    return await this.userBiometricsContext.findOne({
+      where: { userId },
+      relations: ['user'],
+    });
   }
 
-  public async upsertUserBiometricAsync(userId: string, biometrics: UserBiometric): Promise<UserBiometric> {
+  public async upsertUserBiometricAsync(
+    userId: string,
+    biometrics: UserBiometric,
+  ): Promise<UserBiometric> {
     const existing = await this.getUserBiometricAsync(userId);
     if (existing) {
-      existing.profileImageUrl = biometrics.profileImageUrl ?? existing.profileImageUrl;
-      existing.defaultProfileImageUrl = biometrics.defaultProfileImageUrl ?? existing.defaultProfileImageUrl;
+      existing.profileImageUrl =
+        biometrics.profileImageUrl ?? existing.profileImageUrl;
+      existing.defaultProfileImageUrl =
+        biometrics.defaultProfileImageUrl ?? existing.defaultProfileImageUrl;
       existing.privacy = biometrics.privacy ?? existing.privacy;
       const currentUserId = HttpContext.getCurrentUserId;
       if (currentUserId) {
         existing.setCurrentUser(currentUserId);
-      } console.log('Incoming biometrics:', biometrics);
+      }
+      console.log('Incoming biometrics:', biometrics);
       console.log('profileImageUrl:', biometrics.profileImageUrl);
       return await this.userBiometricsContext.save(existing);
     } else {
@@ -543,7 +714,10 @@ export class UserRepository implements IUserRepository {
     }
   }
 
-  public async updateUserBiometricPrivacyAsync(userId: string, privacy: ProfileImagePrivacy): Promise<boolean> {
+  public async updateUserBiometricPrivacyAsync(
+    userId: string,
+    privacy: ProfileImagePrivacy,
+  ): Promise<boolean> {
     const biometrics = await this.getUserBiometricAsync(userId);
     if (!biometrics) {
       return false;
@@ -568,8 +742,13 @@ export class UserRepository implements IUserRepository {
   }
 
   // Referral Methods
-  public async getUserByReferralCodeAsync(referralCode: string): Promise<User | null> {
-    return await this.userContext.findOne({ where: { referralCode }, relations: { biometrics: true } });
+  public async getUserByReferralCodeAsync(
+    referralCode: string,
+  ): Promise<User | null> {
+    return await this.userContext.findOne({
+      where: { referralCode },
+      relations: { biometrics: true },
+    });
   }
 
   public async generateReferralCodeAsync(user: User): Promise<string> {
@@ -580,8 +759,9 @@ export class UserRepository implements IUserRepository {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       const code = nanoid(8);
       // Build the code using the custom alphabet
-      const referralCode = Array.from({ length: 8 }, () =>
-        alphabet[Math.floor(Math.random() * alphabet.length)]
+      const referralCode = Array.from(
+        { length: 8 },
+        () => alphabet[Math.floor(Math.random() * alphabet.length)],
       ).join('');
 
       const existing = await this.getUserByReferralCodeAsync(referralCode);
@@ -592,6 +772,8 @@ export class UserRepository implements IUserRepository {
       }
     }
 
-    throw new ApplicationException('Unable to generate a unique referral code. Please try again.');
+    throw new ApplicationException(
+      'Unable to generate a unique referral code. Please try again.',
+    );
   }
 }

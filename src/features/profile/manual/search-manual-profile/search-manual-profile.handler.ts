@@ -1,16 +1,16 @@
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import _const from "../../../../core/utils/const";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { PlaylistMember } from "../../../../domain/entities/collection/playlistMember.entity";
-import { IManualProfileRepository } from "../../../../domain/repositories";
-import { PagedResult } from "../../../../domain/contracts/pagination/pagedResult";
-import { ManualProfileSearchResponseModel } from "../../../../domain/contracts/manualProfile.model";
-import { mapToManualProfileSearchResponseModel } from "../../../../domain/mappers/manualProfile.mapper";
-import { getProfileImageUrl } from "../../../../core/utils/profileImagePrivacy.util";
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import _const from '../../../../core/utils/const';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { PlaylistMember } from '../../../../domain/entities/collection/playlistMember.entity';
+import { IManualProfileRepository } from '../../../../domain/repositories';
+import { PagedResult } from '../../../../domain/contracts/pagination/pagedResult';
+import { ManualProfileSearchResponseModel } from '../../../../domain/contracts/manualProfile.model';
+import { mapToManualProfileSearchResponseModel } from '../../../../domain/mappers/manualProfile.mapper';
+import { getProfileImageUrl } from '../../../../core/utils/profileImagePrivacy.util';
 
 export class SearchManualProfileQuery {
   page = 1;
@@ -27,28 +27,34 @@ export class SearchManualProfileQuery {
 const searchManualProfileValidations = Joi.object<SearchManualProfileQuery>({
   page: Joi.number().integer().min(1).default(1),
   pageSize: Joi.number().integer().min(1).default(10),
-  searchTerm: Joi.string().allow(null).optional()
+  searchTerm: Joi.string().allow(null).optional(),
 });
 
 @CommandHandler(SearchManualProfileQuery)
-export class SearchManualProfileQueryHandler implements ICommandHandler<SearchManualProfileQuery> {
+export class SearchManualProfileQueryHandler
+  implements ICommandHandler<SearchManualProfileQuery>
+{
   constructor(
     @Inject(_const.IMANUALPROFILE_REPOSITORY)
     private readonly manualProfileRepository: IManualProfileRepository,
-    @InjectRepository(PlaylistMember) private readonly playlistMemberRepository: Repository<PlaylistMember>,
-  ) {
-  }
+    @InjectRepository(PlaylistMember)
+    private readonly playlistMemberRepository: Repository<PlaylistMember>,
+  ) {}
 
-  async execute(command: SearchManualProfileQuery): Promise<PagedResult<ManualProfileSearchResponseModel[]>> {
+  async execute(
+    command: SearchManualProfileQuery,
+  ): Promise<PagedResult<ManualProfileSearchResponseModel[]>> {
     await searchManualProfileValidations.validateAsync(command);
 
-    const [manualProfileEntity, total] = await this.manualProfileRepository.searchAsync(
-      command.page,
-      command.pageSize,
-      command.searchTerm
-    );
+    const [manualProfileEntity, total] =
+      await this.manualProfileRepository.searchAsync(
+        command.page,
+        command.pageSize,
+        command.searchTerm,
+      );
 
-    if (manualProfileEntity?.length == 0) return new PagedResult<ManualProfileSearchResponseModel[]>(null, total);
+    if (manualProfileEntity?.length == 0)
+      return new PagedResult<ManualProfileSearchResponseModel[]>(null, total);
 
     const viewerUserId = HttpContext.getCurrentUserId;
     const manualProfiles = await Promise.all(
@@ -62,14 +68,17 @@ export class SearchManualProfileQueryHandler implements ICommandHandler<SearchMa
             profile.user.biometrics.privacy,
             profile.user.id,
             viewerUserId,
-            this.playlistMemberRepository
+            this.playlistMemberRepository,
           );
         }
 
         return mapToManualProfileSearchResponseModel(profile, profileImageUrl);
-      })
+      }),
     );
 
-    return new PagedResult<ManualProfileSearchResponseModel[]>(manualProfiles, total);
+    return new PagedResult<ManualProfileSearchResponseModel[]>(
+      manualProfiles,
+      total,
+    );
   }
-} 
+}

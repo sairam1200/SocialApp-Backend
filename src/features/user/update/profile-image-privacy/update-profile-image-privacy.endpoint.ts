@@ -1,9 +1,19 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { AuthenticatedAccountGuard } from "../../../../core/passport";
-import { Body, Controller, HttpStatus, Patch, Res, UseGuards } from "@nestjs/common";
-import { UpdateProfileImagePrivacyCommand, UpdateProfileImagePrivacyRequestModel } from "./update-profile-image-privacy.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AuthenticatedAccountGuard } from '../../../../core/passport';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Patch,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  UpdateProfileImagePrivacyCommand,
+  UpdateProfileImagePrivacyRequestModel,
+} from './update-profile-image-privacy.handler';
 
 @ApiTags('Account')
 @Controller({
@@ -11,9 +21,7 @@ import { UpdateProfileImagePrivacyCommand, UpdateProfileImagePrivacyRequestModel
   version: '1',
 })
 export class UpdateProfileImagePrivacyController {
-  constructor(
-    private readonly commandBus: CommandBus
-  ) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Patch('profile-image/privacy')
   @UseGuards(AuthenticatedAccountGuard)
@@ -26,8 +34,9 @@ export class UpdateProfileImagePrivacyController {
     @Body() model: UpdateProfileImagePrivacyRequestModel,
     @Res() res: Response,
   ): Promise<Response> {
-    await this.commandBus.execute(new UpdateProfileImagePrivacyCommand({ model }));
+    await this.commandBus.execute(
+      new UpdateProfileImagePrivacyCommand({ model }),
+    );
     return res.status(HttpStatus.NO_CONTENT).send();
   }
 }
-

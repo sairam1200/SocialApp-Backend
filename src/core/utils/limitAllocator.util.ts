@@ -1,4 +1,8 @@
-type SearchSectionKey = 'contentStream' | 'userContent' | 'linkedAccount' | 'manualProfile';
+type SearchSectionKey =
+  | 'contentStream'
+  | 'userContent'
+  | 'linkedAccount'
+  | 'manualProfile';
 
 export interface SectionSkipMap {
   contentStream: boolean;
@@ -10,16 +14,18 @@ export interface SectionSkipMap {
 /**
  * Distributes the limit among non-skipped sections
  */
-function getSectionLimits(limit: number, skips: SectionSkipMap): Record<SearchSectionKey, number> {
+function getSectionLimits(
+  limit: number,
+  skips: SectionSkipMap,
+): Record<SearchSectionKey, number> {
   const sections: { key: SearchSectionKey; skip: boolean }[] = [
     { key: 'contentStream', skip: skips.contentStream },
     { key: 'userContent', skip: skips.userContent },
     { key: 'linkedAccount', skip: skips.linkedAccount },
     { key: 'manualProfile', skip: skips.manualProfile },
-    
   ];
 
-  const activeSections = sections.filter(s => !s.skip);
+  const activeSections = sections.filter((s) => !s.skip);
   const activeCount = activeSections.length;
 
   const baseLimit = Math.floor(limit / activeCount);

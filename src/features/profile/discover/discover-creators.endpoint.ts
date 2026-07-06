@@ -1,9 +1,12 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { Controller, Get, HttpStatus, Query, Res } from "@nestjs/common";
-import { ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { DiscoverCreatorsQuery, DiscoverCreatorsQueryHandler } from "./discover-creators.handler";
-import { PublicProfileModel } from "../../../domain/contracts/public-profile.model";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
+import { ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  DiscoverCreatorsQuery,
+  DiscoverCreatorsQueryHandler,
+} from './discover-creators.handler';
+import { PublicProfileModel } from '../../../domain/contracts/public-profile.model';
 
 @ApiTags('Discover')
 @Controller({
@@ -11,7 +14,7 @@ import { PublicProfileModel } from "../../../domain/contracts/public-profile.mod
   version: '1',
 })
 export class DiscoverCreatorsController {
-  constructor(private readonly queryBus: CommandBus) { }
+  constructor(private readonly queryBus: CommandBus) {}
 
   @Get('creators')
   @ApiResponse({ status: 200, description: 'OK' })
@@ -24,7 +27,9 @@ export class DiscoverCreatorsController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ): Promise<Response> {
-    const result = await this.queryBus.execute(new DiscoverCreatorsQuery({ page, limit }));
+    const result = await this.queryBus.execute(
+      new DiscoverCreatorsQuery({ page, limit }),
+    );
     res.status(HttpStatus.OK).json(result);
     return res;
   }

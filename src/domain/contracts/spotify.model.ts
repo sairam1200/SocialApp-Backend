@@ -25,7 +25,7 @@ export type SpotifyUserDataType = {
   product?: 'premium' | 'free' | 'open';
   type: 'user';
   uri: string;
-}
+};
 
 export interface SpotifyProfileModel {
   id: string;

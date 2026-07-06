@@ -1,4 +1,4 @@
-import { SearchHistory } from "../entities";
+import { SearchHistory } from '../entities';
 
 export interface ISearchHistoryRepository {
   createAsync(searchHistory: SearchHistory): Promise<SearchHistory>;

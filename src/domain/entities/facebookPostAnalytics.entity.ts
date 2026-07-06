@@ -9,7 +9,6 @@ import { BaseEntity } from '../baseEntity';
 @Index(['impressions'])
 @Index(['reach'])
 export class FacebookPostAnalytics extends BaseEntity {
-
   @Column({ nullable: false })
   postId: string;
 

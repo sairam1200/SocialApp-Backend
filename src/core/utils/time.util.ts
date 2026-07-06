@@ -6,7 +6,9 @@ export function parseDuration(duration: string): number {
   const match = duration.match(regex);
 
   if (!match) {
-    throw new ApplicationException("Invalid duration format. Expected format like '10m', '2h', '1d'.");
+    throw new ApplicationException(
+      "Invalid duration format. Expected format like '10m', '2h', '1d'.",
+    );
   }
 
   const value = parseInt(match[1], 10);
@@ -24,7 +26,9 @@ export function parseDuration(duration: string): number {
     case 'w': // weeks
       return value * 7 * 24 * 60 * 60 * 1000; // Convert to milliseconds
     default:
-      throw new ApplicationException("Invalid time unit. Supported units are: s, m, h, d, w.");
+      throw new ApplicationException(
+        'Invalid time unit. Supported units are: s, m, h, d, w.',
+      );
   }
 }
 

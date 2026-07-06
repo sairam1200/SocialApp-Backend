@@ -41,7 +41,7 @@ export type TiktokUserDataType = {
   following_count?: number;
   likes_count?: number;
   video_count?: number;
-}
+};
 
 export type TikTokVideoDataType = {
   id: string;
@@ -59,7 +59,7 @@ export type TikTokVideoDataType = {
   comment_count: number;
   share_count: number;
   view_count: number;
-}
+};
 
 export class TikTokContentModel {
   @ApiProperty()

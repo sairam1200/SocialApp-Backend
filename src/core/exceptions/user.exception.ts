@@ -25,11 +25,9 @@ export class UserAlreadyInRoleException extends ConflictException {
 
 export class UserNotFoundException extends NotFoundException {
   constructor(value?: string, purpose?: 'email' | 'username') {
-
     if (!value) {
       super('User not found.');
     } else {
-
       let message: string;
       message = `User not found with the ${purpose} "${value}".`;
       super(message);
@@ -37,4 +35,4 @@ export class UserNotFoundException extends NotFoundException {
 
     this.name = 'UserNotFoundException';
   }
-} 
+}

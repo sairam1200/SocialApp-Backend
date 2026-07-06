@@ -1,24 +1,24 @@
-import axios from "axios";
-import * as Joi from "joi";
-import { Inject } from "@nestjs/common";
-import configs from "../../../../configs";
-import _const from "../../../../core/utils/const";
-import { Globals } from "../../../../core/globals";
-import { EventEmitter2 } from "@nestjs/event-emitter";
-import logger from "../../../../core/utils/winston.util";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import { UserNotFoundException } from "../../../../core/exceptions";
-import { PlatformConnectCleanupEvent } from "../../../../domain/events";
-import { serializeObject } from "../../../../core/utils/serialization.util";
-import { LinkedAccount } from "../../../../domain/entities/linkedAccount.entity";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { IUserRepository } from "../../../../domain/repositories/iuser.repository";
-import ApplicationException from "../../../../core/exceptions/application.exception";
-import { DataProtectionKey } from "../../../../domain/entities/dataProtectionKey.entity";
-import { IUserLoginRepository } from "../../../../domain/repositories/iuserLogin.repository";
-import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { IDataProtectionKeyRepository } from "../../../../domain/repositories/idataProtectionKey.repository";
-import { IContentStreamRepository } from "../../../../domain/repositories/icontentStream.repository";
+import axios from 'axios';
+import * as Joi from 'joi';
+import { Inject } from '@nestjs/common';
+import configs from '../../../../configs';
+import _const from '../../../../core/utils/const';
+import { Globals } from '../../../../core/globals';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import logger from '../../../../core/utils/winston.util';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { UserNotFoundException } from '../../../../core/exceptions';
+import { PlatformConnectCleanupEvent } from '../../../../domain/events';
+import { serializeObject } from '../../../../core/utils/serialization.util';
+import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import ApplicationException from '../../../../core/exceptions/application.exception';
+import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
+import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
+import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
+import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
+import { IContentStreamRepository } from '../../../../domain/repositories/icontentStream.repository';
 
 const TWITCH_API_URL = 'https://api.twitch.tv/helix';
 
@@ -39,7 +39,7 @@ type TwitchUserDataType = {
 export class TwitchConnectQuery {
   model: {
     state: string;
-  }
+  };
 
   constructor(request: Partial<TwitchConnectQuery> = {}) {
     Object.assign(this, request);
@@ -50,7 +50,7 @@ export class TwitchConnectCallbackQuery {
   model: {
     code: string;
     state: string;
-  }
+  };
 
   constructor(request: Partial<TwitchConnectCallbackQuery> = {}) {
     Object.assign(this, request);
@@ -59,34 +59,38 @@ export class TwitchConnectCallbackQuery {
 
 const twitchConnectValidations = Joi.object({
   code: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
-  state: Joi.string().required().messages({ 'any.required': 'Invalid request' }),
+  state: Joi.string()
+    .required()
+    .messages({ 'any.required': 'Invalid request' }),
 });
 
 @CommandHandler(TwitchConnectQuery)
-export class TwitchConnectQueryHandler implements ICommandHandler<TwitchConnectQuery> {
-
+export class TwitchConnectQueryHandler
+  implements ICommandHandler<TwitchConnectQuery>
+{
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-  ) { }
+  ) {}
 
   public async execute(query: TwitchConnectQuery): Promise<void> {
-
     const { model } = query;
 
-    const expiresIn = Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
+    const expiresIn =
+      Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       '',
       HttpContext.user[Globals.ClaimTypes.UserId],
-      expiresIn
+      expiresIn,
     );
   }
 }
 
 @CommandHandler(TwitchConnectCallbackQuery)
-export class TwitchConnectCallbackQueryHandler implements ICommandHandler<TwitchConnectCallbackQuery> {
-
+export class TwitchConnectCallbackQueryHandler
+  implements ICommandHandler<TwitchConnectCallbackQuery>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
@@ -99,17 +103,18 @@ export class TwitchConnectCallbackQueryHandler implements ICommandHandler<Twitch
     @Inject(_const.ICONTENTSTREAM_REPOSITORY)
     private readonly contentStreamRepository: IContentStreamRepository,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
   public async execute(query: TwitchConnectCallbackQuery): Promise<{
-    accessToken: string,
-    profile: LinkedAccount
+    accessToken: string;
+    profile: LinkedAccount;
   }> {
-
     const { model } = query;
     await twitchConnectValidations.validateAsync(model);
     const dataProtectionKey = await this.validateStateAsync(model.state);
-    const { access_token, refresh_token, expires_in } = await this.fetchToken(model.code);
+    const { access_token, refresh_token, expires_in } = await this.fetchToken(
+      model.code,
+    );
 
     const userData = await this.fetchUserData(access_token);
     const twitchUser = userData[0];
@@ -118,19 +123,30 @@ export class TwitchConnectCallbackQueryHandler implements ICommandHandler<Twitch
       throw new ApplicationException('Unable to fetch Twitch user profile');
     }
 
-    const user = await this.userRepository.getUserByIdAsync(dataProtectionKey.userId);
+    const user = await this.userRepository.getUserByIdAsync(
+      dataProtectionKey.userId,
+    );
     if (!user) {
       throw new UserNotFoundException(String(twitchUser.id));
     }
 
-    let linkedAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(_const.PLATFORMS.TWITCH, user.id);
+    let linkedAccount =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.TWITCH,
+        user.id,
+      );
     const newExternalId = String(twitchUser.id);
     if (linkedAccount) {
       const oldExternalId = linkedAccount.externalId;
 
       if (oldExternalId !== newExternalId) {
-        logger.info(`[TwitchConnect] User ${user.id} changed Twitch account from ${oldExternalId} to ${newExternalId}`);
-        this.eventEmitter.emit('platform.connect.cleanup', new PlatformConnectCleanupEvent({ account: linkedAccount }));
+        logger.info(
+          `[TwitchConnect] User ${user.id} changed Twitch account from ${oldExternalId} to ${newExternalId}`,
+        );
+        this.eventEmitter.emit(
+          'platform.connect.cleanup',
+          new PlatformConnectCleanupEvent({ account: linkedAccount }),
+        );
       }
 
       linkedAccount = await this.updateLinkedAccount(linkedAccount, twitchUser);
@@ -138,8 +154,16 @@ export class TwitchConnectCallbackQueryHandler implements ICommandHandler<Twitch
       linkedAccount = await this.createLinkedAccount(user.id, twitchUser);
     }
 
-    const existingAccountLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(user.id, _const.PLATFORMS.TWITCH);
-    const tokenValue = serializeObject({ access_token, refresh_token, expires_in });
+    const existingAccountLogin =
+      await this.userLoginRepository.getByUserIdAndProviderAsync(
+        user.id,
+        _const.PLATFORMS.TWITCH,
+      );
+    const tokenValue = serializeObject({
+      access_token,
+      refresh_token,
+      expires_in,
+    });
     if (existingAccountLogin) {
       await this.updateUserLogin(existingAccountLogin, tokenValue, expires_in);
     } else {
@@ -149,11 +173,14 @@ export class TwitchConnectCallbackQueryHandler implements ICommandHandler<Twitch
     return {
       accessToken: access_token,
       profile: linkedAccount,
-    }
+    };
   }
 
-  private async fetchToken(code: string)
-    : Promise<{ access_token: string; refresh_token?: string; expires_in?: number; }> {
+  private async fetchToken(code: string): Promise<{
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+  }> {
     try {
       const params = new URLSearchParams({
         client_id: configs.twitch.clientId,
@@ -169,39 +196,51 @@ export class TwitchConnectCallbackQueryHandler implements ICommandHandler<Twitch
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-          }
-        }
+          },
+        },
       );
 
       if (response.data.error) {
         logger.error('Twitch token error:', response.data);
-        throw new ApplicationException(`Twitch OAuth error: ${response.data.message || response.data.error}`);
+        throw new ApplicationException(
+          `Twitch OAuth error: ${response.data.message || response.data.error}`,
+        );
       }
       return response.data;
     } catch (error) {
       if (error instanceof ApplicationException) throw error;
       logger.error('Error fetching token from Twitch', error);
-      throw new ApplicationException('Unexpected error during authentication with Twitch');
+      throw new ApplicationException(
+        'Unexpected error during authentication with Twitch',
+      );
     }
   }
 
-  private async fetchUserData(accessToken: string): Promise<TwitchUserDataType[]> {
+  private async fetchUserData(
+    accessToken: string,
+  ): Promise<TwitchUserDataType[]> {
     try {
-      const response = await axios.get<{ data: TwitchUserDataType[] }>(`${TWITCH_API_URL}/users`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Client-Id': configs.twitch.clientId,
+      const response = await axios.get<{ data: TwitchUserDataType[] }>(
+        `${TWITCH_API_URL}/users`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Client-Id': configs.twitch.clientId,
+          },
         },
-      });
+      );
       return response.data.data;
     } catch (error) {
       logger.error('Error fetching user data from Twitch', error);
-      throw new ApplicationException('Unexpected error during authentication with Twitch');
+      throw new ApplicationException(
+        'Unexpected error during authentication with Twitch',
+      );
     }
   }
 
   private async validateStateAsync(state: string): Promise<DataProtectionKey> {
-    const dataProtectionKey = await this.dataProtectionKeyRepository.getByKeyAsync(state);
+    const dataProtectionKey =
+      await this.dataProtectionKeyRepository.getByKeyAsync(state);
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
     }
@@ -214,7 +253,10 @@ export class TwitchConnectCallbackQueryHandler implements ICommandHandler<Twitch
     return dataProtectionKey;
   }
 
-  private async updateLinkedAccount(linkedAccount: LinkedAccount, userData: TwitchUserDataType): Promise<LinkedAccount> {
+  private async updateLinkedAccount(
+    linkedAccount: LinkedAccount,
+    userData: TwitchUserDataType,
+  ): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       _const.PLATFORMS.TWITCH,
       String(userData.id),
@@ -241,7 +283,10 @@ export class TwitchConnectCallbackQueryHandler implements ICommandHandler<Twitch
     return linkedAccount;
   }
 
-  private async createLinkedAccount(userId: string, userData: TwitchUserDataType): Promise<LinkedAccount> {
+  private async createLinkedAccount(
+    userId: string,
+    userData: TwitchUserDataType,
+  ): Promise<LinkedAccount> {
     await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
       _const.PLATFORMS.TWITCH,
       String(userData.id),
@@ -266,34 +311,42 @@ export class TwitchConnectCallbackQueryHandler implements ICommandHandler<Twitch
         viewCount: userData.view_count,
         email: userData.email,
         createdAt: userData.created_at,
-      }
+      },
     });
     return await this.linkedAccountRepository.createAsync(newEntry);
   }
 
-  private async updateUserLogin(userLogin: any, tokenValue: string, expiresIn?: number): Promise<void> {
+  private async updateUserLogin(
+    userLogin: any,
+    tokenValue: string,
+    expiresIn?: number,
+  ): Promise<void> {
     userLogin.tokenValue = tokenValue;
     userLogin.addedDateUtc = new Date();
     if (expiresIn && expiresIn > 0) {
-      userLogin.expiryDateUtc = new Date(Date.now() + (expiresIn * 1000));
+      userLogin.expiryDateUtc = new Date(Date.now() + expiresIn * 1000);
     }
     await this.userLoginRepository.updateAsync(userLogin);
   }
 
-  private async createUserLogin(userId: string, tokenValue: string, expiresIn?: number): Promise<void> {
-    const expiry = expiresIn && expiresIn > 0
-      ? new Date(Date.now() + (expiresIn * 1000))
-      : undefined;
+  private async createUserLogin(
+    userId: string,
+    tokenValue: string,
+    expiresIn?: number,
+  ): Promise<void> {
+    const expiry =
+      expiresIn && expiresIn > 0
+        ? new Date(Date.now() + expiresIn * 1000)
+        : undefined;
 
     await this.userLoginRepository.createAysnc(
       _const.PLATFORMS.TWITCH,
       userId,
-      "",
-      "",
-      "",
+      '',
+      '',
+      '',
       tokenValue,
-      expiry
+      expiry,
     );
   }
 }
-

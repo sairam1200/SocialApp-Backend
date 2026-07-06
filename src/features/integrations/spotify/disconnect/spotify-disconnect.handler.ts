@@ -12,15 +12,18 @@ export class SpotifyDisconnectCommand {
 
 @CommandHandler(SpotifyDisconnectCommand)
 export class SpotifyDisconnectCommandHandler
-  implements ICommandHandler<SpotifyDisconnectCommand> {
+  implements ICommandHandler<SpotifyDisconnectCommand>
+{
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,
-  ) { }
+  ) {}
 
   public async execute(command: SpotifyDisconnectCommand): Promise<void> {
     const userId = HttpContext.getCurrentUserId;
-    await this.disconnectService.disconnectPlatformAsync(userId, _const.PLATFORMS.SPOTIFY);
+    await this.disconnectService.disconnectPlatformAsync(
+      userId,
+      _const.PLATFORMS.SPOTIFY,
+    );
   }
 }
-

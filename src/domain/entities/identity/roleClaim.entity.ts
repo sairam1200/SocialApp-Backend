@@ -4,26 +4,23 @@ import { Role } from './role.entity';
 
 @Entity({ name: 'roleClaims', schema: 'identity' })
 export class RoleClaim {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @Column()
+  roleId: string;
 
-    @Column()
-    roleId: string;
+  @Column()
+  claimType: string;
 
-    @Column()
-    claimType: string;
+  @Column()
+  claimValue: string;
 
-    @Column()
-    claimValue: string;
+  @ManyToOne(() => Role, (role) => role.roleClaims)
+  role!: Role[];
 
-    @ManyToOne(() => Role, role => role.roleClaims)
-    role!: Role[];
-
-    constructor(request: Partial<RoleClaim> = {}) {
-        Object.assign(this, request);
-        this.id = uuidv4();
-    }
-
-
+  constructor(request: Partial<RoleClaim> = {}) {
+    Object.assign(this, request);
+    this.id = uuidv4();
+  }
 }

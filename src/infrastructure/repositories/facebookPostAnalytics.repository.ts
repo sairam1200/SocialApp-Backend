@@ -5,13 +5,17 @@ import { FacebookPostAnalytics } from '../../domain/entities/facebookPostAnalyti
 import { IFacebookPostAnalyticsRepository } from '../../domain/repositories/ifacebookPostAnalytics.repository';
 
 @Injectable()
-export class FacebookPostAnalyticsRepository implements IFacebookPostAnalyticsRepository {
+export class FacebookPostAnalyticsRepository
+  implements IFacebookPostAnalyticsRepository
+{
   constructor(
     @InjectRepository(FacebookPostAnalytics)
     private readonly postAnalyticsContext: Repository<FacebookPostAnalytics>,
   ) {}
 
-  async createOrUpdateAsync(analytics: FacebookPostAnalytics): Promise<FacebookPostAnalytics> {
+  async createOrUpdateAsync(
+    analytics: FacebookPostAnalytics,
+  ): Promise<FacebookPostAnalytics> {
     const existing = await this.postAnalyticsContext.findOne({
       where: {
         postId: analytics.postId,
@@ -28,14 +32,18 @@ export class FacebookPostAnalyticsRepository implements IFacebookPostAnalyticsRe
     return await this.postAnalyticsContext.save(newEntity);
   }
 
-  async getLatestByPostIdAsync(postId: string): Promise<FacebookPostAnalytics | null> {
+  async getLatestByPostIdAsync(
+    postId: string,
+  ): Promise<FacebookPostAnalytics | null> {
     return await this.postAnalyticsContext.findOne({
       where: { postId },
       order: { snapshotDate: 'DESC' },
     });
   }
 
-  async getLatestByUserIdAsync(userId: string): Promise<FacebookPostAnalytics[]> {
+  async getLatestByUserIdAsync(
+    userId: string,
+  ): Promise<FacebookPostAnalytics[]> {
     const subQuery = this.postAnalyticsContext
       .createQueryBuilder('sub')
       .select('sub.id')
@@ -52,7 +60,11 @@ export class FacebookPostAnalyticsRepository implements IFacebookPostAnalyticsRe
       .getMany();
   }
 
-  async getTrendsAsync(postId: string, startDate: Date, endDate: Date): Promise<FacebookPostAnalytics[]> {
+  async getTrendsAsync(
+    postId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<FacebookPostAnalytics[]> {
     return await this.postAnalyticsContext.find({
       where: {
         postId,
@@ -62,7 +74,10 @@ export class FacebookPostAnalyticsRepository implements IFacebookPostAnalyticsRe
     });
   }
 
-  async getTopPostsAsync(userId: string, limit: number): Promise<FacebookPostAnalytics[]> {
+  async getTopPostsAsync(
+    userId: string,
+    limit: number,
+  ): Promise<FacebookPostAnalytics[]> {
     const subQuery = this.postAnalyticsContext
       .createQueryBuilder('sub')
       .select('sub.id')

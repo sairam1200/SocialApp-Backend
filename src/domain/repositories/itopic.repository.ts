@@ -1,5 +1,5 @@
-import { Topic } from "../entities/topic.entity";
-import { UserTopic } from "../entities/userTopic.entity";
+import { Topic } from '../entities/topic.entity';
+import { UserTopic } from '../entities/userTopic.entity';
 
 export interface ITopicRepository {
   getAllAsync(): Promise<Topic[]>;

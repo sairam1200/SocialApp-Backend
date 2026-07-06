@@ -5,18 +5,32 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { dependency } from '../infrastructure/dependency';
 import { ProfileModule } from './profile.module';
-import { Role, RoleClaim, User, UserBiometric, UserClaim, UserFollow, UserRole } from '../domain/entities';
+import {
+  Role,
+  RoleClaim,
+  User,
+  UserBiometric,
+  UserClaim,
+  UserFollow,
+  UserRole,
+} from '../domain/entities';
 import { FollowUpdatedListener } from '../infrastructure/background/listeners/follow-updated.listener';
 
 @Module({
   imports: [
     CqrsModule,
-    TypeOrmModule.forFeature([UserFollow, User, UserBiometric, UserClaim, Role, RoleClaim, UserRole]),
+    TypeOrmModule.forFeature([
+      UserFollow,
+      User,
+      UserBiometric,
+      UserClaim,
+      Role,
+      RoleClaim,
+      UserRole,
+    ]),
     ProfileModule,
   ],
-  controllers: [
-    ...follows.addControllers(),
-  ],
+  controllers: [...follows.addControllers()],
   providers: [
     JwtService,
     ...follows.addHandlers(),
@@ -29,4 +43,4 @@ import { FollowUpdatedListener } from '../infrastructure/background/listeners/fo
   ],
   exports: [],
 })
-export class FollowModule { }
+export class FollowModule {}

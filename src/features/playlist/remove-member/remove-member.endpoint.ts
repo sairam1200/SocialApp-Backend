@@ -1,9 +1,16 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { RemovePlaylistMemberCommand } from "./remove-member.handler";
-import { UserAccoutGuard } from "../../../core/passport/account.guard";
-import { Controller, Delete, HttpStatus, Param, Res, UseGuards } from "@nestjs/common";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { RemovePlaylistMemberCommand } from './remove-member.handler';
+import { UserAccoutGuard } from '../../../core/passport/account.guard';
+import {
+  Controller,
+  Delete,
+  HttpStatus,
+  Param,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 
 @ApiTags('Playlists')
 @UseGuards(UserAccoutGuard)
@@ -12,10 +19,9 @@ import { Controller, Delete, HttpStatus, Param, Res, UseGuards } from "@nestjs/c
   version: '1',
 })
 export class RemovePlaylistMemberController {
+  constructor(private readonly commandBus: CommandBus) {}
 
-  constructor(private readonly commandBus: CommandBus) { }
-
-  @Delete(":id/member/remove/:memberId")
+  @Delete(':id/member/remove/:memberId')
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -24,15 +30,16 @@ export class RemovePlaylistMemberController {
   public async Remove(
     @Param('memberId') memberId: string,
     @Param('id') playlistReferenceId: string,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response> {
-
-    await this.commandBus.execute(new RemovePlaylistMemberCommand({
-      model: {
-        playlistReferenceId,
-        memberId
-      }
-    }));
+    await this.commandBus.execute(
+      new RemovePlaylistMemberCommand({
+        model: {
+          playlistReferenceId,
+          memberId,
+        },
+      }),
+    );
 
     res.status(HttpStatus.NO_CONTENT).send();
     return res;

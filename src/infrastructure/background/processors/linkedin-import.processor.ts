@@ -1,20 +1,20 @@
-import axios from "axios";
-import { Inject } from "@nestjs/common";
+import axios from 'axios';
+import { Inject } from '@nestjs/common';
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import _const from "../../../core/utils/const";
-import logger from "../../../core/utils/winston.util";
-import { UserContent } from "../../../domain/entities/userContent.entity";
-import { NotificationStatus, NotificationType } from "../../../domain/enums";
-import { NotificationModel } from "../../../domain/contracts/notification.model";
-import { mapToNotificationModel } from "../../../domain/mappers/notification.mapper";
-import { INotificationService } from "../../../domain/services/inotification.service";
-import { ImportGateway } from "../../../infrastructure/websocket/gateways/import.gateway";
-import { IUserContentRepository } from "../../../domain/repositories/iuserContent.repository";
-import { ILinkedAccountRepository } from "../../../domain/repositories/ilinkedAccount.repository";
-import BullMQConfig from "../../../core/config/bullmq.config";
-import { mapToLinkedInContentModel } from "../../../domain/mappers/linkedin.mapper";
-import { IContentStreamRepository } from "../../../domain/repositories/icontentStream.repository";
+import _const from '../../../core/utils/const';
+import logger from '../../../core/utils/winston.util';
+import { UserContent } from '../../../domain/entities/userContent.entity';
+import { NotificationStatus, NotificationType } from '../../../domain/enums';
+import { NotificationModel } from '../../../domain/contracts/notification.model';
+import { mapToNotificationModel } from '../../../domain/mappers/notification.mapper';
+import { INotificationService } from '../../../domain/services/inotification.service';
+import { ImportGateway } from '../../../infrastructure/websocket/gateways/import.gateway';
+import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
+import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
+import BullMQConfig from '../../../core/config/bullmq.config';
+import { mapToLinkedInContentModel } from '../../../domain/mappers/linkedin.mapper';
+import { IContentStreamRepository } from '../../../domain/repositories/icontentStream.repository';
 
 interface CursorMap {
   [key: string]: string | null;
@@ -36,7 +36,10 @@ interface LinkedInImportJobData {
   accessToken: string;
 }
 
-@Processor(_const.BULL_QUEUES.LINKEDIN_IMPORT, BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.LINKEDIN_IMPORT, 2))
+@Processor(
+  _const.BULL_QUEUES.LINKEDIN_IMPORT,
+  BullMQConfig.getWorkerOptions(_const.BULL_QUEUES.LINKEDIN_IMPORT, 2),
+)
 export class LinkedInImportProcessor extends WorkerHost {
   private readonly NOTIFICATION_UPDATE_INTERVAL = 10;
 
@@ -73,18 +76,23 @@ export class LinkedInImportProcessor extends WorkerHost {
   public async process(job: Job<LinkedInImportJobData>): Promise<void> {
     const { account, accessToken } = job.data;
 
-    const currentAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-      _const.PLATFORMS.LINKEDIN,
-      account.userId,
-    );
+    const currentAccount =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.LINKEDIN,
+        account.userId,
+      );
 
     if (!currentAccount) {
-      logger.error(`[LinkedInImport] Account not found for user ${account.userId}`);
+      logger.error(
+        `[LinkedInImport] Account not found for user ${account.userId}`,
+      );
       return;
     }
 
     if (!(await job.isActive())) {
-      logger.info(`[LinkedInImport] Job ${job.id} is no longer active, stopping import for user ${account.userId}`);
+      logger.info(
+        `[LinkedInImport] Job ${job.id} is no longer active, stopping import for user ${account.userId}`,
+      );
       return;
     }
 
@@ -103,7 +111,9 @@ export class LinkedInImportProcessor extends WorkerHost {
     let itemsProcessedSinceLastNotification = 0;
 
     for (const [key, { endpoint, type }] of Object.entries(fields)) {
-      let cursor: number | null = lastCursors[key] ? parseInt(lastCursors[key] as string, 10) : null;
+      let cursor: number | null = lastCursors[key]
+        ? parseInt(lastCursors[key] as string, 10)
+        : null;
 
       progressReports[type] = {
         totalItem: 0,
@@ -115,26 +125,33 @@ export class LinkedInImportProcessor extends WorkerHost {
       try {
         while (true) {
           if (!(await job.isActive())) {
-            logger.info(`[LinkedInImport] Job ${job.id} cancelled during processing ${type}`);
+            logger.info(
+              `[LinkedInImport] Job ${job.id} cancelled during processing ${type}`,
+            );
             progressReports[type].status = NotificationStatus.Cancelled;
             break;
           }
 
-          const response = await axios.get(`https://api.linkedin.com/v2${endpoint}`, {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'X-Restli-Protocol-Version': '2.0.0',
+          const response = await axios.get(
+            `https://api.linkedin.com/v2${endpoint}`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0',
+              },
+              params: {
+                count: 50,
+                start: cursor || 0,
+              },
             },
-            params: {
-              count: 50,
-              start: cursor || 0,
-            },
-          });
+          );
 
           const data = response.data;
           const items = data.elements || (type === 'Profile' ? [data] : []);
 
-          logger.debug(`[LinkedInImport] Retrieved ${items.length} ${type} items`);
+          logger.debug(
+            `[LinkedInImport] Retrieved ${items.length} ${type} items`,
+          );
 
           if (items.length === 0) {
             progressReports[type].status = NotificationStatus.Completed;
@@ -145,12 +162,14 @@ export class LinkedInImportProcessor extends WorkerHost {
 
           for (const item of items) {
             if (!(await job.isActive())) {
-              logger.info(`[LinkedInImport] Job ${job.id} cancelled during processing ${type}`);
+              logger.info(
+                `[LinkedInImport] Job ${job.id} cancelled during processing ${type}`,
+              );
               progressReports[type].status = NotificationStatus.Cancelled;
               break;
             }
 
-            let content = new UserContent({
+            const content = new UserContent({
               userId: account.userId,
               platform: _const.PLATFORMS.LINKEDIN,
               externalId: item.id || item.urn || `${type}-${account.userId}`,
@@ -158,7 +177,8 @@ export class LinkedInImportProcessor extends WorkerHost {
 
             if (type === 'Posts') {
               content.type = 'post';
-              content.title = item.text?.text || item.commentary?.text || 'LinkedIn Post';
+              content.title =
+                item.text?.text || item.commentary?.text || 'LinkedIn Post';
               content.metaData = {
                 activity: item.activity,
                 author: item.author,
@@ -168,7 +188,9 @@ export class LinkedInImportProcessor extends WorkerHost {
               };
             } else if (type === 'Profile') {
               content.type = 'profile';
-              content.title = `${item.localizedFirstName || ''} ${item.localizedLastName || ''}`.trim() || 'LinkedIn Profile';
+              content.title =
+                `${item.localizedFirstName || ''} ${item.localizedLastName || ''}`.trim() ||
+                'LinkedIn Profile';
               content.metaData = {
                 firstName: item.localizedFirstName,
                 lastName: item.localizedLastName,
@@ -182,35 +204,57 @@ export class LinkedInImportProcessor extends WorkerHost {
                 _const.PLATFORMS.LINKEDIN,
                 content.externalId,
               );
-              const savedContent = await this.userContentRepository.createAsync(content);
+              const savedContent =
+                await this.userContentRepository.createAsync(content);
               importedExternalIds.push(savedContent.externalId);
               const mappedContent = mapToLinkedInContentModel(savedContent);
-              this.gateway.emitNewImportContent(account.userId, _const.PLATFORMS.LINKEDIN, mappedContent);
+              this.gateway.emitNewImportContent(
+                account.userId,
+                _const.PLATFORMS.LINKEDIN,
+                mappedContent,
+              );
 
               progressReports[type].itemProcessed++;
               itemsProcessedSinceLastNotification++;
 
-              if (itemsProcessedSinceLastNotification >= this.NOTIFICATION_UPDATE_INTERVAL) {
-                notification = await this.updateNotification(notification, account.userId, progressReports);
+              if (
+                itemsProcessedSinceLastNotification >=
+                this.NOTIFICATION_UPDATE_INTERVAL
+              ) {
+                notification = await this.updateNotification(
+                  notification,
+                  account.userId,
+                  progressReports,
+                );
                 itemsProcessedSinceLastNotification = 0;
               }
             } catch (err: any) {
-              logger.error(`[LinkedInImport] Error saving ${type} content:`, err.message);
+              logger.error(
+                `[LinkedInImport] Error saving ${type} content:`,
+                err.message,
+              );
             }
           }
 
           if (!(await job.isActive())) {
-            logger.info(`[LinkedInImport] Job ${job.id} cancelled during processing ${type}`);
+            logger.info(
+              `[LinkedInImport] Job ${job.id} cancelled during processing ${type}`,
+            );
             progressReports[type].status = NotificationStatus.Cancelled;
             break;
           }
 
-          if (data.paging && data.paging.start + items.length < (data.paging.count || 0)) {
+          if (
+            data.paging &&
+            data.paging.start + items.length < (data.paging.count || 0)
+          ) {
             cursor = data.paging.start + items.length;
             lastCursors[key] = cursor.toString();
             await this.saveCursors(currentAccount, lastCursors);
           } else {
-            logger.info(`[LinkedInImport] Completed import of ${type} for user ${account.userId}`);
+            logger.info(
+              `[LinkedInImport] Completed import of ${type} for user ${account.userId}`,
+            );
             progressReports[type].status = NotificationStatus.Completed;
             delete lastCursors[key];
             await this.saveCursors(currentAccount, lastCursors);
@@ -220,7 +264,10 @@ export class LinkedInImportProcessor extends WorkerHost {
       } catch (err: any) {
         encounteredError = true;
         progressReports[type].status = NotificationStatus.Cancelled;
-        logger.error(`[LinkedInImport] Error occurred while importing ${type}:`, err.message);
+        logger.error(
+          `[LinkedInImport] Error occurred while importing ${type}:`,
+          err.message,
+        );
         if (cursor !== null) {
           lastCursors[key] = cursor.toString();
           await this.saveCursors(currentAccount, lastCursors);
@@ -229,7 +276,9 @@ export class LinkedInImportProcessor extends WorkerHost {
     }
 
     if (!(await job.isActive())) {
-      logger.info(`[LinkedInImport] Job ${job.id} was cancelled, rolling back imported content`);
+      logger.info(
+        `[LinkedInImport] Job ${job.id} was cancelled, rolling back imported content`,
+      );
 
       if (importedExternalIds.length > 0) {
         try {
@@ -238,17 +287,24 @@ export class LinkedInImportProcessor extends WorkerHost {
             _const.PLATFORMS.LINKEDIN,
             importedExternalIds,
           );
-          logger.info(`[LinkedInImport] Rolled back ${importedExternalIds.length} imported items for user ${account.userId}`);
+          logger.info(
+            `[LinkedInImport] Rolled back ${importedExternalIds.length} imported items for user ${account.userId}`,
+          );
         } catch (rollbackError) {
-          logger.error(`[LinkedInImport] Error during rollback:`, rollbackError);
+          logger.error(
+            `[LinkedInImport] Error during rollback:`,
+            rollbackError,
+          );
         }
       }
 
       if (notification) {
-        const finalReportArray = Object.entries(progressReports).map(([type, report]) => ({
-          type,
-          ...report,
-        }));
+        const finalReportArray = Object.entries(progressReports).map(
+          ([type, report]) => ({
+            type,
+            ...report,
+          }),
+        );
         await this.notificationService.updateAsync(
           notification.id,
           false,
@@ -257,20 +313,24 @@ export class LinkedInImportProcessor extends WorkerHost {
             reports: finalReportArray,
             platform: _const.PLATFORMS.LINKEDIN,
           },
-          "❌ LinkedIn import was cancelled and rolled back",
+          '❌ LinkedIn import was cancelled and rolled back',
         );
       }
       return;
     }
 
-    const finalReportArray = Object.entries(progressReports).map(([type, report]) => ({
-      type,
-      ...report,
-    }));
+    const finalReportArray = Object.entries(progressReports).map(
+      ([type, report]) => ({
+        type,
+        ...report,
+      }),
+    );
 
     if (notification) {
       if (encounteredError) {
-        logger.warn(`[LinkedInImport] Completed with issues for user ${account.userId}`);
+        logger.warn(
+          `[LinkedInImport] Completed with issues for user ${account.userId}`,
+        );
         await this.notificationService.updateAsync(
           notification.id,
           false,
@@ -279,10 +339,12 @@ export class LinkedInImportProcessor extends WorkerHost {
             reports: finalReportArray,
             platform: _const.PLATFORMS.LINKEDIN,
           },
-          "⚠️ LinkedIn import completed with issues",
+          '⚠️ LinkedIn import completed with issues',
         );
       } else {
-        logger.info(`[LinkedInImport] Successfully completed import for user ${account.userId}`);
+        logger.info(
+          `[LinkedInImport] Successfully completed import for user ${account.userId}`,
+        );
         await this.notificationService.updateAsync(
           notification.id,
           false,
@@ -291,14 +353,15 @@ export class LinkedInImportProcessor extends WorkerHost {
             reports: finalReportArray,
             platform: _const.PLATFORMS.LINKEDIN,
           },
-          "✅ LinkedIn import completed!",
+          '✅ LinkedIn import completed!',
         );
       }
 
-      const finalAccount = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-        _const.PLATFORMS.LINKEDIN,
-        account.userId,
-      );
+      const finalAccount =
+        await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+          _const.PLATFORMS.LINKEDIN,
+          account.userId,
+        );
 
       if (finalAccount) {
         finalAccount.allowImport = true;
@@ -309,8 +372,8 @@ export class LinkedInImportProcessor extends WorkerHost {
       await this.notificationService.notifyAsync(
         account.userId,
         NotificationType.Import,
-        "⚠️ LinkedIn import could not start",
-        "Unable to initialize LinkedIn data import.",
+        '⚠️ LinkedIn import could not start',
+        'Unable to initialize LinkedIn data import.',
         false,
         {
           status: NotificationStatus.Cancelled,
@@ -318,7 +381,9 @@ export class LinkedInImportProcessor extends WorkerHost {
           platform: _const.PLATFORMS.LINKEDIN,
         },
       );
-      logger.warn(`[LinkedInImport] No notification initialized for user ${account.userId}`);
+      logger.warn(
+        `[LinkedInImport] No notification initialized for user ${account.userId}`,
+      );
     }
   }
 
@@ -327,18 +392,20 @@ export class LinkedInImportProcessor extends WorkerHost {
     userId: string,
     progressReports: ProgressReports,
   ): Promise<NotificationModel> {
-    const reportArray = Object.entries(progressReports).map(([type, report]) => ({
-      type,
-      ...report,
-    }));
+    const reportArray = Object.entries(progressReports).map(
+      ([type, report]) => ({
+        type,
+        ...report,
+      }),
+    );
 
     if (!notification) {
       logger.debug(`[LinkedInImport] Creating initial notification`);
       const notificationResult = await this.notificationService.notifyAsync(
         userId,
         NotificationType.Import,
-        "Importing your LinkedIn data...",
-        "",
+        'Importing your LinkedIn data...',
+        '',
         true,
         {
           status: NotificationStatus.InProgress,
@@ -379,4 +446,3 @@ export class LinkedInImportProcessor extends WorkerHost {
     }
   }
 }
-

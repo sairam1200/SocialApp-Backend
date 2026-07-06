@@ -1,9 +1,15 @@
-import { LinkedInContentModel, LinkedInProfileModel } from "../contracts/linkedin.model";
-import { LinkedAccount } from "../entities/linkedAccount.entity";
-import { UserContent } from "../entities/userContent.entity";
-import _const from "../../core/utils/const";
+import {
+  LinkedInContentModel,
+  LinkedInProfileModel,
+} from '../contracts/linkedin.model';
+import { LinkedAccount } from '../entities/linkedAccount.entity';
+import { UserContent } from '../entities/userContent.entity';
+import _const from '../../core/utils/const';
 
-export function mapToLinkedInProfileModel(data: LinkedAccount, includeSensitiveFields: boolean = false): LinkedInProfileModel {
+export function mapToLinkedInProfileModel(
+  data: LinkedAccount,
+  includeSensitiveFields: boolean = false,
+): LinkedInProfileModel {
   return {
     firstName: data.metaData.firstName,
     lastName: data.metaData.lastName,
@@ -21,13 +27,18 @@ export function mapToLinkedInProfileModel(data: LinkedAccount, includeSensitiveF
   } as LinkedInProfileModel;
 }
 
-export function mapToLinkedInContentModel(data: UserContent): LinkedInContentModel {
+export function mapToLinkedInContentModel(
+  data: UserContent,
+): LinkedInContentModel {
   return {
     id: data.id,
     title: data.title,
     type: data.type,
     externalId: data.externalId,
-    text: data.metaData?.text?.text || data.metaData?.commentary?.text || data.metaData?.commentary,
+    text:
+      data.metaData?.text?.text ||
+      data.metaData?.commentary?.text ||
+      data.metaData?.commentary,
     commentary: data.metaData?.commentary,
     author: data.metaData?.author,
     created: data.metaData?.created,

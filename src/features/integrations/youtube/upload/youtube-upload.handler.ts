@@ -39,13 +39,18 @@ const uploadValidationSchema = Joi.object({
   title: Joi.string().min(1).max(100).required(),
   description: Joi.string().max(5000).optional().allow(''),
   tags: Joi.array().items(Joi.string().max(100)).max(500).optional(),
-  visibility: Joi.string().valid('public', 'private', 'unlisted').optional().default('public'),
+  visibility: Joi.string()
+    .valid('public', 'private', 'unlisted')
+    .optional()
+    .default('public'),
   publishAt: Joi.date().iso().greater('now').optional(),
   fileSize: Joi.number().positive().optional(),
 }).required();
 
 @CommandHandler(YoutubeUploadCommand)
-export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploadCommand> {
+export class YoutubeUploadCommandHandler
+  implements ICommandHandler<YoutubeUploadCommand>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepo: ILinkedAccountRepository,
@@ -81,17 +86,27 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
       platform: 'youtube',
     });
 
-    const linkedAccount = await this.linkedAccountRepo.getByIdAsync(model.accountId);
-    if (!linkedAccount || linkedAccount.platform !== _const.PLATFORMS.YOUTUBE || linkedAccount.userId !== userId) {
+    const linkedAccount = await this.linkedAccountRepo.getByIdAsync(
+      model.accountId,
+    );
+    if (
+      !linkedAccount ||
+      linkedAccount.platform !== _const.PLATFORMS.YOUTUBE ||
+      linkedAccount.userId !== userId
+    ) {
       logger.warn('[YoutubeUpload] Linked account lookup failed', {
         linkedAccountId: model.accountId,
         userId,
         platform: 'youtube',
         found: !!linkedAccount,
-        platformMatch: linkedAccount ? linkedAccount.platform === _const.PLATFORMS.YOUTUBE : 'N/A',
+        platformMatch: linkedAccount
+          ? linkedAccount.platform === _const.PLATFORMS.YOUTUBE
+          : 'N/A',
         userIdMatch: linkedAccount ? linkedAccount.userId === userId : 'N/A',
       });
-      throw new YoutubeValidationError('YouTube account not found or does not belong to user');
+      throw new YoutubeValidationError(
+        'YouTube account not found or does not belong to user',
+      );
     }
 
     logger.debug('[YoutubeUpload] Linked account resolved', {
@@ -125,7 +140,8 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
     await this.uploadJobRepo.createAsync(uploadJob);
 
     try {
-      await this.uploadQueue.add('youtube-upload-job',
+      await this.uploadQueue.add(
+        'youtube-upload-job',
         {
           videoId: savedVideo.id,
           accountId: linkedAccount.id,
@@ -138,8 +154,13 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
         },
       );
     } catch (queueError: unknown) {
-      const message = queueError instanceof Error ? queueError.message : 'Unknown queue error';
-      logger.error(`[YoutubeUpload] Failed to enqueue job for video ${savedVideo.id}: ${message}`);
+      const message =
+        queueError instanceof Error
+          ? queueError.message
+          : 'Unknown queue error';
+      logger.error(
+        `[YoutubeUpload] Failed to enqueue job for video ${savedVideo.id}: ${message}`,
+      );
       savedVideo.status = 'failed';
       await this.videoRepo.updateAsync(savedVideo);
       uploadJob.status = 'failed';
@@ -148,7 +169,9 @@ export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploa
       throw new YoutubeValidationError(`Upload queuing failed: ${message}`);
     }
 
-    logger.info(`[YoutubeUpload] Upload job queued for video ${savedVideo.id}, r2Key: ${model.r2Key}`);
+    logger.info(
+      `[YoutubeUpload] Upload job queued for video ${savedVideo.id}, r2Key: ${model.r2Key}`,
+    );
 
     if (publishAt) {
       return {

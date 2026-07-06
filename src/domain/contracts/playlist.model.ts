@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { PlaylistMemberRole } from "../enums";
+import { ApiProperty } from '@nestjs/swagger';
+import { PlaylistMemberRole } from '../enums';
 
 export class AddPlaylistContentModel {
   @ApiProperty()
@@ -68,7 +68,6 @@ export class PlaylistContentModel {
 }
 
 export class PlaylistMemberModel {
-
   @ApiProperty()
   id: string;
 
@@ -99,15 +98,15 @@ export class PlaylistModel {
   description?: string;
 
   @ApiProperty({ type: [PlaylistContentModel], required: false })
-  contents?: PlaylistContentModel[]
+  contents?: PlaylistContentModel[];
 
   @ApiProperty({
     type: 'object',
     properties: {
       id: { type: 'string' },
       displayName: { type: 'string' },
-      userName: { type: 'string' }
-    }
+      userName: { type: 'string' },
+    },
   })
   owner: {
     id: string;

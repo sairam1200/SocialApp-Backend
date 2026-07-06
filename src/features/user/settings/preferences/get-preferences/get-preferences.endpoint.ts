@@ -1,9 +1,9 @@
-import { CommandBus } from "@nestjs/cqrs";
-import { Controller, Get, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { AuthenticatedAccountGuard } from "../../../../../core/passport";
-import { UserPreferenceModel } from "../../../../../domain/contracts/userPreference.model";
-import { GetPreferencesQuery } from "./get-preferences.handler";
+import { CommandBus } from '@nestjs/cqrs';
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AuthenticatedAccountGuard } from '../../../../../core/passport';
+import { UserPreferenceModel } from '../../../../../domain/contracts/userPreference.model';
+import { GetPreferencesQuery } from './get-preferences.handler';
 
 @ApiBearerAuth()
 @ApiTags('Settings')
@@ -13,9 +13,7 @@ import { GetPreferencesQuery } from "./get-preferences.handler";
   version: '1',
 })
 export class GetPreferencesController {
-  constructor(
-    private readonly queryBus: CommandBus
-  ) { }
+  constructor(private readonly queryBus: CommandBus) {}
 
   @Get('preference')
   @ApiResponse({ status: 200, description: 'OK', type: UserPreferenceModel })

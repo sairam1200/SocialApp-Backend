@@ -1,7 +1,7 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class AddGlobalSearchIndexes1783100000000 implements MigrationInterface {
-  name = "AddGlobalSearchIndexes1783100000000";
+  name = 'AddGlobalSearchIndexes1783100000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
@@ -16,9 +16,17 @@ export class AddGlobalSearchIndexes1783100000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_userContents_title_trgm"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS identity."IDX_users_userName_trgm"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS identity."IDX_users_lastName_trgm"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS identity."IDX_users_firstName_trgm"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_userContents_title_trgm"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS identity."IDX_users_userName_trgm"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS identity."IDX_users_lastName_trgm"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS identity."IDX_users_firstName_trgm"`,
+    );
   }
 }

@@ -1,4 +1,1 @@
-
-export class AuditRepository {
-    
-}
+export class AuditRepository {}

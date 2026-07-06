@@ -1,8 +1,8 @@
-import { CommandBus } from "@nestjs/cqrs";
-import { Controller, Get, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { GetReferralCodeQuery } from "./get-referral-code.handler";
-import { AuthenticatedAccountGuard } from "../../../../core/passport";
+import { CommandBus } from '@nestjs/cqrs';
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { GetReferralCodeQuery } from './get-referral-code.handler';
+import { AuthenticatedAccountGuard } from '../../../../core/passport';
 
 @ApiBearerAuth()
 @ApiTags('Users')
@@ -12,14 +12,12 @@ import { AuthenticatedAccountGuard } from "../../../../core/passport";
   version: '1',
 })
 export class GetReferralCodeController {
-
-  constructor(private readonly queryBus: CommandBus) { }
+  constructor(private readonly queryBus: CommandBus) {}
 
   @Get()
   @ApiResponse({ status: 200, description: 'OK' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   public async GetReferralCode(): Promise<{ referralCode: string }> {
-
     const result = await this.queryBus.execute(new GetReferralCodeQuery());
     return result;
   }

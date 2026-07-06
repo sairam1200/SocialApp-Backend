@@ -12,15 +12,18 @@ export class LinkedInDisconnectCommand {
 
 @CommandHandler(LinkedInDisconnectCommand)
 export class LinkedInDisconnectCommandHandler
-  implements ICommandHandler<LinkedInDisconnectCommand> {
+  implements ICommandHandler<LinkedInDisconnectCommand>
+{
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,
-  ) { }
+  ) {}
 
   public async execute(command: LinkedInDisconnectCommand): Promise<void> {
     const userId = HttpContext.getCurrentUserId;
-    await this.disconnectService.disconnectPlatformAsync(userId, _const.PLATFORMS.LINKEDIN);
+    await this.disconnectService.disconnectPlatformAsync(
+      userId,
+      _const.PLATFORMS.LINKEDIN,
+    );
   }
 }
-

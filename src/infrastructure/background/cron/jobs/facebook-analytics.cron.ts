@@ -13,12 +13,19 @@ export class FacebookAnalyticsCron {
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handleDailySync(): Promise<void> {
-    logger.info('[FacebookAnalyticsCron] Starting scheduled Facebook Analytics daily sync job');
+    logger.info(
+      '[FacebookAnalyticsCron] Starting scheduled Facebook Analytics daily sync job',
+    );
     try {
       await this.facebookAnalyticsService.syncAllAccountsAnalyticsAsync();
-      logger.info('[FacebookAnalyticsCron] Scheduled Facebook Analytics daily sync job completed successfully');
+      logger.info(
+        '[FacebookAnalyticsCron] Scheduled Facebook Analytics daily sync job completed successfully',
+      );
     } catch (error) {
-      logger.error('[FacebookAnalyticsCron] Error occurred during scheduled Facebook Analytics sync:', error);
+      logger.error(
+        '[FacebookAnalyticsCron] Error occurred during scheduled Facebook Analytics sync:',
+        error,
+      );
     }
   }
 }

@@ -6,11 +6,10 @@ import { IAnalyticsRepository } from '../../domain/repositories/ianalytics.repos
 
 @Injectable()
 export class AnalyticsRepository implements IAnalyticsRepository {
-
   constructor(
     @InjectRepository(AnalyticsEvent)
     private readonly analyticsContext: Repository<AnalyticsEvent>,
-  ) { }
+  ) {}
 
   async trackEventAsync(
     eventName: string,
@@ -21,7 +20,10 @@ export class AnalyticsRepository implements IAnalyticsRepository {
     return this.analyticsContext.save(event);
   }
 
-  async getEventsByUserAsync(userId: string, fromDate: Date): Promise<AnalyticsEvent[]> {
+  async getEventsByUserAsync(
+    userId: string,
+    fromDate: Date,
+  ): Promise<AnalyticsEvent[]> {
     return this.analyticsContext
       .createQueryBuilder('ae')
       .where('ae.userId = :userId', { userId })

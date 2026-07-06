@@ -1,10 +1,10 @@
-import { Inject } from "@nestjs/common";
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
-import _const from "../../../../core/utils/const";
-import logger from "../../../../core/utils/winston.util";
-import { HttpContext } from "../../../../core/middlewares/httpContext.middleware";
-import { ILinkedAccountRepository } from "../../../../domain/repositories/ilinkedAccount.repository";
-import { NotFoundException } from "@nestjs/common";
+import { Inject } from '@nestjs/common';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import _const from '../../../../core/utils/const';
+import logger from '../../../../core/utils/winston.util';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
+import { NotFoundException } from '@nestjs/common';
 
 export class DisableBehanceSyncCommand {
   constructor(request: Partial<DisableBehanceSyncCommand> = {}) {
@@ -13,22 +13,27 @@ export class DisableBehanceSyncCommand {
 }
 
 @CommandHandler(DisableBehanceSyncCommand)
-export class DisableBehanceSyncCommandHandler implements ICommandHandler<DisableBehanceSyncCommand> {
+export class DisableBehanceSyncCommandHandler
+  implements ICommandHandler<DisableBehanceSyncCommand>
+{
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
-  ) { }
+  ) {}
 
-  public async execute(command: DisableBehanceSyncCommand): Promise<{ syncEnabled: boolean }> {
+  public async execute(
+    command: DisableBehanceSyncCommand,
+  ): Promise<{ syncEnabled: boolean }> {
     const userId = HttpContext.getCurrentUserId;
 
-    const account = await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
-      _const.PLATFORMS.BEHANCE,
-      userId,
-    );
+    const account =
+      await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
+        _const.PLATFORMS.BEHANCE,
+        userId,
+      );
 
     if (!account) {
-      throw new NotFoundException("No matching Behance profile was found!");
+      throw new NotFoundException('No matching Behance profile was found!');
     }
 
     account.syncEnabled = false;

@@ -14,16 +14,44 @@ import { ILinkedAccountRepository } from '../../domain/repositories/ilinkedAccou
 import { IUserLoginRepository } from '../../domain/repositories/iuserLogin.repository';
 import { IYoutubeAccountRepository } from '../../domain/repositories/iyoutubeAccount.repository';
 import { IYoutubeAnalyticsService } from '../../domain/services/iyoutubeAnalytics.service';
-import { deserializeObject, serializeObject } from '../../core/utils/serialization.util';
+import {
+  deserializeObject,
+  serializeObject,
+} from '../../core/utils/serialization.util';
 
-const CHANNEL_METRICS = 'views,estimatedMinutesWatched,averageViewDuration,subscribersGained,subscribersLost,likes,comments,shares';
+const CHANNEL_METRICS =
+  'views,estimatedMinutesWatched,averageViewDuration,subscribersGained,subscribersLost,likes,comments,shares';
 const REVENUE_METRICS = 'estimatedRevenue,estimatedAdRevenue';
-const DIMENSION_CONFIGS: Array<{ dimension: string; metrics: string; targetField: string }> = [
-  { dimension: 'insightTrafficSourceType', metrics: 'views,estimatedMinutesWatched', targetField: 'trafficSources' },
-  { dimension: 'country', metrics: 'views,estimatedMinutesWatched', targetField: 'geography' },
-  { dimension: 'deviceType', metrics: 'views,estimatedMinutesWatched', targetField: 'devices' },
-  { dimension: 'subscribedStatus', metrics: 'views,estimatedMinutesWatched,viewerPercentage', targetField: 'audience' },
-  { dimension: 'playbackLocationType', metrics: 'views,estimatedMinutesWatched', targetField: 'playbackLocations' },
+const DIMENSION_CONFIGS: Array<{
+  dimension: string;
+  metrics: string;
+  targetField: string;
+}> = [
+  {
+    dimension: 'insightTrafficSourceType',
+    metrics: 'views,estimatedMinutesWatched',
+    targetField: 'trafficSources',
+  },
+  {
+    dimension: 'country',
+    metrics: 'views,estimatedMinutesWatched',
+    targetField: 'geography',
+  },
+  {
+    dimension: 'deviceType',
+    metrics: 'views,estimatedMinutesWatched',
+    targetField: 'devices',
+  },
+  {
+    dimension: 'subscribedStatus',
+    metrics: 'views,estimatedMinutesWatched,viewerPercentage',
+    targetField: 'audience',
+  },
+  {
+    dimension: 'playbackLocationType',
+    metrics: 'views,estimatedMinutesWatched',
+    targetField: 'playbackLocations',
+  },
 ];
 const INITIAL_SYNC_DAYS = 30;
 const MAX_CATCHUP_DAYS = 7;
@@ -50,26 +78,38 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     private readonly userContentContext: Repository<UserContent>,
   ) {}
 
-  public async syncAccountAnalyticsAsync(userId: string, options: { forceRefresh?: boolean } = {}): Promise<void> {
-    logger.info(`[YoutubeAnalyticsService] Starting analytics sync for user ${userId}`);
+  public async syncAccountAnalyticsAsync(
+    userId: string,
+    options: { forceRefresh?: boolean } = {},
+  ): Promise<void> {
+    logger.info(
+      `[YoutubeAnalyticsService] Starting analytics sync for user ${userId}`,
+    );
 
     const accessToken = await this.resolveTokenAsync(userId);
     if (!accessToken) {
-      logger.warn(`[YoutubeAnalyticsService] No valid YouTube token for user ${userId}. Sync skipped.`);
+      logger.warn(
+        `[YoutubeAnalyticsService] No valid YouTube token for user ${userId}. Sync skipped.`,
+      );
       return;
     }
 
     try {
       const channelInfo = await this.fetchChannelInfoAsync(accessToken);
       if (!channelInfo) {
-        logger.warn(`[YoutubeAnalyticsService] No channel found for user ${userId}. Sync skipped.`);
+        logger.warn(
+          `[YoutubeAnalyticsService] No channel found for user ${userId}. Sync skipped.`,
+        );
         return;
       }
 
       const { channelId, subscriberCount, viewCount, videoCount } = channelInfo;
-      const activeAccount = await this.youtubeAccountRepository.getConnectedByUserIdAsync(userId);
+      const activeAccount =
+        await this.youtubeAccountRepository.getConnectedByUserIdAsync(userId);
       if (!activeAccount || activeAccount.channelId !== channelId) {
-        logger.warn(`[YoutubeAnalyticsService] Active YouTube account mismatch for user ${userId}. active=${activeAccount?.channelId || 'none'} token=${channelId}`);
+        logger.warn(
+          `[YoutubeAnalyticsService] Active YouTube account mismatch for user ${userId}. active=${activeAccount?.channelId || 'none'} token=${channelId}`,
+        );
         return;
       }
 
@@ -78,7 +118,9 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
         : await this.getMissingDatesAsync(channelId);
 
       if (syncDates.length === 0) {
-        logger.info(`[YoutubeAnalyticsService] All dates already synced for user ${userId}, channel ${channelId}. Skipping.`);
+        logger.info(
+          `[YoutubeAnalyticsService] All dates already synced for user ${userId}, channel ${channelId}. Skipping.`,
+        );
         return;
       }
 
@@ -86,25 +128,61 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
       const endDateStr = this.formatDate(syncDates[syncDates.length - 1]);
 
       // Fetch channel daily metrics from Analytics API
-      await this.syncChannelDailyMetricsAsync(accessToken, userId, channelId, subscriberCount, viewCount, videoCount, startDateStr, endDateStr, syncDates);
+      await this.syncChannelDailyMetricsAsync(
+        accessToken,
+        userId,
+        channelId,
+        subscriberCount,
+        viewCount,
+        videoCount,
+        startDateStr,
+        endDateStr,
+        syncDates,
+      );
 
       // Fetch optional revenue metrics independently so unavailable revenue never blocks core analytics.
-      await this.syncRevenueMetricsAsync(accessToken, channelId, startDateStr, endDateStr, syncDates);
+      await this.syncRevenueMetricsAsync(
+        accessToken,
+        channelId,
+        startDateStr,
+        endDateStr,
+        syncDates,
+      );
 
       // Fetch all supported dimension breakdowns independently.
-      await this.syncDimensionDataAsync(accessToken, channelId, startDateStr, endDateStr, syncDates, Boolean(options.forceRefresh));
+      await this.syncDimensionDataAsync(
+        accessToken,
+        channelId,
+        startDateStr,
+        endDateStr,
+        syncDates,
+        Boolean(options.forceRefresh),
+      );
 
       // Fetch video daily metrics from Analytics API
-      await this.syncVideoMetricsAsync(accessToken, userId, channelId, startDateStr, endDateStr, syncDates);
+      await this.syncVideoMetricsAsync(
+        accessToken,
+        userId,
+        channelId,
+        startDateStr,
+        endDateStr,
+        syncDates,
+      );
 
-      logger.info(`[YoutubeAnalyticsService] Successfully synced YouTube Analytics for user ${userId}`);
+      logger.info(
+        `[YoutubeAnalyticsService] Successfully synced YouTube Analytics for user ${userId}`,
+      );
     } catch (error: any) {
-      logger.error(`[YoutubeAnalyticsService] Sync failed for user ${userId}: ${error.message}`);
+      logger.error(
+        `[YoutubeAnalyticsService] Sync failed for user ${userId}: ${error.message}`,
+      );
     }
   }
 
   public async syncAllAccountsAnalyticsAsync(): Promise<void> {
-    logger.info(`[YoutubeAnalyticsService] Starting background sync for all connected YouTube accounts`);
+    logger.info(
+      `[YoutubeAnalyticsService] Starting background sync for all connected YouTube accounts`,
+    );
     try {
       const [accounts] = await this.linkedAccountRepository.getEntriesAsync({
         filter: { platform: _const.PLATFORMS.YOUTUBE },
@@ -122,9 +200,14 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
           );
         }
       }
-      logger.info(`[YoutubeAnalyticsService] Completed background sync for all YouTube accounts`);
+      logger.info(
+        `[YoutubeAnalyticsService] Completed background sync for all YouTube accounts`,
+      );
     } catch (err) {
-      logger.error(`[YoutubeAnalyticsService] Error retrieving YouTube accounts for background sync:`, err);
+      logger.error(
+        `[YoutubeAnalyticsService] Error retrieving YouTube accounts for background sync:`,
+        err,
+      );
     }
   }
 
@@ -138,7 +221,14 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     sort?: string,
     maxResults?: number,
     startIndex?: number,
-  ): Promise<{ columnHeaders: Array<{ name: string; columnType: string; dataType: string }>; rows: string[][] }> {
+  ): Promise<{
+    columnHeaders: Array<{
+      name: string;
+      columnType: string;
+      dataType: string;
+    }>;
+    rows: string[][];
+  }> {
     const params: Record<string, string | number> = {
       ids: 'channel==MINE',
       metrics,
@@ -156,11 +246,14 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const response = await axios.get('https://youtubeanalytics.googleapis.com/v2/reports', {
-          params,
-          headers: { Authorization: `Bearer ${accessToken}` },
-          timeout: 30000,
-        });
+        const response = await axios.get(
+          'https://youtubeanalytics.googleapis.com/v2/reports',
+          {
+            params,
+            headers: { Authorization: `Bearer ${accessToken}` },
+            timeout: 30000,
+          },
+        );
 
         const data = response.data;
         return {
@@ -170,13 +263,20 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
       } catch (error: any) {
         lastError = error;
         const status = error.response?.status;
-        if ((status === 429 || status === 500 || status === 503) && attempt < 2) {
+        if (
+          (status === 429 || status === 500 || status === 503) &&
+          attempt < 2
+        ) {
           const delay = Math.pow(2, attempt) * 1000;
-          logger.warn(`[YoutubeAnalyticsService] reports.query transient error (${status}). Retrying in ${delay}ms...`);
+          logger.warn(
+            `[YoutubeAnalyticsService] reports.query transient error (${status}). Retrying in ${delay}ms...`,
+          );
           await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }
-        logger.error(`[YoutubeAnalyticsService] reports.query non-transient error: ${error.message}`);
+        logger.error(
+          `[YoutubeAnalyticsService] reports.query non-transient error: ${error.message}`,
+        );
         throw error;
       }
     }
@@ -185,15 +285,26 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
 
   private async resolveTokenAsync(userId: string): Promise<string | null> {
     try {
-      const userLogin = await this.userLoginRepository.getByUserIdAndProviderAsync(userId, _const.PLATFORMS.YOUTUBE);
+      const userLogin =
+        await this.userLoginRepository.getByUserIdAndProviderAsync(
+          userId,
+          _const.PLATFORMS.YOUTUBE,
+        );
       if (!userLogin || !userLogin.tokenValue) return null;
 
-      const tokenValue = deserializeObject<{ access_token: string; refresh_token: string }>(userLogin.tokenValue);
+      const tokenValue = deserializeObject<{
+        access_token: string;
+        refresh_token: string;
+      }>(userLogin.tokenValue);
       if (!tokenValue.access_token) return null;
 
-      const isTokenValid = await this.verifyAccessTokenAsync(tokenValue.access_token);
+      const isTokenValid = await this.verifyAccessTokenAsync(
+        tokenValue.access_token,
+      );
       if (!isTokenValid && tokenValue.refresh_token) {
-        const refreshed = await this.refreshTokenAsync(tokenValue.refresh_token);
+        const refreshed = await this.refreshTokenAsync(
+          tokenValue.refresh_token,
+        );
         if (!refreshed.access_token) return null;
 
         userLogin.tokenValue = serializeObject({
@@ -207,7 +318,9 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
 
       return isTokenValid ? tokenValue.access_token : null;
     } catch (err) {
-      logger.warn(`[YoutubeAnalyticsService] Token resolution failed for user ${userId}: ${(err as Error).message}`);
+      logger.warn(
+        `[YoutubeAnalyticsService] Token resolution failed for user ${userId}: ${(err as Error).message}`,
+      );
       return null;
     }
   }
@@ -226,7 +339,10 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
   }
 
   private async getMissingDatesAsync(channelId: string): Promise<Date[]> {
-    const lastSnapshotDate = await this.channelAnalyticsRepository.getLatestSnapshotDateByChannelIdAsync(channelId);
+    const lastSnapshotDate =
+      await this.channelAnalyticsRepository.getLatestSnapshotDateByChannelIdAsync(
+        channelId,
+      );
 
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
@@ -253,12 +369,20 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     return dates;
   }
 
-  private async fetchChannelInfoAsync(accessToken: string): Promise<{ channelId: string; subscriberCount: number; viewCount: number; videoCount: number } | null> {
+  private async fetchChannelInfoAsync(accessToken: string): Promise<{
+    channelId: string;
+    subscriberCount: number;
+    viewCount: number;
+    videoCount: number;
+  } | null> {
     try {
-      const response = await axios.get('https://www.googleapis.com/youtube/v3/channels', {
-        params: { mine: true, part: 'snippet,statistics' },
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const response = await axios.get(
+        'https://www.googleapis.com/youtube/v3/channels',
+        {
+          params: { mine: true, part: 'snippet,statistics' },
+          headers: { Authorization: `Bearer ${accessToken}` },
+        },
+      );
 
       const channel = response.data.items?.[0];
       if (!channel) return null;
@@ -271,25 +395,47 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
         videoCount: parseInt(stats.videoCount || '0', 10),
       };
     } catch (error: any) {
-      logger.error(`[YoutubeAnalyticsService] Failed to fetch channel info: ${error.message}`);
+      logger.error(
+        `[YoutubeAnalyticsService] Failed to fetch channel info: ${error.message}`,
+      );
       return null;
     }
   }
 
   private async syncChannelDailyMetricsAsync(
-    accessToken: string, userId: string, channelId: string,
-    subscriberCount: number, viewCount: number, videoCount: number,
-    startDateStr: string, endDateStr: string, missingDates: Date[],
+    accessToken: string,
+    userId: string,
+    channelId: string,
+    subscriberCount: number,
+    viewCount: number,
+    videoCount: number,
+    startDateStr: string,
+    endDateStr: string,
+    missingDates: Date[],
   ): Promise<void> {
     try {
       const result = await this.queryReportsAsync(
-        accessToken, CHANNEL_METRICS, 'day', undefined, startDateStr, endDateStr, 'day',
+        accessToken,
+        CHANNEL_METRICS,
+        'day',
+        undefined,
+        startDateStr,
+        endDateStr,
+        'day',
       );
 
       if (!result.rows || result.rows.length === 0) {
         // Save empty snapshots for missing dates even if API returns no data
         for (const date of missingDates) {
-          await this.saveChannelSnapshot(userId, channelId, subscriberCount, viewCount, videoCount, date, null);
+          await this.saveChannelSnapshot(
+            userId,
+            channelId,
+            subscriberCount,
+            viewCount,
+            videoCount,
+            date,
+            null,
+          );
         }
         return;
       }
@@ -300,24 +446,45 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
       for (const date of missingDates) {
         const dateKey = this.formatDate(date);
         const row = rowsByDate[dateKey];
-        await this.saveChannelSnapshot(userId, channelId, subscriberCount, viewCount, videoCount, date, row ? { colIndex, row } : null);
+        await this.saveChannelSnapshot(
+          userId,
+          channelId,
+          subscriberCount,
+          viewCount,
+          videoCount,
+          date,
+          row ? { colIndex, row } : null,
+        );
       }
     } catch (error: any) {
-      logger.error(`[YoutubeAnalyticsService] Channel metrics sync failed: ${error.message}`);
+      logger.error(
+        `[YoutubeAnalyticsService] Channel metrics sync failed: ${error.message}`,
+      );
     }
   }
 
   private async syncRevenueMetricsAsync(
-    accessToken: string, channelId: string,
-    startDateStr: string, endDateStr: string, syncDates: Date[],
+    accessToken: string,
+    channelId: string,
+    startDateStr: string,
+    endDateStr: string,
+    syncDates: Date[],
   ): Promise<void> {
     try {
       const result = await this.queryReportsAsync(
-        accessToken, REVENUE_METRICS, 'day', undefined, startDateStr, endDateStr, 'day',
+        accessToken,
+        REVENUE_METRICS,
+        'day',
+        undefined,
+        startDateStr,
+        endDateStr,
+        'day',
       );
 
       if (!result.rows || result.rows.length === 0) {
-        logger.info(`[YoutubeAnalyticsService] Revenue metrics unavailable for channel ${channelId}.`);
+        logger.info(
+          `[YoutubeAnalyticsService] Revenue metrics unavailable for channel ${channelId}.`,
+        );
         return;
       }
 
@@ -328,25 +495,42 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
         const row = rowsByDate[this.formatDate(date)];
         if (!row) continue;
 
-        const existing = await this.channelAnalyticsRepository.getByChannelIdAndDateAsync(channelId, date);
+        const existing =
+          await this.channelAnalyticsRepository.getByChannelIdAndDateAsync(
+            channelId,
+            date,
+          );
         if (!existing) continue;
 
-        existing.estimatedRevenueUsd = this.floatVal({ colIndex, row }, 'estimatedRevenue');
-        existing.estimatedAdRevenueUsd = this.floatVal({ colIndex, row }, 'estimatedAdRevenue');
+        existing.estimatedRevenueUsd = this.floatVal(
+          { colIndex, row },
+          'estimatedRevenue',
+        );
+        existing.estimatedAdRevenueUsd = this.floatVal(
+          { colIndex, row },
+          'estimatedAdRevenue',
+        );
         await this.channelAnalyticsRepository.createOrUpdateAsync(existing);
       }
     } catch (error: any) {
-      logger.warn(`[YoutubeAnalyticsService] Revenue metrics sync skipped for channel ${channelId}: ${error.message}`);
+      logger.warn(
+        `[YoutubeAnalyticsService] Revenue metrics sync skipped for channel ${channelId}: ${error.message}`,
+      );
     }
   }
 
   private async saveChannelSnapshot(
-    userId: string, channelId: string,
-    subscriberCount: number, viewCount: number, videoCount: number,
-    snapshotDate: Date, apiData: { colIndex: Record<string, number>; row: string[] } | null,
+    userId: string,
+    channelId: string,
+    subscriberCount: number,
+    viewCount: number,
+    videoCount: number,
+    snapshotDate: Date,
+    apiData: { colIndex: Record<string, number>; row: string[] } | null,
   ): Promise<void> {
     const snapshot = new YoutubeChannelAnalytics({
-      channelId, userId,
+      channelId,
+      userId,
       subscriberCount,
       viewCount,
       videoCount,
@@ -354,33 +538,63 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     });
 
     if (apiData) {
-      snapshot.estimatedMinutesWatched = this.intVal(apiData, 'estimatedMinutesWatched');
-      snapshot.averageViewDurationSeconds = this.floatVal(apiData, 'averageViewDuration');
+      snapshot.estimatedMinutesWatched = this.intVal(
+        apiData,
+        'estimatedMinutesWatched',
+      );
+      snapshot.averageViewDurationSeconds = this.floatVal(
+        apiData,
+        'averageViewDuration',
+      );
       snapshot.subscribersGained = this.intVal(apiData, 'subscribersGained');
       snapshot.subscribersLost = this.intVal(apiData, 'subscribersLost');
       snapshot.likes = this.intVal(apiData, 'likes');
       snapshot.comments = this.intVal(apiData, 'comments');
       snapshot.shares = this.intVal(apiData, 'shares');
       snapshot.estimatedRevenueUsd = this.floatVal(apiData, 'estimatedRevenue');
-      snapshot.estimatedAdRevenueUsd = this.floatVal(apiData, 'estimatedAdRevenue');
+      snapshot.estimatedAdRevenueUsd = this.floatVal(
+        apiData,
+        'estimatedAdRevenue',
+      );
     }
 
     await this.channelAnalyticsRepository.createOrUpdateAsync(snapshot);
   }
 
   private async queryDimensionReportsPaginatedAsync(
-    accessToken: string, metrics: string, dimensions: string,
-    startDate: string, endDate: string,
-  ): Promise<{ columnHeaders: Array<{ name: string; columnType: string; dataType: string }>; rows: string[][] }> {
+    accessToken: string,
+    metrics: string,
+    dimensions: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<{
+    columnHeaders: Array<{
+      name: string;
+      columnType: string;
+      dataType: string;
+    }>;
+    rows: string[][];
+  }> {
     const MAX_RESULTS = 10000;
     let startIndex = 1;
     let allRows: string[][] = [];
-    let columnHeaders: Array<{ name: string; columnType: string; dataType: string }> = [];
+    let columnHeaders: Array<{
+      name: string;
+      columnType: string;
+      dataType: string;
+    }> = [];
 
     for (let page = 0; page < 10; page++) {
       const result = await this.queryReportsAsync(
-        accessToken, metrics, dimensions,
-        undefined, startDate, endDate, undefined, MAX_RESULTS, startIndex,
+        accessToken,
+        metrics,
+        dimensions,
+        undefined,
+        startDate,
+        endDate,
+        undefined,
+        MAX_RESULTS,
+        startIndex,
       );
 
       if (page === 0) {
@@ -400,53 +614,90 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
   }
 
   private async syncDimensionDataAsync(
-    accessToken: string, channelId: string,
-    startDateStr: string, endDateStr: string, syncDates: Date[], forceRefresh: boolean,
+    accessToken: string,
+    channelId: string,
+    startDateStr: string,
+    endDateStr: string,
+    syncDates: Date[],
+    forceRefresh: boolean,
   ): Promise<void> {
     const today = this.formatDate(new Date());
 
     for (const dimensionConfig of DIMENSION_CONFIGS) {
-      const exists = await this.hasDimensionSnapshotAsync(channelId, dimensionConfig.targetField, today);
+      const exists = await this.hasDimensionSnapshotAsync(
+        channelId,
+        dimensionConfig.targetField,
+        today,
+      );
       if (!forceRefresh && exists) continue;
 
       try {
         const result = await this.queryDimensionReportsPaginatedAsync(
-          accessToken, dimensionConfig.metrics, `day,${dimensionConfig.dimension}`,
-          startDateStr, endDateStr,
+          accessToken,
+          dimensionConfig.metrics,
+          `day,${dimensionConfig.dimension}`,
+          startDateStr,
+          endDateStr,
         );
 
         if (!result.rows || result.rows.length === 0) {
-          logger.info(`[YoutubeAnalyticsService] No ${dimensionConfig.targetField} rows returned for channel ${channelId}.`);
+          logger.info(
+            `[YoutubeAnalyticsService] No ${dimensionConfig.targetField} rows returned for channel ${channelId}.`,
+          );
           continue;
         }
 
         const dimColIndex = this.buildColumnIndex(result.columnHeaders);
-        const rowsByDate = this.groupDimensionRowsByDate(result.rows, dimColIndex, dimensionConfig.dimension);
+        const rowsByDate = this.groupDimensionRowsByDate(
+          result.rows,
+          dimColIndex,
+          dimensionConfig.dimension,
+        );
 
         for (const date of syncDates) {
           const dateKey = this.formatDate(date);
           const dimRows = rowsByDate[dateKey];
           if (!dimRows || dimRows.length === 0) continue;
 
-          const existing = await this.channelAnalyticsRepository.getByChannelIdAndDateAsync(channelId, date);
+          const existing =
+            await this.channelAnalyticsRepository.getByChannelIdAndDateAsync(
+              channelId,
+              date,
+            );
           if (!existing) continue;
 
-          Object.assign(existing, this.mapDimensionRows(dimensionConfig.targetField, dimRows, dimColIndex));
+          Object.assign(
+            existing,
+            this.mapDimensionRows(
+              dimensionConfig.targetField,
+              dimRows,
+              dimColIndex,
+            ),
+          );
           await this.channelAnalyticsRepository.createOrUpdateAsync(existing);
         }
       } catch (error: any) {
-        logger.warn(`[YoutubeAnalyticsService] Dimension sync failed for ${dimensionConfig.targetField}: ${error.message}`);
+        logger.warn(
+          `[YoutubeAnalyticsService] Dimension sync failed for ${dimensionConfig.targetField}: ${error.message}`,
+        );
       }
     }
   }
 
-  private mapDimensionRows(targetField: string, dimRows: Array<{ dimensionValue: string; row: string[] }>, dimColIndex: Record<string, number>): Record<string, any> {
+  private mapDimensionRows(
+    targetField: string,
+    dimRows: Array<{ dimensionValue: string; row: string[] }>,
+    dimColIndex: Record<string, number>,
+  ): Record<string, any> {
     if (targetField === 'trafficSources') {
       return {
         trafficSources: dimRows.map((r) => ({
           source: r.dimensionValue,
           views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
-          watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
+          watchTimeMinutes: this.intVal(
+            { colIndex: dimColIndex, row: r.row },
+            'estimatedMinutesWatched',
+          ),
         })),
       };
     }
@@ -456,7 +707,10 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
         geography: dimRows.map((r) => ({
           countryCode: r.dimensionValue,
           views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
-          watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
+          watchTimeMinutes: this.intVal(
+            { colIndex: dimColIndex, row: r.row },
+            'estimatedMinutesWatched',
+          ),
         })),
       };
     }
@@ -466,7 +720,10 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
         devices: dimRows.map((r) => ({
           deviceType: r.dimensionValue,
           views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
-          watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
+          watchTimeMinutes: this.intVal(
+            { colIndex: dimColIndex, row: r.row },
+            'estimatedMinutesWatched',
+          ),
         })),
       };
     }
@@ -475,7 +732,12 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
       const subscribed = dimRows.find((r) => r.dimensionValue === 'SUBSCRIBED');
       return {
         audience: {
-          subscribedViewerPercentage: subscribed ? this.floatVal({ colIndex: dimColIndex, row: subscribed.row }, 'viewerPercentage') : 0,
+          subscribedViewerPercentage: subscribed
+            ? this.floatVal(
+                { colIndex: dimColIndex, row: subscribed.row },
+                'viewerPercentage',
+              )
+            : 0,
           returnViewerPercentage: 0,
           newViewerPercentage: 0,
         },
@@ -487,7 +749,10 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
         playbackLocations: dimRows.map((r) => ({
           location: r.dimensionValue,
           views: this.intVal({ colIndex: dimColIndex, row: r.row }, 'views'),
-          watchTimeMinutes: this.intVal({ colIndex: dimColIndex, row: r.row }, 'estimatedMinutesWatched'),
+          watchTimeMinutes: this.intVal(
+            { colIndex: dimColIndex, row: r.row },
+            'estimatedMinutesWatched',
+          ),
         })),
       };
     }
@@ -495,8 +760,15 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     return {};
   }
 
-  private async hasDimensionSnapshotAsync(channelId: string, field: string, dateStr: string): Promise<boolean> {
-    const latest = await this.channelAnalyticsRepository.getLatestByChannelIdAsync(channelId);
+  private async hasDimensionSnapshotAsync(
+    channelId: string,
+    field: string,
+    dateStr: string,
+  ): Promise<boolean> {
+    const latest =
+      await this.channelAnalyticsRepository.getLatestByChannelIdAsync(
+        channelId,
+      );
     if (!latest) return false;
     if (this.formatDate(latest.snapshotDate) !== dateStr) return false;
 
@@ -508,8 +780,12 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
   }
 
   private async syncVideoMetricsAsync(
-    accessToken: string, userId: string, channelId: string,
-    startDateStr: string, endDateStr: string, missingDates: Date[],
+    accessToken: string,
+    userId: string,
+    channelId: string,
+    startDateStr: string,
+    endDateStr: string,
+    missingDates: Date[],
   ): Promise<void> {
     const importedVideos = await this.userContentContext.find({
       where: {
@@ -523,7 +799,9 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
       ...new Set(
         importedVideos
           .map((v) => v.metaData?.videoId || v.externalId)
-          .filter((id): id is string => typeof id === 'string' && id.length > 0),
+          .filter(
+            (id): id is string => typeof id === 'string' && id.length > 0,
+          ),
       ),
     ];
 
@@ -531,8 +809,14 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
 
     try {
       const result = await this.queryReportsAsync(
-        accessToken, 'views,estimatedMinutesWatched,averageViewDuration,likes,comments,shares',
-        'day,video', undefined, startDateStr, endDateStr, undefined, 5000,
+        accessToken,
+        'views,estimatedMinutesWatched,averageViewDuration,likes,comments,shares',
+        'day,video',
+        undefined,
+        startDateStr,
+        endDateStr,
+        undefined,
+        5000,
       );
 
       if (!result.rows || result.rows.length === 0) {
@@ -546,20 +830,30 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
       }
 
       const colIndex = this.buildColumnIndex(result.columnHeaders);
-      const ROWS_BY_DATE_VIDEO = this.indexRowsByDateAndVideo(result.rows, colIndex);
+      const ROWS_BY_DATE_VIDEO = this.indexRowsByDateAndVideo(
+        result.rows,
+        colIndex,
+      );
 
       for (const date of missingDates) {
         const dateKey = this.formatDate(date);
         for (const videoId of videoIds) {
           const row = ROWS_BY_DATE_VIDEO[dateKey]?.[videoId];
-          await this.saveVideoSnapshot(userId, videoId, date, row ? { colIndex, row } : null);
+          await this.saveVideoSnapshot(
+            userId,
+            videoId,
+            date,
+            row ? { colIndex, row } : null,
+          );
         }
       }
 
       // Fetch video metadata (snippet only, not statistics) after snapshots exist
       await this.fetchAndStoreVideoMetadataAsync(accessToken, userId, videoIds);
     } catch (error: any) {
-      logger.error(`[YoutubeAnalyticsService] Video metrics sync failed: ${error.message}`);
+      logger.error(
+        `[YoutubeAnalyticsService] Video metrics sync failed: ${error.message}`,
+      );
       // Fallback: save empty video snapshots
       for (const date of missingDates) {
         for (const videoId of videoIds) {
@@ -570,17 +864,27 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
   }
 
   private async saveVideoSnapshot(
-    userId: string, videoId: string,
-    snapshotDate: Date, apiData: { colIndex: Record<string, number>; row: string[] } | null,
+    userId: string,
+    videoId: string,
+    snapshotDate: Date,
+    apiData: { colIndex: Record<string, number>; row: string[] } | null,
   ): Promise<void> {
     const snapshot = new YoutubeVideoAnalytics({
-      videoId, userId, snapshotDate,
+      videoId,
+      userId,
+      snapshotDate,
     });
 
     if (apiData) {
       snapshot.viewCount = this.intVal(apiData, 'views');
-      snapshot.estimatedMinutesWatched = this.intVal(apiData, 'estimatedMinutesWatched');
-      snapshot.averageViewDurationSeconds = this.floatVal(apiData, 'averageViewDuration');
+      snapshot.estimatedMinutesWatched = this.intVal(
+        apiData,
+        'estimatedMinutesWatched',
+      );
+      snapshot.averageViewDurationSeconds = this.floatVal(
+        apiData,
+        'averageViewDuration',
+      );
       snapshot.likeCount = this.intVal(apiData, 'likes');
       snapshot.commentCount = this.intVal(apiData, 'comments');
       snapshot.shares = this.intVal(apiData, 'shares');
@@ -589,20 +893,33 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     await this.videoAnalyticsRepository.createOrUpdateAsync(snapshot);
   }
 
-  private async fetchAndStoreVideoMetadataAsync(accessToken: string, userId: string, videoIds: string[]): Promise<void> {
+  private async fetchAndStoreVideoMetadataAsync(
+    accessToken: string,
+    userId: string,
+    videoIds: string[],
+  ): Promise<void> {
     for (let i = 0; i < videoIds.length; i += 50) {
       const chunk = videoIds.slice(i, i + 50);
       try {
-        const response = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
-          params: { id: chunk.join(','), part: 'snippet,contentDetails' },
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        const response = await axios.get(
+          'https://www.googleapis.com/youtube/v3/videos',
+          {
+            params: { id: chunk.join(','), part: 'snippet,contentDetails' },
+            headers: { Authorization: `Bearer ${accessToken}` },
+          },
+        );
 
         const videosList = response.data.items || [];
         for (const video of videosList) {
-          const existing = await this.videoAnalyticsRepository.getLatestByUserIdAndVideoIdAsync(userId, video.id);
+          const existing =
+            await this.videoAnalyticsRepository.getLatestByUserIdAndVideoIdAsync(
+              userId,
+              video.id,
+            );
           const duration = video.contentDetails?.duration;
-          const publishedAt = video.snippet?.publishedAt ? new Date(video.snippet.publishedAt) : undefined;
+          const publishedAt = video.snippet?.publishedAt
+            ? new Date(video.snippet.publishedAt)
+            : undefined;
 
           if (existing && existing.duration && existing.publishedAt) continue;
 
@@ -612,15 +929,19 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
             await this.videoAnalyticsRepository.createOrUpdateAsync(existing);
           } else if (duration || publishedAt) {
             const metaEntity = new YoutubeVideoAnalytics({
-              videoId: video.id, userId,
-              duration, publishedAt,
+              videoId: video.id,
+              userId,
+              duration,
+              publishedAt,
               snapshotDate: new Date(),
             });
             await this.videoAnalyticsRepository.createOrUpdateAsync(metaEntity);
           }
         }
       } catch (error: any) {
-        logger.warn(`[YoutubeAnalyticsService] Failed to fetch video metadata batch: ${error.message}`);
+        logger.warn(
+          `[YoutubeAnalyticsService] Failed to fetch video metadata batch: ${error.message}`,
+        );
       }
     }
   }
@@ -636,7 +957,9 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     }
   }
 
-  private async refreshTokenAsync(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
+  private async refreshTokenAsync(
+    refreshToken: string,
+  ): Promise<{ access_token: string; expires_in: number }> {
     try {
       const response = await axios.post(
         'https://oauth2.googleapis.com/token',
@@ -651,7 +974,9 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
 
       const { access_token, expires_in } = response.data;
       if (!access_token) {
-        throw new Error('Your Youtube session has expired. Access token is missing.');
+        throw new Error(
+          'Your Youtube session has expired. Access token is missing.',
+        );
       }
 
       return { access_token, expires_in };
@@ -661,7 +986,9 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     }
   }
 
-  private buildColumnIndex(columnHeaders: Array<{ name: string }>): Record<string, number> {
+  private buildColumnIndex(
+    columnHeaders: Array<{ name: string }>,
+  ): Record<string, number> {
     const index: Record<string, number> = {};
     for (let i = 0; i < columnHeaders.length; i++) {
       index[columnHeaders[i].name] = i;
@@ -669,7 +996,10 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     return index;
   }
 
-  private indexRowsByDate(rows: string[][], colIndex: Record<string, number>): Record<string, string[]> {
+  private indexRowsByDate(
+    rows: string[][],
+    colIndex: Record<string, number>,
+  ): Record<string, string[]> {
     const dateIdx = colIndex['day'];
     if (dateIdx === undefined) return {};
     const map: Record<string, string[]> = {};
@@ -679,7 +1009,10 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     return map;
   }
 
-  private indexRowsByDateAndVideo(rows: string[][], colIndex: Record<string, number>): Record<string, Record<string, string[]>> {
+  private indexRowsByDateAndVideo(
+    rows: string[][],
+    colIndex: Record<string, number>,
+  ): Record<string, Record<string, string[]>> {
     const dateIdx = colIndex['day'];
     const videoIdx = colIndex['video'];
     if (dateIdx === undefined || videoIdx === undefined) return {};
@@ -694,12 +1027,17 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
   }
 
   private groupDimensionRowsByDate(
-    rows: string[][], colIndex: Record<string, number>, dimensionName: string,
+    rows: string[][],
+    colIndex: Record<string, number>,
+    dimensionName: string,
   ): Record<string, Array<{ dimensionValue: string; row: string[] }>> {
     const dateIdx = colIndex['day'];
     const dimIdx = colIndex[dimensionName];
     if (dateIdx === undefined || dimIdx === undefined) return {};
-    const map: Record<string, Array<{ dimensionValue: string; row: string[] }>> = {};
+    const map: Record<
+      string,
+      Array<{ dimensionValue: string; row: string[] }>
+    > = {};
     for (const row of rows) {
       const dateKey = row[dateIdx];
       const dimValue = row[dimIdx];
@@ -709,7 +1047,10 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     return map;
   }
 
-  private intVal(apiData: { colIndex: Record<string, number>; row: string[] }, field: string): number {
+  private intVal(
+    apiData: { colIndex: Record<string, number>; row: string[] },
+    field: string,
+  ): number {
     const idx = apiData.colIndex[field];
     if (idx === undefined) return 0;
     const val = apiData.row[idx];
@@ -717,7 +1058,10 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     return Math.round(parseFloat(val)) || 0;
   }
 
-  private floatVal(apiData: { colIndex: Record<string, number>; row: string[] }, field: string): number {
+  private floatVal(
+    apiData: { colIndex: Record<string, number>; row: string[] },
+    field: string,
+  ): number {
     const idx = apiData.colIndex[field];
     if (idx === undefined) return 0;
     const val = apiData.row[idx];

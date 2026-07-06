@@ -1,10 +1,23 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
-import { PinterestImportCommand, PinterestImportRequestModel } from "./pinterest-import.handler";
-import { CancelPinterestImportCommand, CancelPinterestImportRequestModel } from "./cancel-pinterest-import.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  PinterestImportCommand,
+  PinterestImportRequestModel,
+} from './pinterest-import.handler';
+import {
+  CancelPinterestImportCommand,
+  CancelPinterestImportRequestModel,
+} from './cancel-pinterest-import.handler';
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
@@ -13,10 +26,7 @@ import { CancelPinterestImportCommand, CancelPinterestImportRequestModel } from 
   version: '1',
 })
 export class PinterestImportController {
-
-  constructor(
-    private readonly commandBus: CommandBus
-  ) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('import')
   @ApiResponse({ status: 200, description: 'OK' })
@@ -26,17 +36,20 @@ export class PinterestImportController {
   @ApiBody({ type: PinterestImportRequestModel, required: false })
   public async Import(
     @Body() model: PinterestImportRequestModel,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response | void> {
-
-    const result = await this.commandBus.execute(new PinterestImportCommand({ model }));
+    const result = await this.commandBus.execute(
+      new PinterestImportCommand({ model }),
+    );
     if (model?.pinterestAccessToken) {
       return res.status(HttpStatus.OK).json({
-        message: "Pinterest import has begun."
+        message: 'Pinterest import has begun.',
       });
     }
 
-    return res.status(HttpStatus.OK).json({ message: "Pinterest import has begun.", ...result });
+    return res
+      .status(HttpStatus.OK)
+      .json({ message: 'Pinterest import has begun.', ...result });
   }
 
   @Post('import/cancel')
@@ -47,9 +60,11 @@ export class PinterestImportController {
   @ApiBody({ type: CancelPinterestImportRequestModel })
   public async Cancel(
     @Body() model: CancelPinterestImportRequestModel,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response | void> {
     await this.commandBus.execute(new CancelPinterestImportCommand({ model }));
-    return res.status(HttpStatus.OK).json({ message: "Pinterest import cancellation and rollback requested." });
+    return res.status(HttpStatus.OK).json({
+      message: 'Pinterest import cancellation and rollback requested.',
+    });
   }
 }

@@ -1,12 +1,15 @@
-import * as Joi from "joi";
+import * as Joi from 'joi';
 import * as speakeasy from 'speakeasy';
-import { Inject } from "@nestjs/common";
-import { ApiProperty } from "@nestjs/swagger";
+import { Inject } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
-import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { IUserRepository } from '../../../../domain/repositories';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
-import { ApplicationException, UserNotFoundException } from "../../../../core/exceptions";
+import {
+  ApplicationException,
+  UserNotFoundException,
+} from '../../../../core/exceptions';
 
 export class Enable2FAModel {
   @ApiProperty()
@@ -30,15 +33,15 @@ const enable2FAValidations = Joi.object({
 });
 
 @CommandHandler(Enable2FACommand)
-export class Enable2FACommandHandler implements ICommandHandler<Enable2FACommand, void> {
-
+export class Enable2FACommandHandler
+  implements ICommandHandler<Enable2FACommand, void>
+{
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly userRepository: IUserRepository,
-  ) { }
+    @Inject(_const.IUSER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+  ) {}
 
   public async execute(command: Enable2FACommand): Promise<void> {
-
-
     const { model } = command;
     await enable2FAValidations.validateAsync(model);
 
@@ -47,13 +50,15 @@ export class Enable2FACommandHandler implements ICommandHandler<Enable2FACommand
       throw new ApplicationException('Invalid OTP or secret.');
     }
 
-    const user = await this.userRepository.getUserByIdAsync(HttpContext.getCurrentUserId);
+    const user = await this.userRepository.getUserByIdAsync(
+      HttpContext.getCurrentUserId,
+    );
     if (!user) {
       throw new UserNotFoundException();
     }
 
     if (user.twoFactorEnabled) {
-      throw new ApplicationException("") // AI fix error 
+      throw new ApplicationException(''); // AI fix error
     }
 
     user.twoFactorEnabled = true;

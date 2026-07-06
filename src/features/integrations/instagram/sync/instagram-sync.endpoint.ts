@@ -1,10 +1,17 @@
-import { Response } from "express";
-import { CommandBus } from "@nestjs/cqrs";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { UserAccoutGuard } from "../../../../core/passport/account.guard";
-import { Body, Controller, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
-import { EnableInstagramSyncCommand } from "./enable-instagram-sync.handler";
-import { DisableInstagramSyncCommand } from "./disable-instagram-sync.handler";
+import { Response } from 'express';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { EnableInstagramSyncCommand } from './enable-instagram-sync.handler';
+import { DisableInstagramSyncCommand } from './disable-instagram-sync.handler';
 
 @ApiTags('Integrations')
 @UseGuards(UserAccoutGuard)
@@ -13,19 +20,17 @@ import { DisableInstagramSyncCommand } from "./disable-instagram-sync.handler";
   version: '1',
 })
 export class InstagramSyncController {
-  constructor(
-    private readonly commandBus: CommandBus
-  ) { }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('sync/enable')
   @ApiResponse({ status: 200, description: 'OK' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-  public async Enable(
-    @Res() res: Response
-  ): Promise<Response | void> {
-    const result = await this.commandBus.execute(new EnableInstagramSyncCommand());
+  public async Enable(@Res() res: Response): Promise<Response | void> {
+    const result = await this.commandBus.execute(
+      new EnableInstagramSyncCommand(),
+    );
     return res.status(HttpStatus.OK).json(result);
   }
 
@@ -34,11 +39,10 @@ export class InstagramSyncController {
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
-  public async Disable(
-    @Res() res: Response
-  ): Promise<Response | void> {
-    const result = await this.commandBus.execute(new DisableInstagramSyncCommand());
+  public async Disable(@Res() res: Response): Promise<Response | void> {
+    const result = await this.commandBus.execute(
+      new DisableInstagramSyncCommand(),
+    );
     return res.status(HttpStatus.OK).json(result);
   }
 }
-

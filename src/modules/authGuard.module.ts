@@ -1,12 +1,16 @@
-import { Module } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
-import { CqrsModule } from "@nestjs/cqrs";
-import { TurnstileGuard, AdminAccoutGuard, GuestAccoutGuard, UserAccoutGuard, OnboardingGuard } from "../core/passport";
+import { Module } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { CqrsModule } from '@nestjs/cqrs';
+import {
+  TurnstileGuard,
+  AdminAccoutGuard,
+  GuestAccoutGuard,
+  UserAccoutGuard,
+  OnboardingGuard,
+} from '../core/passport';
 
 @Module({
-  imports: [
-    CqrsModule,
-  ],
+  imports: [CqrsModule],
   providers: [
     JwtService,
     UserAccoutGuard,
@@ -23,4 +27,4 @@ import { TurnstileGuard, AdminAccoutGuard, GuestAccoutGuard, UserAccoutGuard, On
     OnboardingGuard,
   ],
 })
-export class AuthGuardsModule { }
+export class AuthGuardsModule {}
