@@ -102,19 +102,15 @@ export class UserRepository implements IUserRepository {
     const key = redis.getRedisKey<string>(
       `${user.id}${_const.REDIS.USER.ACCOUNT}`,
     );
-    const existingCache = await redis.getFromRedisAsync(key);
-    if (existingCache) {
-      await redis.storeInRedisAsync(
-        key,
-        {
-          concurrencyStamp: user.concurrencyStamp,
-          securityStamp: user.securityStamp,
-          useronboardingStep: user.onboardingStep,
-          // Add more user account related
-        },
-        _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC,
-      );
-    }
+    await redis.storeInRedisAsync(
+      key,
+      {
+        concurrencyStamp: user.concurrencyStamp,
+        securityStamp: user.securityStamp,
+        useronboardingStep: user.onboardingStep,
+      },
+      _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC,
+    );
     return true;
   }
 
@@ -128,7 +124,7 @@ export class UserRepository implements IUserRepository {
       {
         concurrencyStamp: user.concurrencyStamp,
         securityStamp: user.securityStamp,
-        // Add more user account related
+        useronboardingStep: user.onboardingStep,
       },
       cacheTtl,
     );
