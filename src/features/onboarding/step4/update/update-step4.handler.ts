@@ -39,7 +39,7 @@ export class OnboardingStep4CommandHandler implements ICommandHandler<Onboarding
     // Mark onboarding as completed
     user.onboardingStep = OnboardingStep.Completed;
     await this.userRepository.updateAsync(user);
-
+    
     // Generate new JWT with updated onboardingStep claim
     const accessToken = await this.tokenService.generateJwtAsync(user);
 

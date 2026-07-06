@@ -64,7 +64,7 @@ export class OnboardingStep1CommandHandler implements ICommandHandler<Onboarding
       const uploadResult = await uploadBase64ToCloudinaryAsync(base64Image, "users");
 
       if (!biometrics) {
-        const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email.split('@')[0];
+        const fullName = [user.firstName, user.lastName].filter(Boolean).join('') || user.email.split('@')[0];
         const initials = stringUtil.extractInitialsFromName(fullName);
         const base64InitialsImage = generateInitialImage(initials);
         const initialsUploadResult = await uploadBase64ToCloudinaryAsync(base64InitialsImage, "users");

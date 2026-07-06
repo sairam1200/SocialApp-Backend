@@ -12,7 +12,7 @@ process.env.NODE_ENV = nodeEnv;
 dotenv.config({ path: path.join(process.cwd(), `.env.${nodeEnv}`) })
 dotenv.config({ override: true })
 console.log(
-  "CONFIG FILE LOADED", process.env.DATABASE_URL
+  "CONFIG FILE LOADED"
 );
 
 const envVarsSchema = Joi.object()

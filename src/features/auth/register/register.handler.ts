@@ -92,9 +92,9 @@ export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> 
 
     const user = await this.userRepository.createAsync(
       new User({
-        firstName: model.firstName,
-        lastName: model.lastName,
-        email: model.email,
+        firstName: model.firstName.trim(),
+        lastName: model.lastName.trim(),
+        email: model.email.toLowerCase(),
         phoneNumber: "",
         type: UserType.User,
         biometrics: new UserBiometric({

@@ -28,7 +28,10 @@ export class GetOnboardingStep1QueryHandler implements IQueryHandler<GetOnboardi
 
     const biometrics = user.biometrics || await this.userRepository.getUserBiometricAsync(user.id);
     const profileImageUrl = biometrics?.profileImageUrl || biometrics?.defaultProfileImageUrl || null;
-
+    console.log({
+  firstName: JSON.stringify(user.firstName),
+  lastName: JSON.stringify(user.lastName),
+});
     return new OnboardingStep1Model({
       profileImage: profileImageUrl,
       username: user.firstName+user.lastName || null,
