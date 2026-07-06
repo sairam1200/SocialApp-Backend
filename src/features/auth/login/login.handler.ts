@@ -2,9 +2,11 @@ import * as Joi from 'joi';
 import { Inject } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../core/utils/const';
+import logger from '../../../core/utils/winston.util';
 import { User } from '../../../domain/entities';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { ITokenService } from '../../../domain/services/itoken.service';
+import { IEmailService } from '../../../domain/services/iemail.service';
 import { IUserRepository } from '../../../domain/repositories/iuser.repository';
 import { IAnalyticsService } from '../../../domain/services/ianalytics.service';
 import { TokenResponseModel } from '../../../domain/contracts/tokenResponse.model';
@@ -61,6 +63,8 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
     private readonly userRepository: IUserRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
+    @Inject(_const.IEMAIL_SERVICE)
+    private readonly emailService: IEmailService,
     @Inject(_const.IANALYTICS_SERVICE)
     private readonly analyticsService: IAnalyticsService,
   ) {}
@@ -134,6 +138,10 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
       );
       // TODO: Send email notification of login with new ipAddress and deviceInfo
 
+     /*  if (String(user.onboardingStep) !== 'Completed') {
+        this.sendWelcomeEmail(user);
+      } */
+
       await this.analyticsService.trackEvent(
         _const.ANALYTICS_EVENTS.AUTH.LOGIN,
         {
@@ -183,5 +191,20 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
 
   private createErrorResponse(message: string): TokenResponseModel {
     return new TokenResponseModel({ message, succeeded: false });
+  }
+
+  private async sendWelcomeEmail(user: User): Promise<void> {
+    try {
+      await this.emailService.sendTemplatedAsync({
+        to: user.email,
+        subject: 'Welcome to Gaddr',
+        templatePath: 'templates/email/welcome-email-v1.html',
+        context: {
+          year: new Date().getFullYear(),
+        },
+      });
+    } catch (error) {
+      logger.error(`Failed to send welcome email for user ${user.id}`, error);
+    }
   }
 }

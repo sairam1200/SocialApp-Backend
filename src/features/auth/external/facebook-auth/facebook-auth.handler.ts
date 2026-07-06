@@ -426,6 +426,10 @@ export class FacebookConnectCallbackQueryHandler
       _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC,
     );
 
+    if (String(user.onboardingStep) !== 'Completed') {
+      this.sendWelcomeEmail(user);
+    }
+
     return new FacebookCallbackTokenResponseModel({
       access_token: access_token,
       refresh_token: userToken.tokenValue,

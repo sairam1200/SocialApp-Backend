@@ -321,6 +321,11 @@ export class GoogleConnectCallbackQueryHandler
     );
 
     // TODO: Send email notification of login with new ipAddress and deviceInfo
+
+    if (String(user.onboardingStep) !== 'Completed') {
+      this.sendWelcomeEmail(user);
+    }
+
     return new GoogleCallbaclTokenResponseModel({
       access_token: access_token,
       refresh_token: userToken.tokenValue,
