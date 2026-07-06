@@ -5,6 +5,7 @@ export type SearchUserProjection = Pick<User, "id" | "firstName" | "lastName" | 
   profileImage?: string;
   followersCount?: number;
   followingCount?: number;
+  isFollowing?: boolean;
   linkedAccounts?: { id: string; platform: string; verified?: boolean }[];
   verified?: boolean;
 };

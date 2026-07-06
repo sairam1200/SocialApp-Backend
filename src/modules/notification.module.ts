@@ -30,6 +30,6 @@ import { NotificationTemplate } from "domain/entities/notification/notificationT
   controllers: [
     ...notification.addControllers()
   ],
-  exports: [dependency.NotificationService, dependency.NotificationRepository],
+  exports: [dependency.NotificationService, dependency.NotificationRepository, NotificationGateway],
 })
 export class NotificationModule { }

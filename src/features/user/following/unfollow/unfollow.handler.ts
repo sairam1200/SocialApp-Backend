@@ -1,5 +1,8 @@
 import { Inject, NotFoundException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { FollowUpdatedEvent } from "../../../../domain/events/follow-updated.event";
+import { FollowStatus } from "../../../../domain/enums";
 import _const from "../../../../core/utils/const";
 import { ProfileCacheService } from "../../../../infrastructure/services/profileCache.service";
 import redis from "../../../../core/utils/redis.util";
@@ -17,6 +20,7 @@ export class UnfollowUserCommandHandler implements ICommandHandler<UnfollowUserC
   constructor(
     @Inject(_const.IUSERFOLLOW_REPOSITORY) private readonly follows: IUserFollowRepository,
     private readonly profileCache: ProfileCacheService,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   public async execute(command: UnfollowUserCommand): Promise<void> {
@@ -27,6 +31,22 @@ export class UnfollowUserCommandHandler implements ICommandHandler<UnfollowUserC
 
     await this.follows.deleteAsync(existing);
     await this.invalidateCaches(command.targetUserId, command.followerId);
+
+    const [targetFollowersCount, viewerFollowingCount] = await Promise.all([
+      this.follows.countFollowersAsync(command.targetUserId, FollowStatus.Accepted),
+      this.follows.countFollowingAsync(command.followerId, FollowStatus.Accepted),
+    ]);
+
+    this.eventEmitter.emit(
+      'follow.updated',
+      new FollowUpdatedEvent(
+        command.targetUserId,
+        command.followerId,
+        false,
+        targetFollowersCount,
+        viewerFollowingCount,
+      ),
+    );
   }
 
   private async invalidateCaches(targetUserId: string, followerId: string): Promise<void> {

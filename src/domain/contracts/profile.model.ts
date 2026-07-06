@@ -21,6 +21,9 @@ export class ProfileModel extends UserModel {
   @ApiProperty({ default: 0 })
   followingCount: number;
 
+  @ApiProperty({ default: false })
+  isFollowing: boolean;
+
   constructor(partial?: Partial<ProfileModel>) {
     super();
     Object.assign(this, partial);

@@ -12,7 +12,8 @@ export function mapToProfileModel(
   includeSensitiveFields: boolean = false,
   profileImageUrl: string | null = null,
   followersCount: number = 0,
-  followingCount: number = 0
+  followingCount: number = 0,
+  isFollowing: boolean = false
 ): ProfileModel {
   const { isEmailVerified, ...userModel } = mapToUserModel(user, includeSensitiveFields, profileImageUrl);
   return new ProfileModel({
@@ -22,6 +23,7 @@ export function mapToProfileModel(
     manualProfiles: manualProfiles.map(mapToManualProfileModel),
     followersCount,
     followingCount,
+    isFollowing,
   });
 }
 

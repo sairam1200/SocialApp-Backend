@@ -1,9 +1,11 @@
 import { Inject, BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { CommandHandler, ICommandHandler } from "@nestjs/cqrs";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { FollowModel } from "../../../../domain/contracts/follow.model";
 import { FollowStatus } from "../../../../domain/enums";
 import { UserFollow } from "../../../../domain/entities/userFollow.entity";
 import { mapToFollowModel } from "../../../../domain/mappers/follow.mapper";
+import { FollowUpdatedEvent } from "../../../../domain/events/follow-updated.event";
 import _const from "../../../../core/utils/const";
 import { IUserRepository, IUserFollowRepository } from "../../../../domain/repositories";
 import { ProfileCacheService } from "../../../../infrastructure/services/profileCache.service";
@@ -24,6 +26,7 @@ export class FollowUserCommandHandler implements ICommandHandler<FollowUserComma
     @Inject(_const.IUSER_REPOSITORY) private readonly users: IUserRepository,
     @Inject(_const.IUSERFOLLOW_REPOSITORY) private readonly follows: IUserFollowRepository,
     private readonly profileCache: ProfileCacheService,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   private getDailyFollowLimitKey(userId: string): string {
@@ -79,6 +82,22 @@ export class FollowUserCommandHandler implements ICommandHandler<FollowUserComma
     );
 
     await this.invalidateCaches(command.targetUserId, command.followerId);
+
+    const [targetFollowersCount, viewerFollowingCount] = await Promise.all([
+      this.follows.countFollowersAsync(command.targetUserId, FollowStatus.Accepted),
+      this.follows.countFollowingAsync(command.followerId, FollowStatus.Accepted),
+    ]);
+
+    this.eventEmitter.emit(
+      'follow.updated',
+      new FollowUpdatedEvent(
+        command.targetUserId,
+        command.followerId,
+        true,
+        targetFollowersCount,
+        viewerFollowingCount,
+      ),
+    );
 
     const hydrated = await this.follows.getWithUsersAsync(command.followerId, command.targetUserId);
     return mapToFollowModel(hydrated ?? new UserFollow({

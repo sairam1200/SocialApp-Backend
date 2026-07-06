@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { dependency } from '../infrastructure/dependency';
 import { ProfileModule } from './profile.module';
 import { Role, RoleClaim, User, UserBiometric, UserClaim, UserFollow, UserRole } from '../domain/entities';
+import { FollowUpdatedListener } from '../infrastructure/background/listeners/follow-updated.listener';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { Role, RoleClaim, User, UserBiometric, UserClaim, UserFollow, UserRole }
     dependency.UserRoleRepository,
     dependency.RoleClaimRepository,
     dependency.UserFollowRepository,
+    FollowUpdatedListener,
   ],
   exports: [],
 })

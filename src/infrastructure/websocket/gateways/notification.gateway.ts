@@ -151,6 +151,16 @@ export class NotificationGateway extends BaseGateway implements OnGatewayConnect
     }
   }
 
+  emitFollowUpdated(userId: string, payload: {
+    targetUserId: string;
+    viewerUserId: string;
+    isFollowing: boolean;
+    targetFollowersCount: number;
+    viewerFollowingCount: number;
+  }) {
+    this.safeEmit(userId, 'follow.updated', payload);
+  }
+
   isUserConnected(userId: string): boolean {
     return this.connectedUsers.has(userId) && this.connectedUsers.get(userId)!.size > 0;
   }

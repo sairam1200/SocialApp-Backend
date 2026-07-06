@@ -197,6 +197,7 @@ export class UserRepository implements IUserRepository {
       ])
       .addSelect(`(SELECT COUNT(1) FROM "identity"."user_follows" f WHERE f."followedId" = user.id AND f.status = 'accepted')`, "followersCount")
       .addSelect(`(SELECT COUNT(1) FROM "identity"."user_follows" f WHERE f."followerId" = user.id AND f.status = 'accepted')`, "followingCount")
+      .addSelect(`(SELECT EXISTS(SELECT 1 FROM "identity"."user_follows" f WHERE f."followerId" = CAST(:viewerUserId AS uuid) AND f."followedId" = user.id AND f.status = 'accepted'))`, "isFollowing")
       .addSelect(`(SELECT COALESCE(json_agg(json_build_object('id', la.id, 'platform', la.platform, 'verified', la.verified) ORDER BY la.platform) FILTER (WHERE la.id IS NOT NULL), '[]'::json) FROM "linkedAccounts" la WHERE la."userId" = CAST(user.id AS text))`, "linkedAccounts")
       .addSelect(`(SELECT EXISTS(SELECT 1 FROM "linkedAccounts" la WHERE la."userId" = CAST(user.id AS text) AND la.verified = true))`, "verified")
       .leftJoin(UserBiometric, "biometrics", "biometrics.\"userId\" = user.id")

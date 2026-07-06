@@ -96,7 +96,12 @@ const decodedUserName = decodeURIComponent(query.userName);
     const followersCount = await this.userFollowRepository.countFollowersAsync(user.id, FollowStatus.Accepted);
     const followingCount = await this.userFollowRepository.countFollowingAsync(user.id, FollowStatus.Accepted);
 
-    return mapToProfileModel(user, linkedAccounts, manualProfiles, includeSensitiveFields, profileImageUrl, followersCount, followingCount);
+    const follow = viewerUserId && !isOwnProfile
+      ? await this.userFollowRepository.getAsync(viewerUserId, user.id)
+      : null;
+    const isFollowing = !!(follow && follow.status === FollowStatus.Accepted);
+
+    return mapToProfileModel(user, linkedAccounts, manualProfiles, includeSensitiveFields, profileImageUrl, followersCount, followingCount, isFollowing);
   }
 }
 
