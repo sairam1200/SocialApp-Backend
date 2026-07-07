@@ -87,6 +87,51 @@ export class UserContentRepository implements IUserContentRepository {
     return [items, nextCursor];
   }
 
+  public async getDiscoverFeedAsync(
+    cursor?: string,
+    limit: number = 20,
+    platform?: string,
+    userId?: string,
+  ): Promise<[UserContent[], string | null]> {
+    const take = Math.min(limit, 50);
+
+    const qb = this.userContentContext
+      .createQueryBuilder('uc')
+      .leftJoinAndSelect('uc.user', 'user')
+      .leftJoinAndSelect('user.biometrics', 'bio')
+      .orderBy('uc.createdOn', 'DESC')
+      .addOrderBy('uc.id', 'DESC')
+      .take(take + 1);
+
+    if (cursor) {
+      qb.andWhere('uc.createdOn < :cursor', {
+        cursor: new Date(cursor),
+      });
+    }
+
+    if (platform) {
+      qb.andWhere('uc.platform = :platform', { platform });
+    }
+
+    if (userId) {
+      qb.andWhere('uc.userId = :userId', { userId });
+    }
+
+    const items = await qb.getMany();
+
+    const hasMore = items.length > take;
+
+    if (hasMore) {
+      items.pop();
+    }
+
+    const nextCursor = hasMore
+      ? items[items.length - 1].createdOn.toISOString()
+      : null;
+
+    return [items, nextCursor];
+  }
+
   async getEntriesAsync(
     params: QueryOptions,
   ): Promise<[UserContent[], number]> {

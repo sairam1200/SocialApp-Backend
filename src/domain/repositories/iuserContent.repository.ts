@@ -67,6 +67,13 @@ export interface IUserContentRepository {
     types: string[],
   ): Promise<Pick<UserContent, 'externalId' | 'metaData'>[]>;
 
+  getDiscoverFeedAsync(
+    cursor?: string,
+    limit?: number,
+    platform?: string,
+    userId?: string,
+  ): Promise<[UserContent[], string | null]>;
+
   deleteByUserIdAndPlatformAsync(
     userId: string,
     platform: string,
