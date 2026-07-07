@@ -63,19 +63,27 @@ export class UserContentRepository implements IUserContentRepository {
     cursor: string,
   ): Promise<[UserContent[], string]> {
     const take = 20;
+    const sortField = 'COALESCE(content.publishedAt, content.createdOn)';
 
     const qb = this.userContentContext
       .createQueryBuilder('content')
       .where('content.userId = :userId', { userId })
       .andWhere('content.platform = :platform', { platform })
-      .orderBy('content.createdOn', 'DESC')
+      .orderBy(sortField, 'DESC')
       .addOrderBy('content.id', 'DESC')
       .take(take + 1);
 
     if (cursor) {
-      qb.andWhere('content.createdOn < :cursor', {
-        cursor: new Date(cursor),
-      });
+      const cursorDate = new Date(cursor.includes('|') ? cursor.split('|')[0] : cursor);
+      if (cursor.includes('|')) {
+        const [, cursorId] = cursor.split('|');
+        qb.andWhere(
+          `(${sortField} < :cursorDate OR (${sortField} = :cursorDate AND content.id < :cursorId))`,
+          { cursorDate, cursorId },
+        );
+      } else {
+        qb.andWhere(`${sortField} < :cursorDate`, { cursorDate });
+      }
     }
 
     const items = await qb.getMany();
@@ -87,7 +95,7 @@ export class UserContentRepository implements IUserContentRepository {
     }
 
     const nextCursor = hasMore
-      ? items[items.length - 1].createdOn.toISOString()
+      ? `${(items[items.length - 1].publishedAt || items[items.length - 1].createdOn).toISOString()}|${items[items.length - 1].id}`
       : '';
 
     return [items, nextCursor];
@@ -100,19 +108,29 @@ export class UserContentRepository implements IUserContentRepository {
     userId?: string,
   ): Promise<[UserContent[], string | null]> {
     const take = Math.min(limit, 50);
+    const sortField = 'COALESCE(uc.publishedAt, uc.createdOn)';
+    const sortAlias = 'discover_sort_time';
 
     const qb = this.userContentContext
       .createQueryBuilder('uc')
       .leftJoinAndSelect('uc.user', 'user')
       .leftJoinAndSelect('user.biometrics', 'bio')
-      .orderBy('uc.createdOn', 'DESC')
+      .addSelect(sortField, sortAlias)
+      .orderBy(sortAlias, 'DESC')
       .addOrderBy('uc.id', 'DESC')
       .take(take + 1);
 
     if (cursor) {
-      qb.andWhere('uc.createdOn < :cursor', {
-        cursor: new Date(cursor),
-      });
+      const cursorDate = new Date(cursor.includes('|') ? cursor.split('|')[0] : cursor);
+      if (cursor.includes('|')) {
+        const [, cursorId] = cursor.split('|');
+        qb.andWhere(
+          `(${sortField} < :cursorDate OR (${sortField} = :cursorDate AND uc.id < :cursorId))`,
+          { cursorDate, cursorId },
+        );
+      } else {
+        qb.andWhere(`${sortField} < :cursorDate`, { cursorDate });
+      }
     }
 
     if (platform) {
@@ -132,7 +150,7 @@ export class UserContentRepository implements IUserContentRepository {
     }
 
     const nextCursor = hasMore
-      ? items[items.length - 1].createdOn.toISOString()
+      ? `${(items[items.length - 1].publishedAt || items[items.length - 1].createdOn).toISOString()}|${items[items.length - 1].id}`
       : null;
 
     return [items, nextCursor];
