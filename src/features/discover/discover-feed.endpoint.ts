@@ -19,17 +19,15 @@ export class DiscoverFeedController {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiQuery({ name: 'cursor', required: false, type: String })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
-  @ApiQuery({ name: 'platform', required: false, type: String })
   @ApiQuery({ name: 'userId', required: false, type: String, description: 'Filter by user ID (used by "For You" tab)' })
   public async getDiscoverFeed(
     @Res() res: Response,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: number,
-    @Query('platform') platform?: string,
     @Query('userId') userId?: string,
   ): Promise<Response> {
     const result = await this.queryBus.execute(
-      new DiscoverFeedQuery({ cursor, limit, platform, userId }),
+      new DiscoverFeedQuery({ cursor, limit, userId }),
     );
     res.status(HttpStatus.OK).json(result);
     return res;

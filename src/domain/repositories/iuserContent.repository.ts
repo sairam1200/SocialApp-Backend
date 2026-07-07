@@ -70,7 +70,6 @@ export interface IUserContentRepository {
   getDiscoverFeedAsync(
     cursor?: string,
     limit?: number,
-    platform?: string,
     userId?: string,
   ): Promise<[UserContent[], string | null]>;
 

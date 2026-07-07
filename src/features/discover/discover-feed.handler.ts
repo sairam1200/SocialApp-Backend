@@ -23,7 +23,6 @@ import logger from '../../core/utils/winston.util';
 export class DiscoverFeedQuery {
   cursor?: string;
   limit = 20;
-  platform?: string;
   userId?: string;
 
   constructor(request: Partial<DiscoverFeedQuery> = {}) {
@@ -34,7 +33,6 @@ export class DiscoverFeedQuery {
 const validateDiscoverFeedQuery = Joi.object<DiscoverFeedQuery>({
   cursor: Joi.string().optional(),
   limit: Joi.number().integer().min(1).max(50).default(20),
-  platform: Joi.string().optional(),
   userId: Joi.string().uuid().optional(),
 });
 
@@ -77,7 +75,6 @@ export class DiscoverFeedQueryHandler
     const [items, nextCursor] = await this.userContentRepository.getDiscoverFeedAsync(
       query.cursor,
       query.limit,
-      query.platform,
       query.userId,
     );
 
@@ -106,7 +103,7 @@ export class DiscoverFeedQueryHandler
 
   private buildCacheKey(query: DiscoverFeedQuery): string | null {
     if (query.cursor || query.userId) return null;
-    return redis.getRedisKey('discover:feed:v1', query.platform || 'all', query.limit.toString());
+    return redis.getRedisKey('discover:feed:v1', 'all');
   }
 
   private commonFields(uc: UserContent): Partial<DiscoverContentModel> {

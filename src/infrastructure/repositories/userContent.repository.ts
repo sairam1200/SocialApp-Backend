@@ -30,7 +30,7 @@ export class UserContentRepository implements IUserContentRepository {
 
     const saved = await this.userContentContext.save(content);
 
-    this.invalidateDiscoverFeedCache(content.platform).catch(() => {});
+    this.invalidateDiscoverFeedCache().catch(() => {});
 
     return saved;
   }
@@ -55,7 +55,7 @@ export class UserContentRepository implements IUserContentRepository {
 
   public async deleteAsync(content: UserContent): Promise<void> {
     await this.userContentContext.remove(content);
-    this.invalidateDiscoverFeedCache(content.platform).catch(() => {});
+    this.invalidateDiscoverFeedCache().catch(() => {});
   }
   public async getByUserIdAsync(
     userId: string,
@@ -104,7 +104,6 @@ export class UserContentRepository implements IUserContentRepository {
   public async getDiscoverFeedAsync(
     cursor?: string,
     limit: number = 20,
-    platform?: string,
     userId?: string,
   ): Promise<[UserContent[], string | null]> {
     const take = Math.min(limit, 50);
@@ -131,10 +130,6 @@ export class UserContentRepository implements IUserContentRepository {
       } else {
         qb.andWhere(`${sortField} < :cursorDate`, { cursorDate });
       }
-    }
-
-    if (platform) {
-      qb.andWhere('uc.platform = :platform', { platform });
     }
 
     if (userId) {
@@ -400,15 +395,9 @@ export class UserContentRepository implements IUserContentRepository {
       .execute();
   }
 
-  private invalidateDiscoverFeedCache(platform?: string): Promise<void> {
-    const keys = [
-      redis.getRedisKey('discover:feed:v1', 'all', '20'),
-    ];
-    if (platform) {
-      keys.push(redis.getRedisKey('discover:feed:v1', platform, '20'));
-    }
-    return Promise.all(
-      keys.map((k) => redis.removeFromRedisAsync(k)),
+  private invalidateDiscoverFeedCache(): Promise<void> {
+    return redis.removeFromRedisAsync(
+      redis.getRedisKey('discover:feed:v1', 'all'),
     ).then(() => undefined);
   }
 }
