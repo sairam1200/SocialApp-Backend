@@ -7,6 +7,7 @@ import { Globals } from '../../../../core/globals';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { SocialAccountLinkedEvent } from '../../../../domain/events';
 import { DataProtectionKey } from '../../../../domain/entities';
 import { PlatformConnectCleanupEvent } from '../../../../domain/events';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
@@ -192,6 +193,8 @@ export class LinkedInConnectCallbackQueryHandler
     } else {
       await this.createUserLogin(user.id, tokenValue, expiresIn);
     }
+
+    this.eventEmitter.emit('social.account.linked', new SocialAccountLinkedEvent({ userId: user.id }));
 
     return {
       accessToken,

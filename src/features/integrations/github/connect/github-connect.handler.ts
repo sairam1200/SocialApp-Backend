@@ -7,6 +7,7 @@ import { Globals } from '../../../../core/globals';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { SocialAccountLinkedEvent } from '../../../../domain/events';
 import { UserNotFoundException } from '../../../../core/exceptions';
 import { PlatformConnectCleanupEvent } from '../../../../domain/events';
 import { serializeObject } from '../../../../core/utils/serialization.util';
@@ -148,6 +149,8 @@ export class GithubConnectCallbackQueryHandler
     } else {
       await this.createUserLogin(user.id, tokenValue);
     }
+
+    this.eventEmitter.emit('social.account.linked', new SocialAccountLinkedEvent({ userId: user.id }));
 
     return {
       accessToken: access_token,

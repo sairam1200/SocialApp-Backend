@@ -7,6 +7,7 @@ import { getRedirectUrl } from '../../../../core/utils/redirectUrl.util';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { SocialAccountLinkedEvent } from '../../../../domain/events';
 import { DataProtectionKey } from '../../../../domain/entities';
 import { UserNotFoundException } from '../../../../core/exceptions';
 import { PlatformConnectCleanupEvent } from '../../../../domain/events';
@@ -288,6 +289,8 @@ export class YoutubeConnectCallbackQueryHandler
         `[YoutubeConnect] Initial analytics sync failed for user ${user.id}, channel ${channelId}: ${error.message}`,
       );
     }
+
+    this.eventEmitter.emit('social.account.linked', new SocialAccountLinkedEvent({ userId: user.id }));
 
     return {
       accessToken: access_token,

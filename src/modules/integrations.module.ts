@@ -11,6 +11,7 @@ import { AuthGuardsModule } from './authGuard.module';
 import { AnalyticsModule } from './analytics.module';
 import { SearchCacheService } from 'infrastructure/services';
 import { PlatformRollbackListener } from '../infrastructure/background/listeners/platform-rollback.listener';
+import { SocialAccountLinkedListener } from '../infrastructure/background/listeners/social-account-linked.listener';
 import { VideoCodecService } from '../shared/video/video-codec.service';
 import { VideoTranscodingService } from '../shared/video/video-transcoding.service';
 import {
@@ -69,6 +70,7 @@ import { FacebookAnalyticsCron } from '../infrastructure/background/cron/jobs/fa
     JwtService,
     SearchCacheService,
     PlatformRollbackListener,
+    SocialAccountLinkedListener,
     YoutubeAnalyticsCron,
     ...integrations.addHandlers(),
     ...search.addHandlers(),

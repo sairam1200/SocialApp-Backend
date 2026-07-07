@@ -6,6 +6,7 @@ import _const from '../../../../core/utils/const';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { SocialAccountLinkedEvent } from '../../../../domain/events';
 import { DataProtectionKey } from '../../../../domain/entities';
 import { UserNotFoundException } from '../../../../core/exceptions';
 import { PlatformConnectCleanupEvent } from '../../../../domain/events';
@@ -198,6 +199,8 @@ export class BehanceConnectCallbackQueryHandler
         new Date(Date.now() + expires_in * 1000),
       );
     }
+
+    this.eventEmitter.emit('social.account.linked', new SocialAccountLinkedEvent({ userId: user.id }));
 
     return {
       accessToken: access_token,

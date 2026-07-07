@@ -7,7 +7,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserLogin } from '../../../../domain/entities';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { PlatformConnectCleanupEvent } from '../../../../domain/events';
+import { PlatformConnectCleanupEvent, SocialAccountLinkedEvent } from '../../../../domain/events';
 import { serializeObject } from '../../../../core/utils/serialization.util';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
@@ -171,6 +171,8 @@ export class TiktokConnectCallbackQueryHandler
         refresh_expires_in,
       });
     }
+
+    this.eventEmitter.emit('social.account.linked', new SocialAccountLinkedEvent({ userId: user.id }));
 
     return {
       accessToken: access_token,

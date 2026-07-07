@@ -200,6 +200,29 @@ export class NotificationGateway
     }
   }
 
+  emitProfileUpdated(
+    userId: string,
+    payload: {
+      userId: string;
+      updates: {
+        linkedAccounts: Array<{
+          id: string;
+          platform: string;
+          username: string;
+          profileImage: string | null;
+          isImported: boolean;
+          externalId: string;
+          externalUrl: string;
+          followersCount: number;
+          followingCount: number;
+          isVerified: boolean;
+        }>;
+      };
+    },
+  ) {
+    this.safeEmit(userId, 'profile-update', payload);
+  }
+
   emitFollowUpdated(
     userId: string,
     payload: {
