@@ -6,6 +6,7 @@ import { IUserContentRepository } from '../../domain/repositories';
 import { QueryOptions } from '../../domain/types/queryOptions.type';
 import { SearchContentProjection } from '../../domain/repositories/iuserContent.repository';
 import { User } from '../../domain/entities/identity/user.entity';
+import redis from '../../core/utils/redis.util';
 @Injectable()
 export class UserContentRepository implements IUserContentRepository {
   constructor(
@@ -27,7 +28,11 @@ export class UserContentRepository implements IUserContentRepository {
       return existingContent;
     }
 
-    return await this.userContentContext.save(content);
+    const saved = await this.userContentContext.save(content);
+
+    this.invalidateDiscoverFeedCache(content.platform).catch(() => {});
+
+    return saved;
   }
 
   public async updateAsync(content: UserContent): Promise<void> {
@@ -50,6 +55,7 @@ export class UserContentRepository implements IUserContentRepository {
 
   public async deleteAsync(content: UserContent): Promise<void> {
     await this.userContentContext.remove(content);
+    this.invalidateDiscoverFeedCache(content.platform).catch(() => {});
   }
   public async getByUserIdAsync(
     userId: string,
@@ -374,5 +380,17 @@ export class UserContentRepository implements IUserContentRepository {
       .andWhere('platform = :platform', { platform })
       .andWhere('externalId IN (:...externalIds)', { externalIds })
       .execute();
+  }
+
+  private invalidateDiscoverFeedCache(platform?: string): Promise<void> {
+    const keys = [
+      redis.getRedisKey('discover:feed:v1', 'all', '20'),
+    ];
+    if (platform) {
+      keys.push(redis.getRedisKey('discover:feed:v1', platform, '20'));
+    }
+    return Promise.all(
+      keys.map((k) => redis.removeFromRedisAsync(k)),
+    ).then(() => undefined);
   }
 }

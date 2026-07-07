@@ -17,6 +17,8 @@ import { mapToRedditContentModel } from '../../domain/mappers/reddit.mapper';
 import { mapToSnapchatContentModel } from '../../domain/mappers/snapchat.mapper';
 import { mapToBehanceContentModel } from '../../domain/mappers/behance.mapper';
 import _const from '../../core/utils/const';
+import redis from '../../core/utils/redis.util';
+import logger from '../../core/utils/winston.util';
 
 export class DiscoverFeedQuery {
   cursor?: string;
@@ -35,6 +37,8 @@ const validateDiscoverFeedQuery = Joi.object<DiscoverFeedQuery>({
   platform: Joi.string().optional(),
   userId: Joi.string().uuid().optional(),
 });
+
+const DISCOVER_FEED_CACHE_TTL = 30;
 
 @CommandHandler(DiscoverFeedQuery)
 export class DiscoverFeedQueryHandler
@@ -56,6 +60,20 @@ export class DiscoverFeedQueryHandler
   }> {
     await validateDiscoverFeedQuery.validateAsync(query);
 
+    const cacheKey = this.buildCacheKey(query);
+    if (cacheKey) {
+      try {
+        const cached = await redis.getFromRedisAsync<{
+          contents: DiscoverContentModel[];
+          nextCursor: string | null;
+          hasMore: boolean;
+        }>(cacheKey);
+        if (cached) return cached;
+      } catch (err) {
+        logger.warn(`Discover feed Redis read failed: ${err}`);
+      }
+    }
+
     const [items, nextCursor] = await this.userContentRepository.getDiscoverFeedAsync(
       query.cursor,
       query.limit,
@@ -65,11 +83,30 @@ export class DiscoverFeedQueryHandler
 
     const contents = items.map((item) => this.toModel(item));
 
-    return {
+    const result = {
       contents,
       nextCursor,
       hasMore: nextCursor !== null,
     };
+
+    if (cacheKey) {
+      try {
+        await redis.storeInRedisAsync(
+          cacheKey,
+          result as unknown as object,
+          DISCOVER_FEED_CACHE_TTL,
+        );
+      } catch (err) {
+        logger.warn(`Discover feed Redis write failed: ${err}`);
+      }
+    }
+
+    return result;
+  }
+
+  private buildCacheKey(query: DiscoverFeedQuery): string | null {
+    if (query.cursor || query.userId) return null;
+    return redis.getRedisKey('discover:feed:v1', query.platform || 'all', query.limit.toString());
   }
 
   private commonFields(uc: UserContent): Partial<DiscoverContentModel> {
