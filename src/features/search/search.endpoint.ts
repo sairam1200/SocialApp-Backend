@@ -1,7 +1,6 @@
 import { Response } from 'express';
 import { QueryBus } from '@nestjs/cqrs';
 import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AuthenticatedAccountGuard } from '../../core/passport/account.guard';
 import {
   Body,
   Controller,
@@ -10,7 +9,6 @@ import {
   Post,
   Query,
   Res,
-  UseGuards,
 } from '@nestjs/common';
 import {
   GlobalSearchQuery,
@@ -32,13 +30,11 @@ export class GlobalSearchController {
   constructor(private readonly queryBus: QueryBus) {}
 
   @Get('suggestions')
-  @UseGuards(AuthenticatedAccountGuard)
   public suggestions(@Query('keyword') keyword: string) {
     return this.queryBus.execute(new SearchSuggestionsQuery({ keyword }));
   }
 
   @Get('results')
-  @UseGuards(AuthenticatedAccountGuard)
   public results(
     @Query('keyword') keyword: string,
     @Query('page') page?: number,
@@ -50,7 +46,6 @@ export class GlobalSearchController {
   }
 
   @Get('item')
-  @UseGuards(AuthenticatedAccountGuard)
   public item(
     @Query('id') id: string,
     @Query('type') type: 'user' | 'userContent',

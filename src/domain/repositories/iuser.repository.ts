@@ -94,7 +94,7 @@ export interface IUserRepository {
   ): Promise<[User[], number]>;
   searchGlobalAsync(
     keyword: string,
-    viewerUserId: string,
+    viewerUserId: string | null,
     page: number,
     limit: number,
   ): Promise<[SearchUserProjection[], number]>;

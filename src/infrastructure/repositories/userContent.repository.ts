@@ -218,7 +218,7 @@ export class UserContentRepository implements IUserContentRepository {
 
   public async searchGlobalAsync(
     keyword: string,
-    viewerUserId: string,
+    viewerUserId: string | null,
     page: number,
     limit: number,
   ): Promise<[SearchContentProjection[], number]> {
@@ -244,7 +244,7 @@ export class UserContentRepository implements IUserContentRepository {
 
   public async getGlobalSearchItemAsync(
     id: string,
-    viewerUserId: string,
+    viewerUserId: string | null,
   ): Promise<SearchContentProjection | null> {
     const row = await this.createGlobalSearchQuery(viewerUserId)
       .andWhere('content.id = :id', { id })
@@ -252,8 +252,8 @@ export class UserContentRepository implements IUserContentRepository {
     return row ? this.mapSearchRow(row) : null;
   }
 
-  private createGlobalSearchQuery(viewerUserId: string) {
-    return this.userContentContext
+  private createGlobalSearchQuery(viewerUserId: string | null) {
+    const qb = this.userContentContext
       .createQueryBuilder('content')
       .innerJoin(User, 'creator', 'creator.id = content.userId')
       .leftJoin(UserBiometric, 'creatorbio', 'creatorbio."userId" = creator.id')
@@ -267,6 +267,7 @@ export class UserContentRepository implements IUserContentRepository {
         'content.publishedAt AS "publishedAt"',
         'content.media AS media',
         'content.metaData AS "metaData"',
+        'content.engagement AS engagement',
         'creator.id AS "userId"',
         'creator.firstName AS "userFirstName"',
         'creator.lastName AS "userLastName"',
@@ -274,16 +275,23 @@ export class UserContentRepository implements IUserContentRepository {
         'creator.bio AS "userBio"',
         'creatorbio."profileImageUrl" AS "userProfileImage"',
       ])
-      .where('creator.isActive = true')
-      .andWhere(
+      .where('creator.isActive = true');
+
+    if (viewerUserId) {
+      qb.andWhere(
         `(creator.profilePrivacy = 'Public' OR creator.id = CAST(:viewerUserId AS uuid) OR EXISTS (
-        SELECT 1 FROM identity.user_follows follow
-        WHERE follow."followerId" = CAST(:viewerUserId AS uuid)
-          AND follow."followedId" = creator.id
-          AND follow.status = 'accepted'
-      ))`,
+          SELECT 1 FROM identity.user_follows follow
+          WHERE follow."followerId" = CAST(:viewerUserId AS uuid)
+            AND follow."followedId" = creator.id
+            AND follow.status = 'accepted'
+        ))`,
         { viewerUserId },
       );
+    } else {
+      qb.andWhere("creator.profilePrivacy = 'Public'");
+    }
+
+    return qb;
   }
 
   private mapSearchRow(row: any): SearchContentProjection {
@@ -297,6 +305,7 @@ export class UserContentRepository implements IUserContentRepository {
       publishedAt: row.publishedAt,
       media: row.media ?? null,
       metaData: row.metaData ?? null,
+      engagement: row.engagement ?? null,
       user: {
         id: row.userId,
         firstName: row.userFirstName,

@@ -13,6 +13,7 @@ export type SearchContentProjection = Pick<
   | 'publishedAt'
   | 'media'
   | 'metaData'
+  | 'engagement'
 > & {
   user: SearchUserProjection;
 };
@@ -38,13 +39,13 @@ export interface IUserContentRepository {
   getEntriesAsync(params: QueryOptions): Promise<[UserContent[], number]>;
   searchGlobalAsync(
     keyword: string,
-    viewerUserId: string,
+    viewerUserId: string | null,
     page: number,
     limit: number,
   ): Promise<[SearchContentProjection[], number]>;
   getGlobalSearchItemAsync(
     id: string,
-    viewerUserId: string,
+    viewerUserId: string | null,
   ): Promise<SearchContentProjection | null>;
   getVideoIdsByUserIdAndPlatformAsync(
     userId: string,

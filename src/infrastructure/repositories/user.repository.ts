@@ -228,20 +228,12 @@ export class UserRepository implements IUserRepository {
 
   public async searchGlobalAsync(
     keyword: string,
-    viewerUserId: string,
+    viewerUserId: string | null,
     page: number,
     limit: number,
   ): Promise<[SearchUserProjection[], number]> {
     const escapedKeyword = keyword.replace(/[\\%_]/g, '\\$&');
     const pattern = `%${escapedKeyword}%`;
-    const visibility = `(user.profilePrivacy = 'Public'
-    OR user.id = CAST(:viewerUserId AS uuid)
-    OR EXISTS (
-        SELECT 1
-        FROM "identity"."user_follows" f
-        WHERE f."followerId" = CAST(:viewerUserId AS uuid)
-          AND f."followedId" = user.id AND f.status = 'accepted'
-    ))`;
     const matches = `(user.firstName ILIKE :pattern ESCAPE '\\' OR user.lastName ILIKE :pattern ESCAPE '\\' OR user.userName ILIKE :pattern ESCAPE '\\')`;
     const qb = this.userContext
       .createQueryBuilder('user')
@@ -262,10 +254,6 @@ export class UserRepository implements IUserRepository {
         'followingCount',
       )
       .addSelect(
-        `(SELECT EXISTS(SELECT 1 FROM "identity"."user_follows" f WHERE f."followerId" = CAST(:viewerUserId AS uuid) AND f."followedId" = user.id AND f.status = 'accepted'))`,
-        'isFollowing',
-      )
-      .addSelect(
         `(SELECT COALESCE(json_agg(json_build_object('id', la.id, 'platform', la.platform, 'verified', la.verified) ORDER BY la.platform) FILTER (WHERE la.id IS NOT NULL), '[]'::json) FROM "linkedAccounts" la WHERE la."userId" = CAST(user.id AS text))`,
         'linkedAccounts',
       )
@@ -276,9 +264,26 @@ export class UserRepository implements IUserRepository {
       .leftJoin(UserBiometric, 'biometrics', 'biometrics."userId" = user.id')
       .where('user.isActive = true')
       .andWhere('user.type = :userType', { userType: UserType.User })
-      .andWhere(visibility, { viewerUserId })
-      .andWhere(matches, { pattern })
-      .orderBy(
+      .andWhere(matches, { pattern });
+
+    if (viewerUserId) {
+      qb.andWhere(
+        `(user.profilePrivacy = 'Public' OR user.id = CAST(:viewerUserId AS uuid) OR EXISTS (
+            SELECT 1 FROM "identity"."user_follows" f
+            WHERE f."followerId" = CAST(:viewerUserId AS uuid)
+              AND f."followedId" = user.id AND f.status = 'accepted'
+        ))`,
+        { viewerUserId },
+      );
+      qb.addSelect(
+        `(SELECT EXISTS(SELECT 1 FROM "identity"."user_follows" f WHERE f."followerId" = CAST(:viewerUserId AS uuid) AND f."followedId" = user.id AND f.status = 'accepted'))`,
+        'isFollowing',
+      );
+    } else {
+      qb.andWhere("user.profilePrivacy = 'Public'");
+    }
+
+    qb.orderBy(
         `CASE
         WHEN LOWER(user.userName) = LOWER(:keyword)
           OR LOWER(CONCAT_WS(' ', user.firstName, user.lastName)) = LOWER(:keyword) THEN 0
@@ -289,18 +294,27 @@ export class UserRepository implements IUserRepository {
       )
       .addOrderBy('user.userName', 'ASC')
       .setParameters({ keyword, prefix: `${escapedKeyword}%` });
-    const [countSql, countParams] = this.userContext
+    const countQb = this.userContext
       .createQueryBuilder('user')
       .where('user.isActive = true')
       .andWhere('user.type = :userType', { userType: UserType.User })
-      .andWhere(visibility, { viewerUserId })
-      .andWhere(matches, { pattern })
-      .getQueryAndParameters();
-    const wrappedSql = `SELECT COUNT(1) AS "cnt" FROM (${countSql}) AS "_sub"`;
-    console.log('=== DEBUG COUNT SQL ===');
-    console.log(wrappedSql);
-    console.log('=== DEBUG COUNT PARAMS ===');
-    console.log(JSON.stringify(countParams));
+      .andWhere(matches, { pattern });
+
+    if (viewerUserId) {
+      countQb.andWhere(
+        `(user.profilePrivacy = 'Public' OR user.id = CAST(:viewerUserId AS uuid) OR EXISTS (
+            SELECT 1 FROM "identity"."user_follows" f
+            WHERE f."followerId" = CAST(:viewerUserId AS uuid)
+              AND f."followedId" = user.id AND f.status = 'accepted'
+        ))`,
+        { viewerUserId },
+      );
+    } else {
+      countQb.andWhere("user.profilePrivacy = 'Public'");
+    }
+
+    const [countSqlStr, countParams] = countQb.getQueryAndParameters();
+    const wrappedSql = `SELECT COUNT(1) AS "cnt" FROM (${countSqlStr}) AS "_sub"`;
     const countResult = await this.userContext.query(wrappedSql, countParams);
     const count = parseInt(countResult[0].cnt, 10);
     const rows = await qb

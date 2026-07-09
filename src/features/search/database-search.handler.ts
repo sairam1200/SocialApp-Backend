@@ -75,7 +75,7 @@ export class SearchSuggestionsQueryHandler
     const value = await suggestionsSchema.validateAsync(query, {
       stripUnknown: true,
     });
-    const viewerId = HttpContext.getCurrentUserId!;
+    const viewerId = HttpContext.getCurrentUserId;
     const [[profiles], [contents]] = await Promise.all([
       this.users.searchGlobalAsync(value.keyword, viewerId, 1, 5),
       this.contents.searchGlobalAsync(value.keyword, viewerId, 1, 5),
@@ -137,7 +137,7 @@ export class SearchResultsQueryHandler
     const value = await resultsSchema.validateAsync(query, {
       stripUnknown: true,
     });
-    const viewerId = HttpContext.getCurrentUserId!;
+    const viewerId = HttpContext.getCurrentUserId;
     const [[profiles, profileTotal], [contents, contentTotal]] =
       await Promise.all([
         this.users.searchGlobalAsync(
@@ -192,7 +192,7 @@ export class SearchItemQueryHandler implements IQueryHandler<SearchItemQuery> {
     }
     const content = await this.contents.getGlobalSearchItemAsync(
       value.id,
-      HttpContext.getCurrentUserId!,
+      HttpContext.getCurrentUserId,
     );
     if (!content) throw new NotFoundException('Content not found');
     const { user, ...item } = content;
