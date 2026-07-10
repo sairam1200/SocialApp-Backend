@@ -195,6 +195,7 @@ export class PinterestImportProcessor extends WorkerHost {
             } else if (type === 'Pins') {
               content.type = 'pin';
               content.title = item.title;
+              content.sourceUrl = item.link || null;
               content.metaData = {
                 description: item.description,
                 imageUrl: item.image_url,

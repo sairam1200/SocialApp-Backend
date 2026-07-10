@@ -19,3 +19,4 @@ export { IYoutubeVideoAnalyticsRepository } from './iyoutubeVideoAnalytics.repos
 export { IFacebookPageAnalyticsRepository } from './ifacebookPageAnalytics.repository';
 export { IFacebookPostAnalyticsRepository } from './ifacebookPostAnalytics.repository';
 export { IFacebookVideoAnalyticsRepository } from './ifacebookVideoAnalytics.repository';
+export { INewsletterSubscriberRepository } from './inewsletterSubscriber.repository';

@@ -17,6 +17,7 @@ import { NotificationModule } from './notification.module';
 import { FollowModule } from './follow.module';
 import { AnalyticsModule } from './analytics.module';
 import { DiscoverModule } from './discover.module';
+import { NewsletterModule } from './newsletter.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DataSeeder } from '../infrastructure/services/data.seeder';
 import { postgresOptions } from '../infrastructure/persistence/data.source';
@@ -54,6 +55,7 @@ import {
     FollowModule,
     AnalyticsModule,
     DiscoverModule,
+    NewsletterModule,
   ],
   providers: [dependency.RateLimitRepository, RateLimitMiddleware],
 })

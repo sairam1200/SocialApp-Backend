@@ -543,6 +543,7 @@ export class YoutubeImportService implements IYoutubeImportService {
                 type: 'uploaded_video',
                 externalId: videoId,
                 title: item.snippet?.title ?? 'Untitled Video',
+                sourceUrl: `https://www.youtube.com/watch?v=${videoId}`,
                 metaData: {
                   videoId,
                   isShort,
@@ -650,6 +651,7 @@ export class YoutubeImportService implements IYoutubeImportService {
             type: 'subscription_video',
             externalId: videoId,
             title: video.snippet?.title ?? 'Untitled Video',
+            sourceUrl: `https://www.youtube.com/watch?v=${videoId}`,
             metaData: {
               videoId,
               isShort,
@@ -1126,6 +1128,7 @@ export class YoutubeImportService implements IYoutubeImportService {
           type: 'playlist_video',
           title: video.snippet?.title || 'Untitled',
           externalId: video.id,
+          sourceUrl: `https://www.youtube.com/watch?v=${video.contentDetails?.videoId ?? video.id}`,
           metaData: {
             videoId: video.contentDetails?.videoId,
             publishedAt: video.snippet?.publishedAt,

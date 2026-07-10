@@ -179,6 +179,7 @@ export class LinkedInImportProcessor extends WorkerHost {
               content.type = 'post';
               content.title =
                 item.text?.text || item.commentary?.text || 'LinkedIn Post';
+              content.sourceUrl = `https://www.linkedin.com/feed/update/${item.id || item.activity || item.urn}`;
               content.metaData = {
                 activity: item.activity,
                 author: item.author,

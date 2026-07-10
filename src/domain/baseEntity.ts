@@ -24,7 +24,10 @@ export abstract class BaseEntity extends TypeORMBaseEntity {
   @UpdateDateColumn({ nullable: true })
   lastModifiedOn?: Date;
 
-  @Column()
+  @Column({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   lastRefreshed: Date;
 
   // Not persisted: used to pass user context
@@ -33,7 +36,6 @@ export abstract class BaseEntity extends TypeORMBaseEntity {
   constructor() {
     super();
     //this._currentUser = "";
-    this.lastRefreshed = new Date();
   }
 
   setCurrentUser(user: string) {

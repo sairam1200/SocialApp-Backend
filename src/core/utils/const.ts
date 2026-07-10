@@ -55,6 +55,9 @@ export default {
   IFACEBOOKVIDEOANALYTICS_REPOSITORY: 'IFacebookVideoAnalyticsRepository',
   IFACEBOOKANALYTICS_SERVICE: 'IFacebookAnalyticsService',
 
+  // Newsletter
+  INEWSLETTER_REPOSITORY: 'INewsletterSubscriberRepository',
+
   BULL_QUEUES: {
     FACEBOOK_IMPORT: 'facebook-import',
     INSTAGRAM_IMPORT: 'instagram-import',

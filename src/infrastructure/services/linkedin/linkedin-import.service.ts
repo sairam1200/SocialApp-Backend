@@ -83,6 +83,8 @@ export class LinkedInImportService {
 
           title: post.commentary?.substring(0, 150) || 'LinkedIn Post',
 
+          sourceUrl: `https://www.linkedin.com/feed/update/${post.id}`,
+
           metaData: {
             commentary: post.commentary,
 

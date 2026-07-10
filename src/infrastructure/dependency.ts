@@ -52,6 +52,7 @@ import {
   YoutubeAnalyticsService,
   FacebookAnalyticsService,
 } from './services';
+import { NewsletterSubscriberRepository } from './repositories/newsletterSubscriber.repository';
 
 /* This is the dependency object that holds all the repositories & services
  * used in the application. It is used to provide the dependencies to the
@@ -244,6 +245,10 @@ export const dependency = {
   FacebookVideoAnalyticsRepository: {
     provide: _const.IFACEBOOKVIDEOANALYTICS_REPOSITORY,
     useClass: FacebookVideoAnalyticsRepository,
+  },
+  NewsletterRepository: {
+    provide: _const.INEWSLETTER_REPOSITORY,
+    useClass: NewsletterSubscriberRepository,
   },
   FacebookAnalyticsService: {
     provide: _const.IFACEBOOKANALYTICS_SERVICE,

@@ -73,7 +73,9 @@ export class FacebookImportService {
 
           externalId: post.id,
 
-          title: post.message?.substring(0, 120) ?? 'Facebook Post',
+          title: 'Facebook ' + (mediaType ? ` ${mediaType}` : ''),
+
+          sourceUrl: post.permalink_url,
 
           metaData: {
             message: post.message,

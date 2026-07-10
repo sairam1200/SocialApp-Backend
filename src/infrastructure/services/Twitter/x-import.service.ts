@@ -70,6 +70,8 @@ export class TwitterImportService {
 
           title: tweet.text?.substring(0, 150) ?? 'Tweet',
 
+          sourceUrl: `https://twitter.com/i/web/status/${tweet.id}`,
+
           metaData: {
             text: tweet.text,
 

@@ -188,6 +188,7 @@ export class SpotifyImportProcessor extends WorkerHost {
             if (type === 'Playlists') {
               content.type = 'playlist';
               content.title = item.name;
+              content.sourceUrl = item.external_urls?.spotify || null;
               content.metaData = {
                 description: item.description,
                 owner: {
@@ -228,6 +229,7 @@ export class SpotifyImportProcessor extends WorkerHost {
             } else if (type === 'Tracks') {
               content.type = 'track';
               content.title = item.name;
+              content.sourceUrl = item.external_urls?.spotify || null;
               content.metaData = {
                 releaseDate: item.album?.release_date,
                 popularity: item.popularity,
@@ -272,6 +274,7 @@ export class SpotifyImportProcessor extends WorkerHost {
             } else if (type === 'Albums') {
               content.type = 'album';
               content.title = item.name;
+              content.sourceUrl = item.external_urls?.spotify || null;
               content.metaData = {
                 artists:
                   item.artists?.map((artist: any) => ({
@@ -310,6 +313,7 @@ export class SpotifyImportProcessor extends WorkerHost {
               content.type = 'show';
               content.title = item.name;
               content.externalId = item.id;
+              content.sourceUrl = item.external_urls?.spotify || null;
               content.metaData = {
                 description: item.description,
                 explicit: item.explicit,

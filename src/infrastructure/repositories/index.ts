@@ -24,3 +24,4 @@ export { YoutubeVideoAnalyticsRepository } from './youtubeVideoAnalytics.reposit
 export { FacebookPageAnalyticsRepository } from './facebookPageAnalytics.repository';
 export { FacebookPostAnalyticsRepository } from './facebookPostAnalytics.repository';
 export { FacebookVideoAnalyticsRepository } from './facebookVideoAnalytics.repository';
+export { NewsletterSubscriberRepository } from './newsletterSubscriber.repository';

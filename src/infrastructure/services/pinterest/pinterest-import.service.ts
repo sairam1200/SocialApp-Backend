@@ -115,6 +115,8 @@ export class PinterestImportService {
                 pin.description?.substring(0, 150) ||
                 'Pinterest Pin',
 
+              sourceUrl: pin.link || null,
+
               metaData: {
                 description: pin.description,
                 imageUrl,

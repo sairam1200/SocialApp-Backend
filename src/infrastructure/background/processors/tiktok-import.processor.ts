@@ -177,6 +177,7 @@ export class TiktokImportProcessor extends WorkerHost {
             content.type = 'video';
             content.title =
               item.title || item.video_description || `TikTok Video ${item.id}`;
+            content.sourceUrl = item.share_url || null;
             content.metaData = {
               videoId: item.id || item.video_id,
               videoDescription: item.video_description,

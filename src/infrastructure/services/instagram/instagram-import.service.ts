@@ -114,7 +114,9 @@ export class InstagramImportService {
 
           externalId: media.id,
 
-          title: media.caption?.substring(0, 150) ?? 'Instagram Post',
+          title:'Instagram ' + (media.media_type ? ` ${media.media_type}` : ''),
+
+          sourceUrl: media.permalink,
 
           metaData: {
             caption: media.caption,

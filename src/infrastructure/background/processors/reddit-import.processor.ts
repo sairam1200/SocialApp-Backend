@@ -206,6 +206,9 @@ export class RedditImportProcessor extends WorkerHost {
             content.title = stringUtil.trimWithEllipsis(
               data.title ?? data.body ?? data.link_title,
             );
+            content.sourceUrl = data.permalink
+              ? `https://www.reddit.com${data.permalink}`
+              : data.url || null;
             content.metaData = {
               subreddit: data.subreddit,
               score: data.score,
