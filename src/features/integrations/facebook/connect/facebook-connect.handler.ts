@@ -6,7 +6,10 @@ import _const from '../../../../core/utils/const';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { PlatformConnectCleanupEvent, SocialAccountLinkedEvent } from '../../../../domain/events';
+import {
+  PlatformConnectCleanupEvent,
+  SocialAccountLinkedEvent,
+} from '../../../../domain/events';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
@@ -232,7 +235,10 @@ export class FacebookConnectCallbackQueryHandler
       await this.createUserLogin(user.id, accessToken, expiresIn);
     }
 
-    this.eventEmitter.emit('social.account.linked', new SocialAccountLinkedEvent({ userId: user.id }));
+    this.eventEmitter.emit(
+      'social.account.linked',
+      new SocialAccountLinkedEvent({ userId: user.id }),
+    );
 
     return {
       accessToken: accessToken,

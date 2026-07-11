@@ -114,7 +114,9 @@ export class InstagramImportService {
 
           externalId: media.id,
 
-          title:'Instagram ' + (media.media_type ? ` ${media.media_type.toLowerCase()}` : ''),
+          title:
+            'Instagram ' +
+            (media.media_type ? ` ${media.media_type.toLowerCase()}` : ''),
 
           sourceUrl: media.permalink,
 

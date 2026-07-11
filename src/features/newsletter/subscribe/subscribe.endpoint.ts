@@ -23,9 +23,7 @@ export class SubscribeController {
     @Body() request: SubscribeModel,
     @Res() res: Response,
   ): Promise<Response> {
-    const result = await this.commandBus.execute(
-      new SubscribeCommand(request),
-    );
+    const result = await this.commandBus.execute(new SubscribeCommand(request));
     return res.status(HttpStatus.CREATED).send(result);
   }
 }

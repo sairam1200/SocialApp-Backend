@@ -138,7 +138,7 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
       );
       // TODO: Send email notification of login with new ipAddress and deviceInfo
 
-     /*  if (String(user.onboardingStep) !== 'Completed') {
+      /*  if (String(user.onboardingStep) !== 'Completed') {
         this.sendWelcomeEmail(user);
       } */
 

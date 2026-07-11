@@ -43,7 +43,11 @@ export class DiscoverFeedQueryHandler
   implements
     ICommandHandler<
       DiscoverFeedQuery,
-      { contents: DiscoverContentModel[]; nextCursor: string | null; hasMore: boolean }
+      {
+        contents: DiscoverContentModel[];
+        nextCursor: string | null;
+        hasMore: boolean;
+      }
     >
 {
   constructor(
@@ -72,11 +76,12 @@ export class DiscoverFeedQueryHandler
       }
     }
 
-    const [items, nextCursor] = await this.userContentRepository.getDiscoverFeedAsync(
-      query.cursor,
-      query.limit,
-      query.userId,
-    );
+    const [items, nextCursor] =
+      await this.userContentRepository.getDiscoverFeedAsync(
+        query.cursor,
+        query.limit,
+        query.userId,
+      );
 
     const contents = items.map((item) => this.toModel(item));
 

@@ -284,14 +284,14 @@ export class UserRepository implements IUserRepository {
     }
 
     qb.orderBy(
-        `CASE
+      `CASE
         WHEN LOWER(user.userName) = LOWER(:keyword)
           OR LOWER(CONCAT_WS(' ', user.firstName, user.lastName)) = LOWER(:keyword) THEN 0
         WHEN user.userName ILIKE :prefix ESCAPE '\\'
           OR user.firstName ILIKE :prefix ESCAPE '\\' OR user.lastName ILIKE :prefix ESCAPE '\\' THEN 1
         ELSE 2 END`,
-        'ASC',
-      )
+      'ASC',
+    )
       .addOrderBy('user.userName', 'ASC')
       .setParameters({ keyword, prefix: `${escapedKeyword}%` });
     const countQb = this.userContext

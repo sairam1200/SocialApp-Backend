@@ -6,14 +6,8 @@ import { dependency } from '../infrastructure/dependency';
 import discover from '../features/discover';
 
 @Module({
-  imports: [
-    CqrsModule,
-    TypeOrmModule.forFeature([UserContent]),
-  ],
+  imports: [CqrsModule, TypeOrmModule.forFeature([UserContent])],
   controllers: [...discover.addControllers()],
-  providers: [
-    ...discover.addHandlers(),
-    dependency.UserContentRepository,
-  ],
+  providers: [...discover.addHandlers(), dependency.UserContentRepository],
 })
 export class DiscoverModule {}

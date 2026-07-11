@@ -2,7 +2,10 @@ import { Response } from 'express';
 import { CommandBus } from '@nestjs/cqrs';
 import { Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
 import { ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { DiscoverFeedQuery, DiscoverFeedQueryHandler } from './discover-feed.handler';
+import {
+  DiscoverFeedQuery,
+  DiscoverFeedQueryHandler,
+} from './discover-feed.handler';
 import { CursorResult } from '../../domain/contracts/pagination/cursorResult';
 import { DiscoverContentModel } from '../../domain/contracts/discover-content.model';
 
@@ -19,7 +22,12 @@ export class DiscoverFeedController {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiQuery({ name: 'cursor', required: false, type: String })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
-  @ApiQuery({ name: 'userId', required: false, type: String, description: 'Filter by user ID (used by "For You" tab)' })
+  @ApiQuery({
+    name: 'userId',
+    required: false,
+    type: String,
+    description: 'Filter by user ID (used by "For You" tab)',
+  })
   public async getDiscoverFeed(
     @Res() res: Response,
     @Query('cursor') cursor?: string,

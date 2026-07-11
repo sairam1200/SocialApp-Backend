@@ -194,7 +194,10 @@ export class LinkedInConnectCallbackQueryHandler
       await this.createUserLogin(user.id, tokenValue, expiresIn);
     }
 
-    this.eventEmitter.emit('social.account.linked', new SocialAccountLinkedEvent({ userId: user.id }));
+    this.eventEmitter.emit(
+      'social.account.linked',
+      new SocialAccountLinkedEvent({ userId: user.id }),
+    );
 
     return {
       accessToken,

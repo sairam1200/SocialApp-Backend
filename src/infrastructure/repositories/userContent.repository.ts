@@ -74,7 +74,9 @@ export class UserContentRepository implements IUserContentRepository {
       .take(take + 1);
 
     if (cursor) {
-      const cursorDate = new Date(cursor.includes('|') ? cursor.split('|')[0] : cursor);
+      const cursorDate = new Date(
+        cursor.includes('|') ? cursor.split('|')[0] : cursor,
+      );
       if (cursor.includes('|')) {
         const [, cursorId] = cursor.split('|');
         qb.andWhere(
@@ -120,7 +122,9 @@ export class UserContentRepository implements IUserContentRepository {
       .take(take + 1);
 
     if (cursor) {
-      const cursorDate = new Date(cursor.includes('|') ? cursor.split('|')[0] : cursor);
+      const cursorDate = new Date(
+        cursor.includes('|') ? cursor.split('|')[0] : cursor,
+      );
       if (cursor.includes('|')) {
         const [, cursorId] = cursor.split('|');
         qb.andWhere(
@@ -223,10 +227,28 @@ export class UserContentRepository implements IUserContentRepository {
     limit: number,
   ): Promise<[SearchContentProjection[], number]> {
     const escapedKeyword = keyword.replace(/[\\%_]/g, '\\$&');
+    const pattern = `%${escapedKeyword}%`;
     const qb = this.createGlobalSearchQuery(viewerUserId)
-      .andWhere("content.title ILIKE :pattern ESCAPE '\\'", {
-        pattern: `%${escapedKeyword}%`,
-      })
+      .andWhere(
+        `(
+           (content.platform = 'facebook'
+            AND EXISTS (SELECT 1 FROM json_each_text(content.metaData) AS kv(key, value)
+                        WHERE key = 'message' AND value ILIKE :pattern ESCAPE '\\'))
+           OR
+           (content.platform = 'instagram'
+            AND EXISTS (SELECT 1 FROM json_each_text(content.metaData) AS kv(key, value)
+                        WHERE key = 'caption' AND value ILIKE :pattern ESCAPE '\\'))
+           OR
+           (content.platform IN ('pinterest', 'youtube')
+            AND (content.title ILIKE :pattern ESCAPE '\\'
+                 OR EXISTS (SELECT 1 FROM json_each_text(content.metaData) AS kv(key, value)
+                            WHERE key = 'description' AND value ILIKE :pattern ESCAPE '\\')))
+           OR
+           (content.platform NOT IN ('facebook', 'instagram', 'pinterest', 'youtube')
+            AND content.title ILIKE :pattern ESCAPE '\\')
+         )`,
+        { pattern },
+      )
       .orderBy(
         `CASE
         WHEN LOWER(content.title) = LOWER(:keyword) THEN 0
@@ -405,8 +427,8 @@ export class UserContentRepository implements IUserContentRepository {
   }
 
   private invalidateDiscoverFeedCache(): Promise<void> {
-    return redis.removeFromRedisAsync(
-      redis.getRedisKey('discover:feed:v1', 'all'),
-    ).then(() => undefined);
+    return redis
+      .removeFromRedisAsync(redis.getRedisKey('discover:feed:v1', 'all'))
+      .then(() => undefined);
   }
 }

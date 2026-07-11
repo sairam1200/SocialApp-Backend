@@ -191,7 +191,10 @@ export class RedditConnectCallbackQueryHandler
       );
     }
 
-    this.eventEmitter.emit('social.account.linked', new SocialAccountLinkedEvent({ userId: user.id }));
+    this.eventEmitter.emit(
+      'social.account.linked',
+      new SocialAccountLinkedEvent({ userId: user.id }),
+    );
 
     return {
       accessToken: access_token,

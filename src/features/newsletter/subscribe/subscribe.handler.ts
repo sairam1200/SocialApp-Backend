@@ -25,11 +25,7 @@ export class SubscribeResult {
   @ApiProperty()
   message: string;
 
-  constructor(
-    success: boolean,
-    alreadySubscribed: boolean,
-    message: string,
-  ) {
+  constructor(success: boolean, alreadySubscribed: boolean, message: string) {
     this.success = success;
     this.alreadySubscribed = alreadySubscribed;
     this.message = message;

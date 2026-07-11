@@ -91,7 +91,7 @@ export class SearchSuggestionsQueryHandler
       ...contents.map((content) => ({
         id: content.id,
         type: 'userContent' as const,
-        label: content.title,
+        label: this.getContentLabel(content),
         href: content.sourceUrl,
         creatorName:
           `${content.user.firstName} ${content.user.lastName}`.trim() ||
@@ -111,6 +111,21 @@ export class SearchSuggestionsQueryHandler
     const normalized = label.toLocaleLowerCase();
     const search = keyword.toLocaleLowerCase();
     return normalized === search ? 0 : normalized.startsWith(search) ? 1 : 2;
+  }
+
+  private getContentLabel(content: SearchContentProjection): string {
+    const meta = content.metaData;
+    switch (content.platform) {
+      case 'facebook':
+        return meta?.message || content.title || '';
+      case 'instagram':
+        return meta?.caption || content.title || '';
+      case 'pinterest':
+      case 'youtube':
+        return content.title || meta?.description || '';
+      default:
+        return content.title || '';
+    }
   }
 }
 

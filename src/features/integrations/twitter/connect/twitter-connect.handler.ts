@@ -8,7 +8,10 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { UserNotFoundException } from '../../../../core/exceptions';
-import { PlatformConnectCleanupEvent, SocialAccountLinkedEvent } from '../../../../domain/events';
+import {
+  PlatformConnectCleanupEvent,
+  SocialAccountLinkedEvent,
+} from '../../../../domain/events';
 import { serializeObject } from '../../../../core/utils/serialization.util';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
@@ -159,7 +162,10 @@ export class TwitterConnectCallbackQueryHandler
       await this.createUserLogin(user.id, tokenValue);
     }
 
-    this.eventEmitter.emit('social.account.linked', new SocialAccountLinkedEvent({ userId: user.id }));
+    this.eventEmitter.emit(
+      'social.account.linked',
+      new SocialAccountLinkedEvent({ userId: user.id }),
+    );
 
     return {
       success: true,

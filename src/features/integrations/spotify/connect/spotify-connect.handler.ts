@@ -7,7 +7,10 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import logger from '../../../../core/utils/winston.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { UserNotFoundException } from '../../../../core/exceptions';
-import { PlatformConnectCleanupEvent, SocialAccountLinkedEvent } from '../../../../domain/events';
+import {
+  PlatformConnectCleanupEvent,
+  SocialAccountLinkedEvent,
+} from '../../../../domain/events';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
@@ -218,7 +221,10 @@ export class SpotifyConnectCallbackQueryHandler
       );
     }
 
-    this.eventEmitter.emit('social.account.linked', new SocialAccountLinkedEvent({ userId: user.id }));
+    this.eventEmitter.emit(
+      'social.account.linked',
+      new SocialAccountLinkedEvent({ userId: user.id }),
+    );
 
     return {
       accessToken: access_token,
