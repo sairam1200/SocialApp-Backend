@@ -51,9 +51,6 @@ export class LinkedInConnectController {
       'openid',
       'profile',
       'email',
-      'r_organization_admin',
-      'r_organization_social',
-      'w_member_social',
     ].join(' ');
 
     const state = stringUtil.generateRandomString(16);
