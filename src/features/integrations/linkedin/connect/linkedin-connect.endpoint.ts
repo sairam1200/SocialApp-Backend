@@ -1,4 +1,3 @@
-import { Response } from 'express';
 import { CommandBus } from '@nestjs/cqrs';
 import configs from '../../../../configs';
 import { ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -7,9 +6,7 @@ import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import {
   Controller,
   Get,
-  HttpStatus,
   Query,
-  Res,
   UseGuards,
 } from '@nestjs/common';
 import { LinkedInProfileModel } from '../../../../domain/contracts/linkedin.model';
