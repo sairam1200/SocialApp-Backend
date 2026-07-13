@@ -83,4 +83,5 @@ export interface IUserContentRepository {
     platform: string,
     externalIds: string[],
   ): Promise<void>;
+  countByUserIdAsync(userId: string): Promise<number>;
 }

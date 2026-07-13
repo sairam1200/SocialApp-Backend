@@ -85,6 +85,18 @@ export class LinkedInImportService {
 
           sourceUrl: `https://www.linkedin.com/feed/update/${post.id}`,
 
+          text: post.commentary || undefined,
+
+          publishedAt: post.createdAt
+            ? new Date(post.createdAt)
+            : undefined,
+
+          engagement: {
+            likes: reactions,
+            comments,
+            shares,
+          },
+
           metaData: {
             commentary: post.commentary,
 

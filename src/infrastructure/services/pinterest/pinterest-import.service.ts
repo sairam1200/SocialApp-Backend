@@ -117,6 +117,23 @@ export class PinterestImportService {
 
               sourceUrl: pin.link || null,
 
+              text: pin.description || undefined,
+
+              media: imageUrl
+                ? [{ url: imageUrl, type: 'image', thumbnail: imageUrl }]
+                : undefined,
+
+              publishedAt: pin.created_at
+                ? new Date(pin.created_at)
+                : undefined,
+
+              engagement: analytics
+                ? {
+                    views: analytics.impressions ?? 0,
+                    likes: analytics.saves ?? 0,
+                  }
+                : undefined,
+
               metaData: {
                 description: pin.description,
                 imageUrl,

@@ -3,15 +3,9 @@ import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
 import { PublicProfileModel } from '../../../domain/contracts/public-profile.model';
-import {
-  IUserRepository,
-  IUserFollowRepository,
-  ILinkedAccountRepository,
-} from '../../../domain/repositories';
-import { FollowStatus, UserType } from '../../../domain/enums';
+import { IUserRepository } from '../../../domain/repositories';
 import { User } from '../../../domain/entities';
 import { mapToPublicProfileModel } from '../../../domain/mappers/public-profile.mapper';
-import { mapToLinkedAccountsModel } from '../../../domain/mappers/user.mapper';
 import _const from '../../../core/utils/const';
 
 export class DiscoverCreatorsQuery {
@@ -45,10 +39,6 @@ export class DiscoverCreatorsQueryHandler
   constructor(
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-    @Inject(_const.IUSERFOLLOW_REPOSITORY)
-    private readonly userFollowRepository: IUserFollowRepository,
-    @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
-    private readonly linkedAccountRepository: ILinkedAccountRepository,
   ) {}
 
   async execute(query: DiscoverCreatorsQuery): Promise<{
@@ -68,42 +58,38 @@ export class DiscoverCreatorsQueryHandler
 
     const viewerUserId = HttpContext.getCurrentUserId;
 
-    const profiles = await Promise.all(
-      users.map(async (user: User) => {
-        const linkedAccounts =
-          (await this.linkedAccountRepository.getByUserIdAsync(user.id)) || [];
-        const followersCount =
-          await this.userFollowRepository.countFollowersAsync(user.id);
-        const followingCount =
-          await this.userFollowRepository.countFollowingAsync(user.id);
-
-        let profileImageUrl: string | null = null;
-        if (user.biometrics) {
-          profileImageUrl =
-            user.biometrics.profileImageUrl ||
-            user.biometrics.defaultProfileImageUrl ||
-            null;
-        }
-
-        const follow = viewerUserId
-          ? await this.userFollowRepository.getAsync(viewerUserId, user.id)
-          : null;
-        const isFollowing = !!(
-          follow && follow.status === FollowStatus.Accepted
-        );
-
-        return mapToPublicProfileModel({
-          user,
-          profileImage: profileImageUrl,
-          followersCount,
-          followingCount,
-          connectedPlatformsCount: linkedAccounts.length,
-          totalPosts: 0,
-          isFollowing,
-          linkedAccounts: linkedAccounts.map(mapToLinkedAccountsModel),
-        });
-      }),
+    const userIds = users.map((u: User) => u.id);
+    const statsMap = await this.userRepository.getUsersProfileStatsAsync(
+      userIds,
+      viewerUserId,
     );
+
+    const profiles = users.map((user: User) => {
+      const stats = statsMap.get(user.id);
+
+      let profileImageUrl: string | null = null;
+      if (user.biometrics) {
+        profileImageUrl =
+          user.biometrics.profileImageUrl ||
+          user.biometrics.defaultProfileImageUrl ||
+          null;
+      }
+
+      return mapToPublicProfileModel({
+        user,
+        profileImage: profileImageUrl,
+        followersCount: stats?.followersCount ?? 0,
+        followingCount: stats?.followingCount ?? 0,
+        connectedPlatformsCount: stats?.linkedAccounts?.length ?? 0,
+        totalPosts: stats?.totalPosts ?? 0,
+        isFollowing: stats?.isFollowing ?? false,
+        linkedAccounts: (stats?.linkedAccounts ?? []).map((la) => ({
+          id: la.id,
+          username: la.username ?? '',
+          platform: la.platform,
+        })),
+      });
+    });
 
     return {
       profiles,

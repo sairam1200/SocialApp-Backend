@@ -166,9 +166,9 @@ export class DiscoverFeedQueryHandler
       description: m.description ?? null,
       imageUrl: m.thumbnailUrl ?? null,
       publishedAt: m.publishedAt ? new Date(m.publishedAt) : null,
-      views: m.viewCount ?? 0,
-      likes: m.likeCount ?? 0,
-      comments: m.commentCount ?? 0,
+      views: m.viewCount ?? null,
+      likes: m.likeCount ?? null,
+      comments: m.commentCount ?? null,
     });
   }
 
@@ -179,23 +179,23 @@ export class DiscoverFeedQueryHandler
       description: m.caption ?? null,
       imageUrl: m.thumbnailUrl ?? m.mediaUrl ?? null,
       publishedAt: m.timestamp ? new Date(m.timestamp) : null,
-      views: 0,
-      likes: m.likeCount ?? 0,
-      comments: m.commentsCount ?? 0,
+      views: null,
+      likes: m.likeCount ?? null,
+      comments: m.commentsCount ?? null,
     });
   }
 
   private fromFacebook(uc: UserContent): DiscoverContentModel {
     const m = mapUserContentToFacebookOnlineModel(uc);
-    const reactions = typeof m.reactions === 'number' ? m.reactions : 0;
+    const reactions = typeof m.reactions === 'number' ? m.reactions : null;
     return new DiscoverContentModel({
       ...this.commonFields(uc),
       description: m.description ?? m.message ?? null,
       imageUrl: m.picture ?? null,
       publishedAt: m.createdAt ? new Date(m.createdAt) : null,
-      views: 0,
+      views: null,
       likes: reactions,
-      comments: m.commentCount ?? 0,
+      comments: m.commentCount ?? null,
     });
   }
 
@@ -206,9 +206,9 @@ export class DiscoverFeedQueryHandler
       description: m.caption ?? null,
       imageUrl: m.thumbnailUrl ?? null,
       publishedAt: m.createdAt ?? null,
-      views: m.stats?.views ?? 0,
-      likes: m.stats?.likes ?? 0,
-      comments: m.stats?.comments ?? 0,
+      views: m.stats?.views ?? null,
+      likes: m.stats?.likes ?? null,
+      comments: m.stats?.comments ?? null,
     });
   }
 
@@ -222,9 +222,9 @@ export class DiscoverFeedQueryHandler
       description: m.tweet ?? null,
       imageUrl: firstMedia?.thumbnail ?? firstMedia?.url ?? null,
       publishedAt: m.createdAt ? new Date(m.createdAt) : null,
-      views: pubMetrics.impressions ?? 0,
-      likes: pubMetrics.likes ?? 0,
-      comments: pubMetrics.replies ?? 0,
+      views: pubMetrics.impressions ?? null,
+      likes: pubMetrics.likes ?? null,
+      comments: pubMetrics.replies ?? null,
     });
   }
 
@@ -235,9 +235,9 @@ export class DiscoverFeedQueryHandler
       description: m.text ?? null,
       imageUrl: null,
       publishedAt: m.created ? new Date(m.created) : null,
-      views: 0,
-      likes: 0,
-      comments: 0,
+      views: null,
+      likes: null,
+      comments: null,
     });
   }
 
@@ -248,9 +248,9 @@ export class DiscoverFeedQueryHandler
       description: m.description ?? null,
       imageUrl: m.imageUrl ?? null,
       publishedAt: m.createdAt ? new Date(m.createdAt) : null,
-      views: 0,
-      likes: 0,
-      comments: 0,
+      views: null,
+      likes: null,
+      comments: null,
     });
   }
 
@@ -261,9 +261,9 @@ export class DiscoverFeedQueryHandler
       description: m.description ?? null,
       imageUrl: m.imageUrl ?? null,
       publishedAt: m.createdAt ? new Date(m.createdAt) : null,
-      views: 0,
-      likes: 0,
-      comments: 0,
+      views: null,
+      likes: null,
+      comments: null,
     });
   }
 
@@ -276,9 +276,9 @@ export class DiscoverFeedQueryHandler
       description,
       imageUrl,
       publishedAt: null,
-      views: 0,
-      likes: 0,
-      comments: 0,
+      views: null,
+      likes: null,
+      comments: null,
     });
   }
 
@@ -289,9 +289,9 @@ export class DiscoverFeedQueryHandler
       description: m.selftext ?? null,
       imageUrl: m.thumbnail ?? null,
       publishedAt: m.createdUtc ? new Date(m.createdUtc * 1000) : null,
-      views: 0,
-      likes: m.score ?? 0,
-      comments: m.numComments ?? 0,
+      views: null,
+      likes: m.score ?? null,
+      comments: m.numComments ?? null,
     });
   }
 
@@ -302,9 +302,9 @@ export class DiscoverFeedQueryHandler
       description: m.description ?? null,
       imageUrl: m.imageUrl ?? null,
       publishedAt: m.createdAt ? new Date(m.createdAt) : null,
-      views: 0,
-      likes: 0,
-      comments: 0,
+      views: null,
+      likes: null,
+      comments: null,
     });
   }
 
@@ -315,9 +315,9 @@ export class DiscoverFeedQueryHandler
       description: m.description ?? null,
       imageUrl: m.imageUrl ?? null,
       publishedAt: m.createdAt ? new Date(m.createdAt) : null,
-      views: m.views ?? 0,
-      likes: m.likes ?? 0,
-      comments: 0,
+      views: m.views ?? null,
+      likes: m.likes ?? null,
+      comments: null,
     });
   }
 
@@ -329,9 +329,9 @@ export class DiscoverFeedQueryHandler
       description: uc.text ?? null,
       imageUrl: media?.[0]?.thumbnail ?? media?.[0]?.url ?? null,
       publishedAt: uc.publishedAt ?? null,
-      views: engagement.views ?? 0,
-      likes: engagement.likes ?? 0,
-      comments: engagement.comments ?? 0,
+      views: engagement.views ?? null,
+      likes: engagement.likes ?? null,
+      comments: engagement.comments ?? null,
     });
   }
 }

@@ -544,6 +544,28 @@ export class YoutubeImportService implements IYoutubeImportService {
                 externalId: videoId,
                 title: item.snippet?.title ?? 'Untitled Video',
                 sourceUrl: `https://www.youtube.com/watch?v=${videoId}`,
+                text: item.snippet?.description || undefined,
+                media: [
+                  {
+                    url:
+                      item.snippet?.thumbnails?.high?.url ??
+                      item.snippet?.thumbnails?.medium?.url ??
+                      item.snippet?.thumbnails?.default?.url,
+                    type: 'video',
+                    thumbnail:
+                      item.snippet?.thumbnails?.high?.url ??
+                      item.snippet?.thumbnails?.medium?.url ??
+                      item.snippet?.thumbnails?.default?.url,
+                  },
+                ],
+                publishedAt: item.snippet?.publishedAt
+                  ? new Date(item.snippet.publishedAt)
+                  : undefined,
+                engagement: {
+                  views: Number(details?.statistics?.viewCount ?? 0),
+                  likes: Number(details?.statistics?.likeCount ?? 0),
+                  comments: Number(details?.statistics?.commentCount ?? 0),
+                },
                 metaData: {
                   videoId,
                   isShort,
@@ -652,13 +674,35 @@ export class YoutubeImportService implements IYoutubeImportService {
             externalId: videoId,
             title: video.snippet?.title ?? 'Untitled Video',
             sourceUrl: `https://www.youtube.com/watch?v=${videoId}`,
+            text: video.snippet?.description || undefined,
+            media: [
+              {
+                url:
+                  video.snippet?.thumbnails?.high?.url ??
+                  video.snippet?.thumbnails?.medium?.url ??
+                  video.snippet?.thumbnails?.default?.url,
+                type: 'video',
+                thumbnail:
+                  video.snippet?.thumbnails?.high?.url ??
+                  video.snippet?.thumbnails?.medium?.url ??
+                  video.snippet?.thumbnails?.default?.url,
+              },
+            ],
+            publishedAt: video.snippet?.publishedAt
+              ? new Date(video.snippet.publishedAt)
+              : undefined,
+            engagement: {
+              views: Number(details?.statistics?.viewCount ?? 0),
+              likes: Number(details?.statistics?.likeCount ?? 0),
+              comments: Number(details?.statistics?.commentCount ?? 0),
+            },
             metaData: {
               videoId,
               isShort,
               duration,
               description: video.snippet?.description,
               publishedAt: video.snippet?.publishedAt,
-              viewCount: Number(details?.statistics?.likeCount ?? 0),
+              viewCount: Number(details?.statistics?.viewCount ?? 0),
               likeCount: Number(details?.statistics?.likeCount ?? 0),
               commentCount: Number(details?.statistics?.commentCount ?? 0),
               thumbnail:
@@ -1129,6 +1173,23 @@ export class YoutubeImportService implements IYoutubeImportService {
           title: video.snippet?.title || 'Untitled',
           externalId: video.id,
           sourceUrl: `https://www.youtube.com/watch?v=${video.contentDetails?.videoId ?? video.id}`,
+          text: video.snippet?.description || undefined,
+          media: video.snippet?.thumbnails
+            ? [
+                {
+                  url:
+                    video.snippet.thumbnails.high?.url ||
+                    video.snippet.thumbnails.default?.url,
+                  type: 'video',
+                  thumbnail:
+                    video.snippet.thumbnails.high?.url ||
+                    video.snippet.thumbnails.default?.url,
+                },
+              ]
+            : undefined,
+          publishedAt: video.snippet?.publishedAt
+            ? new Date(video.snippet.publishedAt)
+            : undefined,
           metaData: {
             videoId: video.contentDetails?.videoId,
             publishedAt: video.snippet?.publishedAt,

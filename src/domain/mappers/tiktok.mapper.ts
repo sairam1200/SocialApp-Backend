@@ -27,19 +27,21 @@ export function mapToTikTokContentModel(data: UserContent): TikTokContentModel {
   return {
     id: data.id,
     type: data.type,
-    url: data.metaData?.shareUrl || data.metaData?.embedUrl || '',
-    createdAt: data.metaData?.createTime
-      ? new Date(data.metaData.createTime * 1000)
-      : new Date(),
-    mediaUrl: data.metaData?.mediaUrl || '',
-    thumbnailUrl: data.metaData?.coverImageUrl || '',
-    caption: data.metaData?.videoDescription || '',
+    url: data.sourceUrl || data.metaData?.shareUrl || data.metaData?.embedUrl || '',
+    createdAt: data.publishedAt
+      ? data.publishedAt
+      : data.metaData?.createTime
+        ? new Date(data.metaData.createTime * 1000)
+        : new Date(),
+    mediaUrl: data.media?.[0]?.url || data.metaData?.mediaUrl || '',
+    thumbnailUrl: data.media?.[0]?.thumbnail || data.metaData?.coverImageUrl || '',
+    caption: data.text || data.metaData?.videoDescription || '',
     title: data.title,
     stats: {
-      likes: data.metaData?.likeCount || 0,
-      comments: data.metaData?.commentCount || 0,
-      shares: data.metaData?.shareCount || 0,
-      views: data.metaData?.viewCount || 0,
+      likes: data.engagement?.likes ?? (data.metaData?.likeCount || 0),
+      comments: data.engagement?.comments ?? (data.metaData?.commentCount || 0),
+      shares: data.engagement?.shares ?? (data.metaData?.shareCount || 0),
+      views: data.engagement?.views ?? (data.metaData?.viewCount || 0),
     },
     duration: data.metaData?.videoDuration || 0,
     dimensions: {

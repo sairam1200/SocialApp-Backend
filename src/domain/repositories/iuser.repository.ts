@@ -8,9 +8,19 @@ export type SearchUserProjection = Pick<
   profileImage?: string;
   followersCount?: number;
   followingCount?: number;
+  totalPosts?: number;
   isFollowing?: boolean;
   linkedAccounts?: { id: string; platform: string; verified?: boolean }[];
   verified?: boolean;
+};
+
+export type UserProfileStats = {
+  totalPosts: number;
+  followersCount: number;
+  followingCount: number;
+  linkedAccounts: { id: string; platform: string; verified?: boolean; username?: string }[];
+  verified: boolean;
+  isFollowing?: boolean;
 };
 
 export interface IUserRepository {
@@ -98,6 +108,11 @@ export interface IUserRepository {
     page: number,
     limit: number,
   ): Promise<[SearchUserProjection[], number]>;
+
+  getUsersProfileStatsAsync(
+    userIds: string[],
+    viewerUserId?: string | null,
+  ): Promise<Map<string, UserProfileStats>>;
 
   getUserBiometricAsync(userId: string): Promise<UserBiometric | null>;
   upsertUserBiometricAsync(

@@ -14,6 +14,7 @@ export function mapToProfileModel(
   followersCount: number = 0,
   followingCount: number = 0,
   isFollowing: boolean = false,
+  totalPosts: number = 0,
 ): ProfileModel {
   const { isEmailVerified, ...userModel } = mapToUserModel(
     user,
@@ -28,5 +29,6 @@ export function mapToProfileModel(
     followersCount,
     followingCount,
     isFollowing,
+    totalPosts,
   });
 }

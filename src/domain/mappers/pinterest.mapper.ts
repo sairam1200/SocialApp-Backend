@@ -35,12 +35,12 @@ export function mapToPinterestContentModel(
     title: data.title,
     type: data.type,
     externalId: data.externalId,
-    description: data.metaData?.description,
-    imageUrl: data.metaData?.imageUrl,
+    description: data.text || data.metaData?.description,
+    imageUrl: data.media?.[0]?.url || data.metaData?.imageUrl,
     boardId: data.metaData?.boardId,
     boardName: data.metaData?.boardName,
     link: data.metaData?.link,
-    createdAt: data.metaData?.createdAt,
+    createdAt: data.publishedAt || data.metaData?.createdAt,
     pinCount: data.metaData?.pinCount,
   } as PinterestContentModel;
 }

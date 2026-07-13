@@ -426,6 +426,13 @@ export class UserContentRepository implements IUserContentRepository {
       .execute();
   }
 
+  public async countByUserIdAsync(userId: string): Promise<number> {
+    return this.userContentContext
+      .createQueryBuilder('content')
+      .where('content.userId = :userId', { userId })
+      .getCount();
+  }
+
   private invalidateDiscoverFeedCache(): Promise<void> {
     return redis
       .removeFromRedisAsync(redis.getRedisKey('discover:feed:v1', 'all'))

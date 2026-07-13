@@ -40,8 +40,8 @@ export function mapToInstagramContentModel(
     thumbnailUrl: data.media?.[0]?.thumbnail || data.metaData?.thumbnailUrl,
     timestamp: data.publishedAt || data.metaData?.timestamp,
     username: data.metaData?.username,
-    likeCount: data.metaData?.likeCount,
-    commentsCount: data.metaData?.commentsCount,
+    likeCount: data.engagement?.likes ?? data.metaData?.likeCount,
+    commentsCount: data.engagement?.comments ?? data.metaData?.commentsCount,
     reach: data.metaData?.reach,
   } as InstagramContentModel;
 }

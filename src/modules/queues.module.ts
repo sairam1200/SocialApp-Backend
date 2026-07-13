@@ -40,6 +40,7 @@ import { SnapchatImportProcessor } from '../infrastructure/background/processors
 import { dependency } from '../infrastructure/dependency';
 import { ImportGateway } from 'infrastructure/websocket/gateways/import.gateway';
 import { ContentImportListener } from 'infrastructure/background/listeners/content-import.listener';
+import { ProfileCacheService } from '../infrastructure/services/profileCache.service';
 import {
   ContentStream,
   DataProtectionKey,
@@ -140,6 +141,7 @@ export class QueuesModule implements NestModule, OnApplicationShutdown {
         JwtService,
         ImportGateway,
         ContentImportListener,
+        ProfileCacheService,
 
         dependency.QueueService,
         dependency.UserLoginRepository,
@@ -175,7 +177,7 @@ export class QueuesModule implements NestModule, OnApplicationShutdown {
             ]
           : []),
       ],
-      exports: [dependency.QueueService, registeredQueues],
+      exports: [dependency.QueueService, dependency.UserContentRepository, registeredQueues],
     };
   }
 

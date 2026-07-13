@@ -13,6 +13,7 @@ import { IUserRepository } from '../../../domain/repositories/iuser.repository';
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
 import { IManualProfileRepository } from '../../../domain/repositories/imanualProfile.repository';
 import { IUserFollowRepository } from '../../../domain/repositories/iuserFollow.repository';
+import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
 import { ProfileCacheService } from '../../../infrastructure/services/profileCache.service';
 import { getProfileImageUrl } from '../../../core/utils/profileImagePrivacy.util';
 import { mapToLinkedAccountsModel } from '../../../domain/mappers/user.mapper';
@@ -48,6 +49,8 @@ export class GetPublicProfileQueryHandler
     private readonly userFollowRepository: IUserFollowRepository,
     @InjectRepository(PlaylistMember)
     private readonly playlistMemberRepository: Repository<PlaylistMember>,
+    @Inject(_const.IUSERCONTENT_REPOSITORY)
+    private readonly userContentRepository: IUserContentRepository,
     private readonly profileCache: ProfileCacheService,
   ) {}
 
@@ -121,13 +124,17 @@ export class GetPublicProfileQueryHandler
       : null;
     const isFollowing = !!(follow && follow.status === FollowStatus.Accepted);
 
+    const totalPosts = await this.userContentRepository.countByUserIdAsync(
+      user.id,
+    );
+
     const profile = mapToPublicProfileModel({
       user,
       profileImage: profileImageUrl,
       followersCount,
       followingCount,
       connectedPlatformsCount: linkedAccounts.length,
-      totalPosts: 0,
+      totalPosts,
       isFollowing,
       linkedAccounts: linkedAccounts.map(mapToLinkedAccountsModel),
     });

@@ -109,7 +109,7 @@ export function mapUserContentToFacebookOnlineModel(
     message: data.text || content.metaData?.message,
     story: content.metaData?.story,
     from: content.metaData?.from,
-    reactions: content.metaData?.analytics?.reactions,
+    reactions: data.engagement?.likes ?? content.metaData?.analytics?.reactions,
     commentCount:
       data.engagement?.comments ?? content.metaData?.analytics?.comments,
     sharesCount: data.engagement?.shares ?? content.metaData?.analytics?.shares,

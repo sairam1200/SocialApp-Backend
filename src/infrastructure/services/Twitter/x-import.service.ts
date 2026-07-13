@@ -72,6 +72,28 @@ export class TwitterImportService {
 
           sourceUrl: `https://twitter.com/i/web/status/${tweet.id}`,
 
+          text: tweet.text || undefined,
+
+          media: media
+            ? [
+                {
+                  url: media.url ?? media.preview_image_url,
+                  type: media.type,
+                  thumbnail: media.preview_image_url ?? media.url,
+                },
+              ]
+            : undefined,
+
+          publishedAt: tweet.created_at
+            ? new Date(tweet.created_at)
+            : undefined,
+
+          engagement: {
+            likes: metrics.like_count ?? 0,
+            comments: metrics.reply_count ?? 0,
+            shares: metrics.retweet_count ?? 0,
+          },
+
           metaData: {
             text: tweet.text,
 

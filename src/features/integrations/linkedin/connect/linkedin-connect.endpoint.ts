@@ -3,12 +3,7 @@ import configs from '../../../../configs';
 import { ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { stringUtil } from '../../../../core/utils/string.util';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
-import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { LinkedInProfileModel } from '../../../../domain/contracts/linkedin.model';
 import {
   LinkedInConnectCallbackQuery,
@@ -44,11 +39,7 @@ export class LinkedInConnectController {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async Connect(): Promise<ConnectResponseModel> {
-    const scopes = [
-      'openid',
-      'profile',
-      'email',
-    ].join(' ');
+    const scopes = ['openid', 'profile', 'email'].join(' ');
 
     const state = stringUtil.generateRandomString(16);
     const params = new URLSearchParams({

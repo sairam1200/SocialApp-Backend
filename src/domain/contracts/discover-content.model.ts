@@ -37,14 +37,14 @@ export class DiscoverContentModel {
   @ApiProperty({ nullable: true })
   sourceUrl: string | null;
 
-  @ApiProperty()
-  views: number;
+  @ApiProperty({ nullable: true })
+  views: number | null;
 
-  @ApiProperty()
-  likes: number;
+  @ApiProperty({ nullable: true })
+  likes: number | null;
 
-  @ApiProperty()
-  comments: number;
+  @ApiProperty({ nullable: true })
+  comments: number | null;
 
   constructor(partial?: Partial<DiscoverContentModel>) {
     Object.assign(this, partial);

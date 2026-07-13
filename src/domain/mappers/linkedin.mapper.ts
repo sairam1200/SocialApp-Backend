@@ -36,12 +36,13 @@ export function mapToLinkedInContentModel(
     type: data.type,
     externalId: data.externalId,
     text:
+      data.text ||
       data.metaData?.text?.text ||
       data.metaData?.commentary?.text ||
       data.metaData?.commentary,
     commentary: data.metaData?.commentary,
     author: data.metaData?.author,
-    created: data.metaData?.created,
+    created: data.publishedAt || data.metaData?.created,
     lastModified: data.metaData?.lastModified,
     activity: data.metaData?.activity,
   } as LinkedInContentModel;

@@ -77,6 +77,18 @@ export class FacebookImportService {
 
           sourceUrl: post.permalink_url,
 
+          text: post.message || undefined,
+
+          media: post.full_picture
+            ? [{ url: post.full_picture, type: mediaType ?? 'image', thumbnail: post.full_picture }]
+            : undefined,
+
+          publishedAt: post.created_time
+            ? new Date(post.created_time)
+            : undefined,
+
+          engagement: { likes: reactions, comments, shares },
+
           metaData: {
             message: post.message,
             permalink: post.permalink_url,

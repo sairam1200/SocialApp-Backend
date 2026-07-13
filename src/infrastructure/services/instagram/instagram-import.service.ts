@@ -120,6 +120,25 @@ export class InstagramImportService {
 
           sourceUrl: media.permalink,
 
+          text: media.caption || undefined,
+
+          media: [
+            {
+              url: media.media_url || media.thumbnail_url,
+              type: media.media_type,
+              thumbnail: media.thumbnail_url || media.media_url,
+            },
+          ],
+
+          publishedAt: media.timestamp
+            ? new Date(media.timestamp)
+            : undefined,
+
+          engagement: {
+            likes: media.like_count ?? 0,
+            comments: media.comments_count ?? 0,
+          },
+
           metaData: {
             caption: media.caption,
             mediaType: media.media_type,

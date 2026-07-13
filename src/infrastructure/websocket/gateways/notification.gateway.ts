@@ -236,6 +236,13 @@ export class NotificationGateway
     this.safeEmit(userId, 'follow.updated', payload);
   }
 
+  emitProfileStatsUpdated(userId: string, totalPosts: number) {
+    this.safeEmit(userId, 'profile-update', {
+      userId,
+      updates: { totalPosts },
+    });
+  }
+
   isUserConnected(userId: string): boolean {
     return (
       this.connectedUsers.has(userId) &&

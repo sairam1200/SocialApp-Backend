@@ -25,7 +25,7 @@ import {
   IUserRepository,
   IUserRoleRepository,
 } from '../../domain/repositories';
-import { SearchUserProjection } from '../../domain/repositories/iuser.repository';
+import { SearchUserProjection, UserProfileStats } from '../../domain/repositories/iuser.repository';
 import {
   RoleNotFoundException,
   ClaimAlreadyExistsException,
@@ -245,22 +245,6 @@ export class UserRepository implements IUserRepository {
         'user.bio AS bio',
         'biometrics."profileImageUrl" AS "profileImage"',
       ])
-      .addSelect(
-        `(SELECT COUNT(1) FROM "identity"."user_follows" f WHERE f."followedId" = user.id AND f.status = 'accepted')`,
-        'followersCount',
-      )
-      .addSelect(
-        `(SELECT COUNT(1) FROM "identity"."user_follows" f WHERE f."followerId" = user.id AND f.status = 'accepted')`,
-        'followingCount',
-      )
-      .addSelect(
-        `(SELECT COALESCE(json_agg(json_build_object('id', la.id, 'platform', la.platform, 'verified', la.verified) ORDER BY la.platform) FILTER (WHERE la.id IS NOT NULL), '[]'::json) FROM "linkedAccounts" la WHERE la."userId" = CAST(user.id AS text))`,
-        'linkedAccounts',
-      )
-      .addSelect(
-        `(SELECT EXISTS(SELECT 1 FROM "linkedAccounts" la WHERE la."userId" = CAST(user.id AS text) AND la.verified = true))`,
-        'verified',
-      )
       .leftJoin(UserBiometric, 'biometrics', 'biometrics."userId" = user.id')
       .where('user.isActive = true')
       .andWhere('user.type = :userType', { userType: UserType.User })
@@ -274,10 +258,6 @@ export class UserRepository implements IUserRepository {
               AND f."followedId" = user.id AND f.status = 'accepted'
         ))`,
         { viewerUserId },
-      );
-      qb.addSelect(
-        `(SELECT EXISTS(SELECT 1 FROM "identity"."user_follows" f WHERE f."followerId" = CAST(:viewerUserId AS uuid) AND f."followedId" = user.id AND f.status = 'accepted'))`,
-        'isFollowing',
       );
     } else {
       qb.andWhere("user.profilePrivacy = 'Public'");
@@ -320,8 +300,85 @@ export class UserRepository implements IUserRepository {
     const rows = await qb
       .offset((page - 1) * limit)
       .limit(limit)
-      .getRawMany<SearchUserProjection>();
-    return [rows, count];
+      .getRawMany<Pick<SearchUserProjection, 'id' | 'firstName' | 'lastName' | 'userName' | 'bio' | 'profileImage'>>();
+
+    if (rows.length === 0) return [[], count];
+
+    const userIds = rows.map((r) => r.id);
+    const statsMap = await this.getUsersProfileStatsAsync(userIds, viewerUserId);
+
+    const results: SearchUserProjection[] = rows.map((row) => {
+      const stats = statsMap.get(row.id);
+      return {
+        id: row.id,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        userName: row.userName,
+        bio: row.bio,
+        profileImage: row.profileImage ?? undefined,
+        followersCount: stats?.followersCount ?? 0,
+        followingCount: stats?.followingCount ?? 0,
+        totalPosts: stats?.totalPosts ?? 0,
+        linkedAccounts: stats?.linkedAccounts ?? [],
+        verified: stats?.verified ?? false,
+        isFollowing: stats?.isFollowing,
+      };
+    });
+
+    return [results, count];
+  }
+
+  public async getUsersProfileStatsAsync(
+    userIds: string[],
+    viewerUserId?: string | null,
+  ): Promise<Map<string, UserProfileStats>> {
+    if (userIds.length === 0) return new Map();
+
+    const placeholders = userIds.map((_, i) => `$${i + 1}`).join(', ');
+    const params: unknown[] = [...userIds];
+
+    let isFollowingExpr = 'NULL::boolean';
+    if (viewerUserId) {
+      params.push(viewerUserId);
+      isFollowingExpr = `(SELECT EXISTS(SELECT 1 FROM "identity"."user_follows" f WHERE f."followerId" = $${params.length} AND f."followedId" = "user".id AND f.status = 'accepted'))`;
+    }
+
+    const sql = `
+      SELECT
+        "user".id AS "userId",
+        (SELECT COUNT(1) FROM "identity"."user_follows" f WHERE f."followedId" = "user".id AND f.status = 'accepted') AS "followersCount",
+        (SELECT COUNT(1) FROM "identity"."user_follows" f WHERE f."followerId" = "user".id AND f.status = 'accepted') AS "followingCount",
+        (SELECT COALESCE(json_agg(json_build_object('id', la.id, 'platform', la.platform, 'verified', la.verified, 'username', la."userName") ORDER BY la.platform) FILTER (WHERE la.id IS NOT NULL), '[]'::json) FROM "linkedAccounts" la WHERE la."userId" = CAST("user".id AS text)) AS "linkedAccounts",
+        (SELECT EXISTS(SELECT 1 FROM "linkedAccounts" la WHERE la."userId" = CAST("user".id AS text) AND la.verified = true)) AS "verified",
+        (SELECT COUNT(*) FROM "userContents" uc WHERE uc."userId" = "user".id) AS "totalPosts",
+        ${isFollowingExpr} AS "isFollowing"
+      FROM "identity"."users" "user"
+      WHERE "user".id IN (${placeholders})
+    `;
+
+    const rows: Record<string, unknown>[] = await this.userContext.query(sql, params);
+
+    const statsMap = new Map<string, UserProfileStats>();
+    for (const row of rows) {
+      const linkedAccounts =
+        typeof row.linkedAccounts === 'string'
+          ? JSON.parse(row.linkedAccounts as string)
+          : (row.linkedAccounts as UserProfileStats['linkedAccounts']) || [];
+
+      statsMap.set(row.userId as string, {
+        totalPosts: parseInt(String(row.totalPosts), 10) || 0,
+        followersCount: parseInt(String(row.followersCount), 10) || 0,
+        followingCount: parseInt(String(row.followingCount), 10) || 0,
+        linkedAccounts,
+        verified: row.verified === true || row.verified === 'true',
+        isFollowing:
+          row.isFollowing != null
+            ? row.isFollowing === true || row.isFollowing === 'true'
+            : undefined,
+      });
+    }
+
+    return statsMap;
   }
 
   public async checkPasswordAsync(
