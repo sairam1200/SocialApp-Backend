@@ -51,7 +51,7 @@ async function bootstrap() {
       'https://socialapp-sg.onrender.com',
       'https://almost-backtrack-drapery.ngrok-free.dev',
       'https://social-app-zeta-three.vercel.app',
-      'https://gaddr.com',
+      'https://demo.gaddr.com',
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
