@@ -168,6 +168,7 @@ export class ManualProfileRepository implements IManualProfileRepository {
     page: number,
     pageSize: number,
     searchTerm?: string,
+    viewerUserId?: string,
   ): Promise<[ManualProfile[], number]> {
     if (!searchTerm || !searchTerm.trim()) {
       return [[], 0];
@@ -200,9 +201,22 @@ export class ManualProfileRepository implements IManualProfileRepository {
             { searchTerm },
           );
         }),
-      )
-      .skip(skip)
-      .take(take);
+      );
+
+    if (viewerUserId) {
+      queryBuilder.andWhere(
+        `(user.profilePrivacy = 'Public' OR user.id = CAST(:viewerUserId AS uuid) OR EXISTS (
+            SELECT 1 FROM "identity"."user_follows" f
+            WHERE f."followerId" = CAST(:viewerUserId AS uuid)
+              AND f."followedId" = user.id AND f.status = 'accepted'
+        ))`,
+        { viewerUserId },
+      );
+    } else {
+      queryBuilder.andWhere("user.profilePrivacy = 'Public'");
+    }
+
+    queryBuilder.skip(skip).take(take);
 
     // Execute the query and get the results
     const [results, count] = await queryBuilder.getManyAndCount();

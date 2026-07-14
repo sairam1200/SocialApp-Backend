@@ -6,9 +6,10 @@ import _const from '../../../core/utils/const';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
 import { UserModel } from '../../../domain/contracts/user.model';
+import { FollowStatus, ProfilePrivacy } from '../../../domain/enums';
 import { mapToUserModel } from '../../../domain/mappers/user.mapper';
 import { PlaylistMember } from '../../../domain/entities/collection/playlistMember.entity';
-import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IUserRepository, IUserFollowRepository } from '../../../domain/repositories';
 import { UserNotFoundException } from '../../../core/exceptions/user.exception';
 import { getProfileImageUrl } from '../../../core/utils/profileImagePrivacy.util';
 
@@ -33,6 +34,8 @@ export class GetUserQueryHandler implements ICommandHandler<GetUserQuery> {
     private readonly userRepository: IUserRepository,
     @InjectRepository(PlaylistMember)
     private readonly playlistMemberRepository: Repository<PlaylistMember>,
+    @Inject(_const.IUSERFOLLOW_REPOSITORY)
+    private readonly userFollowRepository: IUserFollowRepository,
   ) {}
 
   public async execute(query: GetUserQuery): Promise<UserModel> {
@@ -44,6 +47,22 @@ export class GetUserQueryHandler implements ICommandHandler<GetUserQuery> {
     }
 
     const viewerUserId = HttpContext.getCurrentUserId;
+    const isOwnProfile = viewerUserId === user.id;
+
+    // Enforce profile privacy: private profiles are invisible to non-followers
+    if (user.profilePrivacy === ProfilePrivacy.Private && !isOwnProfile) {
+      if (!viewerUserId) {
+        throw new UserNotFoundException(query.userName, 'username');
+      }
+      const follow = await this.userFollowRepository.getAsync(
+        viewerUserId,
+        user.id,
+      );
+      if (!follow || follow.status !== FollowStatus.Accepted) {
+        throw new UserNotFoundException(query.userName, 'username');
+      }
+    }
+
     let profileImageUrl: string | null = null;
 
     if (user.biometrics) {

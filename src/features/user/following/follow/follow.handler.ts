@@ -4,12 +4,18 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { FollowModel } from '../../../../domain/contracts/follow.model';
 import { FollowStatus } from '../../../../domain/enums';
 import { UserFollow } from '../../../../domain/entities/userFollow.entity';
-import { mapToFollowModel } from '../../../../domain/mappers/follow.mapper';
+import {
+  mapToFollowModel,
+  resolveFollowAvatars,
+} from '../../../../domain/mappers/follow.mapper';
+import { PlaylistMember } from '../../../../domain/entities/collection/playlistMember.entity';
 import { FollowUpdatedEvent } from '../../../../domain/events/follow-updated.event';
 import _const from '../../../../core/utils/const';
 import {
@@ -38,6 +44,8 @@ export class FollowUserCommandHandler
     private readonly follows: IUserFollowRepository,
     private readonly profileCache: ProfileCacheService,
     private readonly eventEmitter: EventEmitter2,
+    @InjectRepository(PlaylistMember)
+    private readonly playlistMemberRepository: Repository<PlaylistMember>,
   ) {}
 
   private getDailyFollowLimitKey(userId: string): string {
@@ -88,7 +96,12 @@ export class FollowUserCommandHandler
       if (existing.status === FollowStatus.Blocked) {
         throw new ForbiddenException('You cannot follow this user.');
       }
-      return mapToFollowModel(existing);
+      const avatars = await resolveFollowAvatars(
+        [existing],
+        command.followerId,
+        this.playlistMemberRepository,
+      );
+      return mapToFollowModel(existing, avatars);
     }
 
     await this.follows.createAsync(
@@ -127,14 +140,19 @@ export class FollowUserCommandHandler
       command.followerId,
       command.targetUserId,
     );
-    return mapToFollowModel(
+    const followEntity =
       hydrated ??
-        new UserFollow({
-          followerId: command.followerId,
-          followedId: command.targetUserId,
-          status: FollowStatus.Accepted,
-        }),
+      new UserFollow({
+        followerId: command.followerId,
+        followedId: command.targetUserId,
+        status: FollowStatus.Accepted,
+      });
+    const hydratedAvatars = await resolveFollowAvatars(
+      [followEntity],
+      command.followerId,
+      this.playlistMemberRepository,
     );
+    return mapToFollowModel(followEntity, hydratedAvatars);
   }
 
   private async invalidateCaches(

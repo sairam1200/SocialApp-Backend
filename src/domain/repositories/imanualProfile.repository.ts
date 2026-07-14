@@ -17,5 +17,6 @@ export interface IManualProfileRepository {
     page: number,
     pageSize: number,
     searchTerm?: string,
+    viewerUserId?: string,
   ): Promise<[ManualProfile[], number]>;
 }

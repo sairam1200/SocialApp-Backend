@@ -5,6 +5,8 @@ import { JwtService } from '@nestjs/jwt';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EmailModule } from './email.module';
+import { ProfileModule } from './profile.module';
+import { NotificationModule } from './notification.module';
 import { dependency } from '../infrastructure/dependency';
 import { EmailCleanupCron } from '../infrastructure/background/cron/jobs/email-cleanup.cron';
 import {
@@ -13,6 +15,7 @@ import {
   RoleClaim,
   User,
   UserClaim,
+  UserFollow,
   UserRole,
   UserLogin,
   DataProtectionKey,
@@ -28,6 +31,8 @@ import { AuthModule } from './auth.module';
     CqrsModule,
     EmailModule,
     AuthModule,
+    ProfileModule,
+    NotificationModule,
     TypeOrmModule.forFeature([
       User,
       Role,
@@ -42,6 +47,7 @@ import { AuthModule } from './auth.module';
       UserPreference,
       Topic,
       UserTopic,
+      UserFollow,
     ]),
   ],
   controllers: [...users.addControllers(), ...onboarding.addControllers()],
@@ -57,6 +63,7 @@ import { AuthModule } from './auth.module';
     dependency.DataProtectionKeyRepository,
     dependency.TopicRepository,
     dependency.UserPreferenceRepository,
+    dependency.UserFollowRepository,
     EmailCleanupCron,
   ],
   exports: [],

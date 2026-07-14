@@ -46,17 +46,19 @@ export class SearchManualProfileQueryHandler
   ): Promise<PagedResult<ManualProfileSearchResponseModel[]>> {
     await searchManualProfileValidations.validateAsync(command);
 
+    const viewerUserId = HttpContext.getCurrentUserId;
+
     const [manualProfileEntity, total] =
       await this.manualProfileRepository.searchAsync(
         command.page,
         command.pageSize,
         command.searchTerm,
+        viewerUserId,
       );
 
     if (manualProfileEntity?.length == 0)
       return new PagedResult<ManualProfileSearchResponseModel[]>(null, total);
 
-    const viewerUserId = HttpContext.getCurrentUserId;
     const manualProfiles = await Promise.all(
       manualProfileEntity.map(async (profile) => {
         let profileImageUrl: string | null = null;

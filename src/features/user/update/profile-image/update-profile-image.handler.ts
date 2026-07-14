@@ -14,6 +14,9 @@ import {
   deleteFromCloudinaryAsync,
 } from '../../../../core/utils/cloudinary.util';
 import { UploadedFile } from '../../../../domain/types/uploadedFile.type';
+import { ProfileCacheService } from '../../../../infrastructure/services/profileCache.service';
+import { NotificationGateway } from '../../../../infrastructure/websocket/gateways/notification.gateway';
+import redis from '../../../../core/utils/redis.util';
 
 export class UpdateProfileImageCommand {
   file?: UploadedFile;
@@ -31,6 +34,8 @@ export class UpdateProfileImageCommandHandler
   constructor(
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly profileCache: ProfileCacheService,
+    private readonly notificationGateway: NotificationGateway,
   ) {}
 
   public async execute(command: UpdateProfileImageCommand): Promise<void> {
@@ -144,6 +149,25 @@ export class UpdateProfileImageCommandHandler
         }
         await this.userRepository.upsertUserBiometricAsync(user.id, biometrics);
       }
+    }
+
+    // Invalidate profile caches and emit WebSocket event
+    await this.invalidateCaches(user.id);
+    this.notificationGateway.emitProfileUpdated(user.id, {
+      userId: user.id,
+      updates: {
+        photo: biometrics?.profileImageUrl ?? biometrics?.defaultProfileImageUrl ?? null,
+      },
+    });
+  }
+
+  private async invalidateCaches(userId: string): Promise<void> {
+    try {
+      await this.profileCache.invalidateProfile(userId);
+      const profileKey = redis.getRedisKey('profile', `public:${userId}`);
+      await redis.removeFromRedisAsync(profileKey);
+    } catch (err) {
+      logger.warn(`Profile cache invalidation failed for ${userId}: ${err}`);
     }
   }
 

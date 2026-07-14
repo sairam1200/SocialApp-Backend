@@ -213,12 +213,29 @@ export class UserRepository implements IUserRepository {
   public async getDiscoverCreatorsAsync(
     page: number,
     pageSize: number,
+    viewerUserId?: string,
   ): Promise<[User[], number]> {
     const skip = (page - 1) * pageSize;
     const queryBuilder = this.userContext
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.biometrics', 'biometrics')
       .where('user.type = :type', { type: UserType.User })
+      .andWhere('user.isActive = true');
+
+    if (viewerUserId) {
+      queryBuilder.andWhere(
+        `(user.profilePrivacy = 'Public' OR user.id = CAST(:viewerUserId AS uuid) OR EXISTS (
+            SELECT 1 FROM "identity"."user_follows" f
+            WHERE f."followerId" = CAST(:viewerUserId AS uuid)
+              AND f."followedId" = user.id AND f.status = 'accepted'
+        ))`,
+        { viewerUserId },
+      );
+    } else {
+      queryBuilder.andWhere("user.profilePrivacy = 'Public'");
+    }
+
+    queryBuilder
       .orderBy('user.registeredOn', 'DESC')
       .skip(skip)
       .take(pageSize);
@@ -243,7 +260,7 @@ export class UserRepository implements IUserRepository {
         'user.lastName AS "lastName"',
         'user.userName AS "userName"',
         'user.bio AS bio',
-        'biometrics."profileImageUrl" AS "profileImage"',
+        'NULL AS "profileImage"',
       ])
       .leftJoin(UserBiometric, 'biometrics', 'biometrics."userId" = user.id')
       .where('user.isActive = true')

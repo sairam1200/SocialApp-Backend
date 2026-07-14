@@ -107,6 +107,7 @@ export class UserContentRepository implements IUserContentRepository {
     cursor?: string,
     limit: number = 20,
     userId?: string,
+    viewerUserId?: string,
   ): Promise<[UserContent[], string | null]> {
     const take = Math.min(limit, 50);
     const sortField = 'COALESCE(uc.publishedAt, uc.createdOn)';
@@ -138,6 +139,19 @@ export class UserContentRepository implements IUserContentRepository {
 
     if (userId) {
       qb.andWhere('uc.userId = :userId', { userId });
+    }
+
+    if (viewerUserId) {
+      qb.andWhere(
+        `(user.profilePrivacy = 'Public' OR user.id = CAST(:viewerUserId AS uuid) OR EXISTS (
+            SELECT 1 FROM "identity"."user_follows" f
+            WHERE f."followerId" = CAST(:viewerUserId AS uuid)
+              AND f."followedId" = user.id AND f.status = 'accepted'
+        ))`,
+        { viewerUserId },
+      );
+    } else {
+      qb.andWhere("user.profilePrivacy = 'Public'");
     }
 
     const items = await qb.getMany();
@@ -295,7 +309,7 @@ export class UserContentRepository implements IUserContentRepository {
         'creator.lastName AS "userLastName"',
         'creator.userName AS "userName"',
         'creator.bio AS "userBio"',
-        'creatorbio."profileImageUrl" AS "userProfileImage"',
+        'NULL AS "userProfileImage"',
       ])
       .where('creator.isActive = true');
 

@@ -205,7 +205,8 @@ export class NotificationGateway
     payload: {
       userId: string;
       updates: {
-        linkedAccounts: Array<{
+        photo?: string | null;
+        linkedAccounts?: Array<{
           id: string;
           platform: string;
           username: string;
@@ -217,6 +218,7 @@ export class NotificationGateway
           followingCount: number;
           isVerified: boolean;
         }>;
+        totalPosts?: number;
       };
     },
   ) {

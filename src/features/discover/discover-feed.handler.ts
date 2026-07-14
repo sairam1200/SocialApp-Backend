@@ -1,9 +1,14 @@
 import * as Joi from 'joi';
 import { Inject } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { IUserContentRepository } from '../../domain/repositories/iuserContent.repository';
 import { DiscoverContentModel } from '../../domain/contracts/discover-content.model';
 import { UserContent } from '../../domain/entities';
+import { PlaylistMember } from '../../domain/entities/collection/playlistMember.entity';
+import { getProfileImageUrl } from '../../core/utils/profileImagePrivacy.util';
+import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { mapToYouTubeContentModel } from '../../domain/mappers/youtube.mapper';
 import { mapToInstagramContentModel } from '../../domain/mappers/instagram.mapper';
 import { mapUserContentToFacebookOnlineModel } from '../../domain/mappers/facebook.mapper';
@@ -53,6 +58,8 @@ export class DiscoverFeedQueryHandler
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
+    @InjectRepository(PlaylistMember)
+    private readonly playlistMemberRepository: Repository<PlaylistMember>,
   ) {}
 
   async execute(query: DiscoverFeedQuery): Promise<{
@@ -81,9 +88,12 @@ export class DiscoverFeedQueryHandler
         query.cursor,
         query.limit,
         query.userId,
+        HttpContext.getCurrentUserId,
       );
 
-    const contents = items.map((item) => this.toModel(item));
+    const contents = await Promise.all(
+      items.map((item) => this.toModel(item)),
+    );
 
     const result = {
       contents,
@@ -111,16 +121,30 @@ export class DiscoverFeedQueryHandler
     return redis.getRedisKey('discover:feed:v1', 'all');
   }
 
-  private commonFields(uc: UserContent): Partial<DiscoverContentModel> {
+  private async commonFields(uc: UserContent): Promise<Partial<DiscoverContentModel>> {
     const firstName = uc.user?.firstName ?? '';
     const lastName = uc.user?.lastName ?? '';
     const userName = uc.user?.userName ?? '';
+
+    let userProfileImage: string | null = null;
+    if (uc.user?.biometrics) {
+      const viewerUserId = HttpContext.getCurrentUserId;
+      userProfileImage = await getProfileImageUrl(
+        uc.user.biometrics.profileImageUrl,
+        uc.user.biometrics.defaultProfileImageUrl,
+        uc.user.biometrics.privacy,
+        uc.user.id,
+        viewerUserId,
+        this.playlistMemberRepository,
+      );
+    }
+
     return {
       id: uc.id,
       userId: uc.userId,
       userName: `${firstName} ${lastName}`.trim() || userName,
       userHandle: userName ? `@${userName}` : '',
-      userProfileImage: uc.user?.biometrics?.profileImageUrl ?? null,
+      userProfileImage,
       platform: uc.platform,
       type: uc.type,
       title: uc.title,
@@ -128,7 +152,7 @@ export class DiscoverFeedQueryHandler
     };
   }
 
-  private toModel(item: UserContent): DiscoverContentModel {
+  private async toModel(item: UserContent): Promise<DiscoverContentModel> {
     switch (item.platform) {
       case 'youtube':
         return this.fromYouTube(item);
@@ -159,10 +183,10 @@ export class DiscoverFeedQueryHandler
     }
   }
 
-  private fromYouTube(uc: UserContent): DiscoverContentModel {
+  private async fromYouTube(uc: UserContent): Promise<DiscoverContentModel> {
     const m = mapToYouTubeContentModel(uc);
     return new DiscoverContentModel({
-      ...this.commonFields(uc),
+      ...(await this.commonFields(uc)),
       description: m.description ?? null,
       imageUrl: m.thumbnailUrl ?? null,
       publishedAt: m.publishedAt ? new Date(m.publishedAt) : null,
@@ -172,10 +196,10 @@ export class DiscoverFeedQueryHandler
     });
   }
 
-  private fromInstagram(uc: UserContent): DiscoverContentModel {
+  private async fromInstagram(uc: UserContent): Promise<DiscoverContentModel> {
     const m = mapToInstagramContentModel(uc);
     return new DiscoverContentModel({
-      ...this.commonFields(uc),
+      ...(await this.commonFields(uc)),
       description: m.caption ?? null,
       imageUrl: m.thumbnailUrl ?? m.mediaUrl ?? null,
       publishedAt: m.timestamp ? new Date(m.timestamp) : null,
@@ -185,11 +209,11 @@ export class DiscoverFeedQueryHandler
     });
   }
 
-  private fromFacebook(uc: UserContent): DiscoverContentModel {
+  private async fromFacebook(uc: UserContent): Promise<DiscoverContentModel> {
     const m = mapUserContentToFacebookOnlineModel(uc);
     const reactions = typeof m.reactions === 'number' ? m.reactions : null;
     return new DiscoverContentModel({
-      ...this.commonFields(uc),
+      ...(await this.commonFields(uc)),
       description: m.description ?? m.message ?? null,
       imageUrl: m.picture ?? null,
       publishedAt: m.createdAt ? new Date(m.createdAt) : null,
@@ -199,10 +223,10 @@ export class DiscoverFeedQueryHandler
     });
   }
 
-  private fromTikTok(uc: UserContent): DiscoverContentModel {
+  private async fromTikTok(uc: UserContent): Promise<DiscoverContentModel> {
     const m = mapToTikTokContentModel(uc);
     return new DiscoverContentModel({
-      ...this.commonFields(uc),
+      ...(await this.commonFields(uc)),
       description: m.caption ?? null,
       imageUrl: m.thumbnailUrl ?? null,
       publishedAt: m.createdAt ?? null,
@@ -212,13 +236,13 @@ export class DiscoverFeedQueryHandler
     });
   }
 
-  private fromTwitter(uc: UserContent): DiscoverContentModel {
+  private async fromTwitter(uc: UserContent): Promise<DiscoverContentModel> {
     const m = mapToUserTweetModel(uc) as any;
     const mediaArray = Array.isArray(m.media) ? m.media : [];
     const firstMedia = mediaArray[0];
     const pubMetrics = m.publicMetrics || {};
     return new DiscoverContentModel({
-      ...this.commonFields(uc),
+      ...(await this.commonFields(uc)),
       description: m.tweet ?? null,
       imageUrl: firstMedia?.thumbnail ?? firstMedia?.url ?? null,
       publishedAt: m.createdAt ? new Date(m.createdAt) : null,
@@ -228,10 +252,10 @@ export class DiscoverFeedQueryHandler
     });
   }
 
-  private fromLinkedIn(uc: UserContent): DiscoverContentModel {
+  private async fromLinkedIn(uc: UserContent): Promise<DiscoverContentModel> {
     const m = mapToLinkedInContentModel(uc);
     return new DiscoverContentModel({
-      ...this.commonFields(uc),
+      ...(await this.commonFields(uc)),
       description: m.text ?? null,
       imageUrl: null,
       publishedAt: m.created ? new Date(m.created) : null,
@@ -241,10 +265,10 @@ export class DiscoverFeedQueryHandler
     });
   }
 
-  private fromPinterest(uc: UserContent): DiscoverContentModel {
+  private async fromPinterest(uc: UserContent): Promise<DiscoverContentModel> {
     const m = mapToPinterestContentModel(uc);
     return new DiscoverContentModel({
-      ...this.commonFields(uc),
+      ...(await this.commonFields(uc)),
       description: m.description ?? null,
       imageUrl: m.imageUrl ?? null,
       publishedAt: m.createdAt ? new Date(m.createdAt) : null,
@@ -254,10 +278,10 @@ export class DiscoverFeedQueryHandler
     });
   }
 
-  private fromThreads(uc: UserContent): DiscoverContentModel {
+  private async fromThreads(uc: UserContent): Promise<DiscoverContentModel> {
     const m = mapToThreadsContentModel(uc);
     return new DiscoverContentModel({
-      ...this.commonFields(uc),
+      ...(await this.commonFields(uc)),
       description: m.description ?? null,
       imageUrl: m.imageUrl ?? null,
       publishedAt: m.createdAt ? new Date(m.createdAt) : null,
@@ -267,12 +291,12 @@ export class DiscoverFeedQueryHandler
     });
   }
 
-  private fromSpotify(uc: UserContent): DiscoverContentModel {
+  private async fromSpotify(uc: UserContent): Promise<DiscoverContentModel> {
     const m = mapToSpotifyContentModel(uc);
     const imageUrl = (m as any).imageUrl ?? null;
     const description = (m as any).description ?? null;
     return new DiscoverContentModel({
-      ...this.commonFields(uc),
+      ...(await this.commonFields(uc)),
       description,
       imageUrl,
       publishedAt: null,
@@ -282,10 +306,10 @@ export class DiscoverFeedQueryHandler
     });
   }
 
-  private fromReddit(uc: UserContent): DiscoverContentModel {
+  private async fromReddit(uc: UserContent): Promise<DiscoverContentModel> {
     const m = mapToRedditContentModel(uc);
     return new DiscoverContentModel({
-      ...this.commonFields(uc),
+      ...(await this.commonFields(uc)),
       description: m.selftext ?? null,
       imageUrl: m.thumbnail ?? null,
       publishedAt: m.createdUtc ? new Date(m.createdUtc * 1000) : null,
@@ -295,10 +319,10 @@ export class DiscoverFeedQueryHandler
     });
   }
 
-  private fromSnapchat(uc: UserContent): DiscoverContentModel {
+  private async fromSnapchat(uc: UserContent): Promise<DiscoverContentModel> {
     const m = mapToSnapchatContentModel(uc);
     return new DiscoverContentModel({
-      ...this.commonFields(uc),
+      ...(await this.commonFields(uc)),
       description: m.description ?? null,
       imageUrl: m.imageUrl ?? null,
       publishedAt: m.createdAt ? new Date(m.createdAt) : null,
@@ -308,10 +332,10 @@ export class DiscoverFeedQueryHandler
     });
   }
 
-  private fromBehance(uc: UserContent): DiscoverContentModel {
+  private async fromBehance(uc: UserContent): Promise<DiscoverContentModel> {
     const m = mapToBehanceContentModel(uc);
     return new DiscoverContentModel({
-      ...this.commonFields(uc),
+      ...(await this.commonFields(uc)),
       description: m.description ?? null,
       imageUrl: m.imageUrl ?? null,
       publishedAt: m.createdAt ? new Date(m.createdAt) : null,
@@ -321,11 +345,11 @@ export class DiscoverFeedQueryHandler
     });
   }
 
-  private fromUnknown(uc: UserContent): DiscoverContentModel {
+  private async fromUnknown(uc: UserContent): Promise<DiscoverContentModel> {
     const media = uc.media;
     const engagement = uc.engagement || {};
     return new DiscoverContentModel({
-      ...this.commonFields(uc),
+      ...(await this.commonFields(uc)),
       description: uc.text ?? null,
       imageUrl: media?.[0]?.thumbnail ?? media?.[0]?.url ?? null,
       publishedAt: uc.publishedAt ?? null,

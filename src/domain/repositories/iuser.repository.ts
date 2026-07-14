@@ -101,6 +101,7 @@ export interface IUserRepository {
   getDiscoverCreatorsAsync(
     page: number,
     pageSize: number,
+    viewerUserId?: string,
   ): Promise<[User[], number]>;
   searchGlobalAsync(
     keyword: string,

@@ -72,6 +72,7 @@ export interface IUserContentRepository {
     cursor?: string,
     limit?: number,
     userId?: string,
+    viewerUserId?: string,
   ): Promise<[UserContent[], string | null]>;
 
   deleteByUserIdAndPlatformAsync(

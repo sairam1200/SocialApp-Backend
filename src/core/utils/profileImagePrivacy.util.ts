@@ -59,8 +59,7 @@ export async function getProfileImageUrl(
   ownerUserId: string,
   viewerUserId: string | null,
   playlistMemberRepository: Repository<PlaylistMember>,
-): Promise<string> {
-  // If viewer can see the custom image, return it (or default if no custom)
+): Promise<string | null> {
   const canViewCustom = await isProfileImageVisible(
     profileImagePrivacy,
     ownerUserId,
@@ -68,11 +67,9 @@ export async function getProfileImageUrl(
     playlistMemberRepository,
   );
 
-  // If privacy allows and custom image exists, return custom; otherwise return default
   if (canViewCustom && profileImageUrl) {
     return profileImageUrl;
   }
 
-  // Return default image (always available, even when privacy restricts custom image)
-  return defaultProfileImageUrl;
+  return null;
 }
