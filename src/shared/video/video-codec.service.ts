@@ -2,6 +2,15 @@ import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import { Injectable, OnModuleInit } from '@nestjs/common';
+import logger from '../../core/utils/winston.util';
+
+export const SHORTS_CONFIG = {
+  TARGET_WIDTH: 1080,
+  TARGET_HEIGHT: 1920,
+  MAX_DURATION_SEC: 60,
+  ASPECT_RATIO_MIN: 1.4,
+  ASPECT_RATIO_MAX: 1.9,
+} as const;
 
 export interface VideoMetadata {
   container: string;
@@ -28,10 +37,20 @@ export class VideoCodecService implements OnModuleInit {
   }
 
   async initialize(): Promise<void> {
+    const resolvedPath = process.env.FFPROBE_PATH || 'ffprobe';
     try {
-      await this.runCommand(this.ffprobePath, ['-version']);
+      const output = await this.runCommand(resolvedPath, ['-version']);
+      const firstLine = output.split('\n')[0]?.trim() || 'unknown';
+      logger.info(
+        `[VideoCodecService] FFprobe available: path="${resolvedPath}" version="${firstLine}"`,
+      );
       this.isAvailable = true;
-    } catch {
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      logger.warn(
+        `[VideoCodecService] FFprobe NOT available: path="${resolvedPath}" error="${msg}" ` +
+          `— Set FFPROBE_PATH env var to a valid ffprobe executable path`,
+      );
       this.isAvailable = false;
     }
   }
@@ -102,6 +121,43 @@ export class VideoCodecService implements OnModuleInit {
     return this.isAvailable;
   }
 
+  getEffectiveDimensions(metadata: VideoMetadata): {
+    width: number;
+    height: number;
+  } {
+    const isRotated = metadata.rotation === 90 || metadata.rotation === 270;
+    return {
+      width: isRotated ? metadata.height : metadata.width,
+      height: isRotated ? metadata.width : metadata.height,
+    };
+  }
+
+  isShortsCompatible(metadata: VideoMetadata): boolean {
+    const { width, height } = this.getEffectiveDimensions(metadata);
+    const isPortrait = height > width;
+    const ratio = height / width;
+    const ratioOk =
+      ratio >= SHORTS_CONFIG.ASPECT_RATIO_MIN &&
+      ratio <= SHORTS_CONFIG.ASPECT_RATIO_MAX;
+    const durationOk = metadata.duration <= SHORTS_CONFIG.MAX_DURATION_SEC;
+    const codecOk = ['h264', 'avc1'].includes(metadata.videoCodec);
+    const audioOk =
+      !metadata.audioCodec ||
+      ['aac', 'mp3', 'mp4a'].includes(metadata.audioCodec);
+    const containerOk = ['mp4', 'mov'].includes(metadata.container);
+    const notHdr = !metadata.isHdr;
+
+    return (
+      isPortrait &&
+      ratioOk &&
+      durationOk &&
+      codecOk &&
+      audioOk &&
+      containerOk &&
+      notHdr
+    );
+  }
+
   private runCommand(cmd: string, args: string[]): Promise<string> {
     return new Promise((resolve, reject) => {
       const proc = spawn(cmd, args);
@@ -117,7 +173,7 @@ export class VideoCodecService implements OnModuleInit {
       proc.on('error', (err) => reject(err));
       proc.on('close', (code) => {
         if (code === 0) resolve(stdout);
-        else reject(new Error(stderr || `ffprobe exited with code ${code}`));
+        else reject(new Error(stderr || `${cmd} exited with code ${code}`));
       });
     });
   }

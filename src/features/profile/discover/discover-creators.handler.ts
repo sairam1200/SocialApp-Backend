@@ -1,14 +1,12 @@
 import * as Joi from 'joi';
 import { Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
 import { PublicProfileModel } from '../../../domain/contracts/public-profile.model';
 import { IUserRepository } from '../../../domain/repositories';
+import { IUserFollowRepository } from '../../../domain/repositories/iuserFollow.repository';
 import { User } from '../../../domain/entities';
 import { mapToPublicProfileModel } from '../../../domain/mappers/public-profile.mapper';
-import { PlaylistMember } from '../../../domain/entities/collection/playlistMember.entity';
 import { getProfileImageUrl } from '../../../core/utils/profileImagePrivacy.util';
 import _const from '../../../core/utils/const';
 
@@ -43,8 +41,8 @@ export class DiscoverCreatorsQueryHandler
   constructor(
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-    @InjectRepository(PlaylistMember)
-    private readonly playlistMemberRepository: Repository<PlaylistMember>,
+    @Inject(_const.IUSERFOLLOW_REPOSITORY)
+    private readonly userFollowRepository: IUserFollowRepository,
   ) {}
 
   async execute(query: DiscoverCreatorsQuery): Promise<{
@@ -83,7 +81,7 @@ export class DiscoverCreatorsQueryHandler
             user.biometrics.privacy,
             user.id,
             viewerUserId,
-            this.playlistMemberRepository,
+            this.userFollowRepository,
           );
         }
 

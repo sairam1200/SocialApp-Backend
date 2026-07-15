@@ -13,7 +13,6 @@ import {
   UserClaim,
   UserFollow,
   UserRole,
-  PlaylistMember,
 } from '../domain/entities';
 import { FollowUpdatedListener } from '../infrastructure/background/listeners/follow-updated.listener';
 
@@ -28,7 +27,6 @@ import { FollowUpdatedListener } from '../infrastructure/background/listeners/fo
       Role,
       RoleClaim,
       UserRole,
-      PlaylistMember,
     ]),
     ProfileModule,
   ],

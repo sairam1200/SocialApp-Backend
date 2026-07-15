@@ -1,12 +1,10 @@
 import * as Joi from 'joi';
 import { Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import _const from '../../../../core/utils/const';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
-import { PlaylistMember } from '../../../../domain/entities/collection/playlistMember.entity';
 import { IManualProfileRepository } from '../../../../domain/repositories';
+import { IUserFollowRepository } from '../../../../domain/repositories/iuserFollow.repository';
 import { PagedResult } from '../../../../domain/contracts/pagination/pagedResult';
 import { ManualProfileSearchResponseModel } from '../../../../domain/contracts/manualProfile.model';
 import { mapToManualProfileSearchResponseModel } from '../../../../domain/mappers/manualProfile.mapper';
@@ -37,8 +35,8 @@ export class SearchManualProfileQueryHandler
   constructor(
     @Inject(_const.IMANUALPROFILE_REPOSITORY)
     private readonly manualProfileRepository: IManualProfileRepository,
-    @InjectRepository(PlaylistMember)
-    private readonly playlistMemberRepository: Repository<PlaylistMember>,
+    @Inject(_const.IUSERFOLLOW_REPOSITORY)
+    private readonly userFollowRepository: IUserFollowRepository,
   ) {}
 
   async execute(
@@ -70,7 +68,7 @@ export class SearchManualProfileQueryHandler
             profile.user.biometrics.privacy,
             profile.user.id,
             viewerUserId,
-            this.playlistMemberRepository,
+            this.userFollowRepository,
           );
         }
 

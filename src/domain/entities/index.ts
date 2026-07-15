@@ -27,6 +27,7 @@ export { YoutubeAccount } from './youtubeAccount.entity';
 export { YoutubeVideo } from './youtubeVideo.entity';
 
 export { UploadJob } from './uploadJob.entity';
+export { PublishJob } from './publishJob.entity';
 
 export { AnalyticsEvent } from './analyticsEvent.entity';
 export { PremiumRollup } from './premiumRollup.entity';

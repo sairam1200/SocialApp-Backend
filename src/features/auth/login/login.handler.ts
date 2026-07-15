@@ -75,9 +75,6 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
     const user = await this.userRepository.getUserByEmailAsync(
       command.model.email,
     );
-    console.log('LOGIN EMAIL:', command.model.email);
-    console.log('USER FOUND:', user?.email);
-    console.log('EMAIL CONFIRMED:', user?.emailConfirmed);
     if (
       !user ||
       !(await this.userRepository.checkPasswordAsync(
@@ -96,9 +93,7 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
     if (this.isAccountLockedOrInactive(user)) {
       return this.handleLockedOrInactiveAccount(user);
     }
-    // Log the onboarding step for debugging
-    console.log('LOGIN ONBOARDING:', user.onboardingStep);
-    //
+
     return this.handleSuccessfulLogin(user, command.model);
   }
 

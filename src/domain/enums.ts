@@ -101,3 +101,16 @@ export enum OnboardingStep {
   Confirmation = 'Confirmation',
   Completed = 'Completed',
 }
+
+export enum PostType {
+  Video = 'video',
+  Short = 'short',
+  Reel = 'reel',
+  Story = 'story',
+  Post = 'post',
+  Article = 'article',
+  Pin = 'pin',
+  Project = 'project',
+  Message = 'message',
+  Track = 'track',
+}

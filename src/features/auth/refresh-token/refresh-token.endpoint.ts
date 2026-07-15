@@ -4,17 +4,25 @@ import { TokenResponseModel } from '../../../domain/contracts/tokenResponse.mode
 import { RefreshTokenGuard } from '../../../core/passport';
 import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
+  BadGatewayException,
   Body,
   Controller,
   HttpStatus,
   Post,
   Res,
+  UseFilters,
   UseGuards,
 } from '@nestjs/common';
 import {
   RefreshTokenCommand,
   RefreshTokenRequestModel,
 } from './refresh-token.handler';
+import { ErrorHandlersFilter } from '../../../core/exceptions/exceptionHandler.filter';
+
+const CLEAR_COOKIES_HEADER = [
+  'access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax',
+  'refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax',
+];
 
 @ApiBearerAuth()
 @ApiTags('Authentication')
@@ -26,6 +34,7 @@ export class RefreshTokenController {
   constructor(private readonly commandBus: CommandBus) {}
 
   @Post('refresh-access-token')
+  @UseFilters(ErrorHandlersFilter)
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -34,12 +43,17 @@ export class RefreshTokenController {
     @Body() request: RefreshTokenRequestModel,
     @Res() res: Response,
   ): Promise<Response> {
-    const result = await this.commandBus.execute(
-      new RefreshTokenCommand({
-        model: request,
-      }),
-    );
+    try {
+      const result = await this.commandBus.execute(
+        new RefreshTokenCommand({
+          model: request,
+        }),
+      );
 
-    return res.status(HttpStatus.OK).send(result);
+      return res.status(HttpStatus.OK).send(result);
+    } catch (error) {
+      res.setHeader('Set-Cookie', CLEAR_COOKIES_HEADER);
+      throw error;
+    }
   }
 }

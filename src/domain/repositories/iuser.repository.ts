@@ -6,6 +6,9 @@ export type SearchUserProjection = Pick<
   'id' | 'firstName' | 'lastName' | 'userName' | 'bio'
 > & {
   profileImage?: string;
+  profileImageUrl?: string | null;
+  defaultProfileImageUrl?: string | null;
+  profileImagePrivacy?: string;
   followersCount?: number;
   followingCount?: number;
   totalPosts?: number;
@@ -18,7 +21,12 @@ export type UserProfileStats = {
   totalPosts: number;
   followersCount: number;
   followingCount: number;
-  linkedAccounts: { id: string; platform: string; verified?: boolean; username?: string }[];
+  linkedAccounts: {
+    id: string;
+    platform: string;
+    verified?: boolean;
+    username?: string;
+  }[];
   verified: boolean;
   isFollowing?: boolean;
 };

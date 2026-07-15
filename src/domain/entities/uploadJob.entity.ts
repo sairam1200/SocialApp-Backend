@@ -3,9 +3,9 @@ import { Column, Entity, Index } from 'typeorm';
 
 @Entity({ name: 'upload_jobs' })
 export class UploadJob extends BaseEntity {
-  @Column()
+  @Column({ nullable: true })
   @Index()
-  videoId: string;
+  videoId?: string;
 
   @Column({ default: 'pending' })
   status: string;

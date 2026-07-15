@@ -47,6 +47,7 @@ lerna-debug.log*
 .env.production.local
 .env.local
 cloudrun-env.yaml
+.env.docker
 # temp directory
 .temp
 .tmp

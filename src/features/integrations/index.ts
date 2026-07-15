@@ -291,6 +291,8 @@ import { UploadVideoCommandHandler } from './upload-video/upload-video.handler';
 import { LinkedAccountsController } from './linked-accounts/linked-accounts.endpoint';
 import { GetUserLinkedAccountsQueryHandler } from './linked-accounts/linked-accounts.handler';
 
+import publish from './publish';
+
 export { FacebookConnectController } from './facebook/connect/facebook-connect.endpoint';
 export {
   FacebookConnectCallbackQueryHandler,
@@ -681,6 +683,7 @@ const controllers = [
   UploadMediaController,
   UploadVideoController,
   LinkedAccountsController,
+  ...publish.addControllers(),
 ];
 
 const handlers = [
@@ -843,6 +846,7 @@ const handlers = [
   UploadMediaCommandHandler,
   UploadVideoCommandHandler,
   GetUserLinkedAccountsQueryHandler,
+  ...publish.addHandlers(),
 ];
 
 const integrations = {

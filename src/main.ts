@@ -23,13 +23,20 @@ async function bootstrap() {
     logger.error(`Uncaught Exception: ${reason}`);
   });
 
-  console.log('1 Starting');
+  try {
+    await redis.connectToRedis();
+  } catch (redisErr) {
+    logger.warn(
+      `Redis unavailable (${redisErr instanceof Error ? redisErr.message : redisErr}). Continuing without Redis.`,
+    );
+  }
 
-  await redis.connectToRedis();
-  console.log('2 Redis connected');
+ logger.info("STEP 1");
+const app = await NestFactory.create(AppModule);
+logger.info("STEP 2");
 
-  const app = await NestFactory.create(AppModule);
-  console.log('3 Nest created');
+
+
   app.enableShutdownHooks();
   const cookieParser = require('cookie-parser');
   const globalPrefix = 'api';
@@ -71,8 +78,10 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT) || configs.port || 8080;
 
-  await app.listen(port, '0.0.0.0');
-
+ 
+logger.info("STEP 3");
+await app.listen(port, "0.0.0.0");
+logger.info("STEP 4");
   logger.info(`🚀 Application is running on port ${port}`);
 }
 bootstrap().catch((error) => {

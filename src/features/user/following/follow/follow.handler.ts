@@ -4,8 +4,6 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { FollowModel } from '../../../../domain/contracts/follow.model';
@@ -15,7 +13,6 @@ import {
   mapToFollowModel,
   resolveFollowAvatars,
 } from '../../../../domain/mappers/follow.mapper';
-import { PlaylistMember } from '../../../../domain/entities/collection/playlistMember.entity';
 import { FollowUpdatedEvent } from '../../../../domain/events/follow-updated.event';
 import _const from '../../../../core/utils/const';
 import {
@@ -44,8 +41,6 @@ export class FollowUserCommandHandler
     private readonly follows: IUserFollowRepository,
     private readonly profileCache: ProfileCacheService,
     private readonly eventEmitter: EventEmitter2,
-    @InjectRepository(PlaylistMember)
-    private readonly playlistMemberRepository: Repository<PlaylistMember>,
   ) {}
 
   private getDailyFollowLimitKey(userId: string): string {
@@ -99,7 +94,7 @@ export class FollowUserCommandHandler
       const avatars = await resolveFollowAvatars(
         [existing],
         command.followerId,
-        this.playlistMemberRepository,
+        this.follows,
       );
       return mapToFollowModel(existing, avatars);
     }
@@ -150,7 +145,7 @@ export class FollowUserCommandHandler
     const hydratedAvatars = await resolveFollowAvatars(
       [followEntity],
       command.followerId,
-      this.playlistMemberRepository,
+      this.follows,
     );
     return mapToFollowModel(followEntity, hydratedAvatars);
   }
@@ -161,19 +156,11 @@ export class FollowUserCommandHandler
   ): Promise<void> {
     const targetKey = redis.getRedisKey('follow:counts', targetUserId);
     const followerKey = redis.getRedisKey('follow:counts', followerId);
-    const targetProfileKey = redis.getRedisKey(
-      'profile',
-      `public:${targetUserId}`,
-    );
-    const followerProfileKey = redis.getRedisKey(
-      'profile',
-      `public:${followerId}`,
-    );
     await Promise.all([
       redis.removeFromRedisAsync(targetKey),
       redis.removeFromRedisAsync(followerKey),
-      redis.removeFromRedisAsync(targetProfileKey),
-      redis.removeFromRedisAsync(followerProfileKey),
+      this.profileCache.invalidateProfile(targetUserId),
+      this.profileCache.invalidateProfile(followerId),
     ]);
   }
 }

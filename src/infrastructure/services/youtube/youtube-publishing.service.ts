@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as https from 'https';
+import { Readable } from 'stream';
 import { Injectable, Inject } from '@nestjs/common';
 import configs from '../../../configs';
 import _const from '../../../core/utils/const';
@@ -71,10 +72,21 @@ export class YoutubePublishingService {
     fileSize: number | undefined,
     onProgress?: (progress: number, message: string) => void,
   ): Promise<{ youtubeVideoId: string; youtubeUrl: string }> {
+    const { stream } = await this.r2Storage.getStream(r2Key);
+    return this.uploadVideo(account, video, stream, fileSize, onProgress);
+  }
+
+  async uploadVideo(
+    account: YoutubeAccount,
+    video: YoutubeVideo,
+    stream: Readable,
+    fileSize: number | undefined,
+    onProgress?: (progress: number, message: string) => void,
+  ): Promise<{ youtubeVideoId: string; youtubeUrl: string }> {
     const accessToken = await this.ensureValidAccessToken(account);
 
     logger.info(
-      `[YOUTUBE UPLOAD START] videoId=${video.id} title="${video.title}" r2Key=${r2Key} fileSize=${fileSize}`,
+      `[YOUTUBE UPLOAD START] videoId=${video.id} title="${video.title}" fileSize=${fileSize}`,
     );
 
     onProgress?.(10, 'Initiating resumable upload...');
@@ -84,10 +96,10 @@ export class YoutubePublishingService {
     logger.info(`[YOUTUBE UPLOAD] Upload Started`);
 
     onProgress?.(30, 'Uploading video to YouTube...');
-    const youtubeVideoId = await this.streamUploadToYouTube(
+    const youtubeVideoId = await this.streamUpload(
       uploadUrl,
       accessToken,
-      r2Key,
+      stream,
       fileSize,
       onProgress,
     );
@@ -170,16 +182,15 @@ export class YoutubePublishingService {
     });
   }
 
-  private async streamUploadToYouTube(
+  private async streamUpload(
     uploadUrl: string,
     accessToken: string,
-    r2Key: string,
+    stream: Readable,
     fileSize: number | undefined,
     onProgress?: (progress: number, message: string) => void,
   ): Promise<string> {
-    const { stream: r2Stream } = await this.r2Storage.getStream(r2Key);
-
-    let buffer = Buffer.alloc(0);
+    const bufferChunks: Buffer[] = [];
+    let bufferLength = 0;
     let bytesUploaded = 0;
     const uploadStartTime = Date.now();
 
@@ -187,18 +198,30 @@ export class YoutubePublishingService {
       endOfStream: boolean,
       settle: (err?: any, result?: string) => void,
     ): Promise<boolean> => {
-      while (
-        buffer.length >= CHUNK_SIZE ||
-        (endOfStream && buffer.length > 0)
-      ) {
+      while (bufferLength >= CHUNK_SIZE || (endOfStream && bufferLength > 0)) {
         const sliceSize =
-          endOfStream && buffer.length < CHUNK_SIZE
-            ? buffer.length
-            : CHUNK_SIZE;
-        const slice = buffer.subarray(0, sliceSize);
-        buffer = buffer.subarray(sliceSize);
+          endOfStream && bufferLength < CHUNK_SIZE ? bufferLength : CHUNK_SIZE;
 
-        const isFinal = endOfStream && buffer.length === 0;
+        let slice: Buffer;
+        let remaining = sliceSize;
+        const parts: Buffer[] = [];
+
+        while (remaining > 0 && bufferChunks.length > 0) {
+          const front = bufferChunks[0];
+          const take = Math.min(remaining, front.length);
+          parts.push(front.subarray(0, take));
+          if (take === front.length) {
+            bufferChunks.shift();
+          } else {
+            bufferChunks[0] = front.subarray(take);
+          }
+          remaining -= take;
+        }
+
+        slice = parts.length === 1 ? parts[0] : Buffer.concat(parts);
+        bufferLength -= sliceSize;
+
+        const isFinal = endOfStream && bufferLength === 0;
         const startByte = bytesUploaded;
         const endByte = bytesUploaded + slice.length - 1;
 
@@ -255,25 +278,26 @@ export class YoutubePublishingService {
         doFlush(false, settle).finally(() => {
           flushing = false;
           if (!settled) {
-            r2Stream.resume();
+            stream.resume();
           }
         });
       };
 
-      r2Stream.on('data', (chunk: Buffer) => {
-        buffer = Buffer.concat([buffer, chunk]);
-        if (buffer.length >= CHUNK_SIZE && !flushing) {
-          r2Stream.pause();
+      stream.on('data', (chunk: Buffer) => {
+        bufferChunks.push(chunk);
+        bufferLength += chunk.length;
+        if (bufferLength >= CHUNK_SIZE && !flushing) {
+          stream.pause();
           scheduleFlush();
         }
       });
 
-      r2Stream.on('end', () => {
+      stream.on('end', () => {
         const doEndFlush = async () => {
           while (flushing) {
             await new Promise((r) => setImmediate(r));
           }
-          if (buffer.length > 0 && !settled) {
+          if (bufferLength > 0 && !settled) {
             flushing = true;
             await doFlush(true, settle);
             flushing = false;
@@ -289,8 +313,8 @@ export class YoutubePublishingService {
         doEndFlush();
       });
 
-      r2Stream.on('error', (err) => {
-        settle(new YoutubeUploadError(`R2 stream error: ${err.message}`));
+      stream.on('error', (err) => {
+        settle(new YoutubeUploadError(`Stream error: ${err.message}`));
       });
     });
   }

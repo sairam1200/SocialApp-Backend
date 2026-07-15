@@ -1,9 +1,12 @@
 import { Inject, NotFoundException } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import _const from '../../../../core/utils/const';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { FollowStatus } from '../../../../domain/enums';
+import { FollowUpdatedEvent } from '../../../../domain/events/follow-updated.event';
 import { IUserFollowRepository } from '../../../../domain/repositories/iuserFollow.repository';
+import { ProfileCacheService } from '../../../../infrastructure/services/profileCache.service';
 import redis from '../../../../core/utils/redis.util';
 
 export class ApproveFollowRequestCommand {
@@ -20,6 +23,8 @@ export class ApproveFollowRequestCommandHandler
   constructor(
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
     private readonly follows: IUserFollowRepository,
+    private readonly profileCache: ProfileCacheService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   public async execute(command: ApproveFollowRequestCommand): Promise<void> {
@@ -45,6 +50,28 @@ export class ApproveFollowRequestCommandHandler
 
     await this.follows.updateStatusAsync(existing.id, FollowStatus.Accepted);
     await this.invalidateCaches(command.followedUserId, command.followerId);
+
+    const [targetFollowersCount, viewerFollowingCount] = await Promise.all([
+      this.follows.countFollowersAsync(
+        command.followedUserId,
+        FollowStatus.Accepted,
+      ),
+      this.follows.countFollowingAsync(
+        command.followerId,
+        FollowStatus.Accepted,
+      ),
+    ]);
+
+    this.eventEmitter.emit(
+      'follow.updated',
+      new FollowUpdatedEvent(
+        command.followedUserId,
+        command.followerId,
+        true,
+        targetFollowersCount,
+        viewerFollowingCount,
+      ),
+    );
   }
 
   private async invalidateCaches(
@@ -53,19 +80,11 @@ export class ApproveFollowRequestCommandHandler
   ): Promise<void> {
     const followedKey = redis.getRedisKey('follow:counts', followedUserId);
     const followerKey = redis.getRedisKey('follow:counts', followerId);
-    const followedProfileKey = redis.getRedisKey(
-      'profile',
-      `public:${followedUserId}`,
-    );
-    const followerProfileKey = redis.getRedisKey(
-      'profile',
-      `public:${followerId}`,
-    );
     await Promise.all([
       redis.removeFromRedisAsync(followedKey),
       redis.removeFromRedisAsync(followerKey),
-      redis.removeFromRedisAsync(followedProfileKey),
-      redis.removeFromRedisAsync(followerProfileKey),
+      this.profileCache.invalidateProfile(followedUserId),
+      this.profileCache.invalidateProfile(followerId),
     ]);
   }
 }

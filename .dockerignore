@@ -1,0 +1,51 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+build
+coverage
+
+# Git
+.git
+.gitignore
+.github
+
+# IDE
+.vscode
+.idea
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Runtime
+tmp
+temp
+.tmp
+.cache
+
+# Environment files
+.env
+.env.*
+cloudrun-env.yaml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+.nyc_output
+
+# Documentation
+README.md
+*.md
+
+# Docker
+.dockerignore
+
+# Local tooling
+.opencode

@@ -27,12 +27,6 @@ function createAccountGuard(
       const request = context.switchToHttp().getRequest();
       const response: Response = context.switchToHttp().getResponse();
 
-      logger.info(`[AccountGuard] Checking access for URL: ${request.url}`);
-      logger.info(`[AccountGuard] Expected user type: ${type || 'Any'}`);
-      logger.info(
-        `[AccountGuard] Authorization header: ${request.headers.authorization ? 'Present' : 'Missing'}`,
-      );
-
       const claimsPrinciple = HttpContext.user;
       if (!claimsPrinciple) {
         if (request.headers.authorization) {
@@ -46,15 +40,10 @@ function createAccountGuard(
         }
       }
 
-      logger.info(
-        `[AccountGuard] User validated. User type: ${claimsPrinciple[Globals.ClaimTypes.UserType]}`,
-      );
-
       if (
         claimsPrinciple[Globals.ClaimTypes.TwoFARequired] &&
         !allowTwoFARequired
       ) {
-        logger.error('[AccountGuard] 2FA required but not allowed');
         throw new UnauthorizedException(
           'Unauthorized: Two-factor authentication code is required',
         );
@@ -75,9 +64,6 @@ function createAccountGuard(
       if (userAccount) {
         if (concurrencyStamp !== userAccount.concurrencyStamp) {
           response.setHeader('X-Token-Refresh-Required', 'true');
-          logger.info(
-            `[AccountGuard] ConcurrencyStamp changed for user ${userId}, token refresh recommended`,
-          );
         }
 
         if (securityStamp !== userAccount.securityStamp) {
@@ -95,23 +81,14 @@ function createAccountGuard(
         const userType = claimsPrinciple[
           Globals.ClaimTypes.UserType
         ] as UserType;
-        const hasType = userType === type;
-        logger.info(
-          `[AccountGuard] User type check: Expected=${type}, Actual=${userType}, Match=${hasType}`,
-        );
-        if (hasType) {
-          logger.info('[AccountGuard] Access granted');
-          return true;
-        } else {
-          logger.error(`[AccountGuard] Access denied: User type mismatch`);
+        if (userType !== type) {
           throw new ForbiddenException(
             'Forbidden: You do not have permission to access this resource.',
           );
         }
-      } else {
-        logger.info('[AccountGuard] Access granted (no type restriction)');
-        return true;
       }
+
+      return true;
     }
   }
 

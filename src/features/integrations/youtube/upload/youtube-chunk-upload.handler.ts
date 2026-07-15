@@ -80,6 +80,8 @@ interface ChunkProgressResponse {
 interface ChunkCompleteResponse {
   videoId: string;
   jobId: string;
+  uploadId: string;
+  r2Key: string;
   status: string;
   publishAt?: string;
 }
@@ -300,6 +302,8 @@ export class CompleteChunkUploadCommandHandler
       return {
         videoId: savedVideo.id,
         jobId: uploadJob.id,
+        uploadId: uploadJob.id,
+        r2Key,
         status: publishAt ? 'scheduled' : 'queued',
         publishAt: publishAt?.toISOString(),
       };

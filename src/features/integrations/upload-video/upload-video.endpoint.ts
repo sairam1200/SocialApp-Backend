@@ -69,13 +69,17 @@ export class UploadVideoController {
   })
   @ApiResponse({
     status: 200,
-    description: 'OK — Returns the video URL and metadata',
+    description: 'OK — Returns the video URL, upload metadata, and upload ID',
   })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })
-  public async upload(
-    @UploadedFile() file: Express.Multer.File,
-  ): Promise<{ url: string; transcoded: boolean }> {
+  public async upload(@UploadedFile() file: Express.Multer.File): Promise<{
+    url: string;
+    transcoded: boolean;
+    uploadId: string;
+    r2Key: string;
+    fileSize: number;
+  }> {
     return this.commandBus.execute(new UploadVideoCommand({ file }));
   }
 }

@@ -309,7 +309,9 @@ export class UserContentRepository implements IUserContentRepository {
         'creator.lastName AS "userLastName"',
         'creator.userName AS "userName"',
         'creator.bio AS "userBio"',
-        'NULL AS "userProfileImage"',
+        'creatorbio."profileImageUrl" AS "profileImageUrl"',
+        'creatorbio."defaultProfileImageUrl" AS "defaultProfileImageUrl"',
+        'creatorbio.privacy AS "profileImagePrivacy"',
       ])
       .where('creator.isActive = true');
 
@@ -348,7 +350,10 @@ export class UserContentRepository implements IUserContentRepository {
         lastName: row.userLastName,
         userName: row.userName,
         bio: row.userBio,
-        profileImage: row.userProfileImage ?? null,
+        profileImage: row.profileImageUrl ?? row.defaultProfileImageUrl ?? null,
+        profileImageUrl: row.profileImageUrl ?? null,
+        defaultProfileImageUrl: row.defaultProfileImageUrl ?? null,
+        profileImagePrivacy: row.profileImagePrivacy ?? 'Everyone',
       },
     };
   }
@@ -449,7 +454,9 @@ export class UserContentRepository implements IUserContentRepository {
 
   private invalidateDiscoverFeedCache(): Promise<void> {
     return redis
-      .removeFromRedisAsync(redis.getRedisKey('discover:feed:v1', 'all'))
+      .removeFromRedisByPatternAsync(
+        redis.getRedisKey('discover:feed:v1', 'all', '*'),
+      )
       .then(() => undefined);
   }
 }

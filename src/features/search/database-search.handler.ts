@@ -8,9 +8,11 @@ import {
   IUserContentRepository,
   IUserRepository,
 } from '../../domain/repositories';
+import { IUserFollowRepository } from '../../domain/repositories/iuserFollow.repository';
 import { SearchContentProjection } from '../../domain/repositories/iuserContent.repository';
 import { SearchUserProjection } from '../../domain/repositories/iuser.repository';
 import { GetPublicProfileQuery } from '../profile/public-profile/get-public-profile.handler';
+import { getProfileImageUrl } from '../../core/utils/profileImagePrivacy.util';
 
 export type SearchSuggestion = {
   id: string;
@@ -137,6 +139,8 @@ export class SearchResultsQueryHandler
     @Inject(_const.IUSER_REPOSITORY) private readonly users: IUserRepository,
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly contents: IUserContentRepository,
+    @Inject(_const.IUSERFOLLOW_REPOSITORY)
+    private readonly userFollowRepository: IUserFollowRepository,
   ) {}
 
   async execute(query: SearchResultsQuery): Promise<{
@@ -168,9 +172,61 @@ export class SearchResultsQueryHandler
           value.limit,
         ),
       ]);
+
+    const resolvedProfiles = await Promise.all(
+      profiles.map(async (profile) => {
+        const resolvedUrl = await getProfileImageUrl(
+          profile.profileImageUrl ?? null,
+          profile.defaultProfileImageUrl ?? null,
+          profile.profileImagePrivacy as any,
+          profile.id,
+          viewerId,
+          this.userFollowRepository,
+        );
+        return {
+          id: profile.id,
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          userName: profile.userName,
+          bio: profile.bio,
+          profileImage: resolvedUrl ?? undefined,
+          followersCount: profile.followersCount,
+          followingCount: profile.followingCount,
+          totalPosts: profile.totalPosts,
+          linkedAccounts: profile.linkedAccounts,
+          verified: profile.verified,
+          isFollowing: profile.isFollowing,
+        };
+      }),
+    );
+
+    const resolvedContents = await Promise.all(
+      contents.map(async (content) => {
+        const resolvedUrl = await getProfileImageUrl(
+          content.user.profileImageUrl ?? null,
+          content.user.defaultProfileImageUrl ?? null,
+          content.user.profileImagePrivacy as any,
+          content.user.id,
+          viewerId,
+          this.userFollowRepository,
+        );
+        return {
+          ...content,
+          user: {
+            id: content.user.id,
+            firstName: content.user.firstName,
+            lastName: content.user.lastName,
+            userName: content.user.userName,
+            bio: content.user.bio,
+            profileImage: resolvedUrl ?? null,
+          },
+        };
+      }),
+    );
+
     return {
-      profiles,
-      contents,
+      profiles: resolvedProfiles,
+      contents: resolvedContents,
       pagination: {
         page: value.page,
         limit: value.limit,
@@ -187,6 +243,8 @@ export class SearchItemQueryHandler implements IQueryHandler<SearchItemQuery> {
     @Inject(_const.IUSER_REPOSITORY) private readonly users: IUserRepository,
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly contents: IUserContentRepository,
+    @Inject(_const.IUSERFOLLOW_REPOSITORY)
+    private readonly userFollowRepository: IUserFollowRepository,
     private readonly queryBus: QueryBus,
   ) {}
 
@@ -211,6 +269,32 @@ export class SearchItemQueryHandler implements IQueryHandler<SearchItemQuery> {
     );
     if (!content) throw new NotFoundException('Content not found');
     const { user, ...item } = content;
-    return { content: item, user };
+
+    const viewerId = HttpContext.getCurrentUserId;
+    let resolvedProfileImage: string | null = null;
+    if (user) {
+      resolvedProfileImage = await getProfileImageUrl(
+        user.profileImageUrl ?? null,
+        user.defaultProfileImageUrl ?? null,
+        user.profileImagePrivacy as any,
+        user.id,
+        viewerId,
+        this.userFollowRepository,
+      );
+    }
+
+    return {
+      content: item,
+      user: user
+        ? {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            userName: user.userName,
+            bio: user.bio,
+            profileImage: resolvedProfileImage ?? null,
+          }
+        : undefined,
+    };
   }
 }

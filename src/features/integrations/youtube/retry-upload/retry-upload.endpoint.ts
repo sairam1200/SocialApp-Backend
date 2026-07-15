@@ -5,12 +5,16 @@ import {
   Inject,
   NotFoundException,
   BadRequestException,
+  UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiResponse } from '@nestjs/swagger';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import _const from '../../../../core/utils/const';
 import logger from '../../../../core/utils/winston.util';
+import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinkedAccount.repository';
 import { IYoutubeVideoRepository } from '../../../../domain/repositories/iyoutubeVideo.repository';
 import { IUploadJobRepository } from '../../../../domain/repositories/iuploadJob.repository';
@@ -33,7 +37,10 @@ export class YoutubeRetryUploadController {
   ) {}
 
   @Post('upload/retry/:videoId')
+  @UseGuards(UserAccoutGuard)
   @ApiResponse({ status: 200, description: 'Upload retry queued' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Video not found' })
   @ApiResponse({
     status: 400,
@@ -42,9 +49,22 @@ export class YoutubeRetryUploadController {
   async retryUpload(
     @Param('videoId') videoId: string,
   ): Promise<{ jobId: string; status: string }> {
+    const userId = HttpContext.getCurrentUserId;
+
     const video = await this.videoRepo.getByIdAsync(videoId);
     if (!video) {
       throw new NotFoundException('Video not found');
+    }
+
+    const linkedAccount = await this.linkedAccountRepo.getByIdAsync(
+      video.accountId,
+    );
+    if (!linkedAccount) {
+      throw new NotFoundException('Linked account not found for video');
+    }
+
+    if (linkedAccount.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this video');
     }
 
     if (video.youtubeVideoId) {
@@ -59,14 +79,6 @@ export class YoutubeRetryUploadController {
 
     if (!video.r2Key) {
       throw new BadRequestException('Video has no associated R2 file');
-    }
-
-    // Resolve channelId from the linked account (needed by processor)
-    const linkedAccount = await this.linkedAccountRepo.getByIdAsync(
-      video.accountId,
-    );
-    if (!linkedAccount) {
-      throw new NotFoundException('Linked account not found for video');
     }
 
     video.status = 'pending';

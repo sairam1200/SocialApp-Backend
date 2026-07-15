@@ -3,7 +3,6 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationGateway } from '../../websocket/gateways/notification.gateway';
 import { ProfileCacheService } from '../../services/profileCache.service';
 import { FollowUpdatedEvent } from '../../../domain/events/follow-updated.event';
-import redis from '../../../core/utils/redis.util';
 import logger from '../../../core/utils/winston.util';
 
 @Injectable()
@@ -47,8 +46,6 @@ export class FollowUpdatedListener {
   private async invalidateProfileCache(userId: string): Promise<void> {
     try {
       await this.profileCache.invalidateProfile(userId);
-      const profileKey = redis.getRedisKey('profile', `public:${userId}`);
-      await redis.removeFromRedisAsync(profileKey);
     } catch (err) {
       logger.warn(`Profile cache invalidation failed for ${userId}: ${err}`);
     }

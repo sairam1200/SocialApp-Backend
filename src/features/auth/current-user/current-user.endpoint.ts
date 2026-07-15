@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
 import { Globals } from '../../../core/globals';
+import { OnboardingStep } from '../../../domain/enums';
 import { Controller, Get, HttpStatus, Res, UseGuards } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 
@@ -28,7 +29,9 @@ export class CurrentUserController {
       firstName: user[Globals.ClaimTypes.GivenName],
       lastName: user[Globals.ClaimTypes.FamilyName],
       fullName: user[Globals.ClaimTypes.FullName],
+      userType: user[Globals.ClaimTypes.UserType],
       onboardingStep: user.onboardingStep,
+      onboardingCompleted: user.onboardingStep === OnboardingStep.Completed,
     });
   }
 }

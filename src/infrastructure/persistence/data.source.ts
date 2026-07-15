@@ -7,6 +7,7 @@ export const postgresOptions: DataSourceOptions = {
   url: process.env.DATABASE_URL,
   synchronize: configs.postgres.synchronize,
   entities: [path.resolve(__dirname + configs.postgres.entities)],
+  migrations: [path.resolve(__dirname + configs.postgres.migrations)],
   logging: configs.postgres.logging,
   migrationsRun: configs.postgres.migrationsRun,
 

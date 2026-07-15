@@ -67,19 +67,11 @@ export class UnfollowUserCommandHandler
   ): Promise<void> {
     const targetKey = redis.getRedisKey('follow:counts', targetUserId);
     const followerKey = redis.getRedisKey('follow:counts', followerId);
-    const targetProfileKey = redis.getRedisKey(
-      'profile',
-      `public:${targetUserId}`,
-    );
-    const followerProfileKey = redis.getRedisKey(
-      'profile',
-      `public:${followerId}`,
-    );
     await Promise.all([
       redis.removeFromRedisAsync(targetKey),
       redis.removeFromRedisAsync(followerKey),
-      redis.removeFromRedisAsync(targetProfileKey),
-      redis.removeFromRedisAsync(followerProfileKey),
+      this.profileCache.invalidateProfile(targetUserId),
+      this.profileCache.invalidateProfile(followerId),
     ]);
   }
 }

@@ -1,8 +1,6 @@
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { FollowModel } from '../contracts/follow.model';
 import { UserFollow } from '../entities/userFollow.entity';
-import { PlaylistMember } from '../entities/collection/playlistMember.entity';
+import { IUserFollowRepository } from '../repositories/iuserFollow.repository';
 import { getProfileImageUrl } from '../../core/utils/profileImagePrivacy.util';
 
 export function mapToFollowModel(
@@ -36,7 +34,7 @@ export function mapToFollowModel(
 export async function resolveFollowAvatars(
   follows: UserFollow[],
   viewerUserId: string,
-  playlistMemberRepository: Repository<PlaylistMember>,
+  followRepository: IUserFollowRepository,
 ): Promise<Map<string, string | null>> {
   const resolved = new Map<string, string | null>();
   const processed = new Set<string>();
@@ -45,27 +43,35 @@ export async function resolveFollowAvatars(
     const followerId = follow.follower?.id ?? follow.followerId;
     const followedId = follow.followed?.id ?? follow.followedId;
 
-    if (followerId && !processed.has(followerId) && follow.follower?.biometrics) {
+    if (
+      followerId &&
+      !processed.has(followerId) &&
+      follow.follower?.biometrics
+    ) {
       const url = await getProfileImageUrl(
         follow.follower.biometrics.profileImageUrl,
         follow.follower.biometrics.defaultProfileImageUrl,
         follow.follower.biometrics.privacy,
         followerId,
         viewerUserId,
-        playlistMemberRepository,
+        followRepository,
       );
       resolved.set(followerId, url);
       processed.add(followerId);
     }
 
-    if (followedId && !processed.has(followedId) && follow.followed?.biometrics) {
+    if (
+      followedId &&
+      !processed.has(followedId) &&
+      follow.followed?.biometrics
+    ) {
       const url = await getProfileImageUrl(
         follow.followed.biometrics.profileImageUrl,
         follow.followed.biometrics.defaultProfileImageUrl,
         follow.followed.biometrics.privacy,
         followedId,
         viewerUserId,
-        playlistMemberRepository,
+        followRepository,
       );
       resolved.set(followedId, url);
       processed.add(followedId);

@@ -1,51 +1,49 @@
-import { Repository } from 'typeorm';
-import { PlaylistMember } from '../../domain/entities/collection/playlistMember.entity';
-import { ProfileImagePrivacy } from '../../domain/enums';
+import { FollowStatus, ProfileImagePrivacy } from '../../domain/enums';
+import { IUserFollowRepository } from '../../domain/repositories/iuserFollow.repository';
 
 export async function haveUsersInteracted(
   userId1: string,
   userId2: string,
-  playlistMemberRepository: Repository<PlaylistMember>,
+  followRepository: IUserFollowRepository,
 ): Promise<boolean> {
   if (userId1 === userId2) {
     return true;
   }
 
-  const sharedPlaylists = await playlistMemberRepository
-    .createQueryBuilder('pm1')
-    .innerJoin(
-      'playlistMembers',
-      'pm2',
-      'pm1.playlistId = pm2.playlistId AND pm1.userId != pm2.userId',
-    )
-    .where('pm1.userId = :userId1', { userId1 })
-    .andWhere('pm2.userId = :userId2', { userId2 })
-    .andWhere('pm1.removedAt IS NULL')
-    .andWhere('pm2.removedAt IS NULL')
-    .getCount();
+  const [follow1, follow2] = await Promise.all([
+    followRepository.getAsync(userId1, userId2),
+    followRepository.getAsync(userId2, userId1),
+  ]);
 
-  return sharedPlaylists > 0;
+  return (
+    follow1?.status === FollowStatus.Accepted &&
+    follow2?.status === FollowStatus.Accepted
+  );
 }
 
 export async function isProfileImageVisible(
   profileImagePrivacy: ProfileImagePrivacy,
   ownerUserId: string,
   viewerUserId: string | null,
-  playlistMemberRepository: Repository<PlaylistMember>,
+  followRepository: IUserFollowRepository,
 ): Promise<boolean> {
   if (profileImagePrivacy === ProfileImagePrivacy.Everyone) {
     return true;
   }
 
-  if (!viewerUserId || ownerUserId === viewerUserId) {
+  if (ownerUserId === viewerUserId) {
     return true;
+  }
+
+  if (!viewerUserId) {
+    return false;
   }
 
   if (profileImagePrivacy === ProfileImagePrivacy.Interactions) {
     return await haveUsersInteracted(
       ownerUserId,
       viewerUserId,
-      playlistMemberRepository,
+      followRepository,
     );
   }
 
@@ -58,13 +56,13 @@ export async function getProfileImageUrl(
   profileImagePrivacy: ProfileImagePrivacy,
   ownerUserId: string,
   viewerUserId: string | null,
-  playlistMemberRepository: Repository<PlaylistMember>,
+  followRepository: IUserFollowRepository,
 ): Promise<string | null> {
   const canViewCustom = await isProfileImageVisible(
     profileImagePrivacy,
     ownerUserId,
     viewerUserId,
-    playlistMemberRepository,
+    followRepository,
   );
 
   if (canViewCustom && profileImageUrl) {

@@ -1,9 +1,6 @@
 import { Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
-import { PlaylistMember } from '../../../../domain/entities/collection/playlistMember.entity';
 import _const from '../../../../core/utils/const';
 import { FollowModel } from '../../../../domain/contracts/follow.model';
 import { FollowStatus } from '../../../../domain/enums';
@@ -32,8 +29,6 @@ export class GetFollowersQueryHandler
   constructor(
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
     private readonly follows: IUserFollowRepository,
-    @InjectRepository(PlaylistMember)
-    private readonly playlistMemberRepository: Repository<PlaylistMember>,
   ) {}
 
   public async execute(
@@ -51,7 +46,7 @@ export class GetFollowersQueryHandler
     const avatars = await resolveFollowAvatars(
       result.items,
       viewerUserId,
-      this.playlistMemberRepository,
+      this.follows,
     );
 
     return {

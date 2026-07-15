@@ -17,6 +17,8 @@ import { ValidationError } from 'joi';
 import { serializeObject } from '../utils/serialization.util';
 import { ApplicationException } from './application.exception';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 @Catch()
 export class ErrorHandlersFilter implements ExceptionFilter {
   public catch(err: any, host: ArgumentsHost): any {
@@ -27,11 +29,11 @@ export class ErrorHandlersFilter implements ExceptionFilter {
       const problem = new ProblemDocument({
         type: ApplicationException.name,
         title: err.message,
-        detail: err.stack,
-        status: err.statusCode,
+        detail: isProduction ? undefined : err.stack,
+        status: err.statusCode || HttpStatus.BAD_REQUEST,
       });
 
-      response.status(HttpStatus.BAD_REQUEST).json(problem);
+      response.status(err.statusCode || HttpStatus.BAD_REQUEST).json(problem);
 
       Logger.error(serializeObject(problem));
 
@@ -42,7 +44,7 @@ export class ErrorHandlersFilter implements ExceptionFilter {
       const problem = new ProblemDocument({
         type: err.name,
         title: err.message,
-        detail: err.stack,
+        detail: isProduction ? undefined : err.stack,
         status: err.getStatus(),
       });
 
@@ -57,7 +59,7 @@ export class ErrorHandlersFilter implements ExceptionFilter {
       const problem = new ProblemDocument({
         type: ForbiddenException.name,
         title: err.message,
-        detail: err.stack,
+        detail: isProduction ? undefined : err.stack,
         status: err.getStatus(),
       });
 
@@ -72,7 +74,7 @@ export class ErrorHandlersFilter implements ExceptionFilter {
       const problem = new ProblemDocument({
         type: NotFoundException.name,
         title: err.message,
-        detail: err.stack,
+        detail: isProduction ? undefined : err.stack,
         status: err.getStatus(),
       });
 
@@ -87,7 +89,7 @@ export class ErrorHandlersFilter implements ExceptionFilter {
       const problem = new ProblemDocument({
         type: ConflictException.name,
         title: err.message,
-        detail: err.stack,
+        detail: isProduction ? undefined : err.stack,
         status: err.getStatus(),
       });
 
@@ -102,7 +104,7 @@ export class ErrorHandlersFilter implements ExceptionFilter {
       const problem = new ProblemDocument({
         type: HttpException.name,
         title: err.message,
-        detail: err.stack,
+        detail: isProduction ? undefined : err.stack,
         status: err.getStatus(),
       });
 
@@ -117,7 +119,7 @@ export class ErrorHandlersFilter implements ExceptionFilter {
       const problem = new ProblemDocument({
         type: ValidationError.name,
         title: err.message,
-        detail: err.stack,
+        detail: isProduction ? undefined : err.stack,
         status: HttpStatus.BAD_REQUEST,
       });
 
@@ -131,7 +133,7 @@ export class ErrorHandlersFilter implements ExceptionFilter {
     const problem = new ProblemDocument({
       type: 'INTERNAL_SERVER_ERROR',
       title: err.message,
-      detail: err.stack,
+      detail: isProduction ? undefined : err.stack,
       status: err.statusCode || 500,
     });
 

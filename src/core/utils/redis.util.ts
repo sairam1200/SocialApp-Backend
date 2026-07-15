@@ -185,6 +185,24 @@ async function removeFromRedisAsync(key: string) {
   clearMemoryCache(key);
 }
 
+async function removeFromRedisByPatternAsync(pattern: string): Promise<void> {
+  let cursor = '0';
+  do {
+    const [nextCursor, keys] = await instance.scan(
+      cursor,
+      'MATCH',
+      pattern,
+      'COUNT',
+      100,
+    );
+    cursor = nextCursor;
+    if (keys.length > 0) {
+      await instance.del(...keys);
+      keys.forEach((k) => clearMemoryCache(k));
+    }
+  } while (cursor !== '0');
+}
+
 // Returns the shared Redis instance for BullMQ queues and workers.
 // - QUEUES: pass this → QueueBase sets shared=true → uses instance directly → 0 new connections
 // - WORKERS: pass this → handleProcessor sets connection from queueOpts → Worker sets shared=true
@@ -236,6 +254,7 @@ const redis: {
   ) => Promise<boolean>;
   getFromRedisAsync: <T = any>(key: string) => Promise<T | null>;
   removeFromRedisAsync: (key: string) => Promise<void>;
+  removeFromRedisByPatternAsync: (pattern: string) => Promise<void>;
   incrementInRedisAsync: (key: string, ttl?: number) => Promise<number>;
   clearMemoryCache: () => void;
   logRedisDiagnostics: () => void;
@@ -248,6 +267,7 @@ const redis: {
   storeInRedisAsync,
   getFromRedisAsync,
   removeFromRedisAsync,
+  removeFromRedisByPatternAsync,
   incrementInRedisAsync,
   clearMemoryCache,
   logRedisDiagnostics,

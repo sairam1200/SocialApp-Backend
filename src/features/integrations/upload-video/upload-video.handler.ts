@@ -9,6 +9,8 @@ import configs from '../../../configs';
 import { R2StorageService } from '../../../shared/storage/r2/r2-storage.service';
 import { VideoCodecService } from '../../../shared/video/video-codec.service';
 import { VideoTranscodingService } from '../../../shared/video/video-transcoding.service';
+import { IUploadJobRepository } from '../../../domain/repositories/iuploadJob.repository';
+import { UploadJob } from '../../../domain/entities/uploadJob.entity';
 
 const TEMP_DIR = path.join(os.tmpdir(), 'video-uploads');
 const ACCEPTED_EXTENSIONS = [
@@ -42,11 +44,17 @@ export class UploadVideoCommandHandler
     private readonly r2Storage: R2StorageService,
     private readonly codecService: VideoCodecService,
     private readonly transcodingService: VideoTranscodingService,
+    @Inject(_const.IUPLOADJOB_REPOSITORY)
+    private readonly uploadJobRepo: IUploadJobRepository,
   ) {}
 
-  public async execute(
-    command: UploadVideoCommand,
-  ): Promise<{ url: string; transcoded: boolean }> {
+  public async execute(command: UploadVideoCommand): Promise<{
+    url: string;
+    transcoded: boolean;
+    uploadId: string;
+    r2Key: string;
+    fileSize: number;
+  }> {
     const file = command.file;
     if (!file || !file.path) {
       throw new BadRequestException('Video file is required');
@@ -95,8 +103,22 @@ export class UploadVideoCommandHandler
         await this.r2Storage.uploadStream(r2Key, stream, 'video/mp4');
       }
 
-      const publicUrl = `${configs.r2.publicUrlBase}/${configs.r2.bucket}/${r2Key}`;
-      return { url: publicUrl, transcoded };
+      const uploadJob = new UploadJob({
+        status: 'completed',
+        attempts: 1,
+        r2Key,
+        fileSize: file.size,
+      });
+      const savedJob = await this.uploadJobRepo.createAsync(uploadJob);
+
+      const publicUrl = `${configs.r2.publicUrlBase}/${r2Key}`;
+      return {
+        url: publicUrl,
+        transcoded,
+        uploadId: savedJob.id,
+        r2Key,
+        fileSize: file.size,
+      };
     } catch (err) {
       if (err instanceof BadRequestException) throw err;
       throw new BadRequestException(

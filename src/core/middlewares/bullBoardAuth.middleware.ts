@@ -19,6 +19,21 @@ export class BullBoardAuthMiddleware implements NestMiddleware {
     const [username, password] = decodedCreds.split(':');
 
     try {
+      const expectedUsername = process.env.BULLBOARD_USERNAME;
+      const expectedPassword = process.env.BULLBOARD_PASSWORD;
+
+      if (!expectedUsername || !expectedPassword) {
+        logger.error(
+          '[BullBoard] BULLBOARD_USERNAME and BULLBOARD_PASSWORD must be configured',
+        );
+        this.sendUnauthorizedResponse(res);
+        return;
+      }
+
+      if (username !== expectedUsername || password !== expectedPassword) {
+        this.sendUnauthorizedResponse(res);
+        return;
+      }
     } catch (error) {
       logger.error(`Bull-board login - ${error}`);
       this.sendUnauthorizedResponse(res);

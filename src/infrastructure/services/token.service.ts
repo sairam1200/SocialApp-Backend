@@ -102,7 +102,6 @@ export class TokenService implements ITokenService {
       [Globals.ClaimTypes.Roles]: roleClaims,
       [Globals.ClaimTypes.Permission]: permissionClaims,
     };
-    console.log('ONBOARDING STEP IN JWT:', user.onboardingStep);
     return claims;
   }
 }

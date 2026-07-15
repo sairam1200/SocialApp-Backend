@@ -1,12 +1,10 @@
 import * as Joi from 'joi';
 import { Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { IUserContentRepository } from '../../domain/repositories/iuserContent.repository';
+import { IUserFollowRepository } from '../../domain/repositories/iuserFollow.repository';
 import { DiscoverContentModel } from '../../domain/contracts/discover-content.model';
 import { UserContent } from '../../domain/entities';
-import { PlaylistMember } from '../../domain/entities/collection/playlistMember.entity';
 import { getProfileImageUrl } from '../../core/utils/profileImagePrivacy.util';
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { mapToYouTubeContentModel } from '../../domain/mappers/youtube.mapper';
@@ -58,8 +56,8 @@ export class DiscoverFeedQueryHandler
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
-    @InjectRepository(PlaylistMember)
-    private readonly playlistMemberRepository: Repository<PlaylistMember>,
+    @Inject(_const.IUSERFOLLOW_REPOSITORY)
+    private readonly userFollowRepository: IUserFollowRepository,
   ) {}
 
   async execute(query: DiscoverFeedQuery): Promise<{
@@ -69,7 +67,8 @@ export class DiscoverFeedQueryHandler
   }> {
     await validateDiscoverFeedQuery.validateAsync(query);
 
-    const cacheKey = this.buildCacheKey(query);
+    const viewerUserId = HttpContext.getCurrentUserId;
+    const cacheKey = this.buildCacheKey(query, viewerUserId);
     if (cacheKey) {
       try {
         const cached = await redis.getFromRedisAsync<{
@@ -88,12 +87,10 @@ export class DiscoverFeedQueryHandler
         query.cursor,
         query.limit,
         query.userId,
-        HttpContext.getCurrentUserId,
+        viewerUserId,
       );
 
-    const contents = await Promise.all(
-      items.map((item) => this.toModel(item)),
-    );
+    const contents = await Promise.all(items.map((item) => this.toModel(item)));
 
     const result = {
       contents,
@@ -116,12 +113,18 @@ export class DiscoverFeedQueryHandler
     return result;
   }
 
-  private buildCacheKey(query: DiscoverFeedQuery): string | null {
+  private buildCacheKey(
+    query: DiscoverFeedQuery,
+    viewerUserId: string | null,
+  ): string | null {
     if (query.cursor || query.userId) return null;
-    return redis.getRedisKey('discover:feed:v1', 'all');
+    const viewerSuffix = viewerUserId ?? 'guest';
+    return redis.getRedisKey('discover:feed:v1', `all:${viewerSuffix}`);
   }
 
-  private async commonFields(uc: UserContent): Promise<Partial<DiscoverContentModel>> {
+  private async commonFields(
+    uc: UserContent,
+  ): Promise<Partial<DiscoverContentModel>> {
     const firstName = uc.user?.firstName ?? '';
     const lastName = uc.user?.lastName ?? '';
     const userName = uc.user?.userName ?? '';
@@ -135,7 +138,7 @@ export class DiscoverFeedQueryHandler
         uc.user.biometrics.privacy,
         uc.user.id,
         viewerUserId,
-        this.playlistMemberRepository,
+        this.userFollowRepository,
       );
     }
 

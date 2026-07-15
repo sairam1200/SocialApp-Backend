@@ -73,16 +73,9 @@ export class FacebookImportCommandHandler
       } else {
         const userLogin = await this.getUserLoginAsync(userId);
 
-        console.log('FACEBOOK TOKEN VALUE:', userLogin.tokenValue);
-
         const { access_token, expires_in } = await this.refreshTokenAsync(
           userLogin.tokenValue,
         );
-
-        console.log('REFRESHED TOKEN RESPONSE:', {
-          access_token: access_token?.substring(0, 40) + '...',
-          expires_in,
-        });
 
         userLogin.tokenValue = access_token;
 
@@ -149,8 +142,6 @@ export class FacebookImportCommandHandler
     });
 
     try {
-      console.log('CALLING FACEBOOK IMPORT SERVICE...', accessToken);
-
       const pageAccessToken = account.metaData?.pageAccessToken;
 
       if (!pageAccessToken) {

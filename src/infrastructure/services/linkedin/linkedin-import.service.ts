@@ -87,9 +87,7 @@ export class LinkedInImportService {
 
           text: post.commentary || undefined,
 
-          publishedAt: post.createdAt
-            ? new Date(post.createdAt)
-            : undefined,
+          publishedAt: post.createdAt ? new Date(post.createdAt) : undefined,
 
           engagement: {
             likes: reactions,

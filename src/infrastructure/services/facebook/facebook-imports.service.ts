@@ -80,7 +80,13 @@ export class FacebookImportService {
           text: post.message || undefined,
 
           media: post.full_picture
-            ? [{ url: post.full_picture, type: mediaType ?? 'image', thumbnail: post.full_picture }]
+            ? [
+                {
+                  url: post.full_picture,
+                  type: mediaType ?? 'image',
+                  thumbnail: post.full_picture,
+                },
+              ]
             : undefined,
 
           publishedAt: post.created_time

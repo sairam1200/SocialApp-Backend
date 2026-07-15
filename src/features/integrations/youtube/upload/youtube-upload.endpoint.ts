@@ -59,6 +59,7 @@ class UploadResponseDto {
 }
 
 const TEMP_DIR = path.join(os.tmpdir(), 'youtube-uploads');
+const MAX_UPLOAD_SIZE = 256 * 1024 * 1024; // 256 MB
 
 @ApiTags('Integrations')
 @Controller({
@@ -87,6 +88,7 @@ export class YoutubeUploadController {
           cb(null, `${crypto.randomUUID()}-${file.originalname || 'video'}`);
         },
       }),
+      limits: { fileSize: MAX_UPLOAD_SIZE },
     }),
   )
   @ApiConsumes('multipart/form-data')

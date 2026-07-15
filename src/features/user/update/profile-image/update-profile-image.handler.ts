@@ -16,7 +16,6 @@ import {
 import { UploadedFile } from '../../../../domain/types/uploadedFile.type';
 import { ProfileCacheService } from '../../../../infrastructure/services/profileCache.service';
 import { NotificationGateway } from '../../../../infrastructure/websocket/gateways/notification.gateway';
-import redis from '../../../../core/utils/redis.util';
 
 export class UpdateProfileImageCommand {
   file?: UploadedFile;
@@ -156,7 +155,10 @@ export class UpdateProfileImageCommandHandler
     this.notificationGateway.emitProfileUpdated(user.id, {
       userId: user.id,
       updates: {
-        photo: biometrics?.profileImageUrl ?? biometrics?.defaultProfileImageUrl ?? null,
+        photo:
+          biometrics?.profileImageUrl ??
+          biometrics?.defaultProfileImageUrl ??
+          null,
       },
     });
   }
@@ -164,8 +166,6 @@ export class UpdateProfileImageCommandHandler
   private async invalidateCaches(userId: string): Promise<void> {
     try {
       await this.profileCache.invalidateProfile(userId);
-      const profileKey = redis.getRedisKey('profile', `public:${userId}`);
-      await redis.removeFromRedisAsync(profileKey);
     } catch (err) {
       logger.warn(`Profile cache invalidation failed for ${userId}: ${err}`);
     }

@@ -3,15 +3,20 @@ import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { ApplicationException } from './core/exceptions/application.exception';
 
-const nodeEnv = process.env.NODE_ENV || 'development';
+const nodeEnv = process.env.NODE_ENV || 'production'; // Default to 'production' if NODE_ENV is not set
 
 // Ensure NODE_ENV is always set for validation and downstream usage
 process.env.NODE_ENV = nodeEnv;
 
 // Load the appropriate .env file based on the environment
-dotenv.config({ path: path.join(process.cwd(), `.env.${nodeEnv}`) });
-dotenv.config({ override: true });
-console.log('CONFIG FILE LOADED');
+dotenv.config({
+  path: path.join(process.cwd(), `.env.${nodeEnv}`),
+  override: false,
+});
+console.log("K_SERVICE =", process.env.K_SERVICE);
+console.log("NODE_ENV =", process.env.NODE_ENV);
+console.log("ENCRYPTION_KEY =", process.env.ENCRYPTION_KEY);
+console.log("All env keys =", Object.keys(process.env));
 
 const envVarsSchema = Joi.object()
   .keys({
@@ -21,14 +26,18 @@ const envVarsSchema = Joi.object()
     PROJECT_NAME: Joi.string().description('Project name'),
     PORT: Joi.number().default(3000).description('Application port'),
     ENCRYPTION_KEY: Joi.string()
-      .default('this is my custom Secret key for encryption')
-      .description('Encryption key for data encryption'),
+      .required()
+      .description(
+        'Encryption key for data encryption (32+ bytes, no default)',
+      ),
     ENCRYPTION_ALGORITHM: Joi.string()
       .default('aes-256-cbc')
       .description('Algorithm used for encryption'),
     ENCRYPTION_IV: Joi.string()
-      .default('this is my custom IV for encryption')
-      .description('Initialization vector for encryption'),
+      .required()
+      .description(
+        'Initialization vector for encryption (16+ bytes, no default)',
+      ),
     JWT_SECRET: Joi.string()
       .default('this is my custom Secret key for authentication')
       .required()
@@ -252,17 +261,21 @@ const envVarsSchema = Joi.object()
     FRONTEND_URL: Joi.string()
       .default('https://gaddr.com')
       .description('Frontend application URL'),
-    CLOUDFLARE_ACCOUNT_ID: Joi.string().description(
-      'Cloudflare account ID for R2',
-    ),
-    R2_BUCKET: Joi.string().description('Cloudflare R2 bucket name'),
-    R2_ACCESS_KEY_ID: Joi.string().description('Cloudflare R2 access key ID'),
-    R2_SECRET_ACCESS_KEY: Joi.string().description(
-      'Cloudflare R2 secret access key',
-    ),
-    R2_PUBLIC_URL_BASE: Joi.string().description(
-      'Cloudflare R2 public URL base (for serving files via HTTP)',
-    ),
+    CLOUDFLARE_ACCOUNT_ID: Joi.string()
+      .required()
+      .description('Cloudflare account ID for R2'),
+    R2_BUCKET: Joi.string()
+      .required()
+      .description('Cloudflare R2 bucket name'),
+    R2_ACCESS_KEY_ID: Joi.string()
+      .required()
+      .description('Cloudflare R2 access key ID'),
+    R2_SECRET_ACCESS_KEY: Joi.string()
+      .required()
+      .description('Cloudflare R2 secret access key'),
+    R2_PUBLIC_URL_BASE: Joi.string()
+      .required()
+      .description('Cloudflare R2 public URL base (for serving files via HTTP)'),
     DATABASE_URL: Joi.string().description('PostgreSQL connection string'),
   })
   .unknown();

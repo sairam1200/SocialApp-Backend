@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import configs from '../../configs';
 import { JwtService, TokenExpiredError } from '@nestjs/jwt';
+import logger from './winston.util';
 
 export async function getUserFromAccessTokenAsync(
   access_token: string,
@@ -16,7 +17,7 @@ export async function getUserFromAccessTokenAsync(
       ignoreExpiration,
     });
   } catch (error) {
-    console.error('JWT VERIFY ERROR', error);
+    logger.error(`[JWT] Verification failed: ${error.constructor.name}`);
 
     if (error instanceof TokenExpiredError) {
       response.setHeader('Token-Expired', 'true');
@@ -27,8 +28,6 @@ export async function getUserFromAccessTokenAsync(
 }
 
 export function extractTokenFromHeader(request: any): string | null {
-  console.log('AUTH HEADER:', request.headers.authorization);
   const token = request.headers.authorization?.split(' ')[1];
-  console.log('TOKEN FOUND:', !!token);
   return token || null;
 }

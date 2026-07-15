@@ -12,6 +12,7 @@ import {
   YoutubeAccount,
   YoutubeVideo,
   UploadJob,
+  PublishJob,
   YoutubeVideoAnalytics,
   YoutubeChannelAnalytics,
 } from '../domain/entities';
@@ -27,6 +28,7 @@ import {
 import BullMQConfig from '../core/config/bullmq.config';
 import { YoutubeImportProcessor } from '../infrastructure/background/processors/youtube-import.processor';
 import { YoutubeUploadProcessor } from '../infrastructure/background/processors/youtube-upload.processor';
+import { PublishContentProcessor } from '../infrastructure/background/processors/publish-content.processor';
 
 import { PinterestImportProcessor } from '../infrastructure/background/processors/pinterest-import.processor';
 import { RedditImportProcessor } from '../infrastructure/background/processors/reddit-import.processor';
@@ -41,6 +43,8 @@ import { dependency } from '../infrastructure/dependency';
 import { ImportGateway } from 'infrastructure/websocket/gateways/import.gateway';
 import { ContentImportListener } from 'infrastructure/background/listeners/content-import.listener';
 import { ProfileCacheService } from '../infrastructure/services/profileCache.service';
+import { VideoCodecService } from '../shared/video/video-codec.service';
+import { VideoTranscodingService } from '../shared/video/video-transcoding.service';
 import {
   ContentStream,
   DataProtectionKey,
@@ -96,6 +100,10 @@ const registeredQueues = BullModule.registerQueue(
     name: _const.BULL_QUEUES.SNAPCHAT_IMPORT,
     ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.SNAPCHAT_IMPORT),
   },
+  {
+    name: _const.BULL_QUEUES.PUBLISH_CONTENT,
+    ...BullMQConfig.getQueueOptions(_const.BULL_QUEUES.PUBLISH_CONTENT),
+  },
 );
 
 @Global()
@@ -129,6 +137,7 @@ export class QueuesModule implements NestModule, OnApplicationShutdown {
           YoutubeAccount,
           YoutubeVideo,
           UploadJob,
+          PublishJob,
           YoutubeChannelAnalytics,
           YoutubeVideoAnalytics,
         ]),
@@ -153,7 +162,14 @@ export class QueuesModule implements NestModule, OnApplicationShutdown {
         dependency.YoutubeVideoRepository,
         dependency.UploadJobRepository,
         dependency.YoutubePublishingService,
+        dependency.YoutubeProvider,
         dependency.R2StorageService,
+        VideoCodecService,
+        VideoTranscodingService,
+        dependency.PublishJobRepository,
+        dependency.PublishProviderRegistry,
+        dependency.PublishProviders,
+        dependency.OAuthService,
 
         dependency.YoutubeChannelAnalyticsRepository,
         dependency.YoutubeVideoAnalyticsRepository,
@@ -174,10 +190,15 @@ export class QueuesModule implements NestModule, OnApplicationShutdown {
               LinkedInImportProcessor,
               SnapchatImportProcessor,
               YoutubeUploadProcessor,
+              PublishContentProcessor,
             ]
           : []),
       ],
-      exports: [dependency.QueueService, dependency.UserContentRepository, registeredQueues],
+      exports: [
+        dependency.QueueService,
+        dependency.UserContentRepository,
+        registeredQueues,
+      ],
     };
   }
 

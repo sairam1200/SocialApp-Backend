@@ -1,13 +1,10 @@
 import * as Joi from 'joi';
 import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import _const from '../../../core/utils/const';
 import { UserType, ProfilePrivacy, FollowStatus } from '../../../domain/enums';
 import { UserNotFoundException } from '../../../core/exceptions';
 import { PublicProfileModel } from '../../../domain/contracts/public-profile.model';
-import { PlaylistMember } from '../../../domain/entities/collection/playlistMember.entity';
 import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
 import { IUserRepository } from '../../../domain/repositories/iuser.repository';
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
@@ -47,8 +44,6 @@ export class GetPublicProfileQueryHandler
     private readonly manualProfileRepository: IManualProfileRepository,
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
     private readonly userFollowRepository: IUserFollowRepository,
-    @InjectRepository(PlaylistMember)
-    private readonly playlistMemberRepository: Repository<PlaylistMember>,
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
     private readonly profileCache: ProfileCacheService,
@@ -71,13 +66,17 @@ export class GetPublicProfileQueryHandler
       throw new UserNotFoundException(query.userName, 'username');
     }
 
+    const viewerUserId = HttpContext.getCurrentUserId;
+
     // Check cache first (cache-aside pattern)
-    const cached = await this.profileCache.getCachedProfile(user.id);
+    const cached = await this.profileCache.getCachedProfile(
+      user.id,
+      viewerUserId,
+    );
     if (cached) {
       return cached;
     }
 
-    const viewerUserId = HttpContext.getCurrentUserId;
     const isOwnProfile = viewerUserId === user.id;
 
     if (user.profilePrivacy === ProfilePrivacy.Private && !isOwnProfile) {
@@ -106,7 +105,7 @@ export class GetPublicProfileQueryHandler
         user.biometrics.privacy,
         user.id,
         viewerUserId,
-        this.playlistMemberRepository,
+        this.userFollowRepository,
       );
     }
 
@@ -140,7 +139,7 @@ export class GetPublicProfileQueryHandler
     });
 
     // Populate cache
-    await this.profileCache.setCachedProfile(user.id, profile);
+    await this.profileCache.setCachedProfile(user.id, profile, viewerUserId);
 
     return profile;
   }

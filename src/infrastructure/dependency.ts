@@ -10,6 +10,10 @@ import { TwitterImportService } from '../infrastructure/services/Twitter/x-impor
 import { LinkedInImportService } from '../infrastructure/services/linkedin/linkedin-import.service';
 import { PinterestImportService } from './services/pinterest/pinterest-import.service';
 import { R2StorageService } from '../shared/storage/r2/r2-storage.service';
+import { PublishJobRepository } from './repositories/publishJob.repository';
+import { YoutubeProvider } from './services/publishing/youtube/youtube.provider';
+import { PublishProviderRegistry } from './services/publishing/publish-provider.registry';
+import { OAuthService } from './services/publishing/oauth.service';
 
 import {
   AnalyticsRepository,
@@ -253,5 +257,30 @@ export const dependency = {
   FacebookAnalyticsService: {
     provide: _const.IFACEBOOKANALYTICS_SERVICE,
     useClass: FacebookAnalyticsService,
+  },
+
+  // Publishing
+  PublishJobRepository: {
+    provide: _const.IPUBLISHJOB_REPOSITORY,
+    useClass: PublishJobRepository,
+  },
+  YoutubeProvider: {
+    provide: 'IYoutubePublishingProvider',
+    useClass: YoutubeProvider,
+  },
+  OAuthService: {
+    provide: _const.IOAUTH_SERVICE,
+    useClass: OAuthService,
+  },
+  PublishProviderRegistry: {
+    provide: _const.IPUBLISH_PROVIDER_REGISTRY,
+    useClass: PublishProviderRegistry,
+  },
+  PublishProviders: {
+    provide: 'IPUBLISHING_PROVIDERS',
+    useFactory: (youtubeProvider: YoutubeProvider) => {
+      return [youtubeProvider];
+    },
+    inject: ['IYoutubePublishingProvider'],
   },
 };

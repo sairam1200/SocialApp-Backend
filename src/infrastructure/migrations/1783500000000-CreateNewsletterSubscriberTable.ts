@@ -7,7 +7,7 @@ export class CreateNewsletterSubscriberTable1783500000000
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-      CREATE TABLE notification.newsletter_subscribers (
+      CREATE TABLE IF NOT EXISTS notification.newsletter_subscribers (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         "createdBy" uuid,
         "createdOn" TIMESTAMP NOT NULL DEFAULT now(),
@@ -18,13 +18,16 @@ export class CreateNewsletterSubscriberTable1783500000000
       )
     `);
     await queryRunner.query(`
-      CREATE UNIQUE INDEX idx_newsletter_subscribers_email
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_newsletter_subscribers_email
       ON notification.newsletter_subscribers (email)
     `);
     await queryRunner.query(`
-      ALTER TABLE notification.newsletter_subscribers
-      ADD CONSTRAINT uq_newsletter_subscribers_email
-      UNIQUE (email)
+      DO $$ BEGIN
+        ALTER TABLE notification.newsletter_subscribers
+        ADD CONSTRAINT uq_newsletter_subscribers_email UNIQUE (email);
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END $$;
     `);
   }
 

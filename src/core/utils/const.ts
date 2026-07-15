@@ -37,6 +37,12 @@ export default {
   IYOUTUBE_ANALYTICS_SERVICE: 'IYoutubeAnalyticsService',
   IR2_STORAGE_SERVICE: 'IR2StorageService',
 
+  // Publishing
+  IPUBLISHING_PROVIDER: 'IPublishingProvider',
+  IPUBLISHJOB_REPOSITORY: 'IPublishJobRepository',
+  IOAUTH_SERVICE: 'IOAuthService',
+  IPUBLISH_PROVIDER_REGISTRY: 'IPublishProviderRegistry',
+
   // Repository Interfaces
   IYOUTUBEACCOUNT_REPOSITORY: 'IYoutubeAccountRepository',
   IYOUTUBEVIDEO_REPOSITORY: 'IYoutubeVideoRepository',
@@ -64,6 +70,7 @@ export default {
     YOUTUBE_IMPORT: 'youtube-import',
     SPOTIFY_IMPORT: 'spotify-import',
     YOUTUBE_UPLOAD: 'youtube-upload',
+    PUBLISH_CONTENT: 'publish-content',
     PINTEREST_IMPORT: 'pinterest-import',
     REDDIT_IMPORT: 'reddit-import',
     TWITTER_IMPORT: 'twitter-import',

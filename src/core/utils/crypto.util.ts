@@ -49,7 +49,10 @@ function verifyWithHMAC(encryptedText: string, hmac: string): boolean {
     .createHmac('sha256', key)
     .update(encryptedText)
     .digest('hex');
-  return computedHMAC === hmac;
+  return crypto.timingSafeEqual(
+    Buffer.from(computedHMAC, 'utf8'),
+    Buffer.from(hmac, 'utf8'),
+  );
 }
 
 // SHA-256 -> base64

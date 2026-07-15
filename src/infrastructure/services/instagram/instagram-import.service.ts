@@ -130,9 +130,7 @@ export class InstagramImportService {
             },
           ],
 
-          publishedAt: media.timestamp
-            ? new Date(media.timestamp)
-            : undefined,
+          publishedAt: media.timestamp ? new Date(media.timestamp) : undefined,
 
           engagement: {
             likes: media.like_count ?? 0,

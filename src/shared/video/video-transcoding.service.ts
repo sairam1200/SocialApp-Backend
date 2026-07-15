@@ -1,6 +1,8 @@
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import { Injectable, OnModuleInit } from '@nestjs/common';
+import { SHORTS_CONFIG } from './video-codec.service';
+import logger from '../../core/utils/winston.util';
 
 @Injectable()
 export class VideoTranscodingService implements OnModuleInit {
@@ -16,10 +18,20 @@ export class VideoTranscodingService implements OnModuleInit {
   }
 
   async initialize(): Promise<void> {
+    const resolvedPath = process.env.FFMPEG_PATH || 'ffmpeg';
     try {
-      await this.runCommand(this.ffmpegPath, ['-version']);
+      const output = await this.runCommand(resolvedPath, ['-version']);
+      const firstLine = output.split('\n')[0]?.trim() || 'unknown';
+      logger.info(
+        `[VideoTranscodingService] FFmpeg available: path="${resolvedPath}" version="${firstLine}"`,
+      );
       this.isAvailable = true;
-    } catch {
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      logger.warn(
+        `[VideoTranscodingService] FFmpeg NOT available: path="${resolvedPath}" error="${msg}" ` +
+          `— Set FFMPEG_PATH env var to a valid ffmpeg executable path`,
+      );
       this.isAvailable = false;
     }
   }
@@ -49,6 +61,57 @@ export class VideoTranscodingService implements OnModuleInit {
         'high',
         '-crf',
         '23',
+        '-pix_fmt',
+        'yuv420p',
+        '-c:a',
+        'aac',
+        '-b:a',
+        '128k',
+        '-movflags',
+        '+faststart',
+        '-y',
+        outputPath,
+      ],
+      onProgress,
+    );
+  }
+
+  async transcodeToShortsLetterbox(
+    inputPath: string,
+    outputPath: string,
+    onProgress?: (percent: number) => void,
+  ): Promise<void> {
+    if (!this.isAvailable) {
+      throw new Error('FFmpeg is not available on this system');
+    }
+    if (!fs.existsSync(inputPath)) {
+      throw new Error(`Input file not found: ${inputPath}`);
+    }
+
+    const vf = [
+      `scale=${SHORTS_CONFIG.TARGET_WIDTH}:${SHORTS_CONFIG.TARGET_HEIGHT}:force_original_aspect_ratio=decrease`,
+      `pad=${SHORTS_CONFIG.TARGET_WIDTH}:${SHORTS_CONFIG.TARGET_HEIGHT}:(ow-iw)/2:(oh-ih)/2:black`,
+    ].join(',');
+
+    await this.runCommand(
+      this.ffmpegPath,
+      [
+        '-i',
+        inputPath,
+        '-vf',
+        vf,
+        '-c:v',
+        'libx264',
+        '-preset',
+        'medium',
+        '-profile:v',
+        'high',
+        '-crf',
+        '18',
+        '-maxrate',
+        '8M',
+        '-bufsize',
+        '16M',
         '-pix_fmt',
         'yuv420p',
         '-c:a',

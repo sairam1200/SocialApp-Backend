@@ -33,6 +33,12 @@ export class LogoutController {
     @Res() res: Response,
   ): Promise<Response | void> {
     await this.commandBus.execute(new LogoutCommand({ model }));
+
+    res.setHeader('Set-Cookie', [
+      'access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax',
+      'refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax',
+    ]);
+
     return res.status(HttpStatus.NO_CONTENT).send();
   }
 }

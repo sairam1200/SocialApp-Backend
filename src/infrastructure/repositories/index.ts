@@ -17,6 +17,7 @@ export { UserPreferenceRepository } from './userPreference.repository';
 export { YoutubeAccountRepository } from './youtubeAccount.repository';
 export { YoutubeVideoRepository } from './youtubeVideo.repository';
 export { UploadJobRepository } from './uploadJob.repository';
+export { PublishJobRepository } from './publishJob.repository';
 export { AnalyticsRepository } from './analytics.repository';
 export { PremiumRollupRepository } from './premiumRollup.repository';
 export { YoutubeChannelAnalyticsRepository } from './youtubeChannelAnalytics.repository';

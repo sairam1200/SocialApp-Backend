@@ -25,7 +25,10 @@ import {
   IUserRepository,
   IUserRoleRepository,
 } from '../../domain/repositories';
-import { SearchUserProjection, UserProfileStats } from '../../domain/repositories/iuser.repository';
+import {
+  SearchUserProjection,
+  UserProfileStats,
+} from '../../domain/repositories/iuser.repository';
 import {
   RoleNotFoundException,
   ClaimAlreadyExistsException,
@@ -235,10 +238,7 @@ export class UserRepository implements IUserRepository {
       queryBuilder.andWhere("user.profilePrivacy = 'Public'");
     }
 
-    queryBuilder
-      .orderBy('user.registeredOn', 'DESC')
-      .skip(skip)
-      .take(pageSize);
+    queryBuilder.orderBy('user.registeredOn', 'DESC').skip(skip).take(pageSize);
 
     return queryBuilder.getManyAndCount();
   }
@@ -260,7 +260,9 @@ export class UserRepository implements IUserRepository {
         'user.lastName AS "lastName"',
         'user.userName AS "userName"',
         'user.bio AS bio',
-        'NULL AS "profileImage"',
+        'biometrics."profileImageUrl" AS "profileImageUrl"',
+        'biometrics."defaultProfileImageUrl" AS "defaultProfileImageUrl"',
+        'biometrics.privacy AS "profileImagePrivacy"',
       ])
       .leftJoin(UserBiometric, 'biometrics', 'biometrics."userId" = user.id')
       .where('user.isActive = true')
@@ -317,12 +319,27 @@ export class UserRepository implements IUserRepository {
     const rows = await qb
       .offset((page - 1) * limit)
       .limit(limit)
-      .getRawMany<Pick<SearchUserProjection, 'id' | 'firstName' | 'lastName' | 'userName' | 'bio' | 'profileImage'>>();
+      .getRawMany<
+        Pick<
+          SearchUserProjection,
+          | 'id'
+          | 'firstName'
+          | 'lastName'
+          | 'userName'
+          | 'bio'
+          | 'profileImageUrl'
+          | 'defaultProfileImageUrl'
+          | 'profileImagePrivacy'
+        >
+      >();
 
     if (rows.length === 0) return [[], count];
 
     const userIds = rows.map((r) => r.id);
-    const statsMap = await this.getUsersProfileStatsAsync(userIds, viewerUserId);
+    const statsMap = await this.getUsersProfileStatsAsync(
+      userIds,
+      viewerUserId,
+    );
 
     const results: SearchUserProjection[] = rows.map((row) => {
       const stats = statsMap.get(row.id);
@@ -332,7 +349,11 @@ export class UserRepository implements IUserRepository {
         lastName: row.lastName,
         userName: row.userName,
         bio: row.bio,
-        profileImage: row.profileImage ?? undefined,
+        profileImage:
+          row.profileImageUrl ?? row.defaultProfileImageUrl ?? undefined,
+        profileImageUrl: row.profileImageUrl ?? null,
+        defaultProfileImageUrl: row.defaultProfileImageUrl ?? null,
+        profileImagePrivacy: row.profileImagePrivacy ?? 'Everyone',
         followersCount: stats?.followersCount ?? 0,
         followingCount: stats?.followingCount ?? 0,
         totalPosts: stats?.totalPosts ?? 0,
@@ -373,7 +394,10 @@ export class UserRepository implements IUserRepository {
       WHERE "user".id IN (${placeholders})
     `;
 
-    const rows: Record<string, unknown>[] = await this.userContext.query(sql, params);
+    const rows: Record<string, unknown>[] = await this.userContext.query(
+      sql,
+      params,
+    );
 
     const statsMap = new Map<string, UserProfileStats>();
     for (const row of rows) {

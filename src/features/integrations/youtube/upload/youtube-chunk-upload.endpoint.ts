@@ -13,7 +13,11 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { memoryStorage } from 'multer';
+import { diskStorage } from 'multer';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import * as crypto from 'crypto';
 import {
   InitChunkUploadCommand,
   AppendChunkCommand,
@@ -21,6 +25,9 @@ import {
   AbortChunkUploadCommand,
 } from './youtube-chunk-upload.handler';
 import { YoutubeValidationError } from '../../../../core/exceptions/youtube-publishing.exception';
+
+const CHUNK_TEMP_DIR = path.join(os.tmpdir(), 'chunk-uploads');
+const MAX_CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB per chunk
 
 class InitUploadDto {
   accountId: string;
@@ -77,7 +84,22 @@ export class YoutubeChunkUploadController {
 
   @Post('upload/chunk/:uploadId')
   @UseGuards(UserAccoutGuard)
-  @UseInterceptors(FileInterceptor('chunk', { storage: memoryStorage() }))
+  @UseInterceptors(
+    FileInterceptor('chunk', {
+      storage: diskStorage({
+        destination: (_req, _file, cb) => {
+          if (!fs.existsSync(CHUNK_TEMP_DIR)) {
+            fs.mkdirSync(CHUNK_TEMP_DIR, { recursive: true });
+          }
+          cb(null, CHUNK_TEMP_DIR);
+        },
+        filename: (_req, file, cb) => {
+          cb(null, `${crypto.randomUUID()}-${file.originalname || 'chunk'}`);
+        },
+      }),
+      limits: { fileSize: MAX_CHUNK_SIZE },
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: 'Chunk received' })
   async uploadChunk(
@@ -102,8 +124,17 @@ export class YoutubeChunkUploadController {
       );
     }
 
+    let chunkBuffer: Buffer;
+    try {
+      chunkBuffer = fs.readFileSync(chunk.path);
+    } finally {
+      try {
+        if (chunk.path && fs.existsSync(chunk.path)) fs.unlinkSync(chunk.path);
+      } catch {}
+    }
+
     const result = await this.commandBus.execute(
-      new AppendChunkCommand(uploadId, chunk.buffer, index, total),
+      new AppendChunkCommand(uploadId, chunkBuffer, index, total),
     );
 
     if (result.complete) {

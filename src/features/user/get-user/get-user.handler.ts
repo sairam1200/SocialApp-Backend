@@ -1,15 +1,15 @@
 import * as Joi from 'joi';
 import { Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import _const from '../../../core/utils/const';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
 import { UserModel } from '../../../domain/contracts/user.model';
 import { FollowStatus, ProfilePrivacy } from '../../../domain/enums';
 import { mapToUserModel } from '../../../domain/mappers/user.mapper';
-import { PlaylistMember } from '../../../domain/entities/collection/playlistMember.entity';
-import { IUserRepository, IUserFollowRepository } from '../../../domain/repositories';
+import {
+  IUserRepository,
+  IUserFollowRepository,
+} from '../../../domain/repositories';
 import { UserNotFoundException } from '../../../core/exceptions/user.exception';
 import { getProfileImageUrl } from '../../../core/utils/profileImagePrivacy.util';
 
@@ -32,8 +32,6 @@ export class GetUserQueryHandler implements ICommandHandler<GetUserQuery> {
   constructor(
     @Inject(_const.IUSER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-    @InjectRepository(PlaylistMember)
-    private readonly playlistMemberRepository: Repository<PlaylistMember>,
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
     private readonly userFollowRepository: IUserFollowRepository,
   ) {}
@@ -72,7 +70,7 @@ export class GetUserQueryHandler implements ICommandHandler<GetUserQuery> {
         user.biometrics.privacy,
         user.id,
         viewerUserId,
-        this.playlistMemberRepository,
+        this.userFollowRepository,
       );
     }
 
