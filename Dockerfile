@@ -3,6 +3,10 @@ FROM node:22-bookworm AS builder
 
 WORKDIR /app
 
+RUN apt-get update && \
+    apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev pkg-config && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY package*.json ./
 
 RUN npm ci
@@ -32,8 +36,7 @@ COPY --from=builder /app/dist ./dist
 # If you use Prisma, uncomment the next line:
 # COPY --from=builder /app/prisma ./prisma
 
-# If you have uploads, templates, public assets, etc.
-# COPY --from=builder /app/public ./public
+COPY --from=builder /app/public ./public
 
 EXPOSE 8080
 

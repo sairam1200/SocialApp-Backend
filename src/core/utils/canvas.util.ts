@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import { generateRandomColorSet } from './color.util';
 import { ApplicationException } from '../../core/exceptions';
@@ -7,10 +8,19 @@ const fontPath = path.resolve(
   process.cwd(),
   'public/assets/fonts/Poppins/Poppins-Medium.ttf',
 );
-registerFont(fontPath, {
-  family: 'Poppins',
-  weight: '500',
-});
+
+try {
+  if (fs.existsSync(fontPath)) {
+    registerFont(fontPath, {
+      family: 'Poppins',
+      weight: '500',
+    });
+  } else {
+    console.warn(`[canvas] Font not found at ${fontPath} — using system defaults`);
+  }
+} catch (err) {
+  console.warn(`[canvas] registerFont failed: ${(err as Error).message}`);
+}
 
 /**
  * Generates an image (as a base64 PNG) with initials on a colored background.

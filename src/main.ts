@@ -13,35 +13,41 @@ import {
 } from './core/utils/apiDocs.util';
 import { ErrorHandlersFilter } from './core/exceptions/exceptionHandler.filter';
 import { ApiDocRedirectMiddleware } from './core/middlewares/apiDocRedirect.middleware';
-import cookieParser from 'cookie-parser';
-async function bootstrap() {
-  process.on('unhandledRejection', (reason, promise) => {
-    logger.error(`Unhandled Promise Rejection: ${reason}`);
-  });
+import cookieParser = require('cookie-parser');
 
-  process.on('uncaughtException', (reason, promise) => {
-    logger.error(`Uncaught Exception: ${reason}`);
-  });
+console.info(`[startup] main.ts loaded — PID ${process.pid}, NODE_ENV=${process.env.NODE_ENV}, K_SERVICE=${process.env.K_SERVICE || 'none'}`);
+
+process.on('unhandledRejection', (reason) => {
+  console.error(`[startup] Unhandled Promise Rejection: ${reason}`);
+  logger.error(`Unhandled Promise Rejection: ${reason}`);
+});
+
+process.on('uncaughtException', (reason) => {
+  console.error(`[startup] Uncaught Exception: ${reason}`);
+  logger.error(`Uncaught Exception: ${reason}`);
+  process.exit(1);
+});
+
+async function bootstrap() {
+  console.info('[startup] bootstrap() called');
 
   try {
     await redis.connectToRedis();
+    console.info('[startup] Redis connected');
   } catch (redisErr) {
-    logger.warn(
-      `Redis unavailable (${redisErr instanceof Error ? redisErr.message : redisErr}). Continuing without Redis.`,
-    );
+    const msg = redisErr instanceof Error ? redisErr.message : redisErr;
+    console.warn(`[startup] Redis unavailable (${msg}). Continuing without Redis.`);
+    logger.warn(`Redis unavailable (${msg}). Continuing without Redis.`);
   }
 
- logger.info("STEP 1");
-const app = await NestFactory.create(AppModule);
-logger.info("STEP 2");
-
-
+  console.info('[startup] STEP 1 — creating NestFactory');
+  const app = await NestFactory.create(AppModule);
+  console.info('[startup] STEP 2 — NestFactory created');
 
   app.enableShutdownHooks();
-  const cookieParser = require('cookie-parser');
+  app.use(cookieParser());
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
-  app.use(cookieParser());
   app.enableVersioning({
     type: VersioningType.URI,
   });
@@ -78,12 +84,14 @@ logger.info("STEP 2");
 
   const port = Number(process.env.PORT) || configs.port || 8080;
 
- 
-logger.info("STEP 3");
-await app.listen(port, "0.0.0.0");
-logger.info("STEP 4");
-  logger.info(`🚀 Application is running on port ${port}`);
+  console.info('[startup] STEP 3 — listening on port', port);
+  await app.listen(port, '0.0.0.0');
+  console.info(`[startup] STEP 4 — Application is running on port ${port}`);
 }
+
 bootstrap().catch((error) => {
+  console.error(`[startup] FATAL: Failed to start server — ${error.message}`);
+  console.error(error.stack || error);
   logger.error(`Failed to start server: ERROR = ${error.message}`);
+  process.exit(1);
 });

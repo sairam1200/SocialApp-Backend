@@ -13,10 +13,6 @@ dotenv.config({
   path: path.join(process.cwd(), `.env.${nodeEnv}`),
   override: false,
 });
-console.log("K_SERVICE =", process.env.K_SERVICE);
-console.log("NODE_ENV =", process.env.NODE_ENV);
-console.log("ENCRYPTION_KEY =", process.env.ENCRYPTION_KEY);
-console.log("All env keys =", Object.keys(process.env));
 
 const envVarsSchema = Joi.object()
   .keys({
