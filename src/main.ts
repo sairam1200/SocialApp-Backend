@@ -61,7 +61,7 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:3000',
-      'https://socialapp-sg.onrender.com',
+      'https://gaddr.com',
       'https://almost-backtrack-drapery.ngrok-free.dev',
       'https://social-app-zeta-three.vercel.app',
       'https://demo.gaddr.com',
