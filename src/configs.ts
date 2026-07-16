@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { ApplicationException } from './core/exceptions/application.exception';
 
-const nodeEnv = process.env.NODE_ENV || 'production'; // Default to 'production' if NODE_ENV is not set
+const nodeEnv = process.env.NODE_ENV || 'development'; // Default to 'development' for safety; set NODE_ENV=production in deployment
 
 // Ensure NODE_ENV is always set for validation and downstream usage
 process.env.NODE_ENV = nodeEnv;
