@@ -86,7 +86,6 @@ async function bootstrap() {
 
   console.info('[startup] STEP 3 — listening on port', port);
   await app.listen(port, '0.0.0.0');
-  console.info(`[startup] STEP 4 — Application is running on port ${port}`);
 }
 
 bootstrap().catch((error) => {
