@@ -1,7 +1,7 @@
 import { Inject } from '@nestjs/common';
 import _const from '../../../core/utils/const';
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
-import { IUserRepository } from '../../../domain/repositories';
+import { IIdentityRepository } from '../../../domain/repositories';
 import { OnboardingStatusModel } from '../../../domain/contracts/onboarding.model';
 import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
 import { UserNotFoundException } from '../../../core/exceptions';
@@ -18,8 +18,8 @@ export class GetOnboardingStatusQueryHandler
   implements IQueryHandler<GetOnboardingStatusQuery, OnboardingStatusModel>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
   ) {}
 
   public async execute(

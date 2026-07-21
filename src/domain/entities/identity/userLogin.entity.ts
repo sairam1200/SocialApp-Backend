@@ -6,7 +6,7 @@ export class UserLogin extends BaseEntity {
   @Column()
   provider: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   userId: string;
 
   @Column()

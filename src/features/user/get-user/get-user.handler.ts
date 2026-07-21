@@ -7,7 +7,7 @@ import { UserModel } from '../../../domain/contracts/user.model';
 import { FollowStatus, ProfilePrivacy } from '../../../domain/enums';
 import { mapToUserModel } from '../../../domain/mappers/user.mapper';
 import {
-  IUserRepository,
+  IIdentityRepository,
   IUserFollowRepository,
 } from '../../../domain/repositories';
 import { UserNotFoundException } from '../../../core/exceptions/user.exception';
@@ -30,8 +30,8 @@ const getUserQueryValidations = {
 @CommandHandler(GetUserQuery)
 export class GetUserQueryHandler implements ICommandHandler<GetUserQuery> {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
     private readonly userFollowRepository: IUserFollowRepository,
   ) {}

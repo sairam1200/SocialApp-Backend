@@ -5,8 +5,9 @@ import _const from '../../../core/utils/const';
 import { User } from '../../../domain/entities';
 import { UserType } from '../../../domain/enums';
 import { password } from '../../../core/utils/validation.util';
+import { stringUtil } from '../../../core/utils/string.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { IUserRepository } from '../../../domain/repositories';
+import { IIdentityRepository } from '../../../domain/repositories';
 import { UserModel } from '../../../domain/contracts/user.model';
 import { UserAlreadyExistsException } from '../../../core/exceptions';
 
@@ -62,13 +63,14 @@ export class CreateUserCommandHandler
   implements ICommandHandler<CreateUserCommand, UserModel>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
   ) {}
 
   public async execute(command: CreateUserCommand): Promise<UserModel> {
     const { model } = command;
     await createUserValidations.validateAsync(model);
+    model.email = stringUtil.normalizeEmail(model.email);
 
     let user = await this.userRepository.getUserByEmailAsync(model.email);
     if (user) {

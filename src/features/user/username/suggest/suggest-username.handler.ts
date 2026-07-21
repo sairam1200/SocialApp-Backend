@@ -2,7 +2,7 @@ import { Inject } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { IUserRepository } from '../../../../domain/repositories';
+import { IIdentityRepository } from '../../../../domain/repositories';
 
 export class SuggestUserNameResponseModel {
   @ApiProperty({ type: [String] })
@@ -34,8 +34,8 @@ export class SuggestUserNameCommandHandler
     ICommandHandler<SuggestUserNameCommand, SuggestUserNameResponseModel>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
   ) {}
 
   async execute(

@@ -7,6 +7,7 @@ import { ILinkedAccountRepository } from '../../../../domain/repositories/ilinke
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
 import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { IQueueService } from '../../../../domain/services/iqueue.service';
+import { deserializeObject } from '../../../../core/utils/serialization.util';
 
 export class EnableInstagramSyncCommand {
   constructor(request: Partial<EnableInstagramSyncCommand> = {}) {
@@ -58,9 +59,14 @@ export class EnableInstagramSyncCommandHandler
         );
       }
 
+      const tokenValue = deserializeObject<{
+        access_token: string;
+        expires_in: number;
+      }>(userLogin.tokenValue);
+
       await this.queueService.enqueueInstagramImport(
         account,
-        userLogin.tokenValue,
+        tokenValue.access_token,
       );
       logger.info(`[InstagramSync] Import job enqueued for user ${userId}`);
 

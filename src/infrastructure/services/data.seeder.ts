@@ -10,7 +10,7 @@ import { RoleType, UserType, ProfileImagePrivacy } from '../../domain/enums';
 import { User, Role, RoleClaim, UserBiometric } from '../../domain/entities';
 import { uploadBase64ToCloudinaryAsync } from '../../core/utils/cloudinary.util';
 import {
-  IUserRepository,
+  IIdentityRepository,
   IRoleRepository,
   IRoleClaimRepository,
 } from '../../domain/repositories';
@@ -19,8 +19,8 @@ import {
 export class DataSeeder {
   constructor(
     private readonly permissions: Permissions,
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IROLE_REPOSITORY)
     private readonly roleRepository: IRoleRepository,
     @Inject(_const.IROLECLAIM_REPOSITORY)

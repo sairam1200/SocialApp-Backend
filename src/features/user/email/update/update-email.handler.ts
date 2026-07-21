@@ -1,8 +1,9 @@
 import configs from '../../../../configs';
 import _const from '../../../../core/utils/const';
 import { UserAlreadyExistsException } from 'core/exceptions';
+import { stringUtil } from '../../../../core/utils/string.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { IUserRepository } from '../../../../domain/repositories';
+import { IIdentityRepository } from '../../../../domain/repositories';
 import { HttpContext } from 'core/middlewares/httpContext.middleware';
 import {
   BadRequestException,
@@ -23,11 +24,12 @@ export class UpdateEmailCommandHandler
   implements ICommandHandler<UpdateEmailCommand, void>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
   ) {}
 
   async execute(command: UpdateEmailCommand): Promise<void> {
+    command.email = stringUtil.normalizeEmail(command.email);
     const user = await this.userRepository.getUserByIdAsync(
       HttpContext.getCurrentUserId,
     );

@@ -46,7 +46,7 @@ import {
     ...authentication.addHandlers(),
 
     dependency.TokenService,
-    dependency.UserRepository,
+    dependency.IdentityRepository,
     dependency.RoleRepository,
     dependency.UserRoleRepository,
     dependency.UserLoginRepository,

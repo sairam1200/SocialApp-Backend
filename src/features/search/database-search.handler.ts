@@ -6,17 +6,18 @@ import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { PagedResult } from '../../domain/contracts/pagination/pagedResult';
 import {
   IUserContentRepository,
-  IUserRepository,
+  IIdentityRepository,
 } from '../../domain/repositories';
+import { IProjectRepository } from '../../domain/repositories/iproject.repository';
 import { IUserFollowRepository } from '../../domain/repositories/iuserFollow.repository';
 import { SearchContentProjection } from '../../domain/repositories/iuserContent.repository';
-import { SearchUserProjection } from '../../domain/repositories/iuser.repository';
+import { SearchUserProjection } from '../../domain/repositories/iidentity.repository';
 import { GetPublicProfileQuery } from '../profile/public-profile/get-public-profile.handler';
 import { getProfileImageUrl } from '../../core/utils/profileImagePrivacy.util';
 
 export type SearchSuggestion = {
   id: string;
-  type: 'user' | 'userContent';
+  type: 'user' | 'userContent' | 'project';
   label: string;
   userName?: string;
   href?: string;
@@ -66,9 +67,11 @@ export class SearchSuggestionsQueryHandler
   implements IQueryHandler<SearchSuggestionsQuery>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly users: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY) private readonly users: IIdentityRepository,
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly contents: IUserContentRepository,
+    @Inject(_const.IPROJECT_REPOSITORY)
+    private readonly projects: IProjectRepository,
   ) {}
 
   async execute(
@@ -78,9 +81,10 @@ export class SearchSuggestionsQueryHandler
       stripUnknown: true,
     });
     const viewerId = HttpContext.getCurrentUserId;
-    const [[profiles], [contents]] = await Promise.all([
+    const [[profiles], [contents], projects] = await Promise.all([
       this.users.searchGlobalAsync(value.keyword, viewerId, 1, 5),
       this.contents.searchGlobalAsync(value.keyword, viewerId, 1, 5),
+      this.projects.searchSuggestionsAsync(value.keyword, 5),
     ]);
     const suggestions = [
       ...profiles.map((user) => ({
@@ -98,6 +102,11 @@ export class SearchSuggestionsQueryHandler
         creatorName:
           `${content.user.firstName} ${content.user.lastName}`.trim() ||
           content.user.userName,
+      })),
+      ...projects.map((project) => ({
+        id: String(project.id),
+        type: 'project' as const,
+        label: project.title || '',
       })),
     ]
       .sort(
@@ -136,7 +145,7 @@ export class SearchResultsQueryHandler
   implements IQueryHandler<SearchResultsQuery>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly users: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY) private readonly users: IIdentityRepository,
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly contents: IUserContentRepository,
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
@@ -240,7 +249,7 @@ export class SearchResultsQueryHandler
 @QueryHandler(SearchItemQuery)
 export class SearchItemQueryHandler implements IQueryHandler<SearchItemQuery> {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly users: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY) private readonly users: IIdentityRepository,
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly contents: IUserContentRepository,
     @Inject(_const.IUSERFOLLOW_REPOSITORY)

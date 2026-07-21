@@ -7,7 +7,7 @@ import _const from '../../../../core/utils/const';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { UserNotFoundException } from '../../../../core/exceptions';
 
-import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../../domain/repositories/iidentity.repository';
 import { OnboardingStep } from '../../../../domain/enums';
 import { ITokenService } from '../../../../domain/services/itoken.service';
 
@@ -62,8 +62,8 @@ export class CompleteOnboardingCommandHandler
   implements ICommandHandler<CompleteOnboardingCommand>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.ITOKEN_SERVICE)
     private readonly tokenService: ITokenService,
   ) {}

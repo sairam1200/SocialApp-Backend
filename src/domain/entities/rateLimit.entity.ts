@@ -7,7 +7,7 @@ export class RateLimit extends BaseEntity {
   @Column()
   ip: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   userId?: string;
 
   @Column()

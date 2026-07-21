@@ -2,7 +2,7 @@ import { Inject } from '@nestjs/common';
 import _const from '../../../../core/utils/const';
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import {
-  IUserRepository,
+  IIdentityRepository,
   ITopicRepository,
 } from '../../../../domain/repositories';
 import { OnboardingStep4Model } from '../../../../domain/contracts/onboarding.model';
@@ -20,8 +20,8 @@ export class GetOnboardingStep4QueryHandler
   implements IQueryHandler<GetOnboardingStep4Query, OnboardingStep4Model>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.ITOPIC_REPOSITORY)
     private readonly topicRepository: ITopicRepository,
   ) {}

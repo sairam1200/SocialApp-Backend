@@ -16,7 +16,7 @@ import {
 import { FollowUpdatedEvent } from '../../../../domain/events/follow-updated.event';
 import _const from '../../../../core/utils/const';
 import {
-  IUserRepository,
+  IIdentityRepository,
   IUserFollowRepository,
 } from '../../../../domain/repositories';
 import { ProfileCacheService } from '../../../../infrastructure/services/profileCache.service';
@@ -36,7 +36,7 @@ export class FollowUserCommandHandler
   implements ICommandHandler<FollowUserCommand>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY) private readonly users: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY) private readonly users: IIdentityRepository,
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
     private readonly follows: IUserFollowRepository,
     private readonly profileCache: ProfileCacheService,

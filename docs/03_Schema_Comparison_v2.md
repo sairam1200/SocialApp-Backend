@@ -1,0 +1,1168 @@
+# 03 — Schema Comparison v2: Project A (Drizzle ORM) vs Project B (TypeORM)
+
+> **Status:** Both projects have live schemas in production. This document compares the
+> **actual existing schemas** in both codebases, validates findings from v1, and provides
+> an updated migration roadmap.
+
+---
+
+## Table of Contents
+
+1. [Document Metadata](#1-document-metadata)
+2. [Executive Summary](#2-executive-summary)
+3. [User Table Deep Comparison](#3-user-table-deep-comparison)
+4. [All Other Table Comparisons](#4-all-other-table-comparisons)
+5. [Type System Comparison](#5-type-system-comparison)
+6. [Constraint Comparison](#6-constraint-comparison)
+7. [Index Comparison](#7-index-comparison)
+8. [Migration Comparison](#8-migration-comparison)
+9. [Cross-Project FK Feasibility Analysis](#9-cross-project-fk-feasibility-analysis)
+10. [Compatibility Matrix](#10-compatibility-matrix)
+11. [Recommended Schema Changes](#11-recommended-schema-changes)
+12. [ADR Section](#12-adr-section)
+13. [Open Questions](#13-open-questions)
+
+---
+
+## 1. Document Metadata
+
+| Field | Value |
+|---|---|
+| **Generated** | 2026-07-19 |
+| **V1 Document** | `docs/03_Schema_Comparison.md` — Target Drizzle schema derived from TypeORM reverse-engineering |
+| **Project A** | `gaddr-jobs` — Drizzle ORM, Better Auth, Next.js job platform |
+| **Project B** | `gaddr-backend-api` — TypeORM, NestJS content/analytics platform |
+| **Project A Schema Files** | 60+ files in `src/server/db/`, barrel-exported via `schema.ts` |
+| **Project B Schema Files** | 38 entity files in `src/domain/entities/` |
+| **Project A Migrations** | 85 Drizzle SQL migrations (`drizzle/0000_*.sql` — `0085_*.sql`) |
+| **Project B Migrations** | 45 TypeORM TS migrations (`src/infrastructure/migrations/`) |
+| **Total Tables Analyzed** | 151 (Project A) + 38 (Project B) |
+| **Overlapping Domain Tables** | 18 tables with semantic overlap in `merger-schema.ts` |
+
+### V1 Accuracy Assessment
+
+The v1 document described a **target Drizzle schema** that does NOT exist in Project A. Key corrections:
+
+| V1 Claim | Actual (Project A) | Correction |
+|---|---|---|
+| PK type = `uuid().primaryKey().defaultRandom()` | `text("id").primaryKey()` (user table) or `serial("id").primaryKey()` (merger tables) | **WRONG** — Project A uses `text` and `serial` PKs, not UUID PKs |
+| PK function = `gen_random_uuid()` | No UUID PKs on user table; user PKs are application-generated strings | **WRONG** — user.id is a text string set by Better Auth |
+| All tables use UUID PKs | Most tables use `serial` (auto-increment integer) PKs | **WRONG** — only a few tables use UUID-like PKs |
+| `pgEnum()` for enum handling | Enums stored as `text` with string defaults (no `pgEnum` definitions found) | **WRONG** — no pgEnum usage in Project A |
+| Base columns include `createdBy`, `createdOn`, `lastModifiedOn`, etc. | Only `createdAt`/`updatedAt` timestamps; no audit columns in most tables | **WRONG** — Project A has a minimal base, not the v1 target |
+| 38 tables total | 151 pgTable definitions | **WRONG** — Project A has 4x more tables |
+
+---
+
+## 2. Executive Summary
+
+### Schema Compatibility Status: **INCOMPATIBLE**
+
+The two projects are **fundamentally different systems** with different:
+
+- **Domain models**: Project A is a job/recruitment platform; Project B is a content/social analytics platform
+- **PK strategies**: `text` (application-generated) vs `uuid` (DB-generated)
+- **Naming conventions**: snake_case table/column names vs camelCase
+- **Database schemas**: Single `public` schema vs multi-schema (`identity`, `notification`, `analytics`, `public`)
+- **ORM approaches**: Drizzle (SQL-like, no inheritance) vs TypeORM (entity classes, decorators, BaseEntity)
+- **Auth layer**: Better Auth (Project A) vs custom identity system (Project B)
+
+However, **18 merger tables** in Project A (`merger-schema.ts`) represent simplified versions of Project B's tables, establishing a bridge between the two codebases. A `userIdMapping` table explicitly maps between the two ID systems.
+
+### Key Findings
+
+1. **PK type mismatch is THE critical blocker**: Project A's user table uses `text` PKs (application-generated strings); Project B uses `uuid` PKs (DB-generated). Cross-project FK references are impossible without a mapping table (which exists: `userIdMapping`).
+
+2. **18 merger tables** provide partial domain overlap, but with significant structural differences (different column sets, different PK types, missing FK constraints).
+
+3. **Project A is far larger** (151 tables vs 38), reflecting its broader job platform scope.
+
+4. **Missing FK constraints** remain pervasive in both projects — most relationship definitions are at the ORM level only, not enforced at the DB level.
+
+---
+
+## 3. User Table Deep Comparison
+
+### Project A: `user` (auth-schema.ts)
+
+| Column | Type | Nullable | Default | Constraints | Notes |
+|---|---|---|---|---|---|
+| `id` | `text` | NO | — | **PK** | Application-generated by Better Auth (cuid2 or similar) |
+| `name` | `text` | NO | — | — | Full name |
+| `email` | `text` | NO | — | **UNIQUE** | — |
+| `email_verified` | `boolean` | NO | `false` | — | — |
+| `image` | `text` | YES | — | — | Profile image URL |
+| `created_at` | `timestamp` | NO | `now()` | — | — |
+| `updated_at` | `timestamp` | NO | `now()` | — | Has `$onUpdate` callback |
+| `first_name` | `text` | NO | — | — | — |
+| `last_name` | `text` | NO | — | — | — |
+| `role` | `text` | YES | — | — | No enum constraint |
+| `two_factor_enabled` | `boolean` | YES | `false` | — | — |
+| `two_fa_verified_at` | `timestamp` | YES | — | — | — |
+| `is_verified` | `boolean` | NO | `false` | — | — |
+| `is_admin` | `boolean` | NO | `false` | — | — |
+| `stripe_customer_id` | `text` | YES | — | — | Stripe billing |
+| `stripe_price_id` | `text` | YES | — | — | Stripe billing |
+| `stripe_subscription_id` | `text` | YES | — | — | Stripe billing |
+| `subscription_status` | `text` | NO | `"none"` | — | No enum constraint |
+| `subscription_plan` | `text` | NO | `"free"` | — | No enum constraint |
+| `job_post_limit` | `integer` | NO | `1` | — | — |
+| `active_job_post_count` | `integer` | NO | `0` | — | — |
+| `wallet_address` | `text` | YES | — | — | Web3 wallet |
+| `private_search_mode` | `boolean` | YES | `false` | — | — |
+| `blocked_employers` | `text[]` | YES | `'{}'::text[]` | — | Native PG array |
+| `ai_analysis_opt_out` | `boolean` | YES | `false` | — | — |
+| `google_id` | `text` | YES | — | **UNIQUE** | OAuth provider ID |
+| `phone_number` | `text` | YES | — | — | — |
+| `gender` | `text` | YES | — | — | — |
+| `date_of_birth` | `timestamp` | YES | — | — | — |
+| `onboarding_step` | `text` | YES | `"not_started"` | — | No enum constraint |
+| `referral_code` | `text` | YES | — | **UNIQUE** | — |
+| `referred_by` | `text` | YES | — | — | — |
+| `profile_privacy` | `text` | YES | `"public"` | — | No enum constraint |
+| `source_app` | `text` | YES | `"jobs"` | — | Multi-app origin |
+| `status` | `text` | YES | `"active"` | — | No enum constraint |
+| `deleted_at` | `timestamp` | YES | — | — | Soft delete |
+| `banned_at` | `timestamp` | YES | — | — | — |
+| `ban_reason` | `text` | YES | — | — | — |
+
+**Total: 38 columns**
+
+### Project B: `identity.users` (user.entity.ts + BaseEntity)
+
+| Column | Type | Nullable | Default | Constraints | Notes |
+|---|---|---|---|---|---|
+| `id` | `uuid` | NO | `uuid_generate_v4()` | **PK** | DB-generated UUID |
+| `createdBy` | `varchar` | YES | — | — | Audit column |
+| `createdOn` | `timestamp` | NO | `now()` | — | `@CreateDateColumn` |
+| `lastModifiedBy` | `varchar` | YES | — | — | Audit column |
+| `lastModifiedOn` | `timestamp` | YES | `now()` | — | `@UpdateDateColumn` |
+| `lastRefreshed` | `timestamp` | NO | `CURRENT_TIMESTAMP` | — | — |
+| `firstName` | `varchar` | NO | — | — | — |
+| `lastName` | `varchar` | NO | — | — | — |
+| `isActive` | `boolean` | NO | `true` | — | — |
+| `registeredOn` | `timestamp` | YES | — | — | Set in constructor |
+| `userName` | `varchar` | YES | — | — | — |
+| `email` | `varchar` | NO | — | — | — |
+| `gender` | `varchar` | YES | — | — | — |
+| `phoneNumber` | `varchar` | YES | — | — | — |
+| `bio` | `text` | YES | — | — | — |
+| `googleId` | `varchar` | YES | — | — | — |
+| `newEmail` | `varchar` | YES | — | — | — |
+| `lastEmailModifiedAt` | `timestamp` | YES | — | — | — |
+| `newPhoneNumber` | `varchar` | YES | — | — | — |
+| `lastPhoneNumberModifiedAt` | `timestamp` | YES | — | — | — |
+| `lastUserNameModifiedAt` | `timestamp` | YES | — | — | — |
+| `normalizedEmail` | `varchar` | YES | — | — | Auto-populated via `@BeforeInsert` |
+| `normalizedUserName` | `varchar` | YES | — | — | Auto-populated via `@BeforeInsert` |
+| `emailConfirmed` | `boolean` | NO | `false` | — | — |
+| `twoFactorEnabled` | `boolean` | NO | `false` | — | — |
+| `twoFactorSecret` | `varchar` | YES | — | — | — |
+| `passwordHash` | `varchar` | YES | — | — | — |
+| `lastPasswordModifiedAt` | `timestamp` | YES | — | — | — |
+| `isLockedOut` | `boolean` | NO | `false` | — | — |
+| `lockoutEnd` | `timestamp` | YES | — | — | — |
+| `accessFailedCount` | `integer` | NO | `0` | — | — |
+| `concurrencyStamp` | `varchar` | YES | — | — | — |
+| `securityStamp` | `varchar` | YES | — | — | — |
+| `referralCode` | `varchar` | YES | — | **UNIQUE** | — |
+| `referredBy` | `varchar` | YES | — | — | — |
+| `profilePrivacy` | `enum(Public,Private)` | NO | `'Public'` | — | Native PG enum |
+| `type` | `enum(Admin,Guest,User)` | NO | `'User'` | — | Native PG enum |
+| `onboardingStep` | `enum(6 values)` | YES | `'NotStarted'` | — | Native PG enum |
+
+**Total: 39 columns**
+
+### Column-by-Column Comparison
+
+| Logical Column | Project A Name | Project A Type | Project B Name | Project B Type | Compatible | Action |
+|---|---|---|---|---|---|---|
+| **ID** | `id` | `text` (app-generated) | `id` | `uuid` (DB-generated) | **NO** | Different PK types and generation strategies. Requires mapping table. |
+| **Name** | `name` | `text` | `firstName` + `lastName` | `varchar` + `varchar` | **NO** | Project A stores full name; Project B stores first/last separately. |
+| **Email** | `email` | `text`, UNIQUE | `email` | `varchar`, NOT NULL | **PARTIAL** | Different types but semantically equivalent. No unique constraint in Project B. |
+| **Email Verified** | `email_verified` | `boolean` | `emailConfirmed` | `boolean` | **YES** | Different name, same semantics |
+| **Profile Image** | `image` | `text` | (in `userBiometrics`) | — | **NO** | Project B splits biometrics into separate table |
+| **Created At** | `created_at` | `timestamp` | `createdOn` | `timestamp` (`@CreateDateColumn`) | **PARTIAL** | Different name; Project B auto-sets on INSERT |
+| **Updated At** | `updated_at` | `timestamp` | `lastModifiedOn` | `timestamp` (`@UpdateDateColumn`) | **PARTIAL** | Different name; Project B auto-sets on UPDATE |
+| **First Name** | `first_name` | `text` | `firstName` | `varchar` | **PARTIAL** | Different naming convention, different type |
+| **Last Name** | `last_name` | `text` | `lastName` | `varchar` | **PARTIAL** | Different naming convention, different type |
+| **Role** | `role` | `text` (nullable) | `type` | `enum(Admin,Guest,User)` | **NO** | Different column name, different type (text vs enum) |
+| **2FA Enabled** | `two_factor_enabled` | `boolean` | `twoFactorEnabled` | `boolean` | **YES** | Different name, same type |
+| **Is Admin** | `is_admin` | `boolean` | (in `type` enum) | — | **NO** | Project A has dedicated boolean; Project B uses enum value |
+| **Stripe Customer** | `stripe_customer_id` | `text` | — | — | **N/A** | Project B has no Stripe integration |
+| **Subscription** | `subscription_status` / `subscription_plan` | `text` | — | — | **N/A** | Project B has no subscription system |
+| **Job Post Limit** | `job_post_limit` | `integer` | — | — | **N/A** | Project A-specific |
+| **Wallet Address** | `wallet_address` | `text` | — | — | **N/A** | Project A Web3 feature |
+| **Google ID** | `google_id` | `text` | `googleId` | `varchar` | **PARTIAL** | Same semantics, different naming/type |
+| **Phone Number** | `phone_number` | `text` | `phoneNumber` | `varchar` | **PARTIAL** | Different naming, different type |
+| **Gender** | `gender` | `text` | `gender` | `varchar` | **YES** | — |
+| **DOB** | `date_of_birth` | `timestamp` | — | — | **N/A** | Project A-specific |
+| **Onboarding Step** | `onboarding_step` | `text` | `onboardingStep` | `enum(6 values)` | **PARTIAL** | Text vs native enum |
+| **Referral Code** | `referral_code` | `text`, UNIQUE | `referralCode` | `varchar`, UNIQUE | **YES** | — |
+| **Referred By** | `referred_by` | `text` | `referredBy` | `varchar` | **YES** | — |
+| **Profile Privacy** | `profile_privacy` | `text` | `profilePrivacy` | `enum(Public,Private)` | **PARTIAL** | Text vs native enum |
+| **Status** | `status` | `text` | (managed via `isActive`) | `boolean` | **NO** | Different approach: text status vs boolean flag |
+| **Soft Delete** | `deleted_at` | `timestamp` | — | — | **N/A** | Project A only |
+| **Ban Fields** | `banned_at` / `ban_reason` | `timestamp` / `text` | — | — | **N/A** | Project A only |
+| **Password Hash** | — | — | `passwordHash` | `varchar` | **N/A** | Project B only (Better Auth handles this in A) |
+| **Registered On** | — | — | `registeredOn` | `timestamp` | **N/A** | Project B only |
+| **Bio** | — | — | `bio` | `text` | **N/A** | Project B only (Project A profiles have it) |
+| **Normalized Email** | — | — | `normalizedEmail` | `varchar` | **N/A** | Project B only |
+| **Normalized UserName** | — | — | `normalizedUserName` | `varchar` | **N/A** | Project B only |
+| **Locked Out** | — | — | `isLockedOut` / `lockoutEnd` | `boolean` / `timestamp` | **N/A** | Project B only |
+| **Failed Count** | — | — | `accessFailedCount` | `integer` | **N/A** | Project B only |
+| **Concurrency Stamp** | — | — | `concurrencyStamp` | `varchar` | **N/A** | Project B only |
+| **Security Stamp** | — | — | `securityStamp` | `varchar` | **N/A** | Project B only |
+| **UserName** | — | — | `userName` | `varchar` | **N/A** | Project B only |
+| **Active Flag** | — | — | `isActive` | `boolean` | **N/A** | Project B only |
+| **Blocked Employers** | `blocked_employers` | `text[]` | — | — | **N/A** | Project A only |
+| **AI Opt Out** | `ai_analysis_opt_out` | `boolean` | — | — | **N/A** | Project A only |
+| **Source App** | `source_app` | `text` | — | — | **N/A** | Project A only |
+
+---
+
+## 4. All Other Table Comparisons
+
+### 4.1 Auth Tables (Project A Only)
+
+These tables exist ONLY in Project A (Better Auth integration):
+
+#### `user_id_mapping` (Project A only)
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `jobs_text_id` | `text` | NO | — | **PK**. Project A user ID |
+| `gaddr_uuid` | `text` | NO | — | **UNIQUE**. Project B UUID |
+| `migrated_at` | `timestamp` | NO | `now()` | — |
+
+> **Purpose:** Maps between Project A's `text` user IDs and Project B's `uuid` user IDs. This is the explicit bridge for cross-project references.
+
+#### `session` (Project A only)
+
+| Column | Type | Nullable | Default | FK |
+|---|---|---|---|---|
+| `id` | `text` | NO | — | **PK** |
+| `expires_at` | `timestamp` | NO | — | — |
+| `token` | `text` | NO | — | **UNIQUE** |
+| `created_at` | `timestamp` | NO | `now()` | — |
+| `updated_at` | `timestamp` | NO | `now()` | — |
+| `ip_address` | `text` | YES | — | — |
+| `user_agent` | `text` | YES | — | — |
+| `user_id` | `text` | NO | — | **FK → user.id** (CASCADE) |
+
+#### `account` (Project A only)
+
+| Column | Type | Nullable | Default | FK |
+|---|---|---|---|---|
+| `id` | `text` | NO | — | **PK** |
+| `account_id` | `text` | NO | — | — |
+| `provider_id` | `text` | NO | — | — |
+| `user_id` | `text` | NO | — | **FK → user.id** (CASCADE) |
+| `access_token` | `text` | YES | — | — |
+| `refresh_token` | `text` | YES | — | — |
+| `id_token` | `text` | YES | — | — |
+| `access_token_expires_at` | `timestamp` | YES | — | — |
+| `refresh_token_expires_at` | `timestamp` | YES | — | — |
+| `scope` | `text` | YES | — | — |
+| `password` | `text` | YES | — | — |
+| `created_at` | `timestamp` | NO | `now()` | — |
+| `updated_at` | `timestamp` | NO | `now()` | — |
+
+#### `verification` (Project A only)
+
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| `id` | `text` | NO | — **PK** |
+| `identifier` | `text` | NO | — |
+| `value` | `text` | NO | — |
+| `expires_at` | `timestamp` | NO | — |
+| `created_at` | `timestamp` | NO | `now()` |
+| `updated_at` | `timestamp` | NO | `now()` |
+
+#### `passkey` (Project A only)
+
+| Column | Type | Nullable | Default | FK |
+|---|---|---|---|---|
+| `id` | `text` | NO | — | **PK** |
+| `name` | `text` | YES | — | — |
+| `publicKey` | `text` | NO | — | — |
+| `userId` | `text` | NO | — | **FK → user.id** (CASCADE) |
+| `credentialID` | `text` | NO | — | **UNIQUE INDEX** |
+| `counter` | `integer` | NO | `0` | — |
+| `deviceType` | `text` | NO | — | — |
+| `backedUp` | `boolean` | NO | `false` | — |
+| `transports` | `text` | YES | — | — |
+| `createdAt` | `timestamp` | NO | `now()` | — |
+| `aaguid` | `text` | YES | — | — |
+
+#### `used_free_limit` (Project A only)
+
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| `email` | `text` | NO | — **PK** |
+| `consumed_at` | `timestamp` | NO | `now()` |
+
+### 4.2 Identity Domain
+
+#### `identity.users` ↔ `user` — See Section 3
+
+#### `identity.roles` (Project B only)
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `id` | `uuid` | NO | `uuid_generate_v4()` | PK |
+| `createdBy` | `varchar` | YES | — | Audit |
+| `createdOn` | `timestamp` | NO | `now()` | Audit |
+| `lastModifiedBy` | `varchar` | YES | — | Audit |
+| `lastModifiedOn` | `timestamp` | YES | `now()` | Audit |
+| `lastRefreshed` | `timestamp` | NO | `CURRENT_TIMESTAMP` | Audit |
+| `name` | `varchar` | NO | — | — |
+| `description` | `varchar` | NO | — | TS declares optional but DB is NOT NULL |
+| `normalizedName` | `varchar` | NO | — | Auto-generated |
+| `type` | `enum(System,Regular)` | NO | `'Regular'` | PG enum |
+| `isDisabled` | `boolean` | NO | `false` | — |
+| `disabledUntil` | `timestamp` | YES | — | — |
+
+**Not in Project A.** No equivalent roles table exists.
+
+#### `identity.userRoles` (Project B only)
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `id` | `uuid` | NO | `uuid_generate_v4()` | PK |
+| `createdBy` | `varchar` | YES | — | Audit |
+| `createdOn` | `timestamp` | NO | `now()` | Audit |
+| `lastModifiedBy` | `varchar` | YES | — | Audit |
+| `lastModifiedOn` | `timestamp` | YES | `now()` | Audit |
+| `lastRefreshed` | `timestamp` | NO | `CURRENT_TIMESTAMP` | Audit |
+| `userId` | `varchar` | NO | — | **varchar-as-UUID** |
+| `roleId` | `varchar` | NO | — | **varchar-as-UUID** |
+| `isDisabled` | `boolean` | NO | `false` | — |
+| `disabledUntil` | `timestamp` | YES | — | — |
+
+> **Missing FKs:** No FK to `users.id` or `roles.id` in entity decorators.
+
+#### `identity.userLogins` (Project B only)
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `id` | `uuid` | NO | `uuid_generate_v4()` | PK |
+| + 6 audit columns | — | — | — | BaseEntity |
+| `provider` | `varchar` | NO | — | — |
+| `userId` | `varchar` | NO | — | **varchar-as-UUID** |
+| `tokenValue` | `varchar` | NO | — | — |
+| `userAgent` | `varchar` | YES | — | Was NOT NULL, fixed by migration |
+| `ipAddress` | `varchar` | YES | — | Same |
+| `deviceId` | `varchar` | YES | — | Same |
+| `isValid` | `boolean` | NO | `false` | — |
+| `addedDateUtc` | `timestamp` | YES | — | — |
+| `expiryDateUtc` | `timestamp` | NO | — | — |
+
+**Not in Project A** (Better Auth uses `session` table instead).
+
+#### `identity.userClaims` (Project B only)
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `id` | `integer` | NO | auto-increment | **`PrimaryGeneratedColumn('increment')`** — NOT BaseEntity |
+| `userId` | `varchar` | NO | — | **varchar-as-UUID** |
+| `claimType` | `varchar` | NO | — | — |
+| `claimValue` | `varchar` | NO | — | — |
+
+> **Critical:** No timestamps, no BaseEntity, auto-increment PK instead of UUID.
+
+#### `identity.roleClaims` (Project B only)
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `id` | `uuid` | NO | `uuid_generate_v4()` | PK (own, not BaseEntity) |
+| `roleId` | `varchar` | NO | — | **varchar-as-UUID** |
+| `claimType` | `varchar` | NO | — | — |
+| `claimValue` | `varchar` | NO | — | — |
+
+> Has `@ManyToOne` FK decorator to `Role` but no `@JoinColumn` or `onDelete`.
+
+#### `identity.userBiometrics` (Project B only)
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `id` | `uuid` | NO | `uuid_generate_v4()` | PK |
+| + 6 audit columns | — | — | — | BaseEntity |
+| `userId` | `varchar` | NO | — | **UNIQUE**, **varchar-as-UUID**, FK via `@JoinColumn` |
+| `profileImageUrl` | `varchar` | YES | — | — |
+| `defaultProfileImageUrl` | `varchar` | NO | — | — |
+| `privacy` | `enum(Everyone,Interactions)` | NO | `'Everyone'` | PG enum |
+
+> FK: `@OneToOne(() => User, { onDelete: 'CASCADE' })` + `@JoinColumn({ name: 'userId' })`
+
+#### `identity.user_follows` (Project B only)
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `id` | `uuid` | NO | `uuid_generate_v4()` | PK |
+| + 6 audit columns | — | — | — | BaseEntity |
+| `followerId` | `uuid` | NO | — | Properly typed as `uuid`! |
+| `followedId` | `uuid` | NO | — | Properly typed as `uuid`! |
+| `status` | `enum(requested,accepted,blocked)` | NO | `'accepted'` | PG enum |
+
+> **Indexes:** Unique composite `(followerId, followedId)`, index on `followerId`, index on `followedId`
+> **FKs:** `@ManyToOne(() => User, { onDelete: 'CASCADE' })` for both follower and followed
+
+#### `identity.userPreferences` (Project B only)
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `userId` | `uuid` | NO | — | **PK** (not auto-generated, `PrimaryColumn`) |
+| `theme` | `enum(System,Light,Dark)` | NO | `'System'` | PG enum |
+| `notificationChannelsEnabled` | `enum[]` | NO | — | Array of PG enums |
+
+> FK: `@OneToOne(() => User, { onDelete: 'CASCADE' })` + `@JoinColumn({ name: 'userId' })`
+> **No BaseEntity** — just 3 columns.
+
+### 4.3 Merger Tables — Project A vs Project B Overlap
+
+These Project A tables correspond to Project B entities, with significant structural differences:
+
+#### `linked_accounts` (A) ↔ `linkedAccounts` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **Table name** | `linked_accounts` | `linkedAccounts` |
+| **PK** | `serial` (integer) | `uuid` (auto-generated) |
+| **Audit columns** | `created_at` only | 6 BaseEntity columns |
+| **FK to user** | `user_id text REFERENCES user(id) CASCADE` | None (varchar-as-UUID, no FK) |
+| **Columns** | id, userId, platform, username, profileImage, externalId, followersCount, followingCount, verified, syncEnabled, createdAt | id, + audit, userId, platform, userName, profileImage, externalId, email, allowImport, followersCount, followingCount, verified, externalUrl, metaData, isVisible, syncEnabled |
+| **Column diff** | — | Project B has: email, allowImport, externalUrl, metaData, isVisible |
+
+**Compatibility: PARTIAL** — Project A is a subset; different PK type; different naming.
+
+#### `user_topics` (A) ↔ `userTopics` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **PK** | `serial` (integer) | `uuid` |
+| **FK to user** | `user_id text REFERENCES user(id) CASCADE` | `varchar`-as-UUID, FK decorator |
+| **FK to topic** | `topic_id varchar(255)` — **NO FK** | `varchar`-as-UUID, FK decorator |
+| **Unique** | `(userId, topicId)` | `(userId, topicId)` |
+
+**Compatibility: PARTIAL** — Different PK, different FK enforcement.
+
+#### `notification_events` (A) ↔ `notificationEvents` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **PK** | `serial` (integer) | `uuid` |
+| **Columns** | id, notificationId (integer), event (varchar), metadata (jsonb), createdAt | BaseEntity only (6 columns) |
+| **Schema** | public | `notification` |
+
+**Compatibility: NO** — Project A has actual columns; Project B is an empty stub extending BaseEntity.
+
+#### `notification_templates` (A) ↔ `notificationTemplates` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **PK** | `serial` (integer) | `uuid` |
+| **Columns** | id, name (varchar, unique), subjectTemplate (text), bodyTemplate (text), isActive (boolean) | BaseEntity + `name` (varchar, NOT NULL) |
+| **Schema** | public | `notification` |
+
+**Compatibility: PARTIAL** — Project A has more columns (subjectTemplate, bodyTemplate, isActive).
+
+#### `newsletter_subscribers` (A) ↔ `newsletter_subscribers` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **PK** | `serial` (integer) | `uuid` |
+| **FK to user** | `user_id text REFERENCES user(id) SET NULL` | None |
+| **Columns** | id, email (varchar 255, unique), userId, subscribedAt, unsubscribedAt | BaseEntity + email (varchar 320, unique) |
+
+**Compatibility: PARTIAL** — Different PK, different email length, Project A has userId FK.
+
+#### `user_contents` (A) ↔ `userContents` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **PK** | `serial` (integer) | `uuid` |
+| **FK to user** | `user_id text REFERENCES user(id) CASCADE` | `@ManyToOne(() => User, { onDelete: 'CASCADE' })` |
+| **Tags** | — | `simple-array` (comma-separated varchar) |
+| **Unique** | `(userId, platform, externalId)` | `(userId, platform, externalId)` |
+| **Columns** | id, userId, type, title, platform, externalId, text, media (jsonb), publishedAt, sourceUrl, engagement (jsonb), createdAt | BaseEntity + userId, type, title, platform, externalId, text, media (jsonb), publishedAt, sourceUrl, engagement (jsonb), tags (simple-array), metaData (json) |
+
+**Compatibility: PARTIAL** — Project B has more columns (tags, metaData); different PK type.
+
+#### `playlists` (A) ↔ `playlists` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **PK** | `serial` (integer) | `uuid` |
+| **FK to user** | `user_id text REFERENCES user(id) CASCADE` | `@ManyToOne(() => User)` as `owner` |
+| **Columns** | id, userId, name, description, isPublic, createdAt | BaseEntity + name (varchar 255), referenceId (varchar 255, unique), description, displayOrder |
+| **Missing in A** | referenceId, displayOrder | — |
+| **Missing in B** | isPublic | — |
+
+**Compatibility: NO** — Fundamentally different column sets.
+
+#### `playlist_members` (A) ↔ `playlistMembers` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **PK** | `serial` (integer) | `uuid` |
+| **Columns** | id, playlistId (int FK), userId (text FK), role (varchar default "member") | BaseEntity + role (enum), joinedAt, removedAt (@DeleteDateColumn) |
+| **Unique** | `(playlistId, userId)` | `(playlist, user)` — relation-based |
+
+**Compatibility: NO** — Different PK, different column set.
+
+#### `playlist_content` (A) ↔ `playlistContent` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **PK** | `serial` (integer) | `uuid` |
+| **Columns** | id, playlistId (int FK), contentId (int FK → userContents), position (int) | BaseEntity + type, platform, contentId, contentUrl, title, description, thumbnailUrl, metadata, addedById (FK → playlistMembers) |
+
+**Compatibility: NO** — Completely different column sets. Project A references `userContents.id` (integer); Project B stores content metadata inline.
+
+#### `youtube_accounts` (A) ↔ `youtube_accounts` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **PK** | `serial` (integer) | `uuid` |
+| **FK to user** | `user_id text REFERENCES user(id) CASCADE` | None (varchar-as-UUID, no FK) |
+| **Columns** | id, userId, channelId (unique), channelTitle, accessToken, refreshToken, tokenExpiry, connected | BaseEntity + userId, channelId (unique), channelTitle, accessToken, refreshToken, tokenExpiry, connected, disconnectedAt |
+
+**Compatibility: PARTIAL** — Project B has extra `disconnectedAt`; different PK; missing FK in B.
+
+#### `youtube_videos` (A) ↔ `youtube_videos` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **PK** | `serial` (integer) | `uuid` |
+| **FK to account** | `account_id integer REFERENCES youtube_accounts(id) CASCADE` | None (varchar-as-UUID, no FK) |
+| **Tags** | — | `simple-array` (comma-separated varchar) |
+| **Columns** | id, accountId, youtubeVideoId, title, description, visibility, status, thumbnailUrl, videoUrl, createdAt | BaseEntity + accountId, youtubeVideoId, title, description, visibility, publishAt, publishedAt, status, thumbnailUrl, youtubeUrl, videoUrl, r2Key, tags |
+
+**Compatibility: PARTIAL** — Project B has more columns (publishAt, publishedAt, youtubeUrl, r2Key, tags); different PK.
+
+#### `social_analytics` (A) ↔ `analytics.analyticsEvents` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **Table name** | `social_analytics` (public) | `analyticsEvents` (analytics schema) |
+| **PK** | `serial` (integer) | `uuid` |
+| **Columns** | id, userId, platform, entityType, entityId, metrics (jsonb), snapshotDate, createdAt | BaseEntity + eventName, userId (nullable), metadata (jsonb) |
+| **Unique** | `(platform, entityType, entityId, snapshotDate)` | None |
+
+**Compatibility: NO** — Completely different column sets despite similar purpose.
+
+#### `upload_jobs` (A) ↔ `upload_jobs` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **PK** | `serial` (integer) | `uuid` |
+| **FK to user** | `user_id text REFERENCES user(id) CASCADE` | None |
+| **Columns** | id, userId, type, status, sourceUrl, result (jsonb), createdAt | BaseEntity + videoId (nullable), status, attempts, progress, statusMessage, lastError, nextRetryAt, r2Key, fileSize (bigint) |
+
+**Compatibility: NO** — Completely different column sets.
+
+#### `search_histories` (A) ↔ `searchHistories` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **PK** | `serial` (integer) | `uuid` |
+| **Columns** | id, userId, query, filters (jsonb), createdAt | BaseEntity + originalQuery, normalizedQuery, userId |
+
+**Compatibility: NO** — Different column structure.
+
+#### `premium_rollups` (A) ↔ `premiumRollups` (B)
+
+| Aspect | Project A | Project B |
+|---|---|---|
+| **PK** | `serial` (integer) | `uuid` |
+| **Columns** | id, userId, period, metrics (jsonb), createdAt | BaseEntity + userId, weekStartDate, totalInteractions, topFeatureUsed, interactionBreakdown (jsonb) |
+
+**Compatibility: NO** — Different column structures.
+
+### 4.4 Notification Domain (Project B Only)
+
+#### `notification.notifications`
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `id` | `uuid` | NO | `uuid_generate_v4()` | PK |
+| + 6 audit columns | — | — | — | BaseEntity |
+| `metaData` | `json` | YES | — | — |
+| `type` | `enum(Import)` | NO | — | PG enum |
+| `title` | `varchar` | NO | — | — |
+| `body` | `varchar` | NO | — | — |
+| `notifyId` | `uuid` | NO | — | Not linked to any FK |
+| `isLive` | `boolean` | NO | `false` | — |
+| `sound` | `boolean` | NO | `false` | — |
+| `readAt` | `timestamp` | YES | — | — |
+
+**Not in Project A** — Project A has a different `notification` table (serial PK, userId, type, title, message, link, isRead, createdAt).
+
+#### `notification.notificationEvents` (Project B — empty stub)
+
+Only BaseEntity columns. Project A has an actual `notification_events` table with columns.
+
+#### `notification.notificationTemplates` (Project B)
+
+BaseEntity + `name` (varchar, NOT NULL). Project A has a more complete version (name, subjectTemplate, bodyTemplate, isActive).
+
+#### `notification.newsletter_subscribers` (Project B)
+
+BaseEntity + `email` (varchar 320, unique). Project A has email (varchar 255, unique) + userId FK + subscribedAt + unsubscribedAt.
+
+### 4.5 Analytics Domain (Project B Only)
+
+All 7 analytics tables exist ONLY in Project B. Project A has a simplified `analytics_event` table and a `social_analytics` table.
+
+| Table | Columns (beyond BaseEntity) | In Project A? |
+|---|---|---|
+| `analytics.analyticsEvents` | eventName, userId (nullable), metadata (jsonb) | Simplified version exists |
+| `analytics.premiumRollups` | userId, weekStartDate, totalInteractions, topFeatureUsed, interactionBreakdown (jsonb) | Different structure in A |
+| `analytics.youtubeChannelAnalytics` | channelId, userId, subscriberCount, viewCount (bigint), videoCount, engagementMetrics (jsonb), estimatedMinutesWatched (bigint), averageViewDurationSeconds (double), subscribersGained, subscribersLost, likes, comments, shares, estimatedRevenueUsd (double), estimatedAdRevenueUsd (double), trafficSources (jsonb[]), geography (jsonb[]), devices (jsonb[]), audience (jsonb), playbackLocations (jsonb[]), snapshotDate | **NO** |
+| `analytics.youtubeVideoAnalytics` | videoId, userId, viewCount (bigint), likeCount, commentCount, favoriteCount, estimatedMinutesWatched (bigint), averageViewDurationSeconds (double), shares, publishedAt, duration, snapshotDate | **NO** |
+| `analytics.facebookPageAnalytics` | pageId, userId, followerCount, fanCount, impressions (bigint), reach (bigint), engagement (double), pageViews, clicks, snapshotDate | **NO** |
+| `analytics.facebookPostAnalytics` | postId, userId, reach (bigint), impressions (bigint), engagement (double), reactionsCount, likeCount, loveCount, hahaCount, wowCount, sadCount, angryCount, commentCount, shareCount, clickCount, videoViews, averageWatchTime (double), publishedAt, postType, snapshotDate | **NO** |
+| `analytics.facebookVideoAnalytics` | videoId, userId, videoViews (bigint), uniqueViewers, threeSecondViews, oneMinuteViews, averageWatchTime (double), totalWatchTime (bigint), completionRate (double), publishedAt, duration, snapshotDate | **NO** |
+
+### 4.6 Public Domain Tables (Project B Only)
+
+| Table | Key Columns | In Project A? |
+|---|---|---|
+| `rateLimits` | ip, userId, route, count, expiresAt | **NO** |
+| `rateLimitLogs` | ip, route, count, userId, expiredAt | **NO** |
+| `contentStreams` | type (enum), subType, title, platform, externalId, metaData | Different structure in A |
+| `dataProtectionKeys` | userId, key, value, expiresIn | **NO** |
+| `topics` | name (unique), description, icon, isActive | **NO** (A has `userTopics` but not `topics`) |
+| `manualProfiles` | userId, platform, isActive, icon, url, displayOrder | **NO** |
+
+### 4.7 Collection Domain (Project B Only)
+
+| Table | Key Columns | In Project A? |
+|---|---|---|
+| `playlists` | name, referenceId (unique), description, displayOrder | Different structure in A |
+| `playlistMembers` | role (enum), joinedAt, removedAt (@DeleteDateColumn) | Different structure in A |
+| `playlistContent` | type, platform, contentId, contentUrl, title, description, thumbnailUrl, metadata, addedById | Different structure in A |
+
+### 4.8 YouTube & Publish (Project B Only)
+
+| Table | Key Columns | In Project A? |
+|---|---|---|
+| `youtube_accounts` | userId, channelId (unique), channelTitle, accessToken, refreshToken, tokenExpiry, connected, disconnectedAt | Similar in A |
+| `youtube_videos` | accountId, youtubeVideoId, title, description, visibility, publishAt, publishedAt, status, thumbnailUrl, youtubeUrl, videoUrl, r2Key, tags (simple-array) | Similar in A |
+| `youtube_analytics` | videoId, views, likes, comments, watchTime, snapshotDate | **NO** |
+| `upload_jobs` | videoId, status, attempts, progress, statusMessage, lastError, nextRetryAt, r2Key, fileSize | Different structure in A |
+| `publish_jobs` | userId, linkedAccountId, platform, uploadId, r2Key, fileSize, status, attempts, progress, statusMessage, lastError, nextRetryAt, platformContentId, platformContentUrl, expiresAt, r2CleanedAt, metadata | **NO** |
+
+---
+
+## 5. Type System Comparison
+
+### ORM → PostgreSQL Type Mapping
+
+| Concept | Project A (Drizzle) | Project B (TypeORM) | PostgreSQL Result |
+|---|---|---|---|
+| **Text/Varchar** | `text()` or `varchar()` | `@Column()` (default) or `@Column({ type: 'varchar' })` | `text` / `varchar(n)` |
+| **Boolean** | `boolean()` | `@Column({ type: 'boolean' })` or `@Column({ default: false })` | `boolean` |
+| **Integer** | `integer()` | `@Column({ type: 'integer' })` | `integer` |
+| **Serial (auto-increment)** | `serial()` | `PrimaryGeneratedColumn('increment')` | `serial` / `integer GENERATED BY DEFAULT AS IDENTITY` |
+| **UUID** | `uuid()` (rarely used) | `PrimaryGeneratedColumn('uuid')` | `uuid` |
+| **Text PK** | `text().primaryKey()` | — | `text` |
+| **Timestamp** | `timestamp()` | `@Column({ type: 'timestamp' })` or `@CreateDateColumn()` | `timestamp without time zone` |
+| **Timestamp with TZ** | `timestamp({ withTimezone: true })` (v1 target only) | Not specified in entities | Varies |
+| **JSON** | `json()` | `@Column({ type: 'json' })` | `json` |
+| **JSONB** | `jsonb()` | `@Column('jsonb')` or `@Column({ type: 'jsonb' })` | `jsonb` |
+| **Text Array** | `text().array()` | — | `text[]` |
+| **Simple Array** | — | `@Column({ type: 'simple-array' })` | `varchar` (comma-separated) |
+| **Enum Array** | — | `@Column({ type: 'enum', enum: X, array: true })` | `enum_name[]` or `text[]` |
+| **Native Enum** | — (no pgEnum usage found) | `@Column({ type: 'enum', enum: MyEnum })` | `enum_name` |
+| **BigInt** | — (not found in merger tables) | `@Column({ type: 'bigint' })` | `bigint` |
+| **Double Precision** | — (not found in merger tables) | `@Column({ type: 'double precision' })` | `double precision` |
+| **Date** | `date()` (imported from pg-core) | `@Column({ type: 'date' })` | `date` |
+| **Numeric/Decimal** | `numeric()` (in profile-schema) | — | `numeric(precision, scale)` |
+
+### Key Type Differences
+
+| Issue | Project A | Project B | Severity |
+|---|---|---|---|
+| **PK type** | `text` (user table), `serial` (most tables) | `uuid` (most tables), `serial` (userClaims) | **CRITICAL** |
+| **User ID type** | `text` | `uuid` | **CRITICAL** |
+| **Enum handling** | `text` with string defaults | Native PostgreSQL enums via `CREATE TYPE` | **HIGH** |
+| **Array storage** | `text[]` (native PG array) | `simple-array` (comma-separated varchar) | **HIGH** |
+| **Timestamp TZ** | No timezone specification | No timezone specification | **LOW** — both use `timestamp` |
+| **BigInt** | Not used in shared tables | Used in analytics tables | **LOW** — different domains |
+| **JSON defaults** | `.default({})` or `sql`'{}'::jsonb`` | `{ default: {} }` in decorator | **LOW** — both achieve the same |
+
+---
+
+## 6. Constraint Comparison
+
+### 6.1 Primary Key Strategies
+
+| Strategy | Project A | Project B |
+|---|---|---|
+| **Application-generated string** | `text("id").primaryKey()` (user table) | — |
+| **Auto-increment integer** | `serial("id").primaryKey()` (most tables) | `PrimaryGeneratedColumn('increment')` (userClaims only) |
+| **DB-generated UUID** | — (rarely used) | `PrimaryGeneratedColumn('uuid')` (most tables) |
+| **Manual UUID** | — | `PrimaryGeneratedColumn('uuid')` (roleClaim — generates in constructor) |
+| **Composite PK** | — | — |
+
+### 6.2 Foreign Key Comparison
+
+#### Project A — FK Constraints (enforced at DB level)
+
+| Table | Column | References | On Delete |
+|---|---|---|---|
+| `session` | `user_id` | `user.id` | CASCADE |
+| `account` | `user_id` | `user.id` | CASCADE |
+| `passkey` | `userId` | `user.id` | CASCADE |
+| `profiles` | `id` | `user.id` | CASCADE |
+| `relationships` | `user_id` | `user.id` | CASCADE |
+| `relationships` | `target_id` | `user.id` | CASCADE |
+| `linked_accounts` | `user_id` | `user.id` | CASCADE |
+| `user_topics` | `user_id` | `user.id` | CASCADE |
+| `user_contents` | `user_id` | `user.id` | CASCADE |
+| `playlists` | `user_id` | `user.id` | CASCADE |
+| `playlist_members` | `playlist_id` | `playlists.id` | CASCADE |
+| `playlist_members` | `user_id` | `user.id` | CASCADE |
+| `playlist_content` | `playlist_id` | `playlists.id` | CASCADE |
+| `playlist_content` | `content_id` | `user_contents.id` | CASCADE |
+| `notification_preference` | `user_id` | `user.id` | CASCADE |
+| `notification` | `user_id` | `user.id` | CASCADE |
+| `conversation_participant` | `conversation_id` | `conversation.id` | CASCADE |
+| `conversation_participant` | `user_id` | `user.id` | CASCADE |
+| `message` | `conversation_id` | `conversation.id` | CASCADE |
+| `message` | `sender_id` | `user.id` | CASCADE |
+| `outreach_unsubscribe` | `user_id` | `user.id` | CASCADE |
+| `community_member` | `community_id` | `community.id` | CASCADE |
+| `community_member` | `user_id` | `user.id` | CASCADE |
+| `community_post` | `community_id` | `community.id` | CASCADE |
+| `community_post` | `author_id` | `user.id` | CASCADE |
+| + ~40 more FKs across 60+ schema files | — | — | — |
+
+#### Project B — FK Constraints
+
+| Table | Column | References | On Delete | Declared In |
+|---|---|---|---|---|
+| `userBiometrics` | `userId` | `users.id` | CASCADE | `@JoinColumn` + `@OneToOne` |
+| `userPreferences` | `userId` | `users.id` | CASCADE | `@JoinColumn` + `@OneToOne` |
+| `user_follows` | `followerId` | `users.id` | CASCADE | `@ManyToOne` |
+| `user_follows` | `followedId` | `users.id` | CASCADE | `@ManyToOne` |
+| `userTopics` | `userId` | `users.id` | CASCADE | `@ManyToOne` |
+| `userTopics` | `topicId` | `topics.id` | CASCADE | `@ManyToOne` |
+| `manualProfiles` | `userId` | `users.id` | — | `@JoinColumn` + `@ManyToOne` |
+| `playlistMembers` | (relation) | `playlists.id` | CASCADE | `@ManyToOne` |
+| `playlistMembers` | (relation) | `users.id` | CASCADE | `@ManyToOne` |
+| `playlistContent` | (relation) | `playlists.id` | CASCADE | `@ManyToOne` |
+| `playlistContent` | `addedById` | `playlistMembers` | SET NULL | `@ManyToOne` |
+| `playlists` | (relation) | `users.id` | CASCADE | `@ManyToOne` |
+| `roleClaims` | `roleId` | `roles.id` | — | `@ManyToOne` |
+
+#### Missing FKs in Project B
+
+| Table | Column | Should Reference | Has FK Decorator? |
+|---|---|---|---|
+| `userRoles` | `userId` | `users.id` | **NO** |
+| `userRoles` | `roleId` | `roles.id` | **NO** |
+| `userLogins` | `userId` | `users.id` | **NO** |
+| `userClaims` | `userId` | `users.id` | **NO** |
+| `roleClaims` | `roleId` | `roles.id` | YES (but no `@JoinColumn`) |
+| `linkedAccounts` | `userId` | `users.id` | **NO** |
+| `youtube_accounts` | `userId` | `users.id` | **NO** |
+| `youtube_videos` | `accountId` | `youtube_accounts.id` | **NO** |
+| `upload_jobs` | `videoId` | `youtube_videos.id` | **NO** |
+| `publish_jobs` | `userId` | `users.id` | **NO** |
+| `publish_jobs` | `linkedAccountId` | `linkedAccounts.id` | **NO** |
+| `publish_jobs` | `uploadId` | `upload_jobs.id` | **NO** |
+| `analyticsEvents` | `userId` | `users.id` | **NO** |
+| `premiumRollups` | `userId` | `users.id` | **NO** |
+| `youtubeChannelAnalytics` | `userId` | `users.id` | **NO** |
+| `youtubeVideoAnalytics` | `userId` | `users.id` | **NO** |
+| `facebookPageAnalytics` | `userId` | `users.id` | **NO** |
+| `facebookPostAnalytics` | `userId` | `users.id` | **NO** |
+| `facebookVideoAnalytics` | `userId` | `users.id` | **NO** |
+| `notifications` | `notifyId` | (unclear target) | **NO** |
+
+**Total: 20 missing FK constraints in Project B**
+
+### 6.3 Unique Constraints
+
+| Table | Columns | Project A | Project B |
+|---|---|---|---|
+| `user.email` | email | YES (column-level) | NO |
+| `user.google_id` | googleId | YES (column-level) | NO |
+| `user.referral_code` | referralCode | YES (column-level) | YES (column-level) |
+| `youtube_accounts.channelId` | channelId | YES (column-level) | YES (column-level) |
+| `newsletter_subscribers.email` | email | YES (column-level) | YES (entity-level `@Unique`) |
+| `user_follows` | (followerId, followedId) | — | YES (entity-level `@Unique`) |
+| `userTopics` | (userId, topicId) | YES (table-level) | YES (entity-level `@Unique`) |
+| `playlistMembers` | (playlist, user) | YES (table-level) | YES (entity-level `@Index` unique) |
+| `userContents` | (userId, platform, externalId) | YES (table-level) | YES (entity-level `@Index` unique) |
+| `rateLimits` | (ip, route) | — | YES (entity-level `@Index` unique) |
+| `topics.name` | name | — | YES (column-level) |
+| `youtube_videos.accountId` | accountId | NO (non-unique index) | NO (non-unique index) |
+| Analytics composite uniques | Various (channelId+date, videoId+date, etc.) | — | YES (entity-level) |
+
+### 6.4 Default Value Comparison
+
+| Pattern | Project A (Drizzle) | Project B (TypeORM) |
+|---|---|---|
+| **Boolean false** | `.default(false)` | `{ default: false }` |
+| **Integer zero** | `.default(0)` | `{ default: 0 }` |
+| **String literal** | `.default("value")` | `{ default: 'value' }` |
+| **Timestamp now** | `.defaultNow()` | `@CreateDateColumn()` or `{ default: () => 'CURRENT_TIMESTAMP' }` |
+| **Empty array** | `.default(sql`'{}'::text[])` | `{ default: [] }` (simple-array) |
+| **Empty object** | `.default({})` or `.default(sql`'{}'::jsonb)` | `{ default: {} }` (jsonb) |
+| **Enum value** | `.default("value")` (text column) | `{ default: EnumType.Value }` (native enum) |
+| **Generated UUID** | `.defaultRandom()` (rarely used) | `PrimaryGeneratedColumn('uuid')` |
+
+---
+
+## 7. Index Comparison
+
+### Project A — Index Patterns
+
+| Table | Index | Columns | Unique | Type |
+|---|---|---|---|---|
+| `session` | `session_userId_idx` | userId | NO | B-tree |
+| `account` | `account_userId_idx` | userId | NO | B-tree |
+| `passkey` | `passkey_credential_id_idx` | credentialID | YES | Unique B-tree |
+| `passkey` | `passkey_user_idx` | userId | NO | B-tree |
+| `used_free_limit` | `used_free_limit_email_idx` | email | NO | B-tree |
+| `analytics_event` | `analytics_event_event_idx` | event | NO | B-tree |
+| `analytics_event` | `analytics_event_user_id_idx` | userId | NO | B-tree |
+| `analytics_event` | `analytics_event_created_at_idx` | createdAt | NO | B-tree |
+| `notification` | `notification_user_id_idx` | userId | NO | B-tree |
+| `notification` | `notification_is_read_idx` | isRead | NO | B-tree |
+| `community` | `community_name_idx` | name | NO | B-tree |
+| + many more across 60+ schema files | — | — | — | — |
+
+Project A is generally good about adding indexes on FK columns and frequently-queried columns.
+
+### Project B — Index Patterns
+
+| Table | Index | Columns | Unique |
+|---|---|---|---|
+| `user_follows` | `idx_user_follows_follower` | followerId | NO |
+| `user_follows` | `idx_user_follows_followed` | followedId | NO |
+| `user_follows` | unique composite | (followerId, followedId) | YES |
+| `userTopics` | `idx_user_topics_user` | userId | NO |
+| `userTopics` | `idx_user_topics_topic` | topicId | NO |
+| `userTopics` | unique composite | (userId, topicId) | YES |
+| `playlistMembers` | unique composite | (playlist, user) | YES |
+| `userContents` | unique composite | (userId, platform, externalId) | YES |
+| `rateLimits` | unique composite | (ip, route) | YES |
+| `youtubeChannelAnalytics` | unique composite | (channelId, snapshotDate) | YES |
+| `youtubeChannelAnalytics` | composite | (userId, snapshotDate) | NO |
+| `youtubeVideoAnalytics` | unique composite | (videoId, snapshotDate) | YES |
+| `youtubeVideoAnalytics` | composite | (userId, snapshotDate) | NO |
+| `facebookPageAnalytics` | unique composite | (pageId, snapshotDate) | YES |
+| `facebookPageAnalytics` | single | pageId | NO |
+| `facebookPageAnalytics` | single | snapshotDate | NO |
+| `facebookPageAnalytics` | single | engagement | NO |
+| `facebookPageAnalytics` | single | impressions | NO |
+| `facebookPageAnalytics` | single | reach | NO |
+| `facebookPostAnalytics` | unique composite | (postId, snapshotDate) | YES |
+| `facebookPostAnalytics` | single | postId | NO |
+| `facebookPostAnalytics` | single | snapshotDate | NO |
+| `facebookPostAnalytics` | single | engagement | NO |
+| `facebookPostAnalytics` | single | impressions | NO |
+| `facebookPostAnalytics` | single | reach | NO |
+| `facebookVideoAnalytics` | unique composite | (videoId, snapshotDate) | YES |
+| `facebookVideoAnalytics` | single | videoId | NO |
+| `facebookVideoAnalytics` | single | snapshotDate | NO |
+| `youtube_accounts` | unique | channelId | YES |
+| `youtube_videos` | index | accountId | NO |
+| `youtube_analytics` | unique composite | (videoId, snapshotDate) | YES |
+| `youtube_analytics` | index | videoId | NO |
+| `upload_jobs` | index | videoId | NO |
+| `publish_jobs` | index | userId | NO |
+| `publish_jobs` | index | linkedAccountId | NO |
+| `publish_jobs` | index | platform | NO |
+| `publish_jobs` | index | uploadId | NO |
+
+### Index Gaps
+
+| Table | Missing Index | Reason |
+|---|---|---|
+| `userRoles` (B) | index on `userId` | Frequently joined to users |
+| `userRoles` (B) | index on `roleId` | Frequently joined to roles |
+| `userLogins` (B) | index on `userId` | Session lookups |
+| `userClaims` (B) | index on `userId` | Claims lookups |
+| `roleClaims` (B) | index on `roleId` | Role lookup |
+| `linkedAccounts` (B) | index on `userId` | User's linked accounts |
+| All analytics tables (B) | index on `userId` | User analytics queries |
+| `notifications` (B) | index on `notifyId` | Notification target lookups |
+
+---
+
+## 8. Migration Comparison
+
+| Metric | Project A (Drizzle) | Project B (TypeORM) |
+|---|---|---|
+| **Total migrations** | 85 | 45 (44 TS + 1 README) |
+| **Migration format** | SQL files (`.sql`) | TypeScript files (`.ts`) |
+| **Migration naming** | Sequential: `0000_name.sql` — `0085_name.sql` | Timestamp: `1745256809081-name.ts` |
+| **First migration** | `0000_awesome_black_tarantula.sql` (initial schema) | `1745256809081-create-schema-identity.ts` |
+| **Latest migration** | `0085_opportunity_coordinates.sql` | `178400001-MakeUploadJobVideoIdNullable.ts` |
+| **Schema-creating** | — | First 2 migrations create `identity` and `notification` schemas |
+| **Merger migration** | `0063_merger_phase1_auth.sql` (adds merger columns to user) | — |
+| **Synchronize mode** | Off (uses migrations) | Configurable via `POSTGRES_SYNCHRONIZE` env var |
+
+### Migration Approach Differences
+
+| Aspect | Project A (Drizzle) | Project B (TypeORM) |
+|---|---|---|
+| **Generation** | `drizzle-kit generate` → SQL | Manual TS or TypeORM CLI |
+| **Execution** | `drizzle-kit migrate` | `migrationsRun: true` on startup or manual |
+| **Rollback** | Not built-in | Not built-in |
+| **Type safety** | Schema file is source of truth; migrations are generated | Entity decorators are source of truth; migrations are generated or manual |
+| **Naming convention** | `NNNN_descriptive_name.sql` | `timestamp-descriptiveName.ts` |
+
+---
+
+## 9. Cross-Project FK Feasibility Analysis
+
+### Can Project B's UUID FKs Reference Project A's Text PKs?
+
+**Answer: NO — not directly.**
+
+| Requirement | Status | Detail |
+|---|---|---|
+| **Type compatibility** | **FAIL** | PostgreSQL cannot create a FK where the child column is `uuid` and the parent column is `text`. The types must match. |
+| **Schema separation** | **FAIL** | Project A uses `public` schema; Project B uses `identity`, `notification`, `analytics` schemas. Cross-schema FKs require `schema.table` references. |
+| **ID format** | **FAIL** | Project A's `text` IDs are cuid2/nanoid strings (e.g., `clxyz123...`); Project B's `uuid` IDs are standard UUIDs (e.g., `a0eebc99-...`). They are fundamentally different formats. |
+| **FK enforcement** | **FAIL** | Even if types were coerced, the referenced values would never match. |
+
+### Workaround: `userIdMapping` Table
+
+Project A already includes a `userIdMapping` table:
+
+```ts
+export const userIdMapping = pgTable("user_id_mapping", {
+  jobsTextId: text("jobs_text_id").primaryKey(),   // Project A text ID
+  gaddrUuid: text("gaddr_uuid").notNull().unique(), // Project B UUID (stored as text)
+  migratedAt: timestamp("migrated_at").defaultNow().notNull(),
+});
+```
+
+This enables **application-level joins** via:
+```sql
+-- Find Project B user data for a Project A user:
+SELECT b.* FROM identity.users b
+JOIN public.user_id_mapping m ON m.gaddr_uuid = b.id::text
+WHERE m.jobs_text_id = $1;
+```
+
+### FK Feasibility Matrix
+
+| Scenario | Feasible? | Approach |
+|---|---|---|
+| Project A `session.user_id` → Project B `users.id` | **NO** | Different types (`text` → `uuid`) |
+| Project B `userRoles.userId` → Project A `user.id` | **NO** | Different types (`varchar` → `text`) + different schemas |
+| Cross-project query via mapping table | **YES** | Application-level join through `userIdMapping` |
+| Shared database tables | **YES** | Only the 18 merger tables in `merger-schema.ts` that Project A writes to the same `public` schema |
+| Dual-write synchronization | **PARTIAL** | Requires application logic to write to both systems |
+
+---
+
+## 10. Compatibility Matrix
+
+### Table-Level Compatibility
+
+| Table Domain | Project A Table | Project B Table | Compatible | Notes |
+|---|---|---|---|---|
+| **User** | `user` | `identity.users` | **INCOMPATIBLE** | Different PK type, different column set, different naming |
+| **Auth Session** | `session` | `identity.userLogins` | **INCOMPATIBLE** | Different PK type, different columns (Better Auth vs custom) |
+| **Auth Account** | `account` | — | **N/A** | Project A only |
+| **User Mapping** | `userIdMapping` | — | **N/A** | Bridge table in A |
+| **Roles** | — | `identity.roles` | **N/A** | Project B only |
+| **User Roles** | — | `identity.userRoles` | **N/A** | Project B only |
+| **User Claims** | — | `identity.userClaims` | **N/A** | Project B only |
+| **Role Claims** | — | `identity.roleClaims` | **N/A** | Project B only |
+| **Biometrics** | — | `identity.userBiometrics` | **N/A** | Project B only (image is in A's `user.image`) |
+| **User Preferences** | — | `identity.userPreferences` | **N/A** | Project B only |
+| **Linked Accounts** | `linked_accounts` | `linkedAccounts` | **PARTIAL** | A is subset; different PK; different naming |
+| **User Topics** | `user_topics` | `userTopics` | **PARTIAL** | Different PK; A lacks FK constraint |
+| **Content** | `user_contents` | `userContents` | **PARTIAL** | B has extra columns (tags, metaData); different PK |
+| **Playlists** | `playlists` | `playlists` | **INCOMPATIBLE** | Different column sets; different PK |
+| **Playlist Members** | `playlist_members` | `playlistMembers` | **INCOMPATIBLE** | Different PK, different columns |
+| **Playlist Content** | `playlist_content` | `playlistContent` | **INCOMPATIBLE** | Completely different design |
+| **YouTube Accounts** | `youtube_accounts` | `youtube_accounts` | **PARTIAL** | A is simpler; different PK; B lacks FK |
+| **YouTube Videos** | `youtube_videos` | `youtube_videos` | **PARTIAL** | A is simpler; different PK; B lacks FK |
+| **YouTube Analytics** | `social_analytics` | `youtubeChannelAnalytics` / `youtubeVideoAnalytics` | **INCOMPATIBLE** | Different table structure |
+| **Notifications** | `notification` | `notification.notifications` | **INCOMPATIBLE** | Completely different schema design |
+| **Notification Events** | `notification_events` | `notification.notificationEvents` | **PARTIAL** | A has columns; B is empty stub |
+| **Notification Templates** | `notification_templates` | `notification.notificationTemplates` | **PARTIAL** | A has more columns |
+| **Newsletter** | `newsletter_subscribers` | `notification.newsletter_subscribers` | **PARTIAL** | Different PK; B lacks extra columns |
+| **Analytics Events** | `analytics_event` | `analytics.analyticsEvents` | **INCOMPATIBLE** | Different PK, different columns |
+| **Upload Jobs** | `upload_jobs` | `upload_jobs` | **INCOMPATIBLE** | Completely different column sets |
+| **Search History** | `search_histories` | `searchHistories` | **INCOMPATIBLE** | Different column structure |
+| **Premium Rollups** | `premium_rollups` | `analytics.premiumRollups` | **INCOMPATIBLE** | Different column structures |
+| **FB Analytics** | — | `facebookPageAnalytics` / `facebookPostAnalytics` / `facebookVideoAnalytics` | **N/A** | Project B only |
+| **Rate Limits** | — | `rateLimits` / `rateLimitLogs` | **N/A** | Project B only |
+| **Data Protection** | — | `dataProtectionKeys` | **N/A** | Project B only |
+| **Topics** | — | `topics` | **N/A** | Project B only |
+| **Manual Profiles** | — | `manualProfiles` | **N/A** | Project B only |
+| **Content Streams** | `content_streams` | `contentStreams` | **INCOMPATIBLE** | Different columns |
+| **Publish Jobs** | — | `publish_jobs` | **N/A** | Project B only |
+| **Passkey** | `passkey` | — | **N/A** | Project A only |
+| **Verification** | `verification` | — | **N/A** | Project A only |
+| **Community** | `community` + 6 sub-tables | — | **N/A** | Project A only |
+| **Applications** | `application` | — | **N/A** | Project A only |
+| **Opportunities** | `opportunity` | — | **N/A** | Project A only |
+| **Bounties** | `bounty` + `bountyApplication` | — | **N/A** | Project A only |
+| **+ ~100 more Project A tables** | Various | — | **N/A** | Project A only |
+
+### Summary Statistics
+
+| Metric | Count |
+|---|---|
+| **Fully compatible** | 0 |
+| **Partially compatible** | 7 (linked_accounts, userTopics, userContents, youtube_accounts, youtube_videos, notification_events, notification_templates, newsletter_subscribers) |
+| **Incompatible** | 10 (user, session, playlists, playlist_members, playlist_content, content_streams, upload_jobs, search_histories, premium_rollups, analytics) |
+| **Project A only** | ~130 tables |
+| **Project B only** | ~20 tables |
+
+---
+
+## 11. Recommended Schema Changes
+
+### Priority 1 — Critical (Data Integrity)
+
+| # | Action | Affected Tables | Effort | Project |
+|---|---|---|---|---|
+| **C1** | Add missing FK constraints | `userRoles`, `userLogins`, `userClaims`, `linkedAccounts`, `youtube_accounts`, `youtube_videos`, `upload_jobs`, `publish_jobs`, + 9 analytics tables | High | B |
+| **C2** | Fix varchar-as-UUID columns | `userRoles.userId/roleId`, `userLogins.userId`, `userClaims.userId`, `roleClaims.roleId`, `linkedAccounts.userId`, `youtube_accounts.userId`, `youtube_videos.accountId`, `upload_jobs.videoId`, `publish_jobs.userId/linkedAccountId/uploadId` | High | B |
+| **C3** | Add FK decorator to `roleClaims.roleId` | `roleClaims` | Low | B |
+| **C4** | Add FK constraint for `notifications.notifyId` | `notifications` | Medium | B |
+| **C5** | Align `userContents.tags` storage format | `userContents` | Medium | B |
+
+### Priority 2 — Important (Schema Quality)
+
+| # | Action | Affected Tables | Effort | Project |
+|---|---|---|---|---|
+| **C6** | Add missing indexes on FK columns | `userRoles`, `userLogins`, `userClaims`, `roleClaims`, `linkedAccounts`, all analytics `userId` | Medium | B |
+| **C7** | Fix `roles.description` nullability | `roles` | Low | B |
+| **C8** | Add `email` UNIQUE constraint to `identity.users` | `users` | Low | B |
+| **C9** | Align enum handling across projects | All enum columns | Medium | Both |
+| **C10** | Add `onDelete` to `roleClaims.roleId` FK | `roleClaims` | Low | B |
+
+### Priority 3 — Alignment (Cross-Project)
+
+| # | Action | Effort | Notes |
+|---|---|---|---|
+| **C11** | Standardize table naming convention | High | Project A uses snake_case; Project B uses camelCase. Pick one. |
+| **C12** | Align PK strategy for shared tables | High | Merger tables use `serial` in A but `uuid` in B. Decide on standard. |
+| **C13** | Reconcile merger table schemas | High | 18 merger tables have different column sets between projects |
+| **C14** | Decide on notification system ownership | Medium | Both projects have notification tables but different designs |
+| **C15** | Decide on analytics system ownership | Medium | Project B has rich analytics; Project A has simplified `social_analytics` |
+
+### Priority 4 — Future (Missing Capabilities)
+
+| # | Action | Notes |
+|---|---|---|
+| **C16** | Add audit columns to Project A merger tables | Most merger tables lack `createdBy`/`lastModifiedBy` |
+| **C17** | Add soft-delete support to Project A | Project A uses `deleted_at` on user; Project B uses `@DeleteDateColumn` on playlistMembers |
+| **C18** | Implement cascade insert in Drizzle | TypeORM `cascade: ['insert']` has no Drizzle equivalent |
+
+---
+
+## 12. ADR Section
+
+### ADR-001: PK Strategy for Merged System
+
+**Status:** Accepted
+
+**Context:** Project A uses `text` PKs (application-generated) for the user table and `serial` PKs for most other tables. Project B uses `uuid` PKs (DB-generated) for all tables.
+
+**Decision:** For the merged system:
+- Use `uuid` with `gen_random_uuid()` as the standard PK strategy for all new tables.
+- Maintain the `userIdMapping` table to bridge existing `text` IDs in Project A.
+- Plan a phased migration to convert Project A's `text` user PKs to `uuid`.
+
+**Consequences:**
+- All new tables will use UUID PKs.
+- Existing Project A `text` PKs will need a migration with data backfill.
+- The `userIdMapping` table is the permanent bridge during transition.
+
+### ADR-002: Enum Handling Strategy
+
+**Status:** Accepted
+
+**Context:** Project A stores enums as `text` columns with string defaults. Project B uses native PostgreSQL enums via `CREATE TYPE`.
+
+**Decision:** Use native PostgreSQL enums (`pgEnum` in Drizzle) for new tables, as they provide:
+- Type safety at the DB level
+- Smaller storage (enum labels vs full text)
+- Referential integrity for enum values
+
+For existing Project A tables, gradually migrate text-based enum columns to native enums.
+
+**Consequences:**
+- Drizzle schema must define `pgEnum()` types.
+- Migration must include `CREATE TYPE` statements.
+- Existing text data must be validated before migration.
+
+### ADR-003: Schema Naming Convention
+
+**Status:** Under discussion
+
+**Context:** Project A uses snake_case for table and column names (`user_id`, `created_at`). Project B uses camelCase (`userId`, `createdOn`).
+
+**Decision:** Pending. Options:
+1. **snake_case** — PostgreSQL convention, matches `information_schema`
+2. **camelCase** — Current Project B convention, matches TypeScript
+3. **Keep both** — Accept divergence with mapping layer
+
+**Consequences:** Affects all new table definitions and query patterns.
+
+### ADR-004: Cross-Project Data Access
+
+**Status:** Accepted
+
+**Context:** Both projects need to reference the same user across different PK types and schemas.
+
+**Decision:** Use the `userIdMapping` table for cross-project user lookups. Do NOT attempt direct cross-schema FK references.
+
+**Implementation:**
+```sql
+-- Application-level join pattern:
+SELECT b.* FROM identity.users b
+INNER JOIN public.user_id_mapping m ON m.gaddr_uuid = b.id::text
+WHERE m.jobs_text_id = :projectAUserId;
+```
+
+**Consequences:**
+- Cross-project queries require joins through the mapping table.
+- No direct FK enforcement across projects.
+- Mapping table must be kept in sync during user creation.
+
+---
+
+## 13. Open Questions
+
+| # | Question | Impact | Priority |
+|---|---|---|---|
+| **Q1** | Will the two projects eventually merge into a single codebase, or remain separate services? | Determines whether to align schemas or maintain a mapping layer | **HIGH** |
+| **Q2** | Should the `userIdMapping` table be the single source of truth for cross-project user references? | Affects data architecture | **HIGH** |
+| **Q3** | Which project "owns" the notification system? Both have notification tables with different designs. | Determines which tables to keep/merge | **MEDIUM** |
+| **Q4** | Which project "owns" analytics? Project B has rich analytics; Project A has simplified social analytics. | Determines analytics table strategy | **MEDIUM** |
+| **Q5** | Should the 18 merger tables be reconciled to match Project B's entity definitions, or kept as-is? | Affects data consistency | **HIGH** |
+| **Q6** | Is the `simple-array` format in Project B (`userContents.tags`, `youtube_videos.tags`) acceptable, or should it be migrated to native `text[]`? | Affects query patterns and data portability | **MEDIUM** |
+| **Q7** | Should Project A adopt native PostgreSQL enums (like Project B) or keep text-based enums? | Affects type safety and storage | **LOW** |
+| **Q8** | What is the plan for the `roles` / `userRoles` / `userClaims` / `roleClaims` tables that exist only in Project B? Will Project A need them? | Affects auth architecture | **MEDIUM** |
+| **Q9** | Should `@CreateDateColumn` / `@UpdateDateColumn` auto-set behavior be replicated in Drizzle via DB triggers? | Affects data consistency during migration | **LOW** |
+| **Q10** | What is the column naming convention for the merged system? snake_case or camelCase? | Affects all future development | **MEDIUM** |
+
+---
+
+> **Generated:** 2026-07-19
+> **Source:** 151 Drizzle pgTable definitions (Project A), 38 TypeORM entities (Project B), 85 Drizzle migrations, 45 TypeORM migrations
+> **Total columns analyzed:** 800+
+> **Total indexes analyzed:** 70+
+> **Total FK relationships analyzed:** 60+ (Project A: ~40 DB-enforced, Project B: ~13 DB-enforced)
+> **Critical issues found:** 5 (PK mismatch, varchar-as-UUID, missing FKs, naming divergence, enum handling)
+> **Tables with partial compatibility:** 7
+> **Tables with no compatibility:** 10
+> **Cross-project FK feasibility:** NOT POSSIBLE without mapping table

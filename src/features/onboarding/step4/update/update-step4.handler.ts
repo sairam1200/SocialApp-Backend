@@ -2,7 +2,7 @@ import { Inject } from '@nestjs/common';
 import _const from '../../../../core/utils/const';
 import { OnboardingStep } from '../../../../domain/enums';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { IUserRepository } from '../../../../domain/repositories';
+import { IIdentityRepository } from '../../../../domain/repositories';
 import { ITokenService } from '../../../../domain/services/itoken.service';
 import {
   OnboardingStatusModel,
@@ -27,8 +27,8 @@ export class OnboardingStep4CommandHandler
   implements ICommandHandler<OnboardingStep4Command, OnboardingStatusModel>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.ITOKEN_SERVICE) private readonly tokenService: ITokenService,
   ) {}
 

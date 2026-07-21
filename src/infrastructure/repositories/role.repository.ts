@@ -5,15 +5,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User, Role } from '../../domain/entities';
 import { Inject, Injectable } from '@nestjs/common';
 import { RoleAlreadyExistsException } from '../../core/exceptions';
-import { IUserRepository, IRoleRepository } from '../../domain/repositories';
+import { IIdentityRepository, IRoleRepository } from '../../domain/repositories';
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 
 @Injectable()
 export class RoleRepository implements IRoleRepository {
   constructor(
     @InjectRepository(Role) private readonly roleContext: Repository<Role>,
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
   ) {}
 
   public async getAsync(): Promise<Role[]> {

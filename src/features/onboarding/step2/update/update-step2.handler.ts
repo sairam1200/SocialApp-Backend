@@ -4,7 +4,7 @@ import _const from '../../../../core/utils/const';
 import { OnboardingStep } from '../../../../domain/enums';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import {
-  IUserRepository,
+  IIdentityRepository,
   ITopicRepository,
 } from '../../../../domain/repositories';
 import {
@@ -34,8 +34,8 @@ export class OnboardingStep2CommandHandler
   implements ICommandHandler<OnboardingStep2Command, OnboardingStatusModel>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.ITOPIC_REPOSITORY)
     private readonly topicRepository: ITopicRepository,
   ) {}

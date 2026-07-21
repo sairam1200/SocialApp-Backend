@@ -10,7 +10,7 @@ import { getRedirectUrl } from '../../../../core/utils/redirectUrl.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { ITokenService } from '../../../../domain/services/itoken.service';
 import { IEmailService } from '../../../../domain/services/iemail.service';
-import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../../domain/repositories/iidentity.repository';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
@@ -121,7 +121,7 @@ export class GoogleConnectQueryHandler
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       value,
-      '',
+      null,
       expiresIn,
     );
   }
@@ -140,8 +140,8 @@ export class GoogleConnectCallbackQueryHandler
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
   ) {}
 
   public async execute(
@@ -156,6 +156,7 @@ export class GoogleConnectCallbackQueryHandler
     const { access_token, expires_in } = await this.fetchToken(model.code);
 
     const profile = await this.fetchUserData(access_token);
+    profile.email = stringUtil.normalizeEmail(profile.email);
 
     // 1. Find by Google ID
     let user = await this.userRepository.getUserByGoogleIdAsync(profile.id);

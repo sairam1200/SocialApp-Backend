@@ -2,8 +2,9 @@ import * as Joi from 'joi';
 import { Inject } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../core/utils/const';
+import { stringUtil } from '../../../core/utils/string.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../domain/repositories/iidentity.repository';
 import { IDataProtectionKeyRepository } from '../../../domain/repositories/idataProtectionKey.repository';
 
 export class VerifyCodeRequestModel {
@@ -46,8 +47,8 @@ export class VerifyCodeCommandHandler
   implements ICommandHandler<VerifyCodeCommand, VerifyCodeResponseModel>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
   ) {}
@@ -57,6 +58,7 @@ export class VerifyCodeCommandHandler
   ): Promise<VerifyCodeResponseModel> {
     const { model } = command;
     await verifyCodeValidations.validateAsync(model);
+    model.email = stringUtil.normalizeEmail(model.email);
     const currentTime = Math.floor(Date.now() / 1000);
 
     const purpose = model.purpose.trim().toLowerCase();

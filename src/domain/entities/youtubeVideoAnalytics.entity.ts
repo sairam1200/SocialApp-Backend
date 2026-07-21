@@ -8,7 +8,7 @@ export class YoutubeVideoAnalytics extends BaseEntity {
   @Column({ nullable: false })
   videoId: string;
 
-  @Column({ nullable: false })
+  @Column({ type: 'uuid', nullable: false })
   userId: string;
 
   @Column({ type: 'bigint', default: 0 })

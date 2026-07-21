@@ -5,13 +5,14 @@ import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../core/utils/const';
 import ipUtil from '../../../core/utils/ip.util';
 import logger from '../../../core/utils/winston.util';
+import { stringUtil } from '../../../core/utils/string.util';
 import { password } from '../../../core/utils/validation.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { parseUserAgent } from '../../../core/utils/userAgent.util';
 import { User } from '../../../domain/entities/identity/user.entity';
 import { IEmailService } from '../../../domain/services/iemail.service';
 import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
-import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../domain/repositories/iidentity.repository';
 import { UserNotFoundException } from '../../../core/exceptions/user.exception';
 import ApplicationException from '../../../core/exceptions/application.exception';
 import { DataProtectionKey } from '../../../domain/entities/dataProtectionKey.entity';
@@ -68,8 +69,8 @@ export class ResetPasswordCommandHandler
   constructor(
     @Inject(_const.IEMAIL_SERVICE)
     private readonly emailService: IEmailService,
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
@@ -79,6 +80,7 @@ export class ResetPasswordCommandHandler
   public async execute(command: ResetPasswordCommand): Promise<void> {
     const { model } = command;
     await resetPasswordValidations.validateAsync(model);
+    model.email = stringUtil.normalizeEmail(model.email);
     const user = await this.userRepository.getUserByEmailAsync(model.email);
     if (!user) {
       throw new UserNotFoundException();

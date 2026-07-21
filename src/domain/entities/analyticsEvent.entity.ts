@@ -6,7 +6,7 @@ export class AnalyticsEvent extends BaseEntity {
   @Column()
   eventName: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   userId: string;
 
   @Column('jsonb', { default: {} })

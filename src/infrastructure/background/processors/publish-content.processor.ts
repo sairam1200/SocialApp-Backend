@@ -171,9 +171,7 @@ export class PublishContentProcessor extends WorkerHost {
       );
 
       if (publishJob) {
-        const provider = this.providerRegistry.getProvider(
-          publishJob.platform,
-        );
+        const provider = this.providerRegistry.getProvider(publishJob.platform);
         const normalized = provider.normalizeError(error);
 
         const attemptCount = (publishJob.attempts || 0) + 1;

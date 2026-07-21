@@ -9,7 +9,7 @@ export class UserBiometric extends BaseEntity {
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @Column({ unique: true })
+  @Column({ type: 'uuid', unique: true })
   userId: string;
 
   @Column({ nullable: true })

@@ -10,7 +10,7 @@ import {
 } from '../../../../core/exceptions';
 import {
   IManualProfileRepository,
-  IUserRepository,
+  IIdentityRepository,
 } from '../../../../domain/repositories';
 
 export class DeleteManualProfileCommand {
@@ -30,8 +30,8 @@ export class DeleteManualProfileCommandHandler
   implements ICommandHandler<DeleteManualProfileCommand, void>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IMANUALPROFILE_REPOSITORY)
     private readonly manualProfileRepository: IManualProfileRepository,
   ) {}

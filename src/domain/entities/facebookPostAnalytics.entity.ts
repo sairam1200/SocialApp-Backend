@@ -12,7 +12,7 @@ export class FacebookPostAnalytics extends BaseEntity {
   @Column({ nullable: false })
   postId: string;
 
-  @Column({ nullable: false })
+  @Column({ type: 'uuid', nullable: false })
   userId: string;
 
   @Column({ type: 'bigint', default: 0 })

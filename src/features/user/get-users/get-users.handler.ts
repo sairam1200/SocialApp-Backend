@@ -6,7 +6,7 @@ import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
 import { UserModel } from '../../../domain/contracts/user.model';
 import { mapToUserModel } from '../../../domain/mappers/user.mapper';
 import { PagedResult } from '../../../domain/contracts/pagination/pagedResult';
-import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../domain/repositories/iidentity.repository';
 import { IUserFollowRepository } from '../../../domain/repositories/iuserFollow.repository';
 import { getProfileImageUrl } from '../../../core/utils/profileImagePrivacy.util';
 
@@ -35,8 +35,8 @@ const getUsersValidations = Joi.object<GetUsersQuery>({
 @CommandHandler(GetUsersQuery)
 export class GetUsersQueryHandler implements ICommandHandler<GetUsersQuery> {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
     private readonly userFollowRepository: IUserFollowRepository,
   ) {}

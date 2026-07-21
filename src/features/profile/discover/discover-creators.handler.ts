@@ -3,7 +3,7 @@ import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
 import { PublicProfileModel } from '../../../domain/contracts/public-profile.model';
-import { IUserRepository } from '../../../domain/repositories';
+import { IIdentityRepository } from '../../../domain/repositories';
 import { IUserFollowRepository } from '../../../domain/repositories/iuserFollow.repository';
 import { User } from '../../../domain/entities';
 import { mapToPublicProfileModel } from '../../../domain/mappers/public-profile.mapper';
@@ -39,8 +39,8 @@ export class DiscoverCreatorsQueryHandler
     >
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
     private readonly userFollowRepository: IUserFollowRepository,
   ) {}

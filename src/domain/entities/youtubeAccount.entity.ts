@@ -3,29 +3,29 @@ import { Column, Entity, Index } from 'typeorm';
 
 @Entity({ name: 'youtube_accounts' })
 export class YoutubeAccount extends BaseEntity {
-  @Column()
+  @Column({ type: 'uuid', name: 'user_id' })
   userId: string;
 
-  @Column()
+  @Column({ name: 'channel_id' })
   @Index({ unique: true })
   channelId: string;
 
-  @Column()
+  @Column({ name: 'channel_title' })
   channelTitle: string;
 
-  @Column()
+  @Column({ name: 'access_token' })
   accessToken: string;
 
-  @Column()
+  @Column({ name: 'refresh_token' })
   refreshToken: string;
 
-  @Column()
+  @Column({ name: 'token_expiry' })
   tokenExpiry: Date;
 
   @Column({ default: true })
   connected: boolean;
 
-  @Column({ nullable: true })
+  @Column({ name: 'disconnected_at', nullable: true })
   disconnectedAt?: Date;
 
   constructor(request: Partial<YoutubeAccount> = {}) {

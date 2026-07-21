@@ -9,7 +9,7 @@ export class SearchHistory extends BaseEntity {
   @Column()
   normalizedQuery: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   userId?: string;
 
   constructor(request: Partial<SearchHistory> = {}) {

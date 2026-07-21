@@ -1,6 +1,6 @@
 export default {
   // Repository Interfaces
-  IUSER_REPOSITORY: 'IUserRepository',
+  IIDENTITY_REPOSITORY: 'IIdentityRepository',
   IROLE_REPOSITORY: 'IRoleRepository',
   IGENERAL_REPOSITORY: 'IGeneralRepository',
   IUSERROLE_REPOSITORY: 'IUserRoleRepository',
@@ -63,6 +63,7 @@ export default {
 
   // Newsletter
   INEWSLETTER_REPOSITORY: 'INewsletterSubscriberRepository',
+  IPROJECT_REPOSITORY: 'IProjectRepository',
 
   BULL_QUEUES: {
     FACEBOOK_IMPORT: 'facebook-import',

@@ -2,12 +2,13 @@ import * as Joi from 'joi';
 import { Inject } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../core/utils/const';
+import { stringUtil } from '../../../core/utils/string.util';
 import logger from '../../../core/utils/winston.util';
 import { User } from '../../../domain/entities';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { ITokenService } from '../../../domain/services/itoken.service';
 import { IEmailService } from '../../../domain/services/iemail.service';
-import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../domain/repositories/iidentity.repository';
 import { IAnalyticsService } from '../../../domain/services/ianalytics.service';
 import { TokenResponseModel } from '../../../domain/contracts/tokenResponse.model';
 import { IUserLoginRepository } from '../../../domain/repositories/iuserLogin.repository';
@@ -59,8 +60,8 @@ export class LoginCommand {
 export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
   constructor(
     @Inject(_const.ITOKEN_SERVICE) private readonly tokenService: ITokenService,
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IEMAIL_SERVICE)
@@ -71,6 +72,7 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
 
   public async execute(command: LoginCommand): Promise<TokenResponseModel> {
     await loginValidations.validateAsync(command.model);
+    command.model.email = stringUtil.normalizeEmail(command.model.email);
 
     const user = await this.userRepository.getUserByEmailAsync(
       command.model.email,

@@ -34,7 +34,7 @@ import { FollowUpdatedListener } from '../infrastructure/background/listeners/fo
   providers: [
     JwtService,
     ...follows.addHandlers(),
-    dependency.UserRepository,
+    dependency.IdentityRepository,
     dependency.RoleRepository,
     dependency.UserRoleRepository,
     dependency.RoleClaimRepository,

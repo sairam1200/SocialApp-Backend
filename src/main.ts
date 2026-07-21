@@ -15,7 +15,9 @@ import { ErrorHandlersFilter } from './core/exceptions/exceptionHandler.filter';
 import { ApiDocRedirectMiddleware } from './core/middlewares/apiDocRedirect.middleware';
 import cookieParser = require('cookie-parser');
 
-console.info(`[startup] main.ts loaded — PID ${process.pid}, NODE_ENV=${process.env.NODE_ENV}, K_SERVICE=${process.env.K_SERVICE || 'none'}`);
+console.info(
+  `[startup] main.ts loaded — PID ${process.pid}, NODE_ENV=${process.env.NODE_ENV}, K_SERVICE=${process.env.K_SERVICE || 'none'}`,
+);
 
 process.on('unhandledRejection', (reason) => {
   console.error(`[startup] Unhandled Promise Rejection: ${reason}`);
@@ -36,7 +38,9 @@ async function bootstrap() {
     console.info('[startup] Redis connected');
   } catch (redisErr) {
     const msg = redisErr instanceof Error ? redisErr.message : redisErr;
-    console.warn(`[startup] Redis unavailable (${msg}). Continuing without Redis.`);
+    console.warn(
+      `[startup] Redis unavailable (${msg}). Continuing without Redis.`,
+    );
     logger.warn(`Redis unavailable (${msg}). Continuing without Redis.`);
   }
 
@@ -61,7 +65,11 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:3000',
+      'https://localhost:3000',
+      'http://localhost:5173',
       'https://gaddr.com',
+      'https://www.gaddr.com',
+      'https://jobs.gaddr.com',
       'https://almost-backtrack-drapery.ngrok-free.dev',
       'https://social-app-zeta-three.vercel.app',
       'https://demo.gaddr.com',

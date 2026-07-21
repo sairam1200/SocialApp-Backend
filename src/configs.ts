@@ -260,9 +260,7 @@ const envVarsSchema = Joi.object()
     CLOUDFLARE_ACCOUNT_ID: Joi.string()
       .required()
       .description('Cloudflare account ID for R2'),
-    R2_BUCKET: Joi.string()
-      .required()
-      .description('Cloudflare R2 bucket name'),
+    R2_BUCKET: Joi.string().required().description('Cloudflare R2 bucket name'),
     R2_ACCESS_KEY_ID: Joi.string()
       .required()
       .description('Cloudflare R2 access key ID'),
@@ -271,8 +269,16 @@ const envVarsSchema = Joi.object()
       .description('Cloudflare R2 secret access key'),
     R2_PUBLIC_URL_BASE: Joi.string()
       .required()
-      .description('Cloudflare R2 public URL base (for serving files via HTTP)'),
+      .description(
+        'Cloudflare R2 public URL base (for serving files via HTTP)',
+      ),
     DATABASE_URL: Joi.string().description('PostgreSQL connection string'),
+    BETTER_AUTH_SECRET: Joi.string()
+      .required()
+      .description('Secret key for Better Auth session verification'),
+    BETTER_AUTH_COOKIE_NAME: Joi.string()
+      .default('better-auth.session_token')
+      .description('Better Auth session cookie name'),
   })
   .unknown();
 
@@ -458,6 +464,10 @@ export default {
   },
   frontend: {
     url: envVars.FRONTEND_URL,
+  },
+  betterAuth: {
+    secret: envVars.BETTER_AUTH_SECRET,
+    sessionCookieName: envVars.BETTER_AUTH_COOKIE_NAME,
   },
   r2: {
     accountId: envVars.CLOUDFLARE_ACCOUNT_ID,

@@ -5,7 +5,7 @@ export class UserClaim {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column()
+  @Column({ type: 'uuid' })
   userId: string;
 
   @Column()

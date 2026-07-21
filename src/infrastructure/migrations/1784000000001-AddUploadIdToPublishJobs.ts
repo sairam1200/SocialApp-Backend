@@ -26,9 +26,7 @@ export class AddUploadIdToPublishJobs1784000000001
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `DROP INDEX IF EXISTS "IDX_publish_jobs_uploadId"`,
-    );
+    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_publish_jobs_uploadId"`);
     await queryRunner.query(
       `ALTER TABLE publish_jobs DROP COLUMN IF EXISTS "uploadId"`,
     );

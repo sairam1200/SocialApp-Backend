@@ -6,7 +6,7 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { ProfileImagePrivacy } from '../../../../domain/enums';
 import { UserNotFoundException } from '../../../../core/exceptions/user.exception';
-import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../../domain/repositories/iidentity.repository';
 
 export class UpdateProfileImagePrivacyRequestModel {
   @ApiProperty({ enum: ProfileImagePrivacy })
@@ -32,8 +32,8 @@ export class UpdateProfileImagePrivacyCommandHandler
   implements ICommandHandler<UpdateProfileImagePrivacyCommand>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
   ) {}
 
   public async execute(

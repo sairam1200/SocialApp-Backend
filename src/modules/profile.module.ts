@@ -44,7 +44,7 @@ import { AnalyticsModule } from './analytics.module';
 
     ProfileCacheService,
     ...profile.addHandlers(),
-    dependency.UserRepository,
+    dependency.IdentityRepository,
     dependency.RoleRepository,
     dependency.UserRoleRepository,
     dependency.LinkedAccountRepository,

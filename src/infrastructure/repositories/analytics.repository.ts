@@ -27,14 +27,14 @@ export class AnalyticsRepository implements IAnalyticsRepository {
     return this.analyticsContext
       .createQueryBuilder('ae')
       .where('ae.userId = :userId', { userId })
-      .andWhere('ae.createdAt >= :fromDate', { fromDate })
+      .andWhere('ae.createdOn >= :fromDate', { fromDate })
       .getMany();
   }
 
   async getAllEventsAsync(fromDate: Date): Promise<AnalyticsEvent[]> {
     return this.analyticsContext
       .createQueryBuilder('ae')
-      .where('ae.createdAt >= :fromDate', { fromDate })
+      .where('ae.createdOn >= :fromDate', { fromDate })
       .getMany();
   }
 }

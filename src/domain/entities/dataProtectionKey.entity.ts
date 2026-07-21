@@ -3,7 +3,7 @@ import { BaseEntity } from '../baseEntity';
 
 @Entity({ name: 'dataProtectionKeys' })
 export class DataProtectionKey extends BaseEntity {
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   userId?: string;
 
   @Column({ nullable: false })

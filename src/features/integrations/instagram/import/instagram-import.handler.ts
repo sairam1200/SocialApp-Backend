@@ -1,5 +1,4 @@
 import axios from 'axios';
-import configs from '../../../../configs';
 import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import { Globals } from '../../../../core/globals';
@@ -70,12 +69,10 @@ export class InstagramImportCommandHandler
           access_token: string;
           expires_in: number;
         };
-        console.log('TOKEN DATA:', tokenData);
         const accessTokenFromDb = tokenData.access_token;
 
         const fallbackTokenValid =
           await this.verifyAccessTokenAsync(accessTokenFromDb);
-        console.log('token valid', fallbackTokenValid);
         if (!fallbackTokenValid) {
           throw new ApplicationException(
             'Your Instagram session has expired or the access token is invalid. Please log in to Instagram again to continue.',
@@ -97,8 +94,6 @@ export class InstagramImportCommandHandler
       };
 
       const accessTokenFromDb = tokenData.access_token;
-
-      console.log('[InstagramImport] Token from DB:', accessTokenFromDb);
 
       const isTokenValid = await this.verifyAccessTokenAsync(accessTokenFromDb);
 
@@ -136,7 +131,9 @@ export class InstagramImportCommandHandler
         account.externalId,
       );
     } catch (error: any) {
-      console.error('REFRESH PROFILE ERROR:', error?.response?.data ?? error);
+      logger.error('[InstagramImport] Refresh profile error', {
+        status: error?.response?.status,
+      });
       throw error;
     }
 
@@ -155,7 +152,9 @@ export class InstagramImportCommandHandler
         importedCount,
       };
     } catch (error: any) {
-      console.error('IMPORT MEDIA ERROR:', error?.response?.data ?? error);
+      logger.error('[InstagramImport] Import media error', {
+        status: error?.response?.status,
+      });
       throw error;
     }
   }
@@ -169,11 +168,11 @@ export class InstagramImportCommandHandler
         },
       });
 
-      console.log('[InstagramImport] VERIFY RESPONSE:', response.data);
-
       return !!response.data?.id;
     } catch (error: any) {
-      console.error('[InstagramImport] VERIFY ERROR:', error?.response?.data);
+      logger.error('[InstagramImport] Token verification failed', {
+        status: error?.response?.status,
+      });
 
       return false;
     }

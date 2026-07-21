@@ -12,9 +12,10 @@ import {
   SocialAccountLinkedEvent,
 } from '../../../../domain/events';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
+import { UserLogin } from '../../../../domain/entities';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { serializeObject } from '../../../../core/utils/serialization.util';
-import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../../domain/repositories/iidentity.repository';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { mapToInstagramProfileModel } from '../../../../domain/mappers/instagram.mapper';
 import { IUserLoginRepository } from '../../../../domain/repositories/iuserLogin.repository';
@@ -28,6 +29,7 @@ import { IContentStreamRepository } from '../../../../domain/repositories/iconte
 
 const PLATFORM = 'instagram';
 const GRAPH_BASE = 'https://graph.instagram.com';
+const LONG_LIVED_TOKEN_EXPIRES_IN = 60 * 24 * 60 * 60; // 60 days in seconds
 
 export class InstagramConnectQuery {
   model: {
@@ -95,8 +97,8 @@ export class InstagramConnectCallbackQueryHandler
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.ICONTENTSTREAM_REPOSITORY)
     private readonly contentStreamRepository: IContentStreamRepository,
     private readonly eventEmitter: EventEmitter2,
@@ -114,9 +116,30 @@ export class InstagramConnectCallbackQueryHandler
 
     const tokenResponse = await this.fetchShortLivedToken(model.code);
 
-    const access_token = tokenResponse.access_token;
+    const shortLivedToken = tokenResponse.access_token;
+    const shortLivedExpiresIn = tokenResponse.expires_in ?? 3600;
 
-    const expires_in = tokenResponse.expires_in ?? 3600;
+    let access_token = shortLivedToken;
+    let expires_in = shortLivedExpiresIn;
+
+    try {
+      const longLivedResponse = await this.fetchLongLivedToken(shortLivedToken);
+      if (longLivedResponse?.access_token) {
+        access_token = longLivedResponse.access_token;
+        expires_in = Number.isFinite(longLivedResponse.expires_in)
+          ? longLivedResponse.expires_in
+          : LONG_LIVED_TOKEN_EXPIRES_IN;
+        logger.info(
+          '[InstagramConnect] Long-lived token obtained successfully',
+        );
+      }
+    } catch (error: any) {
+      logger.warn(
+        '[InstagramConnect] Failed to exchange for long-lived token, using short-lived token',
+        { status: error?.response?.status },
+      );
+    }
+
     const userData = await this.fetchUserData(access_token);
     const user = await this.userRepository.getUserByIdAsync(
       HttpContext.user[Globals.ClaimTypes.UserId],
@@ -207,24 +230,16 @@ export class InstagramConnectCallbackQueryHandler
   private async fetchLongLivedToken(
     shortLivedAccessToken: string,
   ): Promise<{ access_token: string; token_type: string; expires_in: number }> {
-    try {
-      const response = await axios.get(`${GRAPH_BASE}/oauth/access_token`, {
-        params: {
-          client_id: configs.facebook.clientId,
-          client_secret: configs.facebook.clientSecret,
-          grant_type: 'ig_exchange_token',
-          fb_exchange_token: shortLivedAccessToken,
-        },
-      });
+    const response = await axios.get(`${GRAPH_BASE}/oauth/access_token`, {
+      params: {
+        client_id: configs.facebook.clientId,
+        client_secret: configs.facebook.clientSecret,
+        grant_type: 'ig_exchange_token',
+        fb_exchange_token: shortLivedAccessToken,
+      },
+    });
 
-      return response.data;
-    } catch (error: any) {
-      console.error('LONG TOKEN ERROR:', error?.response?.status);
-
-      console.error('LONG TOKEN DATA:', error?.response?.data);
-
-      throw error;
-    }
+    return response.data;
   }
 
   private async fetchUserData(
@@ -241,7 +256,6 @@ export class InstagramConnectCallbackQueryHandler
           },
         },
       );
-      console.log('TUSER DATA RESPONSE:', response.data);
       return response.data;
     } catch (error) {
       logger.error('Error fetching user data from Instagram', error);
@@ -317,11 +331,10 @@ export class InstagramConnectCallbackQueryHandler
   }
 
   private async updateUserLogin(
-    userLogin: any,
+    userLogin: UserLogin,
     accessToken: string,
     expiresIn: number,
   ): Promise<void> {
-    // Standardize: Store as serialized object for consistency (even if platform doesn't use refresh_token)
     const tokenValue = serializeObject({
       access_token: accessToken,
       expires_in: expiresIn,
@@ -337,7 +350,6 @@ export class InstagramConnectCallbackQueryHandler
     accessToken: string,
     expiresIn: number,
   ): Promise<void> {
-    // Standardize: Store as serialized object for consistency
     const tokenValue = serializeObject({
       access_token: accessToken,
       expires_in: expiresIn,

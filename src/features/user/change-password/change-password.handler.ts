@@ -11,7 +11,7 @@ import { parseUserAgent } from '../../../core/utils/userAgent.util';
 import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
 import { UserNotFoundException } from '../../../core/exceptions/user.exception';
 import { IEmailService } from '../../../domain/services/iemail.service';
-import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../domain/repositories/iidentity.repository';
 import { IUserLoginRepository } from '../../../domain/repositories/iuserLogin.repository';
 import ApplicationException from '../../../core/exceptions/application.exception';
 
@@ -59,8 +59,8 @@ export class ChangePasswordCommandHandler
   implements ICommandHandler<ChangePasswordCommand>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IEMAIL_SERVICE) private readonly emailService: IEmailService,

@@ -4,7 +4,7 @@ import { Inject } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { IUserRepository } from '../../../../domain/repositories';
+import { IIdentityRepository } from '../../../../domain/repositories';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import {
   ApplicationException,
@@ -37,8 +37,8 @@ export class Enable2FACommandHandler
   implements ICommandHandler<Enable2FACommand, void>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
   ) {}
 
   public async execute(command: Enable2FACommand): Promise<void> {

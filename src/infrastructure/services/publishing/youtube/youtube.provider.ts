@@ -133,8 +133,7 @@ export class YoutubeProvider implements IPublishingProvider {
           await this.videoTranscodingService.transcodeToShortsLetterbox(
             originalPath,
             processedPath,
-            (pct) =>
-              onProgress?.(20 + Math.round(pct * 0.6), 'Converting...'),
+            (pct) => onProgress?.(20 + Math.round(pct * 0.6), 'Converting...'),
           );
           onProgress?.(80, 'Uploading converted video...');
           uploadStream = fs.createReadStream(processedPath);

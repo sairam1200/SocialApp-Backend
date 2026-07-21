@@ -13,7 +13,7 @@ import { stringUtil } from '../../../../core/utils/string.util';
 import { generateInitialImage } from '../../../../core/utils/canvas.util';
 import { ITokenService } from '../../../../domain/services/itoken.service';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
-import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../../domain/repositories/iidentity.repository';
 import { FacebookUserDataType } from '../../../../domain/contracts/facebook.model';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { uploadBase64ToCloudinaryAsync } from '../../../../core/utils/cloudinary.util';
@@ -95,7 +95,7 @@ export class FacebookConnectQueryHandler
         userAgent: model.userAgent,
         ipAddress: model.ipAddress,
       }),
-      '', // No userId yet since this is login (not integration)
+      null, // No userId yet since this is login (not integration)
       expiresIn,
     );
   }
@@ -117,8 +117,8 @@ export class FacebookConnectCallbackQueryHandler
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
   ) {}
 
   public async execute(
@@ -140,6 +140,8 @@ export class FacebookConnectCallbackQueryHandler
         'Facebook did not return an email address. Please grant the email permission and try again.',
       );
     }
+
+    userData.email = stringUtil.normalizeEmail(userData.email);
 
     let createdUser = false;
     let createdLinkedAccount = false;

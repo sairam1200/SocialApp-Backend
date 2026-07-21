@@ -4,7 +4,7 @@ import _const from '../../../core/utils/const';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { UserNotFoundException } from '../../../core/exceptions';
 import { RoleNotFoundException } from '../../../core/exceptions/role.exception';
-import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../domain/repositories/iidentity.repository';
 import { IRoleRepository } from '../../../domain/repositories/irole.repository';
 import { IUserRoleRepository } from '../../../domain/repositories/iuserRole.repository';
 import { BadRequestException } from '@nestjs/common';
@@ -28,8 +28,8 @@ export class ActivateUserRoleCommandHandler
   implements ICommandHandler<ActivateUserRoleCommand>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IROLE_REPOSITORY)
     private readonly roleRepository: IRoleRepository,
     @Inject(_const.IUSERROLE_REPOSITORY)

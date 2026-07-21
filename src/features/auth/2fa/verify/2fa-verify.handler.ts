@@ -10,7 +10,7 @@ import { ITokenService } from '../../../../domain/services/itoken.service';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import {
   IUserLoginRepository,
-  IUserRepository,
+  IIdentityRepository,
 } from '../../../../domain/repositories';
 import {
   ApplicationException,
@@ -58,8 +58,8 @@ export class Verify2FACommandHandler
 {
   constructor(
     @Inject(_const.ITOKEN_SERVICE) private readonly tokenService: ITokenService,
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
   ) {}

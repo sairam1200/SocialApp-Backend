@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import axios from 'axios';
 
 import _const from '../../../core/utils/const';
+import logger from '../../../core/utils/winston.util';
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
 import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
 import { UserContent } from '../../../domain/entities/userContent.entity';
@@ -41,7 +42,6 @@ export class InstagramImportService {
 
     const mediaItems = mediaResponse.data?.data ?? [];
 
-    console.log('check', mediaItems);
     for (const media of mediaItems) {
       let reach = 0;
       let impressions = 0;
@@ -93,16 +93,12 @@ export class InstagramImportService {
             reach = Number(insightMap.get('reach') ?? 0);
             saved = Number(insightMap.get('saved') ?? 0);
           } catch (fallbackError) {
-            console.warn(
+            logger.warn(
               `[Instagram] Fallback insights unavailable for media ${media.id}`,
-              fallbackError,
             );
           }
         } else {
-          console.warn(
-            `[Instagram] Insights unavailable for media ${media.id}`,
-            error?.response?.data,
-          );
+          logger.warn(`[Instagram] Insights unavailable for media ${media.id}`);
         }
       }
       await this.userContentRepository.createAsync(

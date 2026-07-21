@@ -16,7 +16,9 @@ try {
       weight: '500',
     });
   } else {
-    console.warn(`[canvas] Font not found at ${fontPath} — using system defaults`);
+    console.warn(
+      `[canvas] Font not found at ${fontPath} — using system defaults`,
+    );
   }
 } catch (err) {
   console.warn(`[canvas] registerFont failed: ${(err as Error).message}`);

@@ -4,7 +4,7 @@ import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity({ name: 'manualProfiles' })
 export class ManualProfile extends BaseEntity {
-  @Column()
+  @Column({ type: 'uuid' })
   userId: string;
 
   @Column()

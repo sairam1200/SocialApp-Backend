@@ -11,7 +11,7 @@ import { parseUserAgent } from '../../../core/utils/userAgent.util';
 import { IEmailService } from '../../../domain/services/iemail.service';
 import { IDataProtectionKeyRepository } from '../../../domain/repositories';
 import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
-import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../domain/repositories/iidentity.repository';
 
 export class ForgotPasswordRequestModel {
   @ApiProperty()
@@ -54,8 +54,8 @@ export class ForgotPasswordCommandHandler
 {
   constructor(
     @Inject(_const.IEMAIL_SERVICE) private readonly emailService: IEmailService,
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
   ) {}
@@ -64,6 +64,7 @@ export class ForgotPasswordCommandHandler
     const { model } = command;
 
     await forgotPasswordValidations.validateAsync(model);
+    model.email = stringUtil.normalizeEmail(model.email);
 
     try {
       const user = await this.userRepository.getUserByEmailAsync(model.email);

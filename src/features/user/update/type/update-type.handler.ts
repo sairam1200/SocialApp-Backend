@@ -6,7 +6,7 @@ import { UserType } from '../../../../domain/enums';
 import { ForbiddenException } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { UserNotFoundException } from '../../../../core/exceptions';
-import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../../domain/repositories/iidentity.repository';
 
 export class UpdateTypeModel {
   @ApiProperty()
@@ -40,8 +40,8 @@ export class UpdateTypeCommandHandler
   implements ICommandHandler<UpdateTypeCommand>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
   ) {}
 
   public async execute(command: UpdateTypeCommand): Promise<void> {

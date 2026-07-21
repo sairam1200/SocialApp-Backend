@@ -3,10 +3,10 @@ import { Column, Entity } from 'typeorm';
 
 @Entity({ name: 'userRoles', schema: 'identity' })
 export class UserRole extends BaseEntity {
-  @Column()
+  @Column({ type: 'uuid' })
   userId: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   roleId: string;
 
   @Column({ default: false })

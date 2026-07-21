@@ -7,7 +7,7 @@ export class RoleClaim {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   roleId: string;
 
   @Column()

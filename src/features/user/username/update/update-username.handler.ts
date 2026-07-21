@@ -2,7 +2,7 @@ import configs from '../../../../configs';
 import _const from '../../../../core/utils/const';
 import { Inject, UnauthorizedException } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { IUserRepository } from '../../../../domain/repositories';
+import { IIdentityRepository } from '../../../../domain/repositories';
 import { HttpContext } from 'core/middlewares/httpContext.middleware';
 import { generateTimestampUUID } from '../../../../core/utils/time.util';
 import {
@@ -23,8 +23,8 @@ export class UpdateUserNameCommandHandler
   implements ICommandHandler<UpdateUserNameCommand, void>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
   ) {}
 
   async execute(command: UpdateUserNameCommand): Promise<void> {

@@ -11,7 +11,7 @@ import {
 import { IAnalyticsService } from '../../../../domain/services/ianalytics.service';
 import {
   IManualProfileRepository,
-  IUserRepository,
+  IIdentityRepository,
 } from '../../../../domain/repositories';
 import { UpdateManualProfileModel } from '../../../../domain/contracts/manualProfile.model';
 
@@ -35,8 +35,8 @@ export class UpdateManualProfileCommandHandler
   implements ICommandHandler<UpdateManualProfileCommand, void>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IMANUALPROFILE_REPOSITORY)
     private readonly manualProfileRepository: IManualProfileRepository,
     @Inject(_const.IANALYTICS_SERVICE)

@@ -22,13 +22,13 @@ import {
 } from '@nestjs/common';
 import {
   IRoleRepository,
-  IUserRepository,
+  IIdentityRepository,
   IUserRoleRepository,
 } from '../../domain/repositories';
 import {
   SearchUserProjection,
   UserProfileStats,
-} from '../../domain/repositories/iuser.repository';
+} from '../../domain/repositories/iidentity.repository';
 import {
   RoleNotFoundException,
   ClaimAlreadyExistsException,
@@ -39,7 +39,7 @@ import {
 } from '../../core/exceptions';
 
 @Injectable()
-export class UserRepository implements IUserRepository {
+export class IdentityRepository implements IIdentityRepository {
   constructor(
     @InjectRepository(User) private readonly userContext: Repository<User>,
     @InjectRepository(UserClaim)
@@ -386,8 +386,8 @@ export class UserRepository implements IUserRepository {
         "user".id AS "userId",
         (SELECT COUNT(1) FROM "identity"."user_follows" f WHERE f."followedId" = "user".id AND f.status = 'accepted') AS "followersCount",
         (SELECT COUNT(1) FROM "identity"."user_follows" f WHERE f."followerId" = "user".id AND f.status = 'accepted') AS "followingCount",
-        (SELECT COALESCE(json_agg(json_build_object('id', la.id, 'platform', la.platform, 'verified', la.verified, 'username', la."userName") ORDER BY la.platform) FILTER (WHERE la.id IS NOT NULL), '[]'::json) FROM "linkedAccounts" la WHERE la."userId" = CAST("user".id AS text)) AS "linkedAccounts",
-        (SELECT EXISTS(SELECT 1 FROM "linkedAccounts" la WHERE la."userId" = CAST("user".id AS text) AND la.verified = true)) AS "verified",
+        (SELECT COALESCE(json_agg(json_build_object('id', la.id, 'platform', la.platform, 'verified', la.verified, 'username', la."userName") ORDER BY la.platform) FILTER (WHERE la.id IS NOT NULL), '[]'::json) FROM "linkedAccounts" la WHERE la."userId" = "user".id) AS "linkedAccounts",
+        (SELECT EXISTS(SELECT 1 FROM "linkedAccounts" la WHERE la."userId" = "user".id AND la.verified = true)) AS "verified",
         (SELECT COUNT(*) FROM "userContents" uc WHERE uc."userId" = "user".id) AS "totalPosts",
         ${isFollowingExpr} AS "isFollowing"
       FROM "identity"."users" "user"

@@ -11,7 +11,7 @@ import { cryptoUtils } from '../../../core/utils/crypto.util';
 import { addDurationToNow } from '../../../core/utils/time.util';
 import { ITokenService } from '../../../domain/services/itoken.service';
 import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
-import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../domain/repositories/iidentity.repository';
 import { IUserLoginRepository } from '../../../domain/repositories/iuserLogin.repository';
 import { ApplicationException } from 'core/exceptions';
 
@@ -62,8 +62,8 @@ export class RefreshTokenCommandHandler
 {
   constructor(
     @Inject(_const.ITOKEN_SERVICE) private readonly tokenService: ITokenService,
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
   ) {}

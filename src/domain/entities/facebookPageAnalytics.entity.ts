@@ -12,7 +12,7 @@ export class FacebookPageAnalytics extends BaseEntity {
   @Column({ nullable: false })
   pageId: string;
 
-  @Column({ nullable: false })
+  @Column({ type: 'uuid', nullable: false })
   userId: string;
 
   @Column({ type: 'integer', default: 0 })

@@ -1,4 +1,4 @@
-export { UserRepository } from './user.repository';
+export { IdentityRepository } from './identity.repository';
 export { RoleRepository } from './role.repository';
 export { UserRoleRepository } from './userRole.repository';
 export { PlaylistRepository } from './playlist.repository';
@@ -26,3 +26,4 @@ export { FacebookPageAnalyticsRepository } from './facebookPageAnalytics.reposit
 export { FacebookPostAnalyticsRepository } from './facebookPostAnalytics.repository';
 export { FacebookVideoAnalyticsRepository } from './facebookVideoAnalytics.repository';
 export { NewsletterSubscriberRepository } from './newsletterSubscriber.repository';
+export { ProjectRepository } from './project.repository';

@@ -8,7 +8,7 @@ import { generateInitialImage } from '../../../../core/utils/canvas.util';
 import { ProfileImagePrivacy } from '../../../../domain/enums';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { UserBiometric } from '../../../../domain/entities/identity/userBiometric.entity';
-import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../../domain/repositories/iidentity.repository';
 import {
   uploadBase64ToCloudinaryAsync,
   deleteFromCloudinaryAsync,
@@ -31,8 +31,8 @@ export class UpdateProfileImageCommandHandler
   implements ICommandHandler<UpdateProfileImageCommand>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     private readonly profileCache: ProfileCacheService,
     private readonly notificationGateway: NotificationGateway,
   ) {}

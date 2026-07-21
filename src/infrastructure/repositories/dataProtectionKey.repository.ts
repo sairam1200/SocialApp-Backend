@@ -40,7 +40,7 @@ export class DataProtectionKeyRepository
   public async createAsync(
     key: string,
     value: string,
-    userId: string,
+    userId: string | null,
     expiresIn = 604800,
   ): Promise<DataProtectionKey> {
     const newKey = new DataProtectionKey({

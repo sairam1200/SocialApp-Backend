@@ -15,7 +15,7 @@ import {
 import { serializeObject } from '../../../../core/utils/serialization.util';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
-import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../../domain/repositories/iidentity.repository';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { mapToTwitterProfileModel } from '../../../../domain/mappers/twitter.mapper';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
@@ -94,8 +94,8 @@ export class TwitterConnectCallbackQueryHandler
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.ICONTENTSTREAM_REPOSITORY)
     private readonly contentStreamRepository: IContentStreamRepository,
     private readonly eventEmitter: EventEmitter2,

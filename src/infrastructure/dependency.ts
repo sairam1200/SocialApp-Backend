@@ -32,7 +32,7 @@ import {
   UserFollowRepository,
   UserLoginRepository,
   UserPreferenceRepository,
-  UserRepository,
+  IdentityRepository,
   UserRoleRepository,
   YoutubeChannelAnalyticsRepository,
   YoutubeVideoAnalyticsRepository,
@@ -57,6 +57,7 @@ import {
   FacebookAnalyticsService,
 } from './services';
 import { NewsletterSubscriberRepository } from './repositories/newsletterSubscriber.repository';
+import { ProjectRepository } from './repositories/project.repository';
 
 /* This is the dependency object that holds all the repositories & services
  * used in the application. It is used to provide the dependencies to the
@@ -64,9 +65,9 @@ import { NewsletterSubscriberRepository } from './repositories/newsletterSubscri
  * dependencies in one place and make it easy to manage them.
  */
 export const dependency = {
-  UserRepository: {
-    provide: _const.IUSER_REPOSITORY,
-    useClass: UserRepository,
+  IdentityRepository: {
+    provide: _const.IIDENTITY_REPOSITORY,
+    useClass: IdentityRepository,
   },
   UserRoleRepository: {
     provide: _const.IUSERROLE_REPOSITORY,
@@ -253,6 +254,10 @@ export const dependency = {
   NewsletterRepository: {
     provide: _const.INEWSLETTER_REPOSITORY,
     useClass: NewsletterSubscriberRepository,
+  },
+  ProjectRepository: {
+    provide: _const.IPROJECT_REPOSITORY,
+    useClass: ProjectRepository,
   },
   FacebookAnalyticsService: {
     provide: _const.IFACEBOOKANALYTICS_SERVICE,

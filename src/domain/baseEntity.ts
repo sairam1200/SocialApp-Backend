@@ -46,6 +46,7 @@ export abstract class BaseEntity extends TypeORMBaseEntity {
   private beforeInsert() {
     this.createdBy = this._currentUser;
     this.createdOn = new Date();
+    this.lastRefreshed = new Date();
   }
 
   @BeforeUpdate()

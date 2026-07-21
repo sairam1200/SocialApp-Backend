@@ -3,11 +3,11 @@ import { Column, Entity, Index } from 'typeorm';
 
 @Entity({ name: 'youtube_videos' })
 export class YoutubeVideo extends BaseEntity {
-  @Column()
+  @Column({ type: 'uuid', name: 'account_id' })
   @Index()
   accountId: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name: 'youtube_video_id' })
   youtubeVideoId?: string;
 
   @Column()
@@ -28,13 +28,13 @@ export class YoutubeVideo extends BaseEntity {
   @Column({ default: 'draft' })
   status: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name: 'thumbnail_url' })
   thumbnailUrl?: string;
 
   @Column({ nullable: true })
   youtubeUrl?: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name: 'video_url' })
   videoUrl?: string;
 
   @Column({ nullable: true })

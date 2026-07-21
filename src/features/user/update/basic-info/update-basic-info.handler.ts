@@ -5,7 +5,7 @@ import _const from '../../../../core/utils/const';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { UserNotFoundException } from '../../../../core/exceptions';
-import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../../domain/repositories/iidentity.repository';
 
 export class UpdateBasicInfoModel {
   @ApiProperty()
@@ -45,8 +45,8 @@ export class UpdateBasicInfoCommandHandler
   implements ICommandHandler<UpdateBasicInfoCommand>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
   ) {}
 
   public async execute(command: UpdateBasicInfoCommand): Promise<void> {

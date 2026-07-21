@@ -13,7 +13,7 @@ export interface IDataProtectionKeyRepository {
   createAsync(
     key: string,
     value: string,
-    userId: string,
+    userId: string | null,
     expiresIn?: number,
   ): Promise<DataProtectionKey>;
   updateAsync(dataProtectionKey: DataProtectionKey): Promise<void>;

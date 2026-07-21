@@ -6,7 +6,7 @@ import logger from '../../../core/utils/winston.util';
 import { User, UserBiometric } from '../../../domain/entities';
 import { UserType, ProfileImagePrivacy } from '../../../domain/enums';
 import { stringUtil } from '../../../core/utils/string.util';
-import { IUserRepository } from '../../../domain/repositories';
+import { IIdentityRepository } from '../../../domain/repositories';
 import { password } from '../../../core/utils/validation.util';
 import { UserModel } from '../../../domain/contracts/user.model';
 import { mapToUserModel } from '../../../domain/mappers/user.mapper';
@@ -72,8 +72,8 @@ export class RegisterCommandHandler
   implements ICommandHandler<RegisterCommand>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     private readonly commandBus: CommandBus,
     @Inject(_const.IEMAIL_SERVICE)
     private readonly emailService: IEmailService,
@@ -85,6 +85,7 @@ export class RegisterCommandHandler
     const { model } = command;
 
     await createUserValidations.validateAsync(model);
+    model.email = stringUtil.normalizeEmail(model.email);
 
     const existUser = await this.userRepository.getUserByEmailAsync(
       model.email,

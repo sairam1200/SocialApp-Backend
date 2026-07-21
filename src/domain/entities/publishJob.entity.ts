@@ -3,11 +3,11 @@ import { BaseEntity } from '../baseEntity';
 
 @Entity({ name: 'publish_jobs' })
 export class PublishJob extends BaseEntity {
-  @Column()
+  @Column({ type: 'uuid' })
   @Index()
   userId: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   @Index()
   linkedAccountId: string;
 
@@ -15,7 +15,7 @@ export class PublishJob extends BaseEntity {
   @Index()
   platform: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   @Index()
   uploadId?: string;
 

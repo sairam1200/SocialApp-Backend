@@ -3,7 +3,7 @@ import { Column, Entity } from 'typeorm';
 
 @Entity({ name: 'linkedAccounts' })
 export class LinkedAccount extends BaseEntity {
-  @Column()
+  @Column({ type: 'uuid' })
   userId: string;
 
   @Column()

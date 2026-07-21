@@ -7,7 +7,7 @@ import { ILinkedAccountRepository } from '../../../domain/repositories';
 import { LinkedAccountModel } from '../../../domain/contracts/user.model';
 import { mapToLinkedAccountsModel } from '../../../domain/mappers/user.mapper';
 import { UserNotFoundException } from '../../../core/exceptions/user.exception';
-import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../domain/repositories/iidentity.repository';
 
 export class GetUserLinkedAccountsQuery {
   userName: string;
@@ -28,8 +28,8 @@ export class GetUserLinkedAccountsQueryHandler
   implements ICommandHandler<GetUserLinkedAccountsQuery, LinkedAccountModel[]>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
   ) {}

@@ -71,7 +71,7 @@ import { UpdatePermissionsController } from '../features/role/update-permissions
     JwtService,
     MetadataScanner,
     DiscoveryService,
-    dependency.UserRepository,
+    dependency.IdentityRepository,
     dependency.RoleRepository,
     dependency.UserRoleRepository,
     dependency.RoleClaimRepository,

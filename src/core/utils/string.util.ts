@@ -59,6 +59,10 @@ export const stringUtil = {
     return input.slice(0, trimmedLength) + ellipsis;
   },
 
+  normalizeEmail: (email: string): string => {
+    return email?.trim().toLowerCase() ?? email;
+  },
+
   extractInitialsFromName(name: string): string {
     const FORMAL_TITLES = [
       'Sir',

@@ -13,7 +13,7 @@ import {
 } from '../../../../domain/events';
 import { LinkedAccount } from '../../../../domain/entities/linkedAccount.entity';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
-import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../../domain/repositories/iidentity.repository';
 import { mapToSpotifyProfileModel } from '../../../../domain/mappers/spotify.mapper';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
@@ -91,8 +91,8 @@ export class SpotifyConnectCallbackQueryHandler
     private readonly userLoginRepository: IUserLoginRepository,
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.ICONTENTSTREAM_REPOSITORY)
     private readonly contentStreamRepository: IContentStreamRepository,
     private readonly eventEmitter: EventEmitter2,

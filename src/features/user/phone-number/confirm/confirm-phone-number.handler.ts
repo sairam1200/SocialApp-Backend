@@ -1,6 +1,6 @@
 import _const from '../../../../core/utils/const';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { IUserRepository } from '../../../../domain/repositories';
+import { IIdentityRepository } from '../../../../domain/repositories';
 import { BadRequestException, Inject } from '@nestjs/common';
 
 export class ConfirmPhoneNumberCommand {
@@ -17,8 +17,8 @@ export class ConfirmPhoneNumberCommandHandler
   implements ICommandHandler<ConfirmPhoneNumberCommand, void>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
   ) {}
 
   async execute(command: ConfirmPhoneNumberCommand): Promise<void> {

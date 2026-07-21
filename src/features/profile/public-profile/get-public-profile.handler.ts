@@ -6,7 +6,7 @@ import { UserType, ProfilePrivacy, FollowStatus } from '../../../domain/enums';
 import { UserNotFoundException } from '../../../core/exceptions';
 import { PublicProfileModel } from '../../../domain/contracts/public-profile.model';
 import { HttpContext } from '../../../core/middlewares/httpContext.middleware';
-import { IUserRepository } from '../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../domain/repositories/iidentity.repository';
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
 import { IManualProfileRepository } from '../../../domain/repositories/imanualProfile.repository';
 import { IUserFollowRepository } from '../../../domain/repositories/iuserFollow.repository';
@@ -36,8 +36,8 @@ export class GetPublicProfileQueryHandler
   implements ICommandHandler<GetPublicProfileQuery, PublicProfileModel>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
     @Inject(_const.IMANUALPROFILE_REPOSITORY)

@@ -1,6 +1,6 @@
 import { QueryOptions } from '../types/queryOptions.type';
 import { UserContent } from '../entities/userContent.entity';
-import { SearchUserProjection } from './iuser.repository';
+import { SearchUserProjection } from './iidentity.repository';
 
 export type SearchContentProjection = Pick<
   UserContent,

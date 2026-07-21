@@ -31,7 +31,7 @@ export type UserProfileStats = {
   isFollowing?: boolean;
 };
 
-export interface IUserRepository {
+export interface IIdentityRepository {
   deleteAsync(user: User): Promise<void>;
   updateAsync(user: User): Promise<boolean>;
   createAsync(user: User, password: string): Promise<User>;

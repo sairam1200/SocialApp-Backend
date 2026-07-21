@@ -6,11 +6,11 @@ import { Topic } from './topic.entity';
 @Entity({ name: 'userTopics' })
 @Unique(['userId', 'topicId'])
 export class UserTopic extends BaseEntity {
-  @Column()
+  @Column({ type: 'uuid' })
   @Index('idx_user_topics_user')
   userId: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   @Index('idx_user_topics_topic')
   topicId: string;
 

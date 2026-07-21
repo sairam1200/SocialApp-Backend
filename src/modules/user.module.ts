@@ -55,7 +55,7 @@ import { AuthModule } from './auth.module';
     JwtService,
     ...users.addHandlers(),
     ...onboarding.addHandlers(),
-    dependency.UserRepository,
+    dependency.IdentityRepository,
     dependency.RoleRepository,
     dependency.UserRoleRepository,
     dependency.LinkedAccountRepository,

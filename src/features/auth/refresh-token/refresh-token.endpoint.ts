@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import configs from '../../../configs';
 import { CommandBus } from '@nestjs/cqrs';
 import { TokenResponseModel } from '../../../domain/contracts/tokenResponse.model';
 import { RefreshTokenGuard } from '../../../core/passport';
@@ -19,9 +20,18 @@ import {
 } from './refresh-token.handler';
 import { ErrorHandlersFilter } from '../../../core/exceptions/exceptionHandler.filter';
 
+const isProduction = configs.env === 'production';
+const cookieDomain = isProduction ? '.gaddr.com' : undefined;
+
+function buildClearCookie(name: string): string {
+  const domainPart = cookieDomain ? `Domain=${cookieDomain}; ` : '';
+  return `${name}=; Path=/; ${domainPart}Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+}
+
 const CLEAR_COOKIES_HEADER = [
-  'access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax',
-  'refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax',
+  `${buildClearCookie('access_token')}; HttpOnly`,
+  buildClearCookie('refresh_token') + '; HttpOnly',
+  buildClearCookie('better-auth.session_token'),
 ];
 
 @ApiBearerAuth()

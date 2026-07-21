@@ -12,7 +12,7 @@ export class RateLimitLog extends BaseEntity {
   @Column()
   count: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   userId?: string;
 
   @Column()

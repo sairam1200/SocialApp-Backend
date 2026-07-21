@@ -3,9 +3,10 @@ import { Inject } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import logger from '../../../../core/utils/winston.util';
+import { stringUtil } from '../../../../core/utils/string.util';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { UserNotFoundException } from '../../../../core/exceptions/user.exception';
-import { IUserRepository } from '../../../../domain/repositories/iuser.repository';
+import { IIdentityRepository } from '../../../../domain/repositories/iidentity.repository';
 import ApplicationException from '../../../../core/exceptions/application.exception';
 import { DataProtectionKey } from '../../../../domain/entities/dataProtectionKey.entity';
 import { IDataProtectionKeyRepository } from '../../../../domain/repositories/idataProtectionKey.repository';
@@ -44,8 +45,8 @@ export class VerifyEmailCommandHandler
   implements ICommandHandler<VerifyEmailCommand, VerifyEmailResponseModel>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
   ) {}
@@ -56,6 +57,7 @@ export class VerifyEmailCommandHandler
     const { model } = command;
 
     await verifyEmailValidations.validateAsync(model);
+    model.email = stringUtil.normalizeEmail(model.email);
 
     const user = await this.userRepository.getUserByEmailAsync(
       model.email,

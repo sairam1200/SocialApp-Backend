@@ -1,5 +1,5 @@
 export { IRoleRepository } from './irole.repository';
-export { IUserRepository } from './iuser.repository';
+export { IIdentityRepository } from './iidentity.repository';
 export { IUserRoleRepository } from './iuserRole.repository';
 export { IPlaylistRepository } from './iplaylist.repository';
 export { IRateLimitRepository } from './irateLimit.repository';
@@ -20,3 +20,4 @@ export { IFacebookPageAnalyticsRepository } from './ifacebookPageAnalytics.repos
 export { IFacebookPostAnalyticsRepository } from './ifacebookPostAnalytics.repository';
 export { IFacebookVideoAnalyticsRepository } from './ifacebookVideoAnalytics.repository';
 export { INewsletterSubscriberRepository } from './inewsletterSubscriber.repository';
+export { IProjectRepository } from './iproject.repository';

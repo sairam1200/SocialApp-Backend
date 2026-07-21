@@ -2,14 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Inject } from '@nestjs/common';
 import _const from '../../../../core/utils/const';
-import { IUserRepository } from '../../../../domain/repositories';
+import { IIdentityRepository } from '../../../../domain/repositories';
 import logger from '../../../../core/utils/winston.util';
 
 @Injectable()
 export class EmailCleanupCron {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_2AM)

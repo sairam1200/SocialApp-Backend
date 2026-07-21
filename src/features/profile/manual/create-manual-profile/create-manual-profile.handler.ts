@@ -9,7 +9,7 @@ import { HttpContext } from '../../../../core/middlewares/httpContext.middleware
 import { mapToManualProfileModel } from '../../../../domain/mappers/manualProfile.mapper';
 import {
   IManualProfileRepository,
-  IUserRepository,
+  IIdentityRepository,
 } from '../../../../domain/repositories';
 import {
   CreateManualProfileModel,
@@ -35,8 +35,8 @@ export class CreateManualProfileCommandHandler
   implements ICommandHandler<CreateManualProfileCommand, ManualProfileModel>
 {
   constructor(
-    @Inject(_const.IUSER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly userRepository: IIdentityRepository,
     @Inject(_const.IMANUALPROFILE_REPOSITORY)
     private readonly manualProfileRepository: IManualProfileRepository,
   ) {}

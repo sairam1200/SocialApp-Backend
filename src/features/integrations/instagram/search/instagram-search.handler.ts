@@ -4,17 +4,13 @@ import configs from '../../../../configs';
 import { ApiProperty } from '@nestjs/swagger';
 import _const from '../../../../core/utils/const';
 import fuseUtil from '../../../../core/utils/fuse.util';
-import logger from '../../../../core/utils/winston.util';
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import { SearchHistory } from '../../../../domain/entities';
-import { ApplicationException } from '../../../../core/exceptions';
+import ApplicationException from '../../../../core/exceptions/application.exception';
 import { ISearchService } from '../../../../domain/services/isearch.service';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { InstagramSearchResponseModel } from '../../../../domain/contracts/instagram.model';
-import {
-  deserializeObject,
-  serializeObject,
-} from '../../../../core/utils/serialization.util';
+import { deserializeObject } from '../../../../core/utils/serialization.util';
 import {
   ISearchHistoryRepository,
   IUserLoginRepository,
@@ -64,35 +60,28 @@ export class InstagramSearchQueryHandler
     if (instagramAccessToken) {
       const isTokenValid =
         await this.verifyAccessTokenAsync(instagramAccessToken);
-      if (!isTokenValid) {
-        const now = new Date();
+      if (isTokenValid) {
+        accessToken = instagramAccessToken;
+      } else {
         const userLogin =
           await this.userLoginRepository.getByUserIdAndProviderAsync(
             userId,
             _const.PLATFORMS.INSTAGRAM,
           );
 
-        if (userLogin && now < userLogin.expiryDateUtc) {
+        if (userLogin) {
           const tokenValue = deserializeObject<{
             access_token: string;
-            refresh_token: string;
+            expires_in: number;
           }>(userLogin.tokenValue);
-          const { access_token, expires_in } = await this.refreshTokenAsync(
-            tokenValue.refresh_token,
+          const isDbTokenValid = await this.verifyAccessTokenAsync(
+            tokenValue.access_token,
           );
-          if (access_token) {
-            userLogin.tokenValue = serializeObject({
-              access_token,
-              refresh_token: tokenValue.refresh_token,
-            });
-            userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
-            await this.userLoginRepository.updateAsync(userLogin);
+          if (isDbTokenValid) {
+            accessToken = tokenValue.access_token;
+            expiresIn = tokenValue.expires_in;
           }
-          accessToken = access_token;
-          expiresIn = expires_in;
         }
-      } else {
-        accessToken = instagramAccessToken;
       }
     } else {
       const userLogin =
@@ -108,28 +97,16 @@ export class InstagramSearchQueryHandler
 
       const tokenValue = deserializeObject<{
         access_token: string;
-        refresh_token: string;
         expires_in: number;
       }>(userLogin.tokenValue);
       const isTokenValid = await this.verifyAccessTokenAsync(
         tokenValue.access_token,
       );
       if (!isTokenValid) {
-        const { access_token, expires_in } = await this.refreshTokenAsync(
-          tokenValue.refresh_token,
-        );
-        userLogin.tokenValue = serializeObject({
-          access_token,
-          refresh_token: tokenValue.refresh_token,
-        });
-        userLogin.expiryDateUtc = new Date(Date.now() + expires_in * 1000);
-        await this.userLoginRepository.updateAsync(userLogin);
-        accessToken = access_token;
-        expiresIn = expires_in;
-      } else {
-        accessToken = tokenValue.access_token;
-        expiresIn = tokenValue.expires_in;
+        throw new ApplicationException('RECONNECT_REQUIRED');
       }
+      accessToken = tokenValue.access_token;
+      expiresIn = tokenValue.expires_in;
     }
 
     const normalizedQuery = await this.normalizeQueryAsync(searchTerm);
@@ -143,41 +120,6 @@ export class InstagramSearchQueryHandler
       forceRefresh: command.model.forceRefresh || false,
     });
     return data;
-  }
-
-  private async refreshTokenAsync(
-    refreshToken: string,
-  ): Promise<{ access_token: string; expires_in: number }> {
-    try {
-      const response = await axios.get(
-        'https://graph.facebook.com/v23.0/oauth/access_token',
-        {
-          params: {
-            grant_type: 'fb_exchange_token',
-            client_id: configs.facebook.clientId,
-            client_secret: configs.facebook.clientSecret,
-            fb_exchange_token: refreshToken,
-          },
-        },
-      );
-
-      const { access_token, expires_in } = response.data;
-      if (!access_token) {
-        throw new ApplicationException(
-          'Your Instagram session has expired or the access token is invalid. Please log in to Instagram again to continue.',
-        );
-      }
-
-      return {
-        access_token,
-        expires_in,
-      };
-    } catch (error) {
-      logger.error('Error refreshing Instagram token', { error });
-      throw new UnauthorizedException(
-        'Your Instagram session has expired or the access token is invalid. Please log in to Instagram again to continue.',
-      );
-    }
   }
 
   private async verifyAccessTokenAsync(accessToken: string): Promise<boolean> {
