@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { Repository, EntityManager } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { DataProtectionKey } from '../../domain/entities/dataProtectionKey.entity';
@@ -70,5 +70,18 @@ export class DataProtectionKeyRepository
     dataProtectionKey: DataProtectionKey,
   ): Promise<void> {
     await this.dataProtectionKeyContext.delete(dataProtectionKey.id);
+  }
+
+  public async deleteByUserIdAsync(
+    userId: string,
+    entityManager?: EntityManager,
+  ): Promise<void> {
+    const repo = entityManager
+      ? entityManager.getRepository(DataProtectionKey)
+      : this.dataProtectionKeyContext;
+    const keys = await repo.find({ where: { userId } });
+    for (const key of keys) {
+      await repo.delete(key.id);
+    }
   }
 }

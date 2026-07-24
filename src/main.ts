@@ -13,6 +13,7 @@ import {
 } from './core/utils/apiDocs.util';
 import { ErrorHandlersFilter } from './core/exceptions/exceptionHandler.filter';
 import { ApiDocRedirectMiddleware } from './core/middlewares/apiDocRedirect.middleware';
+import { CORS_ORIGINS } from './core/configs/cors.config';
 import cookieParser = require('cookie-parser');
 
 console.info(
@@ -64,17 +65,7 @@ async function bootstrap() {
   }
 
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'https://localhost:3000',
-      'http://localhost:5173',
-      'https://gaddr.com',
-      'https://www.gaddr.com',
-      'https://jobs.gaddr.com',
-      'https://almost-backtrack-drapery.ngrok-free.dev',
-      'https://social-app-zeta-three.vercel.app',
-      'https://demo.gaddr.com',
-    ],
+    origin: CORS_ORIGINS,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [

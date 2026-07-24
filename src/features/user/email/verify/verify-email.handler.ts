@@ -125,15 +125,6 @@ export class VerifyEmailCommandHandler
         key.expiresIn &&
         key.expiresIn >= currentTime,
     );
-    console.log({
-      expectedKey,
-      enteredCode: code,
-      verificationKeys: verificationKeys.map((x) => ({
-        key: x.key,
-        value: x.value,
-        expiresIn: x.expiresIn,
-      })),
-    });
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid or expired verification code');
     }

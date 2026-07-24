@@ -224,6 +224,9 @@ const envVarsSchema = Joi.object()
     BREVO_API_KEY: Joi.string().description(
       'Brevo (formerly Sendinblue) API key',
     ),
+    BREVO_WEBHOOK_SECRET: Joi.string().description(
+      'Bearer token for Brevo webhook authentication',
+    ),
     LOG_PATH: Joi.string()
       .default('logs')
       .description('Directory path for log files'),
@@ -435,6 +438,7 @@ export default {
   },
   brevo: {
     apiKey: envVars.BREVO_API_KEY,
+    webhookSecret: envVars.BREVO_WEBHOOK_SECRET,
   },
   cloudinary: {
     cloudName: envVars.CLOUDINARY_CLOUD_NAME,

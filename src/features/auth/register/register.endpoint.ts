@@ -3,8 +3,9 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiHeader, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserModel } from '../../../domain/contracts/user.model';
 import { RegisterCommand, RegisterModel } from './register.handler';
-import { Body, Controller, HttpStatus, Post, Res } from '@nestjs/common';
+import { Body, Controller, HttpStatus, Post, Res, UseFilters } from '@nestjs/common';
 import { RequireTurnstile } from '../../../core/passport';
+import { ErrorHandlersFilter } from '../../../core/exceptions/exceptionHandler.filter';
 
 @ApiTags('Account')
 @Controller({
@@ -16,6 +17,7 @@ export class RegisterController {
 
   @RequireTurnstile()
   @Post('register')
+  @UseFilters(ErrorHandlersFilter)
   @ApiHeader({
     name: 'x-turnstile-token',
     required: true,
@@ -29,12 +31,16 @@ export class RegisterController {
     @Body() request: RegisterModel,
     @Res() res: Response,
   ): Promise<Response> {
-    const result = await this.commandBus.execute(
-      new RegisterCommand({
-        model: request,
-      }),
-    );
+    try {
+      const result = await this.commandBus.execute(
+        new RegisterCommand({
+          model: request,
+        }),
+      );
 
-    return res.status(HttpStatus.CREATED).send(result);
+      return res.status(HttpStatus.CREATED).send(result);
+    } catch (error) {
+      throw error;
+    }
   }
 }

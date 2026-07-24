@@ -28,6 +28,9 @@ export class UserModel {
   @ApiProperty()
   photo: string;
 
+  @ApiProperty({ required: false, nullable: true })
+  accessToken?: string | null;
+
   constructor(partial?: Partial<UserModel>) {
     Object.assign(this, partial);
   }

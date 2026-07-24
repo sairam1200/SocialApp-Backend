@@ -25,3 +25,7 @@ export {
   PlaylistNotFoundException,
   PlaylistUpdateNotAllowedException,
 } from './playlist.exception';
+export {
+  InvalidEmailDomainException,
+  EmailDomainSuggestionException,
+} from './email.exception';

@@ -15,12 +15,13 @@ import { NotificationModel } from '../../../domain/contracts/notification.model'
 import { INotificationService } from '../../../domain/services/inotification.service';
 import logger from '../../../core/utils/winston.util';
 import { BaseGateway } from './base.gateway';
+import { CORS_ORIGINS } from '../../../core/configs/cors.config';
 
 @Injectable()
 @WebSocketGateway({
   namespace: '/notifications',
   cors: {
-    origin: '*',
+    origin: CORS_ORIGINS,
     credentials: true,
   },
 })

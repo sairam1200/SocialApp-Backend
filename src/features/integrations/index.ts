@@ -96,6 +96,8 @@ import { CancelYoutubeImportCommandHandler } from './youtube/import/cancel-youtu
 import { EnableYoutubeSyncCommandHandler } from './youtube/sync/enable-youtube-sync.handler';
 import { DisableYoutubeSyncCommandHandler } from './youtube/sync/disable-youtube-sync.handler';
 import { YoutubeWebhookController } from './youtube/webhook/youtube-webhook.endpoint';
+import { BrevoWebhookController } from './brevo/webhook/brevo-webhook.endpoint';
+import { BrevoWebhookHandler } from './brevo/webhook/brevo-webhook.handler';
 
 import { YoutubeUploadController } from './youtube/upload/youtube-upload.endpoint';
 import { YoutubeUploadCommandHandler } from './youtube/upload/youtube-upload.handler';
@@ -454,6 +456,7 @@ export { CancelYoutubeImportCommandHandler } from './youtube/import/cancel-youtu
 export { EnableYoutubeSyncCommandHandler } from './youtube/sync/enable-youtube-sync.handler';
 export { DisableYoutubeSyncCommandHandler } from './youtube/sync/disable-youtube-sync.handler';
 export { YoutubeWebhookController } from './youtube/webhook/youtube-webhook.endpoint';
+export { BrevoWebhookController } from './brevo/webhook/brevo-webhook.endpoint';
 export { YoutubeDisconnectController } from './youtube/disconnect/youtube-disconnect.endpoint';
 export { YoutubeDisconnectCommandHandler } from './youtube/disconnect/youtube-disconnect.handler';
 export { YoutubeUploadController } from './youtube/upload/youtube-upload.endpoint';
@@ -630,6 +633,7 @@ const controllers = [
   YoutubeContentsController,
   YoutubeImportController,
   YoutubeWebhookController,
+  BrevoWebhookController,
   YoutubeDisconnectController,
   YoutubeUploadController,
   YoutubeChunkUploadController,
@@ -752,6 +756,7 @@ const handlers = [
   YoutubeDisconnectCommandHandler,
   EnableYoutubeSyncCommandHandler,
   DisableYoutubeSyncCommandHandler,
+  BrevoWebhookHandler,
 
   YoutubeUploadCommandHandler,
   InitChunkUploadCommandHandler,

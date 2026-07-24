@@ -122,6 +122,7 @@ import { R2CleanupCron } from '../infrastructure/background/cron/jobs/r2-cleanup
     dependency.FacebookVideoAnalyticsRepository,
     dependency.FacebookAnalyticsService,
     dependency.ProjectRepository,
+    dependency.EmailBounceService,
     FacebookAnalyticsCron,
     R2CleanupCron,
     VideoCodecService,

@@ -3,13 +3,14 @@ import configs from '../../configs';
 import _const from '../../core/utils/const';
 import redis from '../../core/utils/redis.util';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository, SelectQueryBuilder } from 'typeorm';
+import { Like, Repository, SelectQueryBuilder, EntityManager } from 'typeorm';
 import { cryptoUtils } from '../../core/utils/crypto.util';
 import {
   User,
   UserClaim,
   UserRole,
   UserBiometric,
+  DataProtectionKey,
 } from '../../domain/entities';
 import { ProfileImagePrivacy, UserType } from '../../domain/enums';
 import { generateTimestampUUID } from '../../core/utils/time.util';
@@ -141,6 +142,35 @@ export class IdentityRepository implements IIdentityRepository {
     await redis.removeFromRedisAsync(key);
     // TODO: Handle proper delete
     await this.userContext.remove(user);
+  }
+
+  public async findByIdAsync(
+    id: string,
+    entityManager?: EntityManager,
+  ): Promise<User | null> {
+    const repo = entityManager
+      ? entityManager.getRepository(User)
+      : this.userContext;
+    return await repo.findOne({
+      where: { id },
+      relations: { biometrics: true },
+    });
+  }
+
+  public async deleteUnverifiedByIdAsync(
+    id: string,
+    entityManager?: EntityManager,
+  ): Promise<boolean> {
+    const repo = entityManager
+      ? entityManager.getRepository(User)
+      : this.userContext;
+    const result = await repo
+      .createQueryBuilder()
+      .delete()
+      .from(User)
+      .where('id = :id AND "emailConfirmed" = false', { id })
+      .execute();
+    return (result.affected ?? 0) > 0;
   }
 
   public async getUserByIdAsync(id: string): Promise<User | null> {
@@ -515,6 +545,53 @@ export class IdentityRepository implements IIdentityRepository {
       .execute();
 
     return result.affected || 0;
+  }
+
+  public async deleteUnverifiedUsersAsync(
+    expirationHours: number = 24,
+  ): Promise<number> {
+    const expirationDate = new Date();
+    expirationDate.setHours(expirationDate.getHours() - expirationHours);
+
+    const unverifiedUsers = await this.userContext.find({
+      where: {
+        emailConfirmed: false,
+      },
+      select: ['id'],
+    });
+
+    const expiredUserIds = unverifiedUsers
+      .filter((user) => new Date(user.createdOn) < expirationDate)
+      .map((user) => user.id);
+
+    if (expiredUserIds.length === 0) {
+      return 0;
+    }
+
+    let deletedCount = 0;
+
+    for (const userId of expiredUserIds) {
+      try {
+        await this.userContext.query(
+          'DELETE FROM "dataProtectionKeys" WHERE "userId" = $1',
+          [userId],
+        );
+
+        const user = await this.userContext.findOne({ where: { id: userId } });
+        if (user) {
+          const key = redis.getRedisKey<string>(
+            `${user.id}${_const.REDIS.USER.ACCOUNT}`,
+          );
+          await redis.removeFromRedisAsync(key);
+          await this.userContext.remove(user);
+          deletedCount++;
+        }
+      } catch (error) {
+        // Skip this user if deletion fails, continue with others
+      }
+    }
+
+    return deletedCount;
   }
 
   public async setEmailAsync(user: User, email: string): Promise<boolean> {

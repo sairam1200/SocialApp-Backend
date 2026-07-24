@@ -1,3 +1,4 @@
+import { EntityManager } from 'typeorm';
 import { DataProtectionKey } from '../../domain/entities/dataProtectionKey.entity';
 
 export interface IDataProtectionKeyRepository {
@@ -18,4 +19,8 @@ export interface IDataProtectionKeyRepository {
   ): Promise<DataProtectionKey>;
   updateAsync(dataProtectionKey: DataProtectionKey): Promise<void>;
   deleteAsync(dataProtectionKey: DataProtectionKey): Promise<void>;
+  deleteByUserIdAsync(
+    userId: string,
+    entityManager?: EntityManager,
+  ): Promise<void>;
 }

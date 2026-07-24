@@ -14,6 +14,7 @@ import { PublishJobRepository } from './repositories/publishJob.repository';
 import { YoutubeProvider } from './services/publishing/youtube/youtube.provider';
 import { PublishProviderRegistry } from './services/publishing/publish-provider.registry';
 import { OAuthService } from './services/publishing/oauth.service';
+import { EmailBounceService } from './services/email-bounce.service';
 
 import {
   AnalyticsRepository,
@@ -46,6 +47,7 @@ import {
 import {
   AnalyticsService,
   EmailService,
+  EmailValidationService,
   NotificationService,
   SearchService,
   SearchCacheService,
@@ -142,6 +144,10 @@ export const dependency = {
   EmailService: {
     provide: _const.IEMAIL_SERVICE,
     useClass: EmailService,
+  },
+  EmailValidationService: {
+    provide: _const.IEMAIL_VALIDATION_SERVICE,
+    useClass: EmailValidationService,
   },
   NotificationService: {
     provide: _const.INOTIFICATION_SERVICE,
@@ -287,5 +293,9 @@ export const dependency = {
       return [youtubeProvider];
     },
     inject: ['IYoutubePublishingProvider'],
+  },
+  EmailBounceService: {
+    provide: _const.IEMAIL_BOUNCE_SERVICE,
+    useClass: EmailBounceService,
   },
 };

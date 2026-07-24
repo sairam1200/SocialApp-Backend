@@ -49,6 +49,10 @@ export class EmailListener {
   async handleSendEmail(event: SendEmailEvent): Promise<void> {
     const { from, to, subject, html, attachments } = event.data;
 
+    logger.info(
+      `[EmailListener] CHECKPOINT 5: Received event to=${to} subject="${subject}"`,
+    );
+
     logger.info(`Sending email`, {
       from: from ?? Globals.Email.DefaultFrom,
       to,
@@ -57,13 +61,18 @@ export class EmailListener {
 
     try {
       await this.sendViaSMTP(from, to, subject, html, attachments);
-      logger.info(`Email sent successfully`, { to, subject });
+      logger.info(
+        `[EmailListener] CHECKPOINT 6a: Email sent successfully via SMTP to=${to}`,
+      );
     } catch (error) {
       logger.error(
         'Failed to send email via SMTP, trying Brevo fallback:',
         error,
       );
       await this.sendViaBrevoAPI(to, subject, html, attachments);
+      logger.info(
+        `[EmailListener] CHECKPOINT 6b: Email sent successfully via Brevo fallback to=${to}`,
+      );
     }
   }
 

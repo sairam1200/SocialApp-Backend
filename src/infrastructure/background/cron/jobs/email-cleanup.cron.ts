@@ -29,5 +29,19 @@ export class EmailCleanupCron {
     } catch (error) {
       logger.error('Error cleaning up expired email changes:', error);
     }
+
+    try {
+      const expirationHours = 24;
+      const deletedCount =
+        await this.userRepository.deleteUnverifiedUsersAsync(expirationHours);
+
+      if (deletedCount > 0) {
+        logger.info(
+          `Deleted ${deletedCount} unverified users older than ${expirationHours} hours.`,
+        );
+      }
+    } catch (error) {
+      logger.error('Error deleting unverified users:', error);
+    }
   }
 }

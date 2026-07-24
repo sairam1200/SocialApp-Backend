@@ -12,6 +12,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import logger from '../../../core/utils/winston.util';
 import { BaseGateway } from './base.gateway';
+import { CORS_ORIGINS } from '../../../core/configs/cors.config';
 
 export interface ImportContentPayload {
   platform?: string;
@@ -22,7 +23,7 @@ export interface ImportContentPayload {
 @WebSocketGateway({
   namespace: '/imports',
   cors: {
-    origin: '*',
+    origin: CORS_ORIGINS,
     credentials: true,
   },
 })

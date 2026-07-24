@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { CommandBus } from '@nestjs/cqrs';
 import { UpdateEmailCommand } from './update-email.handler';
 import { ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -8,6 +8,7 @@ import {
   HttpStatus,
   Patch,
   Query,
+  Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -29,9 +30,18 @@ export class UpdateEmailController {
   @ApiQuery({ name: 'email', required: true, type: String })
   public async Update(
     @Res() res: Response,
+    @Req() req: Request,
     @Query('email') email?: string,
   ): Promise<Response> {
-    await this.queryBus.execute(new UpdateEmailCommand({ email }));
+    const userAgent = req.headers['user-agent'] || '';
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string) ||
+      req.socket.remoteAddress ||
+      '';
+
+    await this.queryBus.execute(
+      new UpdateEmailCommand({ email, userAgent, ipAddress }),
+    );
     res.status(HttpStatus.NO_CONTENT).send({});
     return res;
   }

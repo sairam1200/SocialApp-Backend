@@ -21,6 +21,8 @@ export default {
 
   // Service Interfaces
   IEMAIL_SERVICE: 'IEmailService',
+  IEMAIL_VALIDATION_SERVICE: 'IEmailValidationService',
+  IEMAIL_BOUNCE_SERVICE: 'IEmailBounceService',
   ISEARCH_SERVICE: 'ISearchService',
   ITOKEN_SERVICE: 'ITokenService',
   IYOUTUBEWEBHOOK_SERVICE: 'IYoutubeWebhookService',

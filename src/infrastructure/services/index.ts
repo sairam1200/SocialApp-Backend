@@ -1,5 +1,6 @@
 export { DataSeeder } from './data.seeder';
 export { EmailService } from './email.service';
+export { EmailValidationService } from './email-validation.service';
 export { TokenService } from './token.service';
 export { SearchService } from './search.service';
 export { SearchCacheService } from './searchCache.service';

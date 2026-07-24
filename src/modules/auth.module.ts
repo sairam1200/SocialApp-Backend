@@ -52,8 +52,9 @@ import {
     dependency.UserLoginRepository,
     dependency.LinkedAccountRepository,
     dependency.DataProtectionKeyRepository,
+    dependency.EmailValidationService,
   ],
   controllers: [...authentication.addControllers()],
-  exports: [dependency.TokenService],
+  exports: [dependency.TokenService, dependency.EmailValidationService],
 })
 export class AuthModule {}

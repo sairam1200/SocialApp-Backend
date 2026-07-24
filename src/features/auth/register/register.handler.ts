@@ -10,13 +10,20 @@ import { IIdentityRepository } from '../../../domain/repositories';
 import { password } from '../../../core/utils/validation.util';
 import { UserModel } from '../../../domain/contracts/user.model';
 import { mapToUserModel } from '../../../domain/mappers/user.mapper';
-import { SendVerificationEmailCommand } from '../../../features/user';
 import { UserAlreadyExistsException } from '../../../core/exceptions';
 import { generateInitialImage } from '../../../core/utils/canvas.util';
 import { IEmailService } from '../../../domain/services/iemail.service';
 import { IAnalyticsService } from '../../../domain/services/ianalytics.service';
-import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { uploadBase64ToCloudinaryAsync } from '../../../core/utils/cloudinary.util';
+import { IDataProtectionKeyRepository } from '../../../domain/repositories/idataProtectionKey.repository';
+import { IEmailValidationService } from '../../../domain/services/iemail-validation.service';
+import { ITokenService } from '../../../domain/services/itoken.service';
+import { VerificationEmailService } from '../../../infrastructure/services/verification-email.service';
+import {
+  InvalidEmailDomainException,
+  EmailDomainSuggestionException,
+} from '../../../core/exceptions/email.exception';
 
 export class RegisterModel {
   @ApiProperty()
@@ -74,11 +81,17 @@ export class RegisterCommandHandler
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,
-    private readonly commandBus: CommandBus,
     @Inject(_const.IEMAIL_SERVICE)
     private readonly emailService: IEmailService,
     @Inject(_const.IANALYTICS_SERVICE)
     private readonly analyticsService: IAnalyticsService,
+    @Inject(_const.IEMAIL_VALIDATION_SERVICE)
+    private readonly emailValidationService: IEmailValidationService,
+    @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
+    private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
+    @Inject(_const.ITOKEN_SERVICE)
+    private readonly tokenService: ITokenService,
+    private readonly verificationEmailService: VerificationEmailService,
   ) {}
 
   public async execute(command: RegisterCommand): Promise<UserModel> {
@@ -86,6 +99,17 @@ export class RegisterCommandHandler
 
     await createUserValidations.validateAsync(model);
     model.email = stringUtil.normalizeEmail(model.email);
+
+    // Validate email domain (typo detection + MX records)
+    const emailValidation = await this.emailValidationService.validate(
+      model.email,
+    );
+    if (!emailValidation.valid) {
+      if (emailValidation.suggestion) {
+        throw new EmailDomainSuggestionException(emailValidation.suggestion);
+      }
+      throw new InvalidEmailDomainException(model.email.split('@')[1]);
+    }
 
     const existUser = await this.userRepository.getUserByEmailAsync(
       model.email,
@@ -98,34 +122,49 @@ export class RegisterCommandHandler
       `${model.firstName} ${model.lastName}`,
     );
     const base64Image = generateInitialImage(initials);
-
     const avatar = await uploadBase64ToCloudinaryAsync(base64Image, 'users');
 
-    const user = await this.userRepository.createAsync(
-      new User({
-        firstName: model.firstName.trim(),
-        lastName: model.lastName.trim(),
-        email: model.email.toLowerCase(),
-        phoneNumber: '',
-        type: UserType.User,
-        biometrics: new UserBiometric({
-          profileImageUrl: null,
-          defaultProfileImageUrl: avatar.secure_url,
-          privacy: ProfileImagePrivacy.Everyone,
+    let user: User;
+    try {
+      user = await this.userRepository.createAsync(
+        new User({
+          firstName: model.firstName.trim(),
+          lastName: model.lastName.trim(),
+          email: model.email.toLowerCase(),
+          phoneNumber: '',
+          type: UserType.User,
+          biometrics: new UserBiometric({
+            profileImageUrl: null,
+            defaultProfileImageUrl: avatar.secure_url,
+            privacy: ProfileImagePrivacy.Everyone,
+          }),
         }),
-      }),
-      model.password,
-    );
+        model.password,
+      );
 
-    await this.commandBus.execute(
-      new SendVerificationEmailCommand({
-        model: {
-          userAgent: model.userAgent,
-          ipAddress: model.ipAddress,
-          email: user.email,
-        },
-      }),
-    );
+      await this.verificationEmailService.sendVerificationEmail({
+        user,
+        targetEmail: user.email,
+        userAgent: model.userAgent,
+        ipAddress: model.ipAddress,
+        isEmailChange: false,
+        deliveryMode: 'sync',
+      });
+    } catch (error) {
+      if (user) {
+        try {
+          await this.dataProtectionKeyRepository.deleteByUserIdAsync(user.id);
+        } catch {
+          /* best-effort token cleanup */
+        }
+        try {
+          await this.userRepository.deleteAsync(user);
+        } catch {
+          /* best-effort user cleanup */
+        }
+      }
+      throw error;
+    }
 
     // Apply referral code if provided
     if (model.referralCode) {
@@ -154,7 +193,10 @@ export class RegisterCommandHandler
     );
 
     this.sendWelcomeEmail(user);
-    return mapToUserModel(user, true, avatar.secure_url);
+
+    const userModel = mapToUserModel(user, true, avatar.secure_url);
+    userModel.accessToken = await this.tokenService.generateJwtAsync(user);
+    return userModel;
   }
 
   private async sendWelcomeEmail(user: User): Promise<void> {

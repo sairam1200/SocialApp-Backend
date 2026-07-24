@@ -1,3 +1,4 @@
+import { EntityManager } from 'typeorm';
 import { User, UserClaim, UserRole, UserBiometric } from '../entities';
 import { ProfileImagePrivacy } from '../enums';
 
@@ -36,6 +37,15 @@ export interface IIdentityRepository {
   updateAsync(user: User): Promise<boolean>;
   createAsync(user: User, password: string): Promise<User>;
 
+  findByIdAsync(
+    id: string,
+    entityManager?: EntityManager,
+  ): Promise<User | null>;
+  deleteUnverifiedByIdAsync(
+    id: string,
+    entityManager?: EntityManager,
+  ): Promise<boolean>;
+
   getAsync(): Promise<User[]>;
   getUserByIdAsync(id: string): Promise<User | null>;
   getUserByGoogleIdAsync(googleId: string): Promise<User | null>;
@@ -48,6 +58,7 @@ export interface IIdentityRepository {
 
   isEmailInuseAsync(email: string): Promise<boolean>;
   cleanupExpiredEmailChangesAsync(expirationHours?: number): Promise<number>;
+  deleteUnverifiedUsersAsync(expirationHours?: number): Promise<number>;
 
   setEmailAsync(user: User, email: string): Promise<boolean>;
   changeEmailAsync(newEmail: string, token: string): Promise<boolean>;

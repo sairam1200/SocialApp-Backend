@@ -19,6 +19,13 @@ import { ApplicationException } from './application.exception';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+function getClientTitle(err: any, fallback: string): string {
+  if (typeof err.clientMessage === 'string') {
+    return err.clientMessage;
+  }
+  return fallback;
+}
+
 @Catch()
 export class ErrorHandlersFilter implements ExceptionFilter {
   public catch(err: any, host: ArgumentsHost): any {
@@ -26,31 +33,37 @@ export class ErrorHandlersFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
 
     if (err instanceof ApplicationException) {
+      const title = getClientTitle(err, err.message);
       const problem = new ProblemDocument({
         type: ApplicationException.name,
-        title: err.message,
+        title,
         detail: isProduction ? undefined : err.stack,
         status: err.statusCode || HttpStatus.BAD_REQUEST,
       });
 
-      response.status(err.statusCode || HttpStatus.BAD_REQUEST).json(problem);
+      Logger.error(
+        serializeObject({ ...problem, detail: err.stack, originalMessage: err.message }),
+      );
 
-      Logger.error(serializeObject(problem));
+      response.status(err.statusCode || HttpStatus.BAD_REQUEST).json(problem);
 
       return;
     }
 
     if (err instanceof BadRequestException) {
+      const title = getClientTitle(err, err.message);
       const problem = new ProblemDocument({
         type: err.name,
-        title: err.message,
+        title,
         detail: isProduction ? undefined : err.stack,
         status: err.getStatus(),
       });
 
-      response.status(HttpStatus.BAD_REQUEST).json(problem);
+      Logger.error(
+        serializeObject({ ...problem, detail: err.stack, originalMessage: err.message }),
+      );
 
-      Logger.error(serializeObject(problem));
+      response.status(HttpStatus.BAD_REQUEST).json(problem);
 
       return;
     }
@@ -63,9 +76,9 @@ export class ErrorHandlersFilter implements ExceptionFilter {
         status: err.getStatus(),
       });
 
-      response.status(HttpStatus.FORBIDDEN).json(problem);
-
       Logger.error(serializeObject(problem));
+
+      response.status(HttpStatus.FORBIDDEN).json(problem);
 
       return;
     }
@@ -78,9 +91,9 @@ export class ErrorHandlersFilter implements ExceptionFilter {
         status: err.getStatus(),
       });
 
-      response.status(HttpStatus.NOT_FOUND).json(problem);
-
       Logger.error(serializeObject(problem));
+
+      response.status(HttpStatus.NOT_FOUND).json(problem);
 
       return;
     }
@@ -93,9 +106,9 @@ export class ErrorHandlersFilter implements ExceptionFilter {
         status: err.getStatus(),
       });
 
-      response.status(HttpStatus.CONFLICT).json(problem);
-
       Logger.error(serializeObject(problem));
+
+      response.status(HttpStatus.CONFLICT).json(problem);
 
       return;
     }
@@ -108,9 +121,9 @@ export class ErrorHandlersFilter implements ExceptionFilter {
         status: err.getStatus(),
       });
 
-      response.status(err.getStatus()).json(problem);
-
       Logger.error(serializeObject(problem));
+
+      response.status(err.getStatus()).json(problem);
 
       return;
     }
@@ -123,9 +136,9 @@ export class ErrorHandlersFilter implements ExceptionFilter {
         status: HttpStatus.BAD_REQUEST,
       });
 
-      response.status(HttpStatus.BAD_REQUEST).json(problem);
-
       Logger.error(serializeObject(problem));
+
+      response.status(HttpStatus.BAD_REQUEST).json(problem);
 
       return;
     }
@@ -137,9 +150,9 @@ export class ErrorHandlersFilter implements ExceptionFilter {
       status: err.statusCode || 500,
     });
 
-    response.status(HttpStatus.INTERNAL_SERVER_ERROR).json(problem);
-
     Logger.error(serializeObject(problem));
+
+    response.status(HttpStatus.INTERNAL_SERVER_ERROR).json(problem);
 
     return;
   }
