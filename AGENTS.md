@@ -48,10 +48,21 @@ iterating until the reviewer reports no Critical or Major findings.
 **Planning work?** [`docs/roadmap/IMPLEMENTATION_PLAN.md`](docs/roadmap/IMPLEMENTATION_PLAN.md)
 has the sequenced plan and what is deliberately deferred.
 **Search returning nothing?** Check
-[`docs/integrations/STATUS.md`](docs/integrations/STATUS.md) before debugging code —
-several platform credentials are dead, and a 401 is silent by design. For how the
-whole chain was verified against the live YouTube API, and the four defects that
-found, see [`docs/integrations/END_TO_END_VERIFICATION.md`](docs/integrations/END_TO_END_VERIFICATION.md).
+[`docs/integrations/STATUS.md`](docs/integrations/STATUS.md) before debugging code. A
+platform whose credential is dead returns an empty array, not an error — by design, so
+one bad integration cannot fail the whole search. That means "no results" is far more
+often a credential than a bug. Two entries there are not credential problems at all:
+**Dribbble's v2 API has no search endpoint**, and **Behance has no public API** — its
+handler is a stub returning empty arrays, so debugging it is wasted time.
+
+Five platforms return real data today, and **four of them need no credential**: GitHub,
+Apple/iTunes, Openverse and Hacker News, plus YouTube on an API key. Verified end to end
+as one search: 41 real results in 1.15 s, persisted to `contentStreams`, served back
+through the read path in 0.46 s. See
+[`docs/integrations/END_TO_END_VERIFICATION.md`](docs/integrations/END_TO_END_VERIFICATION.md)
+for the trace and the defects it found. Adding another open source is a mapping function
+on top of `searchOpenSourceAsync`, not new infrastructure — skill
+`gaddr-platform-integration` has the template.
 
 ---
 
@@ -72,8 +83,12 @@ load-bearing — don't undo it:
   `securityStamp` from the database on a Redis cache miss, repopulates the cache, and
   rejects if neither can confirm. The ordering mattered: failing closed *without* the
   DB read would have logged out every user with a cold cache. Guards now take
-  `IIdentityRepository` as a second constructor argument — a new guard needs the same
-  wiring via `authGuard.module`.
+  `IIdentityRepository` as a second constructor argument, resolvable because
+  [`modules/identityAccess.module.ts`](src/modules/identityAccess.module.ts) is
+  **`@Global()`**. That is not a shortcut: Nest resolves a guard's dependencies in the
+  module where the guard is *used*, and these guards are applied across ~147 endpoints in
+  a dozen-plus modules. The alternative is re-registering the repository's whole
+  transitive graph in each one, which silently breaks the next module someone guards.
 - **C4, token encryption — closed.** `crypto.util.ts` emits authenticated
   **AES-256-GCM** with a per-message random IV, keyed by HKDF, formatted
   `v2:<iv>:<ciphertext>:<authTag>`. `decrypt()` still routes hex CBC values to
@@ -221,7 +236,7 @@ Individually:
 ```bash
 npx tsc -p tsconfig.json --noEmit   # must stay at 0 errors
 npx eslint src --ext .ts            # must stay at 0 errors
-npx jest                            # 136 tests, 8 suites
+npx jest                            # 177 tests, 9 suites
 npm run build
 ```
 
@@ -229,15 +244,40 @@ npm run build
 
 Two things to know:
 
-- **Lint has a warning budget, not a zero target.** 284 warnings remain (239
-  `no-unused-vars`). `scripts/ci.sh` fails if the count *rises*. Lower
-  `LINT_WARNING_BUDGET` as you clean up; never raise it. Errors always fail.
+- **Lint has a warning budget, not a zero target.** 276 warnings remain, mostly
+  `no-unused-vars`. `scripts/ci.sh` fails if the count *rises* — it fired once at 285 vs
+  284 over a single new `case` block. Lower `LINT_WARNING_BUDGET` as you clean up; never
+  raise it. Errors always fail.
 - **Adding a `.required()` env var to `src/configs.ts`?** Add it to
   `test/jest-setup-env.ts` too, or every suite fails at import with a Joi error
   that looks unrelated to your change. See skill `gaddr-testing`.
 
 Test coverage is concentrated on auth and search, where the audit found critical
 defects. Everything else is uncovered — if you touch it, you are the first.
+
+### A green gate is not evidence that the application runs
+
+Learn this from the C5 fix rather than by repeating it. Adding a constructor dependency
+to the account guards passed **typecheck and all 174 tests**, then failed at startup:
+
+```
+Nest can't resolve dependencies of the AccessLevelGuard (JwtService, ?).
+Please make sure that the argument "IIdentityRepository" at index [1] is available…
+```
+
+Neither gate could have caught it. `tsc` does not evaluate a DI graph, and the guard
+tests inject a stub repository directly — that is what makes them unit tests. **So after
+any change to a provider, module, guard, entity or DI token, boot the process:**
+
+```bash
+npm run build && node dist/main.js   # watch for "Nest can't resolve dependencies"
+```
+
+The same class of gap explains three other defects here: the `fuse.js` interop 500 (types
+fine, `dist/` wrong), the non-recursive entity glob (`Entity metadata … not found`), and
+`searchText` landing NULL on every row because a raw bulk INSERT names its columns
+explicitly and the entity default never ran. Typecheck, unit tests and a real process
+each see something the others cannot.
 
 ### CI/CD
 

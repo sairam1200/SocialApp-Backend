@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import configs from '../../configs';
 import { DataSource, DataSourceOptions } from 'typeorm';
@@ -80,12 +81,85 @@ const connection: Partial<DataSourceOptions> = configs.postgres.url
       database: configs.postgres.database,
     };
 
+/**
+ * Resolve a glob that is expressed relative to this compiled directory.
+ *
+ * `POSTGRES_ENTITIES` and `POSTGRES_MIGRATIONS` are optional in `configs.ts`, and the
+ * previous `__dirname + configs.postgres.migrations` concatenated `undefined` straight
+ * into the path when either was unset. The result is a directory that cannot exist
+ * (`…/persistenceundefined`), and the failure is **silent**: TypeORM finds zero
+ * migrations, creates the bookkeeping `migrations` table anyway, and the application
+ * reports a successful start against a completely empty database.
+ *
+ * That was observed on a fresh environment — 1 table where 42 were expected, and nothing
+ * in the log to say so. So the defaults live here rather than being required of every
+ * deployment, and an unset variable now yields a working database instead of an empty one.
+ *
+ * Both defaults are **recursive** on purpose. A non-recursive `*.entity.js` misses
+ * entities in subdirectories, and the symptom is a runtime
+ * `Entity metadata for UserFollow#follower was not found` rather than anything pointing
+ * at a glob.
+ */
+function resolveGlob(configured: string | undefined, fallback: string): string {
+  return path.resolve(__dirname + (configured ?? fallback));
+}
+
+const ENTITIES_GLOB = resolveGlob(
+  configs.postgres.entities,
+  '/../../domain/entities/**/*.entity.js',
+);
+const MIGRATIONS_GLOB = resolveGlob(
+  configs.postgres.migrations,
+  '/../migrations/*.js',
+);
+
+/**
+ * Fail fast when the migration glob matches nothing.
+ *
+ * A correct default fixes the *unset* case, but a wrong value fails the same silent way:
+ * zero migrations applied, a `migrations` table created, and a clean startup log over an
+ * empty database. The first symptom is then a confusing "relation does not exist" from
+ * whichever query happens to run first, arbitrarily far from the cause.
+ *
+ * Only checked when `migrationsRun` is on. When it is off, an empty glob is a legitimate
+ * configuration — someone is applying migrations out of band.
+ */
+function assertMigrationsDiscoverable(glob: string): void {
+  if (!configs.postgres.migrationsRun) return;
+
+  // Everything up to the first wildcard is a literal directory path.
+  const wildcardAt = glob.indexOf('*');
+  const literalPath = wildcardAt === -1 ? glob : glob.slice(0, wildcardAt);
+  const directory = path.dirname(literalPath);
+
+  let hasMigrations = false;
+  try {
+    hasMigrations = fs
+      .readdirSync(directory)
+      .some((entry) => entry.endsWith('.js'));
+  } catch {
+    // Unreadable or missing directory — treated the same as empty below.
+  }
+
+  if (!hasMigrations) {
+    throw new Error(
+      `POSTGRES_MIGRATIONS resolved to "${glob}", which contains no compiled ` +
+        `migrations. Starting with POSTGRES_MIGRATIONS_RUN=true would report success ` +
+        `against an empty database. Run "npm run build" first, or point ` +
+        `POSTGRES_MIGRATIONS at the compiled migrations directory ` +
+        `(default: /../migrations/*.js).`,
+    );
+  }
+}
+
+assertMigrationsDiscoverable(MIGRATIONS_GLOB);
+
 export const postgresOptions: DataSourceOptions = {
   type: 'postgres',
   ...connection,
   synchronize: configs.postgres.synchronize,
-  entities: [path.resolve(__dirname + configs.postgres.entities)],
-  migrations: [path.resolve(__dirname + configs.postgres.migrations)],
+  entities: [ENTITIES_GLOB],
+  migrations: [MIGRATIONS_GLOB],
   logging: configs.postgres.logging,
   migrationsRun: configs.postgres.migrationsRun,
   ssl: resolveSsl(),

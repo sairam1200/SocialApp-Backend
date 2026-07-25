@@ -191,12 +191,27 @@ will trip it, which is the limiter working.
 
 Stated plainly rather than implied:
 
-- **Only YouTube.** It is the one platform with working credentials. Pinterest returns
-  401, Reddit 403, Dribbble needs an authorisation-code flow, TikTok's
-  `client_credentials` token cannot search content. See [`STATUS.md`](STATUS.md).
-- **The frontend rendering these results.** The API contract is verified; no browser
-  test asserts the `aggregated` array reaches a rendered result card. Playwright
-  coverage is the next step.
+- **Seven of twelve platforms.** Five are verified end to end — YouTube on an API key,
+  plus GitHub, Apple/iTunes, Openverse and Hacker News needing **no credential at all**.
+  One search across all five returned 41 real results in 1.15 s, persisted per platform
+  (apple 9, github 8, hackernews 8, openverse 8, youtube 8), and served back through the
+  read path as `aggregated: 40` in 0.46 s.
+
+  What remains is not code. Pinterest fails with `1201: Two-factor authentication
+  required` — the app secret is **valid**, so the blocker is an interactive browser flow
+  its account owner must complete. Reddit returns 403 from datacenter IPs on three
+  separate endpoints even with their required UA format, and the API application was
+  **declined**. Twitter/X, LinkedIn and Meta need verification or app review. TikTok's
+  `client_credentials` token cannot search content by design.
+
+  Two are not credential problems and never will be: **Dribbble v2 has no search
+  endpoint**, and **Behance has no public API** — its handler is a stub returning empty
+  arrays. See [`STATUS.md`](STATUS.md).
+- **~~The frontend rendering these results.~~ Now covered.** `e2e/search-aggregated.spec.ts`
+  in the frontend repo asserts the `aggregated` array reaches a rendered card — 12 tests
+  across desktop Chrome and a Pixel 7, against a production build. It exists because unit
+  tests on both sides were green while results were persisted, returned, and never
+  rendered.
 - **Against production data volumes.** 11 rows is a functional proof, not a
   performance one. `contentStreams` search uses `ILIKE` plus a `json_each_text` scan
   over `metaData`, which will not hold up at scale — full-text search or a trigram

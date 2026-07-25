@@ -16,7 +16,7 @@ Start from [`../AGENTS.md`](../AGENTS.md) if you are an AI agent.
 | [`audit/2026-07_Security_And_Correctness_Audit.md`](audit/2026-07_Security_And_Correctness_Audit.md) | **Read before touching auth, crypto or permissions.** Verified findings, remediation status, and settled non-issues |
 | [`roadmap/IMPLEMENTATION_PLAN.md`](roadmap/IMPLEMENTATION_PLAN.md) | **Where the platform is and what to build next.** Sequenced phases, what is deliberately deferred and why, plus the legal questions needing professional review |
 | [`integrations/STATUS.md`](integrations/STATUS.md) | **Which platform credentials actually work**, verified by live API call. Check this before debugging "search returns nothing" |
-| [`integrations/END_TO_END_VERIFICATION.md`](integrations/END_TO_END_VERIFICATION.md) | A real run of the full search chain — live YouTube API → Postgres → user-facing endpoint — with the four defects it exposed and how to reproduce it |
+| [`integrations/END_TO_END_VERIFICATION.md`](integrations/END_TO_END_VERIFICATION.md) | A real run of the full search chain — five live platform APIs → Postgres → user-facing endpoint — with the five defects it exposed and how to reproduce it |
 
 ## 1b. Skills and sub-agents
 
@@ -151,13 +151,16 @@ stated product mandate".
 
 | Gap | State |
 |---|---|
-| Test coverage | **136 tests, 8 suites**, all passing (was 0). Concentrated on auth and search — the areas with critical findings. Everything else is uncovered. No suite here starts a real server, so backend end-to-end verification is still manual; see `integrations/END_TO_END_VERIFICATION.md`. |
+| Test coverage | **177 tests, 9 suites**, all passing (was 0). Concentrated on auth and search — the areas with critical findings. Everything else is uncovered. No suite here starts a real server, so backend end-to-end verification is still manual; see `integrations/END_TO_END_VERIFICATION.md`. |
 | Request validation | No global `ValidationPipe`; `class-validator` not installed. Joi is used per-handler and for env config. |
 | Rate limiting | ✅ Search is limited by `searchRateLimit.guard.ts` using atomic Redis `INCR`, per user when authenticated and per client IP otherwise, with a bounded per-instance fallback when Redis is down. `trust proxy` is set, so `req.ip` is correct. **Outstanding:** the older `RateLimitMiddleware` still covers only 4 auth routes via a non-atomic DB read-then-write. |
 | Security headers | No `helmet`; no CSP, HSTS, or frame options. This is what makes the frontend's `localStorage` token exposure (H3) exploitable. |
-| Session revocation | ✅ **Closed (C5).** Cache miss now falls back to the database, repopulates, and fails closed. Guards take `IIdentityRepository`; wire new ones through `authGuard.module`. |
+| Session revocation | ✅ **Closed (C5).** Cache miss now falls back to the database, repopulates, and fails closed. Guards take `IIdentityRepository`, resolvable because `modules/identityAccess.module.ts` is `@Global()` — Nest resolves a guard's dependencies where the guard is *used*, and these cover ~147 endpoints across a dozen-plus modules. |
 | Token encryption | ✅ **Closed (C4).** AES-256-GCM, per-message random IV, HKDF-derived key, `v2:` format, with dual-read so stored CBC values stay readable. **Outstanding:** `ENCRYPTION_KEY` rotation (needs production access) and removal of the legacy branch once legacy reads reach zero. |
+| Redis client | ✅ **Fixed.** `ioredis` is now a declared dependency; it was imported while arriving only transitively via BullMQ. The unused `redis` (node-redis v4) and `@types/redis` are removed. They were a live trap, not clutter: node-redis silently *ignores* ioredis's positional `set(k, v, 'EX', ttl, 'NX')` — measured as NX not honoured (lock not exclusive) and TTL `-1` (key never expires). |
+| Fresh-environment boot | ✅ **Fixed.** `POSTGRES_ENTITIES` and `POSTGRES_MIGRATIONS` are optional in `configs.ts`, and `data.source.ts` concatenated `undefined` into the path when unset — TypeORM then found zero migrations, created the bookkeeping table, and reported a **successful start against an empty database** (1 table where 42 were expected, nothing in the log). Both globs now default correctly, and an unresolvable migration glob throws instead of booting. Verified: a fresh database reaches 42 tables and 53 migrations with neither variable set. |
 | Payments / KYC | Nothing built. Both land on the auth layer — settle the open C-series findings first. |
-| Platform credentials | Only YouTube verified working, and it allows ~100 searches/day. See [`integrations/STATUS.md`](integrations/STATUS.md). |
+| Result attribution | ✅ **Fixed.** `renderPlatformIcon` in the frontend returned `null` for any platform without a bundled brand SVG — four of the five that actually return data. Results rendered with no indication of their source, which for an aggregation product reads as Gaddr's own content. Now a monogram badge plus a full source name in the card footer, so a newly added platform is attributed with no UI change. Openverse licence and creator now travel the whole chain: an unattributed CC-BY image is a licence breach, not a cosmetic gap. |
+| Platform credentials | **Five platforms verified end to end**, four needing no credential (GitHub, Apple, Openverse, Hacker News) plus YouTube on an API key. YouTube's ~100 searches/day quota is the binding limit on the one keyed source. Seven remain blocked on their owners' portals, 2FA or app review; Dribbble and Behance have no search API at all. See [`integrations/STATUS.md`](integrations/STATUS.md). |
 
 Full sequencing in [`roadmap/IMPLEMENTATION_PLAN.md`](roadmap/IMPLEMENTATION_PLAN.md).

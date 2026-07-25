@@ -40,7 +40,28 @@ Does it do what it claims? Walk the unhappy paths: null, empty array, missing fi
 concurrent callers, an API returning 429 or 500. Off-by-one in pagination. Timezone
 and `Date` handling.
 
-**2. Security**
+**2. Wiring — the process must still start**
+The gate cannot answer this, so you must. Flag any diff that adds a constructor
+dependency to a guard, adds or moves a provider, changes a module's `imports`/`exports`,
+adds an entity, or renames a DI token — and say explicitly that
+`npm run build && node dist/main.js` is required before merge. This is not pedantry: the
+C5 fix passed typecheck and 174 tests and left the application unbootable, because Nest
+resolves a guard's dependencies in the module where the guard is *used*. A guard applied
+across many modules needs a `@Global()` provider; see `identityAccess.module.ts`.
+
+Also check the compiled output, not just the types, for any new third-party import.
+`allowSyntheticDefaultImports` is on and `esModuleInterop` is **off**, so a default
+import of an `export =` package typechecks cleanly and emits `undefined` — that is
+exactly how `fuse.js` produced 500s on every global search.
+
+Then the wider question, since every defect that got through this repo was a gap
+*between* correct units: **does the write path have a corresponding read path, and is it
+exercised?** Persisting data nothing reads back is the exact bug that hid in search for
+months. Two variants worth naming: a raw bulk INSERT silently bypasses entity defaults
+(`searchText` landed NULL on every row that way), and a column added to an entity without
+a migration is invisible everywhere `synchronize` has not run.
+
+**3. Security**
 - Guard present on every new endpoint? A missing `@UseGuards` is silent.
 - New guards built via `createAccountGuard`? Reading `HttpContext.user` directly
   bypasses expiry enforcement.
@@ -59,7 +80,7 @@ and `Date` handling.
   reference: database read, repopulate, then reject. A bare inversion that logs out
   every cold-cache user is not a fix.
 
-**3. Architecture**
+**4. Architecture**
 - Dependency direction: `features → domain → infrastructure`. A feature importing a
   concrete infrastructure class is a violation.
 - Resolved through a DI token, not `new`?
@@ -67,7 +88,7 @@ and `Date` handling.
   already; the answer to "should we add another way to do X" is almost always no.
 - Is logic in the handler, with the endpoint kept thin?
 
-**4. Performance and resources**
+**5. Performance and resources**
 - N+1 queries — especially `Promise.all` over a `map` that queries per item.
 - New query without a supporting index.
 - Unbounded memory: reading a whole table, buffering a file. 512 MB cap.
@@ -78,7 +99,7 @@ and `Date` handling.
 - Third-party quota: does this increase API fan-out? YouTube allows ~100
   searches/day.
 
-**5. Migrations and schema**
+**6. Migrations and schema**
 - New table or column: is there a **migration**, not just an entity? An entity alone is
   invisible outside whatever environment `synchronize` last touched. Six tables reached
   production that way and left the chain unable to rebuild the database.
@@ -91,11 +112,6 @@ and `Date` handling.
   cannot use a btree index, and JSON-column scans are full table scans.
 - Is a real invariant enforced only in application code? Uniqueness belongs in a
   `UNIQUE` index, or concurrent writers race past it.
-
-**6. Wiring, not just units**
-The defects that got through here were all gaps *between* correct units. Ask: does the
-write path have a corresponding read path, and is it exercised? Persisting data that
-nothing reads back is the exact bug that hid in search for months.
 
 **7. Tests**
 - Is the changed behaviour pinned by a test? Security fixes especially.

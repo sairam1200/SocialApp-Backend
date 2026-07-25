@@ -1,7 +1,13 @@
 import { ContentStream } from '../../domain/entities/contentStream.entity';
 import { AggregatedSearchResult, __testables } from './database-search.handler';
 
-const { toAggregatedResult, buildSourceUrl, extractThumbnail } = __testables;
+const {
+  toAggregatedResult,
+  buildSourceUrl,
+  extractThumbnail,
+  extractCreator,
+  extractLicense,
+} = __testables;
 
 /**
  * Tests for the aggregated cross-platform search projection.
@@ -217,6 +223,8 @@ describe('toAggregatedResult', () => {
         'externalId',
         'id',
         'lastRefreshed',
+        'creator',
+        'license',
         'platform',
         'subType',
         'thumbnailUrl',
@@ -240,5 +248,93 @@ describe('toAggregatedResult', () => {
   it('keeps lastRefreshed so staleness is visible to the client', () => {
     const result = toAggregatedResult(stream());
     expect(result.lastRefreshed).toEqual(new Date('2026-07-25T12:00:00Z'));
+  });
+});
+
+/**
+ * Attribution and licence.
+ *
+ * These reach the client because Openverse's value is media a user can *prove* they may
+ * reuse. A licence that lands in the database and stops there is worth nothing — an image
+ * rendered without its attribution is a licence breach, so this is compliance, not
+ * decoration.
+ */
+describe('extractCreator', () => {
+  it('reads the field each platform actually persists', () => {
+    // Verified against real rows in contentStreams, not against the upstream API shapes.
+    // The mappers rename things: GitHub flattens owner.login to a plain string, and the
+    // Apple mapper writes `artist`. Reading owner.login alone returned null for every
+    // GitHub row.
+    expect(extractCreator({ creator: 'Jonas Bergman' })).toBe('Jonas Bergman'); // openverse
+    expect(extractCreator({ author: 'fellowshipofone' })).toBe(
+      'fellowshipofone',
+    ); // hackernews
+    expect(extractCreator({ channelTitle: 'Kanal 5' })).toBe('Kanal 5'); // youtube
+    expect(extractCreator({ owner: 'alvarorgaz' })).toBe('alvarorgaz'); // github, flattened
+    expect(extractCreator({ artist: 'Mikael Askergren' })).toBe(
+      'Mikael Askergren',
+    ); // apple
+  });
+
+  it('still reads a nested owner, so re-nesting the GitHub mapper cannot regress it', () => {
+    expect(extractCreator({ owner: { login: 'octocat' } })).toBe('octocat');
+  });
+
+  it('trims, because a padded name breaks layout rather than logic', () => {
+    expect(extractCreator({ creator: '  Ada Lovelace \n' })).toBe(
+      'Ada Lovelace',
+    );
+  });
+
+  it('returns null rather than an empty or non-string name', () => {
+    // A blank creator must not render as an empty "by " prefix.
+    expect(extractCreator({ creator: '   ' })).toBeNull();
+    expect(extractCreator({ creator: 12345 } as never)).toBeNull();
+    expect(extractCreator(null)).toBeNull();
+    expect(extractCreator({})).toBeNull();
+  });
+});
+
+describe('extractLicense', () => {
+  it('carries code, version and deed URL through from Openverse', () => {
+    expect(
+      extractLicense({
+        license: 'by-sa',
+        licenseVersion: '4.0',
+        licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+      }),
+    ).toEqual({
+      code: 'by-sa',
+      version: '4.0',
+      url: 'https://creativecommons.org/licenses/by-sa/4.0/',
+    });
+  });
+
+  it('normalises the code so a badge lookup does not miss on case', () => {
+    expect(extractLicense({ license: 'CC0' })?.code).toBe('cc0');
+  });
+
+  it('surfaces a code with no version, because attribution is still required', () => {
+    // 'by' alone already tells the user they must attribute. Withholding the badge until
+    // a version arrives would hide the obligation.
+    expect(extractLicense({ license: 'by' })).toEqual({
+      code: 'by',
+      version: null,
+      url: null,
+    });
+  });
+
+  it('returns null when the source states no terms', () => {
+    // Absent terms are NOT permissive terms. Every platform except Openverse lands here,
+    // and the UI must show nothing rather than imply reuse is allowed.
+    expect(extractLicense({ description: 'A cat' })).toBeNull();
+    expect(extractLicense({ license: '' })).toBeNull();
+    expect(extractLicense({ license: '  ' })).toBeNull();
+    expect(extractLicense(null)).toBeNull();
+  });
+
+  it('rejects a non-string code instead of rendering "undefined"', () => {
+    expect(extractLicense({ license: { id: 4 } } as never)).toBeNull();
+    expect(extractLicense({ license: 7 } as never)).toBeNull();
   });
 });

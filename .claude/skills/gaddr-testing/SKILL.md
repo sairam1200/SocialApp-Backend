@@ -42,7 +42,7 @@ its own `gaddr-frontend-testing` skill; use that when working there, not this on
 
 ## What is covered
 
-**Backend: 136 tests, 8 suites**, all passing. Concentrated on auth and search,
+**Backend: 177 tests, 9 suites**, all passing. Concentrated on auth and search,
 because that is where the audit found critical defects:
 
 | Suite | Pins |
@@ -54,10 +54,22 @@ because that is where the audit found critical defects:
 | `database-search.handler.spec.ts` | The aggregated projection. Mostly `buildSourceUrl`, because a wrong URL still renders a card and just 404s. |
 | `limitAllocator.util.spec.ts` | Result-limit conservation, exhaustive over all 15 skip combinations. |
 | `fuse.util.spec.ts` | Query normalisation — the search cache key. |
-| `const.spec.ts` | DI token and platform-constant integrity — a duplicated or renamed token fails resolution at boot, not at compile time. |
+| `const.spec.ts` | DI token and platform-constant integrity — a duplicated or renamed token fails resolution at boot, not at compile time. Also pins `SEARCHABLE_PLATFORMS` in both directions, and pins the four credential-free platforms into the fan-out. |
+| `search.handler.spec.ts` | 35 tests, parameterised over every platform. The fan-out: one platform failing must not fail the search, counting must be per-platform, and every dispatch case must reach its service method. |
 
 Counts move. Re-measure with `npx jest` rather than trusting this paragraph, and
 update it when it changes.
+
+**ESM-only dependencies will break a suite that never imports them directly.** `nanoid`
+v5, `uuid` v14 and `fuse.js` are all ESM or `export =`. Production tolerates this (Node
+22+ can `require()` ESM); Jest's CJS transform does not. Importing the entity barrel
+`domain/entities` pulls in `uuid` transitively and the suite dies before your first
+assertion. Prefer stubbing the barrel in that one spec over growing
+`transformIgnorePatterns`, which slows every suite to fix one:
+
+```ts
+jest.mock('../../domain/entities', () => ({ ContentStream: class {} }));
+```
 
 **Frontend: 52 Vitest tests** (3 files — locale registry, content normaliser,
 colour-scheme provider) **and 12 Playwright tests** (6 cases in
@@ -81,8 +93,8 @@ is currently something you do by hand.
 
 ## Unit tests are not enough — run the thing
 
-Every unit test in this repo passed while four defects made the core product not work.
-All four were found by starting a real server against a real Postgres and a real API,
+Every unit test in this repo passed while five defects made the core product not work.
+All five were found by starting a real server against a real Postgres and a real API,
 and none was visible from reading code or from green unit tests:
 
 1. Aggregated results were persisted and never read back — the read path had zero
@@ -91,9 +103,32 @@ and none was visible from reading code or from green unit tests:
 3. `data.source.ts` discarded five connection variables and hardcoded TLS, so
    `POSTGRES_*` and `POSTGRES_SSL_REJECTUNAUTHORIZED` did nothing.
 4. `fuse.js` was imported in a way that compiled to `undefined` at runtime.
+5. The C5 guard fix made the application **unbootable**. Typecheck passed; 174 tests
+   passed; `node dist/main.js` died with
+   `Nest can't resolve dependencies of the AccessLevelGuard (JwtService, ?)`.
 
 The common shape: **each was a gap *between* correctly-written units.** Unit tests
 verify the pieces; only execution verifies the wiring.
+
+Number 5 is the one to internalise, because it is the cheapest to check and the easiest
+to cause. `tsc` cannot evaluate a DI graph, and a guard unit test *by definition* injects
+a stub rather than resolving the real provider — so both gates are structurally blind to
+it. **After touching a provider, module, guard, entity or DI token, boot the process:**
+
+```bash
+npm run build && node dist/main.js   # grep the output for "can't resolve dependencies"
+```
+
+Nest resolves a guard's dependencies in the module where the guard is *used*, not where
+it is declared. A guard applied across a dozen modules therefore needs its dependency
+available in all of them — which is why `IdentityAccessModule` is `@Global()`.
+
+A subtler variant, worth knowing before it costs an hour: a **raw bulk INSERT bypasses
+entity defaults**. `searchText` was derived in the `ContentStream` constructor and landed
+NULL on every row, because `general.repository.createAsync` builds a
+`jsonb_to_recordset` INSERT with an explicit column list. Nothing in the entity or its
+tests was wrong. If a column has a computed default, grep for raw SQL that writes that
+table before trusting it.
 
 The frontend reached the same conclusion independently and acted on it: its
 `e2e/search-aggregated.spec.ts` exists because unit tests on **both** sides were green

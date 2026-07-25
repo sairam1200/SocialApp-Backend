@@ -44,6 +44,41 @@ The same shape applies to rate limiting: `searchRateLimit.guard.ts` counts atomi
 with Redis `INCR` and drops to a **bounded per-instance** counter when Redis is
 unavailable — degraded, still enforcing, never unlimited.
 
+## The client is ioredis, not node-redis — this one silently corrupts writes
+
+`core/utils/redis.util.ts` imports **`ioredis`**. Its call style is positional:
+
+```ts
+await instance.set(key, value, 'EX', duration);            // TTL
+await instance.set(lockKey, stamp, 'EX', ttl, 'NX');       // lock
+```
+
+`package.json` used to declare **`redis`** (node-redis v4) and *not* `ioredis` — the
+latter arrived only transitively through BullMQ, Bull and TypeORM. Both halves of that
+were wrong, and the combination is a trap rather than untidiness:
+
+- **The declared library was never imported.** Anyone who reasonably reaches for the
+  dependency package.json advertises writes node-redis code.
+- **node-redis accepts the positional form and silently ignores it.** Not an error — a
+  wrong success. Measured against a live server:
+
+  ```
+  node-redis:  set(k,v,'EX',30,'NX') twice -> "OK", "OK"   NX ignored, TTL -1
+  ioredis:     set(k,v,'EX',30,'NX') twice -> "OK", null   NX honoured, TTL 30
+  ```
+
+  So on node-redis the distributed lock is **not a lock** — every concurrent caller
+  believes it acquired it, which is precisely the thundering herd the lock exists to
+  prevent, against a YouTube key good for ~100 searches a day. And the key **never
+  expires**, so it leaks permanently inside a 30 MB budget.
+
+`ioredis` is now declared explicitly and the unused `redis`/`@types/redis` pair is gone.
+Keep it that way, and if you ever see `from 'redis'` in a diff, treat it as a defect: the
+code will look right, typecheck, run, and quietly do neither of the things it says.
+
+Worth generalising — an undeclared transitive dependency is a stability risk on its own.
+The code imported `ioredis` while depending on BullMQ to keep providing it.
+
 ## Key discipline
 
 - Naming: `gaddr:<domain>:<id>`. Helpers in `core/utils/redis.util.ts`.

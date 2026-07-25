@@ -8,18 +8,41 @@ when_to_use: Trigger phrases include "add a platform", "connect YouTube", "searc
 
 ## Credential reality, verified 2026-07-25
 
-Test before building. Half the configured credentials do not work, and a platform
-that silently returns nothing looks identical to a code bug.
+**Test before assuming.** This table exists because two platforms were sitting in the
+"blocked" bucket while actually needing no credential at all — GitHub was labelled
+"link-only, not searchable" without ever being tried. Never inherit a status; re-probe it.
 
-| Platform | State | Note |
+### Working today — five platforms, four needing no credential
+
+| Platform | Credential | Covers |
 |---|---|---|
-| **YouTube** | ✅ Works | API key valid; public search needs no user token. Quota: 10,000 units/day, and `search.list` costs **100 units** — roughly 100 searches/day. |
-| **TikTok** | ✅ Token issues | `client_credentials` returns a token, but it only opens a narrow endpoint set. Content search needs a **user-authorised** token. |
-| **Pinterest** | ❌ 401 | Access token dead/expired. Needs re-authorisation. |
-| **Dribbble** | ⚠️ Needs user OAuth | `client_credentials` is unsupported; requires the authorisation-code flow. |
-| **Reddit** | ❌ 403 | Public JSON endpoints block datacenter IPs. Needs OAuth, and direct API access was refused. |
-| Twitter/X | Not verified | Requires email + phone verification on the developer account. |
-| LinkedIn | Blocked | Developer portal inaccessible. |
+| **YouTube** | API key | Video. Quota is the real limit: 10,000 units/day and `search.list` costs **100**, so ~100 searches/day |
+| **GitHub** | **none** | Code, developers. 10 req/min unauthenticated, 60/hr with a PAT |
+| **Apple / iTunes** | **none** | Music, podcasts, audiobooks, video |
+| **Openverse** | **none** | Openly-licensed imagery — the brief's royalty-free asset ask |
+| **Hacker News** | **none** | News, trending technical discussion |
+
+Verified end-to-end: one search across all five returns **41 real results in 1.15 s**,
+persisted to `contentStreams` and served back through the read path in 0.46 s.
+
+### Credential-gated — the blocker is not code
+
+| Platform | State | Blocker |
+|---|---|---|
+| **TikTok** | ⚠️ Token issues | `client_credentials` works but cannot search content — needs a **user-authorised** token, by TikTok's design |
+| **Pinterest** | ❌ Blocked | `1201: Two-factor authentication required`. The app secret is **valid**; Pinterest challenges the *account*. Token minting cannot be scripted — the owner must complete OAuth in a browser |
+| **Reddit** | ❌ Blocked | 403 from datacenter IPs on `www`, `old.reddit` and subreddit listings, retested with Reddit's required UA format. API access was **declined** |
+| Twitter/X | ⛔ | Developer account needs email + phone verification, then a paid tier |
+| LinkedIn | ⛔ | Developer portal inaccessible |
+| Meta (FB/IG/Threads) | ⛔ | App review required for useful scopes |
+| Spotify | ⛔ not configured | **Cheapest remaining win** — `client_credentials` suffices for catalogue search, so ~30 minutes end to end |
+
+### Not credential problems — these will never be search integrations
+
+- **Dribbble** — v2 API has **no search endpoint**. Only authenticated reads of the
+  signed-in user's own shots. Reframe as a connected-account import or drop it.
+- **Behance** — no public API. `searchBehanceAsync` is a **stub returning empty arrays**.
+  Worth knowing before debugging "why does Behance return nothing".
 
 Re-verify with a single curl before assuming a platform is broken in code:
 
@@ -88,12 +111,61 @@ This is the pattern to preserve: **the database is the read model, the API is th
 refresh mechanism.** Results are persisted so subsequent searches are served
 locally rather than burning quota.
 
+## Adding a credential-free source — use the shared helper
+
+`searchOpenSourceAsync` in `search.service.ts` carries the whole
+cache → fetch → persist → cache shape once. Apple, Openverse and Hacker News are three
+small mapping functions on top of it, because the read path, dedup and persistence were
+already per-platform. Adding another open source is a mapper, not new infrastructure:
+
+```ts
+public async searchFooAsync(params: PlatformSearchParamsModel): Promise<any> {
+  return this.searchOpenSourceAsync(
+    _const.PLATFORMS.FOO,
+    params,
+    async (term, perPage, page) => {
+      const { data } = await axios.get('https://api.example.com/search', {
+        params: { q: term, per_page: perPage, page },
+        timeout: 8000,
+      });
+      const items = (data?.results ?? []).map((r: any) => new ContentStream({
+        type: StreamEntityType.Content,
+        subType: 'thing',
+        title: r.title ?? '',
+        platform: _const.PLATFORMS.FOO,
+        externalId: String(r.id ?? ''),
+        // externalUrl and thumbnailUrl are what the read path reads — see below.
+        metaData: { description: r.description, externalUrl: r.url, thumbnailUrl: r.image },
+        lastRefreshed: new Date(),
+      }));
+      return { items, raw: data?.results ?? [] };
+    },
+  );
+}
+```
+
+Things that bit while doing this three times:
+
+- **Opaque ids need `metaData.externalUrl`.** GitHub, Apple, Openverse and HN all use ids
+  you cannot build a URL from, so `buildSourceUrl` returns `null` for them and the read
+  path uses the stored landing URL. Better an absent link than a fabricated 404.
+- **Check the page index base.** Algolia is zero-indexed; GitHub and Openverse are one-
+  indexed. Getting it wrong silently returns page 2 as page 1.
+- **Persisting matters more here**, not less: it is what stops an unauthenticated rate
+  limit becoming the binding constraint on repeat searches.
+- **Keep licence fields.** Openverse rows carry `license`, `licenseVersion`, `licenseUrl`.
+  That is the entire reason to prefer that source over scraping — dropping them defeats it.
+
 ## Adding a platform
 
 1. **Config** — add `<PLATFORM>_CLIENT_ID`, `_CLIENT_SECRET`, `_CALLBACK_URL` to
    `src/configs.ts` and the exported config object. Secrets get no default.
-2. **Constant** — add to `_const.PLATFORMS` in `core/utils/const.ts`. `allPlatforms`
-   in the search handler derives from it, so search picks it up automatically.
+2. **Constants** — add to `_const.PLATFORMS`, **and** to `_const.SEARCHABLE_PLATFORMS`.
+   Two lists on purpose: `PLATFORMS` also covers identity linking and holds entries with
+   no search implementation (twitch, discord). The fan-out reads `SEARCHABLE_PLATFORMS`,
+   because deriving it from `PLATFORMS` meant every search returned
+   `Unsupported platform: …` for those. `const.spec.ts` guards both directions — nothing
+   dispatched without an implementation, nothing implemented left out of the fan-out.
 3. **Contracts** — response model in `domain/contracts/`.
 4. **Search method** — `search<Platform>Async` on `ISearchService`, following the
    cache → DB → lock → fetch → persist shape above. Copy
