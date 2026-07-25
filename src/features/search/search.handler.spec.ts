@@ -58,6 +58,7 @@ const PLATFORM_METHODS: Array<{ platform: string; method: string }> = [
   { platform: _const.PLATFORMS.TWITTER, method: 'searchTwitterAsync' },
   { platform: _const.PLATFORMS.LINKEDIN, method: 'searchLinkedInAsync' },
   { platform: _const.PLATFORMS.YOUTUBE, method: 'searchYoutubeAsync' },
+  { platform: _const.PLATFORMS.GITHUB, method: 'searchGithubAsync' },
   { platform: _const.PLATFORMS.SPOTIFY, method: 'searchSpotifyAsync' },
   { platform: _const.PLATFORMS.REDDIT, method: 'searchRedditAsync' },
   { platform: _const.PLATFORMS.PINTEREST, method: 'searchPinterestAsync' },
@@ -196,14 +197,16 @@ describe('GlobalSearchQueryHandler', () => {
     });
 
     it('does not dispatch to link-only platforms', async () => {
-      // twitch, github and discord are in PLATFORMS for account linking but have no
-      // search implementation. Including them produced "Unsupported platform" entries
-      // in every response.
+      // twitch and discord are in PLATFORMS for account linking but have no search
+      // implementation. Including them produced "Unsupported platform" entries in every
+      // response.
       const { handler } = makeHandler();
 
       const response = await handler.execute(query({ searchTerm: 'design' }));
 
-      for (const platform of ['twitch', 'github', 'discord']) {
+      // github is deliberately absent here — it became searchable once its
+      // credential-free API was wired up.
+      for (const platform of ['twitch', 'discord']) {
         expect(response.results[platform]).toBeUndefined();
       }
     });

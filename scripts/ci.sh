@@ -71,7 +71,7 @@ fi
 #
 # So: errors always fail, and warnings fail only if they INCREASE past this
 # number. Lower it whenever you clean some up — never raise it.
-LINT_WARNING_BUDGET=284
+LINT_WARNING_BUDGET=276
 
 lint_step() {
   STEP_NUM=$((STEP_NUM + 1))

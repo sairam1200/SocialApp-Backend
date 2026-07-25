@@ -61,15 +61,22 @@ describe('SEARCHABLE_PLATFORMS', () => {
   });
 
   it('excludes the platforms that exist only for identity linking', () => {
-    // twitch, github and discord are legitimate PLATFORMS entries — users link those
-    // accounts — but there is no search API integration for any of them.
+    // twitch and discord are legitimate PLATFORMS entries — users link those accounts —
+    // but neither has a search API integration.
+    //
+    // GitHub used to be in this list and no longer is: its search API needs no
+    // credential at all, so it was the cheapest real integration available while sitting
+    // in the "blocked" bucket.
     for (const platform of [
       _const.PLATFORMS.TWITCH,
-      _const.PLATFORMS.GITHUB,
       _const.PLATFORMS.DISCORD,
     ]) {
       expect(_const.SEARCHABLE_PLATFORMS).not.toContain(platform);
     }
+  });
+
+  it('includes GitHub, which needs no credential', () => {
+    expect(_const.SEARCHABLE_PLATFORMS).toContain(_const.PLATFORMS.GITHUB);
   });
 
   it('has no duplicates', () => {

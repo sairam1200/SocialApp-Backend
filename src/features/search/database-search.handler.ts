@@ -99,6 +99,10 @@ function buildSourceUrl(
       if (subType === 'playlist')
         return `https://www.youtube.com/playlist?list=${externalId}`;
       return `https://www.youtube.com/watch?v=${externalId}`;
+    case 'github':
+      // GitHub's numeric ids are not addressable, so the URL must come from the stored
+      // metaData (`externalUrl`, handled above). Returning null beats guessing a path.
+      return null;
     case 'reddit':
       return `https://www.reddit.com/${externalId}`;
     case 'pinterest':

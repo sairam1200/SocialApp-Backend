@@ -90,6 +90,19 @@ describe('buildSourceUrl', () => {
     expect(buildSourceUrl('youtube', 'video', '', null)).toBeNull();
   });
 
+  it('uses the stored externalUrl for GitHub, whose ids are not addressable', () => {
+    // GitHub search returns numeric ids; there is no URL you can build from one. The
+    // repository/user html_url is persisted into metaData.externalUrl instead.
+    expect(
+      buildSourceUrl('github', 'repository', '12345', {
+        externalUrl: 'https://github.com/donnemartin/system-design-primer',
+      }),
+    ).toBe('https://github.com/donnemartin/system-design-primer');
+
+    // Without it, null rather than a fabricated path.
+    expect(buildSourceUrl('github', 'repository', '12345', null)).toBeNull();
+  });
+
   it('returns null for a platform with no known URL shape', () => {
     // Better an absent link than a guessed one that 404s.
     expect(buildSourceUrl('behance', null, 'abc', null)).toBeNull();

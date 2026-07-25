@@ -136,6 +136,7 @@ export default {
     'twitter',
     'linkedin',
     'youtube',
+    'github',
     'spotify',
     'reddit',
     'pinterest',

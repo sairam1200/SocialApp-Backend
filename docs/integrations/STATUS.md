@@ -35,6 +35,7 @@ moment a valid credential exists.
 | **LinkedIn** | Account owner | Regain developer portal access, then apply for the Marketing/Community API. Search access is heavily restricted and may be declined | Weeks, uncertain |
 | **Facebook / Instagram / Threads** | Account owner | Meta app review for the scopes involved. Then gate on connected accounts | Weeks (review) |
 | **Snapchat** | Account owner | No credentials configured. Register an app if this platform is still in scope | Days |
+| **GitHub** | ✅ Done | Working with **no credential at all**. Optionally set a PAT to raise the rate limit from 10/min to 60/hr | Done |
 | **Spotify** | Engineering | No credentials configured. `client_credentials` is sufficient for catalogue search, so this is the **cheapest platform to add** — register an app at developer.spotify.com and set `SPOTIFY_CLIENT_ID`/`_SECRET` | 30 min |
 | **Reddit** | Business decision | API access was **declined**. Public JSON returns 403 from datacenter IPs regardless of User-Agent (retested with Reddit's required UA format on `www`, `old` and a subreddit listing — all 403). Either appeal, pay for the commercial tier, or **remove Reddit from the platform list** rather than shipping a permanently failing integration | Decision needed |
 | **Dribbble** | Product decision | Not a credential problem: **v2 has no search endpoint**. Reframe as a connected-account content import via `/v2/user/shots`, or drop it | Decision needed |
@@ -51,6 +52,7 @@ user authorisation, so it goes from zero to working in about half an hour.
 | Platform | Status | Verified how | Blocker |
 |---|---|---|---|
 | **YouTube** | ✅ **Working** | `GET /youtube/v3/search` → 200, real results | Quota, not auth — see below |
+| **GitHub** | ✅ **Working, no credential needed** | `GET /search/repositories` + `/search/users` → 200 unauthenticated; verified end-to-end into Postgres and back out | Rate limit 10/min unauthenticated, 60/hr with a token |
 | **TikTok** | ⚠️ **Partial** | `POST /v2/oauth/token/` → 200, token issued | `client_credentials` opens a narrow endpoint set; content search needs a user-authorised token |
 | **Pinterest** | ❌ **Broken** | `GET /v5/user_account` → **401** `Authentication failed` | Access token dead or expired. Needs re-authorisation |
 | **Dribbble** | ⚠️ **Needs user OAuth** | `POST /oauth/token` → **400** `Missing required parameter: code` | `client_credentials` unsupported; requires the authorisation-code flow |

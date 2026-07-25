@@ -1,3 +1,4 @@
+import { GithubSearchResponseModel } from '../contracts/github.model';
 import { PlatformSearchParamsModel } from '../contracts/platform-search.model';
 import { FacebookSearchResponseModel } from '../contracts/facebook.model';
 import { RedditSearchResponseModel } from '../contracts/reddit.model';
@@ -37,6 +38,14 @@ export interface ISearchService {
   searchSpotifyAsync(
     params: PlatformSearchParamsModel,
   ): Promise<SpotifySearchResponseModel>;
+  /**
+   * GitHub search. Needs no credential — api.github.com/search/* serves
+   * unauthenticated requests at 10/minute. An accessToken only raises that limit.
+   */
+  searchGithubAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<GithubSearchResponseModel>;
+
   searchYoutubeAsync(
     params: PlatformSearchParamsModel,
   ): Promise<YoutubeSearchResponseModel>;

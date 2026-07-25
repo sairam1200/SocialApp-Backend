@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import _const from '../core/utils/const';
 import redis from '../core/utils/redis.util';
 import logger from '../core/utils/winston.util';
+import { IdentityAccessModule } from './identityAccess.module';
 import { UserModule } from './user.module';
 import { RoleModule } from './role.module';
 import { AuthModule } from './auth.module';
@@ -36,6 +37,10 @@ import {
 
 @Module({
   imports: [
+    // Global: the account guards read the database on a session-cache miss, and Nest
+    // resolves a guard's dependencies where the guard is *used* — across a dozen feature
+    // modules. See identityAccess.module.ts.
+    IdentityAccessModule,
     PassportModule,
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),

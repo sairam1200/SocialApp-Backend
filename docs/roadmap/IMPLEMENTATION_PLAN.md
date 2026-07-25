@@ -20,11 +20,11 @@ Companion documents: [`../audit/2026-07_Security_And_Correctness_Audit.md`](../a
 |---|---|
 | Backend | NestJS 11, clean architecture + CQRS, 201 endpoints, builds clean, typechecks at 0 errors |
 | Frontend | Next.js 16, React 19, Tailwind v4, TanStack Query v5, builds clean, typecheck 130 → 0 |
-| Tests | **171** backend (9 suites) + **52** frontend Vitest + **12** Playwright = **235**, from zero |
+| Tests | **174** backend (9 suites) + **52** frontend Vitest + **12** Playwright = **235**, from zero |
 | CI/CD | Cloud Build pipeline + local gate in both repos (no GitHub Actions, per cost constraint) |
 | Search | 12-platform fan-out, DB-persisted, cached, distributed-locked. **Verified end-to-end against the live YouTube API** — see [`../integrations/END_TO_END_VERIFICATION.md`](../integrations/END_TO_END_VERIFICATION.md). Four defects found and fixed, including aggregated results being saved but never shown to users |
 | Migrations | **A fresh database now builds** — 42 tables, 52 migrations. Six tables previously had no create-migration, so no environment could be provisioned from source |
-| Platform credentials | YouTube ✅ · TikTok ⚠️ partial · Pinterest ❌ · Reddit ❌ · Dribbble ⚠️ · see STATUS.md |
+| Platform credentials | YouTube ✅ · **GitHub ✅ (needs no credential)** · TikTok ⚠️ partial · Pinterest ❌ 2FA · Reddit ❌ declined · Dribbble/Behance ✖ no API · see STATUS.md |
 | i18n | next-intl live; `sv` + `en` catalogs; 28 locales registered; RTL working |
 | Light/dark | Working, with a pre-paint script and a settings control |
 | SEO | robots.txt, sitemap.xml, rich root metadata, per-profile metadata + JSON-LD |

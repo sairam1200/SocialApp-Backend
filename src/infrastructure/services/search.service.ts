@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { GithubSearchResponseModel } from '../../domain/contracts/github.model';
+import { StreamEntityType } from '../../domain/enums';
 import _const from '../../core/utils/const';
 import logger from '../../core/utils/winston.util';
 import { Inject, Injectable } from '@nestjs/common';
@@ -3146,6 +3148,169 @@ export class SearchService implements ISearchService {
     await this.cacheService.getCachedResults<BehanceSearchResponseModel>(
       cacheParams,
     );
+    return response;
+  }
+
+  /**
+   * GitHub search.
+   *
+   * The only platform besides YouTube that returns real data with **no credential** —
+   * `api.github.com/search/*` serves unauthenticated requests at 10/minute (60/hour with
+   * a token). It was already in `PLATFORMS` for account linking but had no search
+   * implementation, so it was sitting in the "blocked" bucket while actually being the
+   * cheapest available integration.
+   *
+   * Follows the same shape as the other platforms: cache → API → persist to
+   * contentStreams → build response. Repositories become Content/'repository' and users
+   * or organisations become Profile/'user', so both surface through the aggregated read
+   * path alongside every other platform.
+   *
+   * `accessToken` is honoured when a user has connected their GitHub account, purely to
+   * raise the rate limit — the same query works without one.
+   */
+  public async searchGithubAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<GithubSearchResponseModel> {
+    const {
+      filters = {},
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      page,
+      forceRefresh = false,
+    } = params;
+
+    filters.platform = _const.PLATFORMS.GITHUB;
+
+    const cacheParams = {
+      platform: _const.PLATFORMS.GITHUB,
+      normalizedQuery,
+      filters,
+      page,
+      limit,
+    };
+
+    if (!forceRefresh) {
+      const cached =
+        await this.cacheService.getCachedResults<GithubSearchResponseModel>(
+          cacheParams,
+        );
+      if (cached) return cached;
+    }
+
+    const response = new GithubSearchResponseModel({ query: originalQuery });
+
+    const term = (originalQuery ?? '').trim();
+    if (!term) return response;
+
+    // Split the requested limit across both entity kinds, and cap at GitHub's
+    // per_page maximum of 100.
+    const perPage = Math.max(1, Math.min(50, Math.floor((limit || 20) / 2)));
+    const currentPage = Math.max(1, page || 1);
+
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github+json',
+      // GitHub rejects requests without a User-Agent.
+      'User-Agent': 'Gaddr-Search/1.0',
+      'X-GitHub-Api-Version': '2022-11-28',
+    };
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+    // Both kinds in parallel, each failing independently: a rate-limited user search
+    // must not discard repository results that already succeeded.
+    const [repoResult, userResult] = await Promise.allSettled([
+      axios.get('https://api.github.com/search/repositories', {
+        params: { q: term, per_page: perPage, page: currentPage },
+        headers,
+        timeout: 8000,
+      }),
+      axios.get('https://api.github.com/search/users', {
+        params: { q: term, per_page: perPage, page: currentPage },
+        headers,
+        timeout: 8000,
+      }),
+    ]);
+
+    if (repoResult.status === 'fulfilled') {
+      response.results.repositories = repoResult.value.data?.items ?? [];
+    } else {
+      logger.warn(
+        `[GithubSearch] Repository search failed: ${repoResult.reason?.message}`,
+      );
+    }
+
+    if (userResult.status === 'fulfilled') {
+      response.results.users = userResult.value.data?.items ?? [];
+    } else {
+      logger.warn(
+        `[GithubSearch] User search failed: ${userResult.reason?.message}`,
+      );
+    }
+
+    // Persist so subsequent searches are served from Postgres rather than spending the
+    // 10/minute unauthenticated budget — the same read-model design every platform uses.
+    const mappedResults: ContentStream[] = [
+      ...response.results.repositories.map(
+        (repo) =>
+          new ContentStream({
+            type: StreamEntityType.Content,
+            subType: 'repository',
+            title: repo.full_name || '',
+            platform: _const.PLATFORMS.GITHUB,
+            externalId: String(repo.id),
+            metaData: {
+              description: repo.description,
+              externalUrl: repo.html_url,
+              language: repo.language,
+              stars: repo.stargazers_count,
+              forks: repo.forks_count,
+              thumbnailUrl: repo.owner?.avatar_url ?? null,
+              owner: repo.owner?.login,
+              updatedAt: repo.updated_at,
+            },
+            lastRefreshed: new Date(),
+          }),
+      ),
+      ...response.results.users.map(
+        (user) =>
+          new ContentStream({
+            type: StreamEntityType.Profile,
+            subType: 'user',
+            title: user.login || '',
+            platform: _const.PLATFORMS.GITHUB,
+            externalId: String(user.id),
+            metaData: {
+              externalUrl: user.html_url,
+              thumbnailUrl: user.avatar_url,
+              accountType: user.type,
+            },
+            lastRefreshed: new Date(),
+          }),
+      ),
+    ].filter((c) => c.externalId && c.externalId !== 'undefined');
+
+    if (mappedResults.length > 0) {
+      const externalIds = mappedResults.map((c) => c.externalId);
+      const newIds = await this.generalRepository.checkExistingItemsAsync(
+        externalIds,
+        _const.PLATFORMS.GITHUB,
+      );
+      const toAdd = mappedResults.filter((c) => newIds.includes(c.externalId));
+
+      if (toAdd.length > 0) {
+        await this.generalRepository.createAsync(toAdd);
+      }
+    }
+
+    // Page-number pagination: another page exists only if this one came back full.
+    const gotFullPage =
+      response.results.repositories.length >= perPage ||
+      response.results.users.length >= perPage;
+    response.nextPage = gotFullPage ? currentPage + 1 : null;
+
+    await this.cacheService.setCachedResults(cacheParams, response);
+
     return response;
   }
 }

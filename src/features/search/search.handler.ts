@@ -295,6 +295,9 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
         case _const.PLATFORMS.YOUTUBE:
           result = await this.searchService.searchYoutubeAsync(searchParams);
           break;
+        case _const.PLATFORMS.GITHUB:
+          result = await this.searchService.searchGithubAsync(searchParams);
+          break;
         case _const.PLATFORMS.SPOTIFY:
           result = await this.searchService.searchSpotifyAsync(searchParams);
           break;
@@ -358,6 +361,9 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
           return null;
         case _const.PLATFORMS.YOUTUBE:
           return result.nextPageToken || null;
+        case _const.PLATFORMS.GITHUB:
+          // Page-number pagination, not a cursor.
+          return result.nextPage != null ? String(result.nextPage) : null;
         case _const.PLATFORMS.SPOTIFY:
           // Spotify uses offset, calculate next offset
           if (
@@ -410,7 +416,7 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
 
     try {
       switch (platform) {
-        case _const.PLATFORMS.FACEBOOK:
+        case _const.PLATFORMS.FACEBOOK: {
           const fbResults = result.results as any;
           return (
             (fbResults.feeds?.data?.length || 0) +
@@ -423,28 +429,39 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
             (fbResults.people?.data?.length || 0) +
             (fbResults.accounts?.length || 0)
           );
-        case _const.PLATFORMS.INSTAGRAM:
+        }
+        case _const.PLATFORMS.INSTAGRAM: {
           const igResults = result.results as any;
           return (
             (igResults.media?.length || 0) +
             (igResults.hashtags?.length || 0) +
             (igResults.accounts?.length || 0)
           );
-        case _const.PLATFORMS.TWITTER:
+        }
+        case _const.PLATFORMS.TWITTER: {
           const twResults = result.results as any;
           return (
             (twResults.tweets?.length || 0) + (twResults.users?.length || 0)
           );
-        case _const.PLATFORMS.LINKEDIN:
+        }
+        case _const.PLATFORMS.LINKEDIN: {
           const liResults = result.results as any;
           return (
             (liResults.posts?.length || 0) +
             (liResults.people?.length || 0) +
             (liResults.companies?.length || 0)
           );
+        }
         case _const.PLATFORMS.YOUTUBE:
           return result.results?.length || 0;
-        case _const.PLATFORMS.SPOTIFY:
+        case _const.PLATFORMS.GITHUB: {
+          const ghResults = result.results as any;
+          return (
+            (ghResults.repositories?.length || 0) +
+            (ghResults.users?.length || 0)
+          );
+        }
+        case _const.PLATFORMS.SPOTIFY: {
           const spResults = result.results as any;
           return (
             (spResults.tracks?.length || 0) +
@@ -453,25 +470,29 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
             (spResults.artists?.length || 0) +
             (spResults.shows?.length || 0)
           );
-        case _const.PLATFORMS.REDDIT:
+        }
+        case _const.PLATFORMS.REDDIT: {
           const rdResults = result.results as any;
           return (
             (rdResults.posts?.length || 0) +
             (rdResults.subreddits?.length || 0) +
             (rdResults.users?.length || 0)
           );
-        case _const.PLATFORMS.PINTEREST:
+        }
+        case _const.PLATFORMS.PINTEREST: {
           const pinResults = result.results as any;
           return (
             (pinResults.pins?.length || 0) +
             (pinResults.boards?.length || 0) +
             (pinResults.users?.length || 0)
           );
-        case _const.PLATFORMS.TIKTOK:
+        }
+        case _const.PLATFORMS.TIKTOK: {
           const ttResults = result.results as any;
           return (
             (ttResults.videos?.length || 0) + (ttResults.users?.length || 0)
           );
+        }
         default:
           return 0;
       }
