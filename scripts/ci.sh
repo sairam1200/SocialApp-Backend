@@ -115,16 +115,73 @@ run_step "Typecheck" npx tsc -p tsconfig.json --noEmit
 lint_step
 run_step "Tests" npx jest --ci --runInBand
 
+# Secret scan.
+#
+# `--no-git` scans the working tree rather than history. History is deliberately not
+# scanned: two historical commits contain verified false positives (long TypeScript
+# identifiers tripping the default twitter-api-key rule), so a history scan can never
+# go green without rewriting history.
+#
+# `--no-git` also ignores .gitignore, which means a developer's populated .env is
+# reported every run. Allowlisting .env in .gitleaks.toml would fix that but is the
+# wrong fix: the same config backs the pre-commit `gitleaks protect --staged` hook, so
+# it would also stop blocking a force-added `git add -f .env`. Verified.
+#
+# So findings are filtered here instead: anything in a gitignored path is dropped,
+# everything else fails the gate. .gitleaks.toml stays strict.
+secret_scan_step() {
+  STEP_NUM=$((STEP_NUM + 1))
+  printf '\n%s[%d] Secret scan%s\n' "$BOLD" "$STEP_NUM" "$RESET"
+  printf '%s    $ gitleaks detect --no-git (gitignored paths filtered)%s\n' "$DIM" "$RESET"
+
+  local report
+  report=$(mktemp)
+
+  gitleaks detect --source=. --no-git --config=.gitleaks.toml \
+    --redact --no-banner --report-format=json --report-path="$report" \
+    >/dev/null 2>&1 || true
+
+  if [ ! -s "$report" ]; then
+    printf '%s    ✓ Secret scan: clean%s\n' "$GREEN" "$RESET"
+    rm -f "$report"
+    return
+  fi
+
+  # Collect finding paths, then drop the ones git already ignores.
+  local reported real=0
+  reported=$(python3 -c "
+import json,sys
+try:
+    for f in json.load(open('$report')):
+        print(f\"{f.get('File')}|{f.get('StartLine')}|{f.get('RuleID')}\")
+except Exception:
+    pass
+")
+
+  while IFS='|' read -r file line rule; do
+    [ -z "$file" ] && continue
+    if git check-ignore -q "$file" 2>/dev/null; then
+      printf '%s      (ignored, gitignored path) %s:%s [%s]%s\n' \
+        "$DIM" "$file" "$line" "$rule" "$RESET"
+      continue
+    fi
+    printf '%s      %s:%s [%s]%s\n' "$RED" "$file" "$line" "$rule" "$RESET"
+    real=$((real + 1))
+  done <<< "$reported"
+
+  rm -f "$report"
+
+  if [ "$real" -gt 0 ]; then
+    printf '%s    ✗ Secret scan: %s finding(s) in tracked files%s\n' "$RED" "$real" "$RESET"
+    FAILED+=("Secret scan")
+  else
+    printf '%s    ✓ Secret scan: clean (gitignored paths excluded)%s\n' "$GREEN" "$RESET"
+  fi
+}
+
 if [ "$RUN_SECRETS" -eq 1 ]; then
   if command -v gitleaks >/dev/null 2>&1; then
-    # --no-git scans the working tree. Full-history scanning is deliberately not
-    # done here: two historical commits contain matches that are verified false
-    # positives (long TypeScript identifiers tripping the twitter-api-key rule),
-    # so a history scan can never go green without rewriting history.
-    # .gitleaks.toml allowlists those and adds rules for the real risks —
-    # committed database dumps and platform OAuth tokens.
-    run_step "Secret scan" gitleaks detect --source=. --no-git \
-      --config=.gitleaks.toml --redact --no-banner
+    secret_scan_step
   else
     printf '\n%s[-] Secret scan skipped — gitleaks not installed (brew install gitleaks)%s\n' "$DIM" "$RESET"
   fi

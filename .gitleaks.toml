@@ -30,6 +30,17 @@ paths = [
   # Test environment bootstrap. Values are placeholders built by string repetition
   # specifically so they are not mistaken for real keys; see the file's comments.
   '''^test/jest-setup-env\.ts$''',
+
+  # NOTE: .env files are deliberately NOT allowlisted here.
+  #
+  # They legitimately hold real credentials and are gitignored, so a working-tree
+  # scan reports them and turns the local gate red for every developer. The
+  # tempting fix — allowlisting them in this file — is wrong: this config is shared
+  # with the pre-commit `gitleaks protect --staged` hook, so it would also stop
+  # blocking a force-added `git add -f .env`. Verified by doing exactly that.
+  #
+  # Instead, scripts/ci.sh drops findings in gitignored files after the scan, which
+  # keeps this config strict where it matters.
 ]
 
 regexes = [
