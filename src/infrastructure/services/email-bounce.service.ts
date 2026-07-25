@@ -61,6 +61,9 @@ export class EmailBounceService implements IEmailBounceService {
       }
 
       await this.dataProtectionKeyRepository.deleteByUserIdAsync(user.id, em);
+      console.log(
+        `[OAUTH-DBG] EMAIL-BOUNCE deleteByUserIdAsync userId=${user.id} — bounce cleanup`,
+      );
 
       const deleted = await this.userRepository.deleteUnverifiedByIdAsync(
         user.id,

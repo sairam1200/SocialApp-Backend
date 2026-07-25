@@ -71,14 +71,27 @@ export class InstagramConnectQueryHandler
   public async execute(command: InstagramConnectQuery): Promise<void> {
     const { model } = command;
 
+    const userId = HttpContext.user?.[Globals.ClaimTypes.UserId];
+    console.log(
+      `[OAUTH-DBG] CONNECT-HANDLER execute userId=${userId} generatedState=${model.state} stateLength=${model.state.length}`,
+    );
+
     // expires in 15 minutes
     const expiresIn =
       Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
+    console.log(
+      `[OAUTH-DBG] CONNECT-HANDLER BEFORE-INSERT generatedState=${model.state} userId=${userId} expiresIn=${expiresIn} nowEpochSec=${Math.floor(Date.now() / 1000)}`,
+    );
+
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       '',
       HttpContext.user[Globals.ClaimTypes.UserId],
       expiresIn,
+    );
+
+    console.log(
+      `[OAUTH-DBG] CONNECT-HANDLER AFTER-INSERT generatedState=${model.state} userId=${userId}`,
     );
   }
 }
@@ -90,6 +103,8 @@ export class InstagramConnectQueryHandler
 export class InstagramConnectCallbackQueryHandler
   implements ICommandHandler<InstagramConnectCallbackQuery>
 {
+  private static callbackInvocationCount = 0;
+
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
@@ -109,10 +124,20 @@ export class InstagramConnectCallbackQueryHandler
     expiresIn: number;
     profile: InstagramProfileModel;
   }> {
+    const invocationNum = ++InstagramConnectCallbackQueryHandler.callbackInvocationCount;
     const { model } = query;
+
+    console.log(
+      `[OAUTH-DBG] CALLBACK-HANDLER execute INVOCATION=${invocationNum} receivedState=${model.state} receivedCodeLen=${model.code?.length} nowEpochSec=${Math.floor(Date.now() / 1000)} pid=${process.pid}`,
+    );
+
     await instagramConnectCallbackValidations.validateAsync(model);
 
-    await this.validateState(model.state);
+    console.log(
+      `[OAUTH-DBG] CALLBACK-HANDLER AFTER-JOI-VALIDATION state=${model.state} invocation=${invocationNum}`,
+    );
+
+    await this.validateState(model.state, invocationNum);
 
     const tokenResponse = await this.fetchShortLivedToken(model.code);
 
@@ -265,18 +290,47 @@ export class InstagramConnectCallbackQueryHandler
     }
   }
 
-  private async validateState(state: string): Promise<void> {
+  private async validateState(state: string, invocationNum: number): Promise<void> {
+    console.log(
+      `[OAUTH-DBG] VALIDATE-STATE ENTRY state=${state} invocation=${invocationNum} nowEpochSec=${Math.floor(Date.now() / 1000)}`,
+    );
+
     const dataProtectionKey =
       await this.dataProtectionKeyRepository.getByKeyAsync(state);
+
+    console.log(
+      `[OAUTH-DBG] VALIDATE-STATE LOOKUP-COMPLETE state=${state} invocation=${invocationNum} found=${!!dataProtectionKey} rowId=${dataProtectionKey?.id ?? 'NULL'}`,
+    );
+
     if (!dataProtectionKey) {
+      console.log(
+        `[OAUTH-DBG] VALIDATE-STATE FAILED state=${state} invocation=${invocationNum} reason=NOT_FOUND`,
+      );
       throw new ApplicationException('Invalid state parameter');
     }
 
-    if (dataProtectionKey.expiresIn < Math.floor(Date.now() / 1000)) {
+    const nowEpochSec = Math.floor(Date.now() / 1000);
+    const isExpired = dataProtectionKey.expiresIn < nowEpochSec;
+    console.log(
+      `[OAUTH-DBG] VALIDATE-STATE EXPIRY-CHECK state=${state} invocation=${invocationNum} rowExpiresIn=${dataProtectionKey.expiresIn} nowEpochSec=${nowEpochSec} isExpired=${isExpired}`,
+    );
+
+    if (isExpired) {
+      console.log(
+        `[OAUTH-DBG] VALIDATE-STATE FAILED state=${state} invocation=${invocationNum} reason=EXPIRED`,
+      );
       throw new ApplicationException('State parameter has expired');
     }
 
+    console.log(
+      `[OAUTH-DBG] VALIDATE-STATE BEFORE-DELETE state=${state} invocation=${invocationNum} rowId=${dataProtectionKey.id}`,
+    );
+
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
+
+    console.log(
+      `[OAUTH-DBG] VALIDATE-STATE SUCCESS state=${state} invocation=${invocationNum} rowId=${dataProtectionKey.id}`,
+    );
   }
 
   private async updateLinkedAccount(

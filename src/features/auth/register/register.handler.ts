@@ -153,6 +153,9 @@ export class RegisterCommandHandler
     } catch (error) {
       if (user) {
         try {
+          console.log(
+            `[OAUTH-DBG] REGISTER-HANDLER deleteByUserIdAsync userId=${user.id} — error cleanup path`,
+          );
           await this.dataProtectionKeyRepository.deleteByUserIdAsync(user.id);
         } catch {
           /* best-effort token cleanup */

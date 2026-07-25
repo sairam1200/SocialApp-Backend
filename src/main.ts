@@ -20,6 +20,22 @@ console.info(
   `[startup] main.ts loaded — PID ${process.pid}, NODE_ENV=${process.env.NODE_ENV}, K_SERVICE=${process.env.K_SERVICE || 'none'}`,
 );
 
+// OAUTH-DBG: Log database connection info at startup
+try {
+  const dbUrl = process.env.DATABASE_URL || 'NOT_SET';
+  const urlObj = new URL(dbUrl);
+  console.log(
+    `[OAUTH-DBG] STARTUP DB-INFO host=${urlObj.hostname} database=${urlObj.pathname} port=${urlObj.port} hasPassword=${!!urlObj.password} pid=${process.pid}`,
+  );
+} catch (e: any) {
+  console.log(
+    `[OAUTH-DBG] STARTUP DB-INFO parseError=${e.message} DATABASE_URL=${process.env.DATABASE_URL ? 'SET' : 'NOT_SET'}`,
+  );
+}
+console.log(
+  `[OAUTH-DBG] STARTUP POSTGRES_HOST=${process.env.POSTGRES_HOST || 'NOT_SET'} POSTGRES_PORT=${process.env.POSTGRES_PORT || 'NOT_SET'} POSTGRES_DATABASE=${process.env.POSTGRES_DATABASE || 'NOT_SET'}`,
+);
+
 process.on('unhandledRejection', (reason) => {
   console.error(`[startup] Unhandled Promise Rejection: ${reason}`);
   logger.error(`Unhandled Promise Rejection: ${reason}`);
@@ -48,6 +64,52 @@ async function bootstrap() {
   console.info('[startup] STEP 1 — creating NestFactory');
   const app = await NestFactory.create(AppModule);
   console.info('[startup] STEP 2 — NestFactory created');
+
+  // OAUTH-DBG: Log TypeORM connection info after NestFactory creation
+  try {
+    const typeormDs = app.get('DataSource', { strict: false });
+    const typeormOpts = typeormDs?.options;
+    if (typeormOpts) {
+      const connUrl = typeormOpts.url || 'unknown';
+      let connHost = 'unknown';
+      let connDatabase = 'unknown';
+      try {
+        const parsed = new URL(connUrl);
+        connHost = parsed.hostname;
+        connDatabase = parsed.pathname;
+      } catch {}
+      console.log(
+        `[OAUTH-DBG] STARTUP TYPEORM-DB host=${connHost} database=${connDatabase} synchronize=${typeormOpts.synchronize} migrationsRun=${typeormOpts.migrationsRun} pid=${process.pid}`,
+      );
+
+      // OAUTH-DBG: Count rows in dataProtectionKeys table
+      try {
+        const dpkResult = await typeormDs.query(
+          'SELECT COUNT(*) as cnt FROM "dataProtectionKeys"',
+        );
+        const dpkCount = dpkResult?.[0]?.cnt ?? 'unknown';
+        console.log(
+          `[OAUTH-DBG] STARTUP TABLE-COUNT dataProtectionKeys=${dpkCount}`,
+        );
+
+        // OAUTH-DBG: Check for indexes on key column
+        const idxResult = await typeormDs.query(
+          `SELECT indexdef FROM pg_indexes WHERE tablename = 'dataProtectionKeys' AND indexdef LIKE '%key%'`,
+        );
+        console.log(
+          `[OAUTH-DBG] STARTUP INDEXES dataProtectionKeys key-indexes=${JSON.stringify(idxResult?.map((r: any) => r.indexdef))}`,
+        );
+      } catch (qErr: any) {
+        console.log(
+          `[OAUTH-DBG] STARTUP TABLE-COUNT error=${qErr.message}`,
+        );
+      }
+    }
+  } catch (e: any) {
+    console.log(
+      `[OAUTH-DBG] STARTUP TYPEORM-DB error=${e.message}`,
+    );
+  }
 
   app.enableShutdownHooks();
   app.use(cookieParser());

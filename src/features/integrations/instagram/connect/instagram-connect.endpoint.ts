@@ -54,6 +54,11 @@ export class InstagramConnectController {
       'instagram_business_manage_insights',
     ].join(',');
     const state = stringUtil.generateRandomString(16);
+
+    console.log(
+      `[OAUTH-DBG] ENDPOINT.connect ENTRY generatedState=${state} stateLength=${state.length} pid=${process.pid}`,
+    );
+
     const params = new URLSearchParams({
       force_reauth: 'true',
       client_id: configs.Instagram.clientId,
@@ -65,9 +70,18 @@ export class InstagramConnectController {
 
     const authorizeURL = `https://www.instagram.com/oauth/authorize?${params.toString()}`;
 
+    console.log(
+      `[OAUTH-DBG] ENDPOINT.connect BEFORE-COMMAND-BUS generatedState=${state} redirectUri=${configs.Instagram.redirectUri}`,
+    );
+
     await this.commandBus.execute(
       new InstagramConnectQuery({ model: { state } }),
     );
+
+    console.log(
+      `[OAUTH-DBG] ENDPOINT.connect AFTER-COMMAND-BUS generatedState=${state}`,
+    );
+
     return res.status(HttpStatus.OK).json({ authorizeURL: authorizeURL });
   }
 
@@ -85,9 +99,25 @@ export class InstagramConnectController {
     @Query('state') state: string,
     @Res() res: Response,
   ): Promise<Response | void> {
-    const result = await this.commandBus.execute(
-      new InstagramConnectCallbackQuery({ model: { code, state } }),
+    console.log(
+      `[OAUTH-DBG] ENDPOINT.callback ENTRY receivedState=${state} receivedCodeLen=${code?.length} pid=${process.pid} nowEpochSec=${Math.floor(Date.now() / 1000)}`,
     );
-    return res.status(HttpStatus.OK).json(result);
+
+    try {
+      const result = await this.commandBus.execute(
+        new InstagramConnectCallbackQuery({ model: { code, state } }),
+      );
+
+      console.log(
+        `[OAUTH-DBG] ENDPOINT.callback SUCCESS receivedState=${state} hasAccessToken=${!!result?.accessToken}`,
+      );
+
+      return res.status(HttpStatus.OK).json(result);
+    } catch (err: any) {
+      console.log(
+        `[OAUTH-DBG] ENDPOINT.callback ERROR receivedState=${state} errorType=${err?.constructor?.name} errorMessage=${err?.message} statusCode=${err?.statusCode}`,
+      );
+      throw err;
+    }
   }
 }

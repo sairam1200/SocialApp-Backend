@@ -572,9 +572,15 @@ export class IdentityRepository implements IIdentityRepository {
 
     for (const userId of expiredUserIds) {
       try {
+        console.log(
+          `[OAUTH-DBG] IDENTITY-REPO.deleteExpiredUsers RAW-SQL-DELETE-DATA-PROTECTION-KEYS userId=${userId}`,
+        );
         await this.userContext.query(
           'DELETE FROM "dataProtectionKeys" WHERE "userId" = $1',
           [userId],
+        );
+        console.log(
+          `[OAUTH-DBG] IDENTITY-REPO.deleteExpiredUsers RAW-SQL-DELETE-COMPLETE userId=${userId}`,
         );
 
         const user = await this.userContext.findOne({ where: { id: userId } });
