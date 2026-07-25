@@ -49,10 +49,17 @@ function verifyWithHMAC(encryptedText: string, hmac: string): boolean {
     .createHmac('sha256', key)
     .update(encryptedText)
     .digest('hex');
-  return crypto.timingSafeEqual(
-    Buffer.from(computedHMAC, 'utf8'),
-    Buffer.from(hmac, 'utf8'),
-  );
+
+  const expected = Buffer.from(computedHMAC, 'utf8');
+  const actual = Buffer.from(hmac ?? '', 'utf8');
+
+  // timingSafeEqual throws RangeError on length mismatch, which would surface as
+  // an unhandled 500 (and an error oracle) rather than a clean rejection.
+  if (expected.length !== actual.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(expected, actual);
 }
 
 // SHA-256 -> base64

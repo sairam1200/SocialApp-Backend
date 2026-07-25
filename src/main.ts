@@ -46,10 +46,19 @@ async function bootstrap() {
   }
 
   console.info('[startup] STEP 1 — creating NestFactory');
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   console.info('[startup] STEP 2 — NestFactory created');
 
   app.enableShutdownHooks();
+
+  // Cloud Run / Vercel terminate TLS and forward the client address in
+  // X-Forwarded-For. Without this, req.ip is the proxy's address, so anything
+  // keyed on client IP (rate limiting, audit logs, geo lookup) is keyed on the
+  // wrong identity — collapsing all callers into a single bucket.
+  // Trust exactly one hop: the platform load balancer, which overwrites the
+  // header. A larger value would let clients spoof their own address.
+  app.set('trust proxy', 1);
+
   app.use(cookieParser());
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);

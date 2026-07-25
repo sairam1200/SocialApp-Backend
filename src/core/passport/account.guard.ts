@@ -40,6 +40,26 @@ function createAccountGuard(
         }
       }
 
+      // HttpContextMiddleware verifies tokens with ignoreExpiration=true so that
+      // the refresh flow can still identify the caller from a lapsed access
+      // token. Expiry is therefore enforced here instead, per guard — only
+      // guards constructed with ignoreExpiration=true (RefreshTokenGuard) accept
+      // an expired token.
+      if (!ignoreExpiration) {
+        const exp = claimsPrinciple.exp;
+        if (typeof exp !== 'number') {
+          throw new UnauthorizedException(
+            'Unauthorized: Invalid or expired token.',
+          );
+        }
+        if (exp * 1000 <= Date.now()) {
+          response.setHeader('Token-Expired', 'true');
+          throw new UnauthorizedException(
+            'Unauthorized: Invalid or expired token.',
+          );
+        }
+      }
+
       if (
         claimsPrinciple[Globals.ClaimTypes.TwoFARequired] &&
         !allowTwoFARequired

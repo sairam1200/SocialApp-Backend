@@ -1,0 +1,153 @@
+# AGENTS.md — Gaddr Search & Me, Backend
+
+Entry point for Claude and other AI agents. Deliberately short: it routes you to
+the authoritative document rather than restating it. Read this, then read the one
+file that matches your task.
+
+**Companion repo:** [`TeamGaddr/Gaddr-Search-Me-Frontend`](https://github.com/TeamGaddr/Gaddr-Search-Me-Frontend) — see its `AGENTS.md`.
+**Full documentation index:** [`docs/index.md`](docs/index.md)
+
+---
+
+## Read this first
+
+**[`docs/audit/2026-07_Security_And_Correctness_Audit.md`](docs/audit/2026-07_Security_And_Correctness_Audit.md)**
+
+Non-negotiable before touching auth, crypto, or permissions. It records five
+critical findings, which of them are fixed, which are deliberately left open and
+*why*, and — importantly — a "Checked and cleared" section listing plausible bugs
+that turned out not to be real. Reading it prevents you re-investigating settled
+ground or "fixing" something that is already correct.
+
+Open items you must not trip over:
+
+- **Session revocation fails open** on Redis cache miss (`account.guard.ts`). Do
+  not make it fail closed without adding the DB fallback — you will log out every
+  user with a cold cache.
+- **OAuth tokens use a fixed IV with unauthenticated CBC** (`crypto.util.ts`).
+  Migrating to AES-GCM changes the stored format; it needs a dual-read migration.
+- **A production DB dump is still in git history** at `e4b5f3b`. Removed from
+  `HEAD`; the blob persists. Never re-add dumps — `.gitignore` blocks them.
+- **`better-auth` is installed with zero imports** and its session logic is
+  hand-rolled in raw SQL. Adopt-or-remove is a product decision; don't drift further.
+
+---
+
+## What this service is
+
+The API behind **Gaddr Search** (cross-platform social search and aggregation)
+and **Gaddr Me** (universal profile). Part of the Gaddr family alongside Gaddr
+Jobs, Gaddr Pay and Gaddr Chains.
+
+NestJS 11 · TypeScript · TypeORM 0.3 · PostgreSQL (Neon) · Redis · BullMQ ·
+Socket.IO · Cloudflare R2. Deployed to GCP Cloud Run. Live at `demo.gaddr.com`.
+
+## Architecture in one screen
+
+```
+features/        HTTP use-cases — vertical slices, CQRS (431 command/query refs)
+domain/          Models, entities, repository + service interfaces, mappers
+infrastructure/  Concrete implementations — repositories, gateways, processors
+modules/         NestJS module wiring
+core/            Cross-cutting — guards, middleware, utils, exceptions, config
+shared/          Cross-feature services (R2, video processing)
+```
+
+Dependency direction: `features → domain interfaces → infrastructure implementations`.
+Never import `infrastructure` from `features` directly; resolve through a DI token.
+
+Each layer has its own README — read the one you are working in:
+[`src/features`](src/features/README.md) ·
+[`src/domain`](src/domain/README.md) ·
+[`src/infrastructure`](src/infrastructure/README.md) ·
+[`src/core`](src/core/README.md) ·
+[`src/modules`](src/modules/README.md)
+
+Per-feature READMEs exist for
+[auth](src/features/auth/README.md),
+[search](src/features/search/README.md),
+[integrations](src/features/integrations/README.md),
+[profile](src/features/profile/README.md),
+[user](src/features/user/README.md),
+[onboarding](src/features/onboarding/README.md),
+[notification](src/features/notification/README.md),
+[playlist](src/features/playlist/README.md) and
+[role](src/features/role/README.md).
+
+## Request lifecycle — know this before touching auth
+
+1. `HttpContextMiddleware` (`core/middlewares/`) runs on every route. It resolves
+   the caller from a Better Auth session cookie *or* a JWT (header or cookie) and
+   stores it in `AsyncLocalStorage`. **`HttpContext.user` is per-request safe** —
+   it looks like shared static state but is not.
+2. It verifies JWTs with `ignoreExpiration: true` **by design**, so the refresh
+   endpoint can identify a caller from a lapsed token.
+3. **Expiry is therefore enforced in `account.guard.ts`**, per guard, via the
+   `ignoreExpiration` flag. `RefreshTokenGuard` is the only exemption. If you add
+   a guard, inherit from `createAccountGuard` rather than reading `HttpContext.user`
+   raw, or you will silently accept expired tokens.
+4. `PermissionsGuard` verifies independently (expiry enforced) and requires an
+   **exact** `Controller.method` permission match.
+
+## Non-obvious constraints
+
+| Constraint | Consequence |
+|---|---|
+| RAM 512 MB, 0.1 vCPU | Estimate memory for anything that buffers. No in-process caches of unbounded size. |
+| Redis 30 MB, 30 connections | Reuse the shared client (`core/utils/redis.util`). Set a TTL on every key. |
+| Redis is optional at boot | `main.ts` continues without it. Any code path that *requires* Redis must degrade explicitly, not assume presence. |
+| R2 10 GB | Media goes to R2, never the container filesystem beyond temp. |
+| Migrations auto-run on start | `POSTGRES_MIGRATIONS_RUN` defaults true — beware races across instances. |
+
+## Conventions
+
+| Category | Convention | Example |
+|---|---|---|
+| Feature directories | `kebab-case` | `create-user/` |
+| Endpoints / handlers | `*.endpoint.ts` / `*.handler.ts` | `create-user.endpoint.ts` |
+| Entities | `*.entity.ts` | `user.entity.ts` |
+| Repository / service interfaces | `i*.repository.ts` / `i*.service.ts` | `iuser.repository.ts` |
+| DI token constants | `IUPPERCASE` | `IUSER_REPOSITORY` |
+| Redis keys | `gaddr:<domain>:<id>` | `gaddr:user_account:userId123` |
+
+Key files: DI registry `infrastructure/dependency.ts` · DI tokens
+`core/utils/const.ts` · Redis client `core/utils/redis.util.ts` · base entity
+`domain/baseEntity.ts` · root module `modules/app.module.ts` · env schema
+`src/configs.ts` (Joi — add every new variable here).
+
+Known naming defects, safe to correct on sight: `UserAccoutGuard` /
+`AdminAccoutGuard` / `GuestAccoutGuard` are misspelled (128 files);
+`core/passport/` contains plain Nest guards, not Passport strategies; the
+`userBiometrics` table holds profile image URLs, not biometrics.
+
+## Working rules
+
+1. **Search before creating.** `grep`/`glob` first; say what you are reusing.
+2. **Extend, don't fork.** No parallel implementation of existing logic. Two
+   parallel auth systems already exist — don't make it three.
+3. **Preserve API contracts.** Additive changes only unless versioning.
+4. **State resource impact** for anything touching RAM, Redis, DB or WebSocket.
+5. **No `TODO`, no `console.log`, no hardcoded secrets.** Route logging through
+   Winston (`core/utils/winston.util`), which redacts sensitive keys. There are
+   already 136 stray `console.log` calls; don't add the 137th.
+6. **Every new env var goes in `src/configs.ts`.** Secrets get no default —
+   `.required()` and fail at boot. A guessable default is a vulnerability
+   (see M2/M6 in the audit).
+7. **Validate input.** There is no global `ValidationPipe` and `class-validator`
+   is not installed, so hand-rolled Joi is the current norm. If you add DTO
+   validation, add it per slice — enabling a global pipe with
+   `forbidNonWhitelisted` before DTOs exist would reject live traffic.
+
+## Verify your work
+
+```bash
+npm run build          # nest build — must pass
+npx tsc --noEmit       # must stay at 0 errors
+npm run lint
+npm test               # jest — currently 0 tests; add them with your change
+```
+
+Both `build` and `tsc --noEmit` pass on `main`. Keep it that way.
+
+There are **no unit tests** in this repo. If you touch auth, crypto or
+permissions, add tests — the audit's findings are a ready-made specification.

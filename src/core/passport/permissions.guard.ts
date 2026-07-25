@@ -49,8 +49,22 @@ export class PermissionsGuard implements CanActivate {
     const controller = context.getClass();
     const requiredPermission = `${controller.name}.${handler.name}`;
 
-    const hasPermission = claimsPrinciple.permission?.some(
-      (permission: string) => requiredPermission.includes(permission),
+    // Exact match only. A substring test (`requiredPermission.includes(p)`) is
+    // dangerously permissive: an empty-string grant matches every endpoint, and
+    // a coarse grant such as "User" matches any Controller.method containing it.
+    // Permissions are issued in this same `Controller.method` shape by
+    // Permissions.discoverControllerPermissions(), so equality is the correct test.
+    const granted: string[] = Array.isArray(claimsPrinciple.permission)
+      ? claimsPrinciple.permission
+      : [];
+
+    const hasPermission = granted.some(
+      (permission) =>
+        typeof permission === 'string' &&
+        permission.length > 0 &&
+        (permission === requiredPermission ||
+          permission === '*' ||
+          permission === `${requiredPermission.split('.')[0]}.*`),
     );
     if (hasPermission) {
       return true;
