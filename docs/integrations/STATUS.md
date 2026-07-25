@@ -19,6 +19,33 @@ concluding that search is broken in code.
 
 ---
 
+## What must happen for each platform to return real data
+
+Every remaining blocker needs an action by an account owner or a decision by the
+business. None can be resolved by writing code — the orchestration is verified
+(`search.handler.spec.ts`, 35 tests) and each platform's token path is proven to work the
+moment a valid credential exists.
+
+| Platform | Who acts | Exact action | Effort |
+|---|---|---|---|
+| **YouTube** | Engineering | ✅ Working. Request a **quota increase** in Google Cloud → APIs & Services → YouTube Data API v3 → Quotas. Default 10,000 units/day at 100 per `search.list` = ~100 searches/day, which will not survive launch | 30 min + Google review |
+| **Pinterest** | Account owner | Re-run the OAuth flow at developers.pinterest.com to mint a fresh token, and **store the refresh token** so `oauth.service.ts` renews it automatically. The app ID and secret are still valid; only the access token expired | 1 hour |
+| **TikTok** | Account owner | Complete app review for the scopes needed, then gate TikTok results on a **connected account** — `client_credentials` cannot search content, by TikTok's design | Days–weeks (review) |
+| **Twitter / X** | Account owner | Complete email + phone verification on the developer account, then choose a paid API tier — the free tier has no search | Hours + ongoing cost |
+| **LinkedIn** | Account owner | Regain developer portal access, then apply for the Marketing/Community API. Search access is heavily restricted and may be declined | Weeks, uncertain |
+| **Facebook / Instagram / Threads** | Account owner | Meta app review for the scopes involved. Then gate on connected accounts | Weeks (review) |
+| **Snapchat** | Account owner | No credentials configured. Register an app if this platform is still in scope | Days |
+| **Spotify** | Engineering | No credentials configured. `client_credentials` is sufficient for catalogue search, so this is the **cheapest platform to add** — register an app at developer.spotify.com and set `SPOTIFY_CLIENT_ID`/`_SECRET` | 30 min |
+| **Reddit** | Business decision | API access was **declined**. Public JSON returns 403 from datacenter IPs regardless of User-Agent (retested with Reddit's required UA format on `www`, `old` and a subreddit listing — all 403). Either appeal, pay for the commercial tier, or **remove Reddit from the platform list** rather than shipping a permanently failing integration | Decision needed |
+| **Dribbble** | Product decision | Not a credential problem: **v2 has no search endpoint**. Reframe as a connected-account content import via `/v2/user/shots`, or drop it | Decision needed |
+| **Behance** | Product decision | No public API. Currently a **stub returning empty arrays**. Either remove it from `SEARCHABLE_PLATFORMS` or accept it never returns results | Decision needed |
+
+**The two cheapest wins, in order:** request the YouTube quota increase (the only working
+integration is capped at ~100 searches/day), then register a Spotify app — it needs no
+user authorisation, so it goes from zero to working in about half an hour.
+
+---
+
 ## Summary
 
 | Platform | Status | Verified how | Blocker |
