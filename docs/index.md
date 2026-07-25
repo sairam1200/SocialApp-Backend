@@ -16,6 +16,7 @@ Start from [`../AGENTS.md`](../AGENTS.md) if you are an AI agent.
 | [`audit/2026-07_Security_And_Correctness_Audit.md`](audit/2026-07_Security_And_Correctness_Audit.md) | **Read before touching auth, crypto or permissions.** Verified findings, remediation status, and settled non-issues |
 | [`roadmap/IMPLEMENTATION_PLAN.md`](roadmap/IMPLEMENTATION_PLAN.md) | **Where the platform is and what to build next.** Sequenced phases, what is deliberately deferred and why, plus the legal questions needing professional review |
 | [`integrations/STATUS.md`](integrations/STATUS.md) | **Which platform credentials actually work**, verified by live API call. Check this before debugging "search returns nothing" |
+| [`integrations/END_TO_END_VERIFICATION.md`](integrations/END_TO_END_VERIFICATION.md) | A real run of the full search chain — live YouTube API → Postgres → user-facing endpoint — with the four defects it exposed and how to reproduce it |
 
 ## 1b. Skills and sub-agents
 

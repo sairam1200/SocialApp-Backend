@@ -8,7 +8,9 @@ wasteful until earlier ones land.
 
 Companion documents: [`../audit/2026-07_Security_And_Correctness_Audit.md`](../audit/2026-07_Security_And_Correctness_Audit.md)
 (verified findings) · [`../integrations/STATUS.md`](../integrations/STATUS.md)
-(which platform credentials actually work) · [`../index.md`](../index.md).
+(which platform credentials actually work) ·
+[`../integrations/END_TO_END_VERIFICATION.md`](../integrations/END_TO_END_VERIFICATION.md)
+(a real run of the search chain) · [`../index.md`](../index.md).
 
 ---
 
@@ -18,9 +20,10 @@ Companion documents: [`../audit/2026-07_Security_And_Correctness_Audit.md`](../a
 |---|---|
 | Backend | NestJS 11, clean architecture + CQRS, 201 endpoints, builds clean, typechecks at 0 errors |
 | Frontend | Next.js 16, React 19, Tailwind v4, TanStack Query v5, builds clean, typecheck 130 → 0 |
-| Tests | **100** backend (6 suites) + **41** frontend (Vitest) = **141**, from zero |
+| Tests | **119** backend (7 suites) + **41** frontend (Vitest) = **160**, from zero |
 | CI/CD | Cloud Build pipeline + local gate in both repos (no GitHub Actions, per cost constraint) |
-| Search | 12-platform fan-out, DB-persisted, cached, distributed-locked. **A latent 500 was fixed this pass** |
+| Search | 12-platform fan-out, DB-persisted, cached, distributed-locked. **Verified end-to-end against the live YouTube API** — see [`../integrations/END_TO_END_VERIFICATION.md`](../integrations/END_TO_END_VERIFICATION.md). Four defects found and fixed, including aggregated results being saved but never shown to users |
+| Migrations | **A fresh database now builds** — 42 tables, 52 migrations. Six tables previously had no create-migration, so no environment could be provisioned from source |
 | Platform credentials | YouTube ✅ · TikTok ⚠️ partial · Pinterest ❌ · Reddit ❌ · Dribbble ⚠️ · see STATUS.md |
 | i18n | next-intl live; `sv` + `en` catalogs; 28 locales registered; RTL working |
 | Light/dark | Working, with a pre-paint script and a settings control |
@@ -54,8 +57,11 @@ auth slice validated.
 
 ## 3. Phase 1 — Make the search product real
 
-Search is the core product and the architecture is sound. What it lacks is working
-credentials, quota discipline and observability.
+Search is the core product. The chain is now verified working end-to-end against the
+live YouTube API — API → Postgres → user-facing endpoint — after four defects were
+found and fixed by actually running it. What it lacks now is working credentials for
+the other eleven platforms, quota headroom, an index that survives scale, and
+observability.
 
 ### 3.1 Credentials (highest leverage)
 
@@ -84,7 +90,27 @@ which is how a 401 goes unnoticed for weeks.
 
 Note `/platform-status` on the frontend is a **static marketing page**, not health.
 
-### 3.3 Search quality
+### 3.3 Search scale — `contentStreams` needs a real index
+
+Now that aggregated content is actually served to users, its query path matters.
+`getEntriesAsync` searches with `title ILIKE '%term%'` plus a `json_each_text` scan
+over every row's `metaData`. That is a full table scan with a per-row JSON expansion —
+fine at the 11 rows verified, unworkable at production volume.
+
+Before this carries real traffic:
+
+1. **Postgres full-text search** on `title` plus extracted metadata fields, with a
+   `GIN` index on the `tsvector`, or a `pg_trgm` index if substring matching must be
+   kept.
+2. **Stop scanning `metaData` wholesale.** Extract the two or three fields worth
+   searching (description/message/caption) into real columns at write time.
+3. **Add a unique index on `(platform, externalId)`.** Dedup is currently enforced only
+   in application code, so concurrent inserts of the same item from different queries
+   can still race past it. Cheap, and it makes the invariant real.
+4. **Cap and page** the aggregated section explicitly; it currently shares the caller's
+   `limit`.
+
+### 3.4 Search quality
 
 - **Fix non-Latin normalisation.** `fuse.util.ts` sanitises with ASCII-only `\w`, so
   CJK and Arabic queries reduce to empty and cannot be normalised or cached. This
@@ -96,10 +122,10 @@ Note `/platform-status` on the frontend is a **static marketing page**, not heal
 - Add relevance ranking across platforms. Results are currently grouped per platform
   with no cross-platform scoring — the "All" tab has no true ordering.
 
-### 3.4 Test coverage
+### 3.5 Test coverage
 
 Vitest is installed with 41 tests (locale registry, colour-scheme provider) and the
-backend has 100 across 6 suites. Both gates are green.
+backend has 119 across 7 suites. Both gates are green.
 
 What is still uncovered, highest value first:
 
