@@ -298,6 +298,15 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
         case _const.PLATFORMS.GITHUB:
           result = await this.searchService.searchGithubAsync(searchParams);
           break;
+        case _const.PLATFORMS.APPLE:
+          result = await this.searchService.searchAppleAsync(searchParams);
+          break;
+        case _const.PLATFORMS.OPENVERSE:
+          result = await this.searchService.searchOpenverseAsync(searchParams);
+          break;
+        case _const.PLATFORMS.HACKERNEWS:
+          result = await this.searchService.searchHackernewsAsync(searchParams);
+          break;
         case _const.PLATFORMS.SPOTIFY:
           result = await this.searchService.searchSpotifyAsync(searchParams);
           break;
@@ -362,6 +371,9 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
         case _const.PLATFORMS.YOUTUBE:
           return result.nextPageToken || null;
         case _const.PLATFORMS.GITHUB:
+        case _const.PLATFORMS.APPLE:
+        case _const.PLATFORMS.OPENVERSE:
+        case _const.PLATFORMS.HACKERNEWS:
           // Page-number pagination, not a cursor.
           return result.nextPage != null ? String(result.nextPage) : null;
         case _const.PLATFORMS.SPOTIFY:
@@ -454,6 +466,11 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
         }
         case _const.PLATFORMS.YOUTUBE:
           return result.results?.length || 0;
+        case _const.PLATFORMS.APPLE:
+        case _const.PLATFORMS.OPENVERSE:
+        case _const.PLATFORMS.HACKERNEWS:
+          // These return a flat array rather than named sections.
+          return Array.isArray(result.results) ? result.results.length : 0;
         case _const.PLATFORMS.GITHUB: {
           const ghResults = result.results as any;
           return (

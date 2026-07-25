@@ -46,6 +46,15 @@ export interface ISearchService {
     params: PlatformSearchParamsModel,
   ): Promise<GithubSearchResponseModel>;
 
+  /**
+   * Credential-free sources covering verticals the brief names directly: music and audio
+   * (Apple), openly-licensed imagery (Openverse), news and trends (Hacker News). All three
+   * serve unauthenticated requests, which makes them the cheapest real integrations.
+   */
+  searchAppleAsync(params: PlatformSearchParamsModel): Promise<any>;
+  searchOpenverseAsync(params: PlatformSearchParamsModel): Promise<any>;
+  searchHackernewsAsync(params: PlatformSearchParamsModel): Promise<any>;
+
   searchYoutubeAsync(
     params: PlatformSearchParamsModel,
   ): Promise<YoutubeSearchResponseModel>;

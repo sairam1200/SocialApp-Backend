@@ -3313,4 +3313,234 @@ export class SearchService implements ISearchService {
 
     return response;
   }
+
+  /**
+   * Shared shape for the three credential-free sources below.
+   *
+   * Each covers a vertical the product brief names directly — music and audio, royalty-free
+   * imagery, news and trends — and each serves unauthenticated requests. They exist as
+   * first-class platforms rather than a bolt-on because the read path, cache, persistence
+   * and dedup are all per-platform already; adding one is a mapping function, not new
+   * infrastructure.
+   */
+  private async searchOpenSourceAsync(
+    platform: string,
+    params: PlatformSearchParamsModel,
+    fetchAndMap: (
+      term: string,
+      perPage: number,
+      page: number,
+    ) => Promise<{ items: ContentStream[]; raw: unknown }>,
+  ): Promise<{ query: string; results: unknown; nextPage: number | null }> {
+    const {
+      filters = {},
+      limit,
+      normalizedQuery,
+      originalQuery,
+      page,
+      forceRefresh = false,
+    } = params;
+
+    filters.platform = platform;
+    const cacheParams = { platform, normalizedQuery, filters, page, limit };
+
+    if (!forceRefresh) {
+      const cached = await this.cacheService.getCachedResults<{
+        query: string;
+        results: unknown;
+        nextPage: number | null;
+      }>(cacheParams);
+      if (cached) return cached;
+    }
+
+    const term = (originalQuery ?? '').trim();
+    const empty = { query: originalQuery, results: [], nextPage: null };
+    if (!term) return empty;
+
+    const perPage = Math.max(1, Math.min(50, limit || 20));
+    const currentPage = Math.max(1, page || 1);
+
+    let mapped: ContentStream[] = [];
+    let raw: unknown = [];
+
+    try {
+      const result = await fetchAndMap(term, perPage, currentPage);
+      mapped = result.items;
+      raw = result.raw;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn(`[${platform}Search] failed: ${message}`);
+      return empty;
+    }
+
+    // Persist, so repeat searches are served from Postgres. Same read-model design as
+    // every other platform — and here it also keeps unauthenticated rate limits from
+    // being the binding constraint.
+    const valid = mapped.filter(
+      (c) => c.externalId && c.externalId !== 'undefined',
+    );
+    if (valid.length > 0) {
+      const newIds = await this.generalRepository.checkExistingItemsAsync(
+        valid.map((c) => c.externalId),
+        platform,
+      );
+      const toAdd = valid.filter((c) => newIds.includes(c.externalId));
+      if (toAdd.length > 0) await this.generalRepository.createAsync(toAdd);
+    }
+
+    const response = {
+      query: originalQuery,
+      results: raw,
+      nextPage: valid.length >= perPage ? currentPage + 1 : null,
+    };
+
+    await this.cacheService.setCachedResults(cacheParams, response);
+    return response;
+  }
+
+  /**
+   * Apple / iTunes Search — music, podcasts, audiobooks, video.
+   *
+   * Fully open, no key, no rate-limit header. Covers the brief's music, audio and video
+   * verticals. `media=all` so one query spans them.
+   */
+  public async searchAppleAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<any> {
+    return this.searchOpenSourceAsync(
+      _const.PLATFORMS.APPLE,
+      params,
+      async (term, perPage) => {
+        const { data } = await axios.get('https://itunes.apple.com/search', {
+          params: { term, limit: perPage, media: 'all' },
+          timeout: 8000,
+        });
+
+        const items = (data?.results ?? []).map(
+          (r: any) =>
+            new ContentStream({
+              type: StreamEntityType.Content,
+              subType: r.kind || r.wrapperType || 'track',
+              title: r.trackName || r.collectionName || r.artistName || '',
+              platform: _const.PLATFORMS.APPLE,
+              externalId: String(
+                r.trackId || r.collectionId || r.artistId || '',
+              ),
+              metaData: {
+                description:
+                  r.longDescription || r.shortDescription || r.artistName,
+                externalUrl:
+                  r.trackViewUrl || r.collectionViewUrl || r.artistViewUrl,
+                thumbnailUrl: r.artworkUrl100 || r.artworkUrl60,
+                artist: r.artistName,
+                genre: r.primaryGenreName,
+                releaseDate: r.releaseDate,
+              },
+              lastRefreshed: new Date(),
+            }),
+        );
+
+        return { items, raw: data?.results ?? [] };
+      },
+    );
+  }
+
+  /**
+   * Openverse — openly-licensed images.
+   *
+   * Covers the brief's explicit ask for royalty-free image and asset sources. Every result
+   * carries its licence, which is the point: it is safe-to-reuse media rather than
+   * scraped content.
+   */
+  public async searchOpenverseAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<any> {
+    return this.searchOpenSourceAsync(
+      _const.PLATFORMS.OPENVERSE,
+      params,
+      async (term, perPage, page) => {
+        const { data } = await axios.get(
+          'https://api.openverse.org/v1/images/',
+          {
+            params: { q: term, page_size: perPage, page },
+            headers: { 'User-Agent': 'Gaddr-Search/1.0' },
+            timeout: 8000,
+          },
+        );
+
+        const items = (data?.results ?? []).map(
+          (r: any) =>
+            new ContentStream({
+              type: StreamEntityType.Content,
+              subType: 'image',
+              title: r.title || 'Untitled',
+              platform: _const.PLATFORMS.OPENVERSE,
+              externalId: String(r.id || ''),
+              metaData: {
+                description: r.creator ? `by ${r.creator}` : null,
+                externalUrl: r.foreign_landing_url || r.url,
+                thumbnailUrl: r.thumbnail || r.url,
+                // The licence is the reason to use this source; never drop it.
+                license: r.license,
+                licenseVersion: r.license_version,
+                licenseUrl: r.license_url,
+                creator: r.creator,
+                source: r.source,
+              },
+              lastRefreshed: new Date(),
+            }),
+        );
+
+        return { items, raw: data?.results ?? [] };
+      },
+    );
+  }
+
+  /**
+   * Hacker News via Algolia — news and trending technical discussion.
+   *
+   * Fully open. Covers the brief's trends and news verticals.
+   */
+  public async searchHackernewsAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<any> {
+    return this.searchOpenSourceAsync(
+      _const.PLATFORMS.HACKERNEWS,
+      params,
+      async (term, perPage, page) => {
+        const { data } = await axios.get(
+          'https://hn.algolia.com/api/v1/search',
+          {
+            // Algolia pages are zero-indexed.
+            params: { query: term, hitsPerPage: perPage, page: page - 1 },
+            timeout: 8000,
+          },
+        );
+
+        const items = (data?.hits ?? []).map(
+          (h: any) =>
+            new ContentStream({
+              type: StreamEntityType.Content,
+              subType: h.url ? 'story' : 'discussion',
+              title: h.title || h.story_title || '',
+              platform: _const.PLATFORMS.HACKERNEWS,
+              externalId: String(h.objectID || ''),
+              metaData: {
+                description: h.story_text || h.comment_text || null,
+                // Prefer the linked article; fall back to the discussion thread.
+                externalUrl:
+                  h.url || `https://news.ycombinator.com/item?id=${h.objectID}`,
+                points: h.points,
+                numComments: h.num_comments,
+                author: h.author,
+                createdAt: h.created_at,
+              },
+              lastRefreshed: new Date(),
+            }),
+        );
+
+        return { items, raw: data?.hits ?? [] };
+      },
+    );
+  }
 }

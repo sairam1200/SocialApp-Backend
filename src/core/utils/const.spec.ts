@@ -75,8 +75,18 @@ describe('SEARCHABLE_PLATFORMS', () => {
     }
   });
 
-  it('includes GitHub, which needs no credential', () => {
-    expect(_const.SEARCHABLE_PLATFORMS).toContain(_const.PLATFORMS.GITHUB);
+  it('includes every platform that needs no credential', () => {
+    // These five work with no API key at all, which makes them the integrations most
+    // likely to still be returning data a year from now. Removing one from the fan-out
+    // silently loses a working source, so it is worth pinning.
+    for (const platform of [
+      _const.PLATFORMS.GITHUB,
+      _const.PLATFORMS.APPLE,
+      _const.PLATFORMS.OPENVERSE,
+      _const.PLATFORMS.HACKERNEWS,
+    ]) {
+      expect(_const.SEARCHABLE_PLATFORMS).toContain(platform);
+    }
   });
 
   it('has no duplicates', () => {

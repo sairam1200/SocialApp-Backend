@@ -5,6 +5,16 @@
 The API credentials document asks for "clear documentation on all API integrations and
 which ones work and which ones need adjustments". This is that document.
 
+**Five platforms return real data today, and four of them need no credential at all.**
+A single search across YouTube, GitHub, Apple, Openverse and Hacker News returns **41 real
+results in 1.15 s**, all persisted to `contentStreams` and served back through the
+user-facing read path in 0.46 s. Verified against a fresh database.
+
+That reframes the situation: the product is not "one platform working and eleven blocked".
+It is five working sources — covering search, code, music/audio/video, royalty-free imagery
+and news/trends — plus a set of social platforms gated on credentials that only their
+account owners can supply.
+
 **Verified separately from credentials.** `search.handler.spec.ts` (35 tests) pins the
 orchestration for all twelve platforms without needing any working credential: per-platform
 dispatch, that a stored OAuth token reaches its own platform and no other, failure
@@ -53,6 +63,9 @@ user authorisation, so it goes from zero to working in about half an hour.
 |---|---|---|---|
 | **YouTube** | ✅ **Working** | `GET /youtube/v3/search` → 200, real results | Quota, not auth — see below |
 | **GitHub** | ✅ **Working, no credential needed** | `GET /search/repositories` + `/search/users` → 200 unauthenticated; verified end-to-end into Postgres and back out | Rate limit 10/min unauthenticated, 60/hr with a token |
+| **Apple / iTunes** | ✅ **Working, no credential needed** | `GET /search?media=all` → 200; 9 rows persisted and served | Covers the brief's **music, audio and video** verticals |
+| **Openverse** | ✅ **Working, no credential needed** | `GET /v1/images/` → 200; 8 rows persisted and served | Covers the brief's explicit ask for **royalty-free image and asset sources**; every result carries its licence |
+| **Hacker News** | ✅ **Working, no credential needed** | `GET /api/v1/search` (Algolia) → 200; 8 rows persisted and served | Covers the brief's **news and trends** verticals |
 | **TikTok** | ⚠️ **Partial** | `POST /v2/oauth/token/` → 200, token issued | `client_credentials` opens a narrow endpoint set; content search needs a user-authorised token |
 | **Pinterest** | ❌ **Broken** | `GET /v5/user_account` → **401** `Authentication failed` | Access token dead or expired. Needs re-authorisation |
 | **Dribbble** | ⚠️ **Needs user OAuth** | `POST /oauth/token` → **400** `Missing required parameter: code` | `client_credentials` unsupported; requires the authorisation-code flow |

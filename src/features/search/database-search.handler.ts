@@ -99,6 +99,12 @@ function buildSourceUrl(
       if (subType === 'playlist')
         return `https://www.youtube.com/playlist?list=${externalId}`;
       return `https://www.youtube.com/watch?v=${externalId}`;
+    case 'apple':
+    case 'openverse':
+    case 'hackernews':
+      // These carry a real landing URL in metaData.externalUrl (handled above); their
+      // ids are opaque, so there is no path to construct.
+      return null;
     case 'github':
       // GitHub's numeric ids are not addressable, so the URL must come from the stored
       // metaData (`externalUrl`, handled above). Returning null beats guessing a path.

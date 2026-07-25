@@ -110,6 +110,12 @@ export default {
     TWITCH: 'twitch',
     GITHUB: 'github',
     DISCORD: 'discord',
+    // Credential-free sources covering verticals the product brief names directly:
+    // music and audio (Apple), royalty-free imagery (Openverse), news and trends
+    // (Hacker News). All three serve unauthenticated requests.
+    APPLE: 'apple',
+    OPENVERSE: 'openverse',
+    HACKERNEWS: 'hackernews',
   },
 
   /**
@@ -137,6 +143,9 @@ export default {
     'linkedin',
     'youtube',
     'github',
+    'apple',
+    'openverse',
+    'hackernews',
     'spotify',
     'reddit',
     'pinterest',
