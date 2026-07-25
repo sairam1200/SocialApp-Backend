@@ -29,7 +29,7 @@ moment a valid credential exists.
 | Platform | Who acts | Exact action | Effort |
 |---|---|---|---|
 | **YouTube** | Engineering | ✅ Working. Request a **quota increase** in Google Cloud → APIs & Services → YouTube Data API v3 → Quotas. Default 10,000 units/day at 100 per `search.list` = ~100 searches/day, which will not survive launch | 30 min + Google review |
-| **Pinterest** | Account owner | Re-run the OAuth flow at developers.pinterest.com to mint a fresh token, and **store the refresh token** so `oauth.service.ts` renews it automatically. The app ID and secret are still valid; only the access token expired | 1 hour |
+| **Pinterest** | Account owner | **The app secret is valid — the blocker is account 2FA.** `POST /v5/oauth/token` with `grant_type=client_credentials` and a scope returns `1201: Two-factor authentication required`, which is a *different* error from invalid credentials: Pinterest accepted the app ID and secret and then challenged the account. So token minting cannot be automated at all; the owner must complete the OAuth flow interactively, satisfying 2FA, then **store the refresh token** so `oauth.service.ts` renews it without repeating that. Note `client_credentials` alone returns `400 Invalid parameters` — Pinterest v5 needs the authorisation-code flow | 1 hour, interactive |
 | **TikTok** | Account owner | Complete app review for the scopes needed, then gate TikTok results on a **connected account** — `client_credentials` cannot search content, by TikTok's design | Days–weeks (review) |
 | **Twitter / X** | Account owner | Complete email + phone verification on the developer account, then choose a paid API tier — the free tier has no search | Hours + ongoing cost |
 | **LinkedIn** | Account owner | Regain developer portal access, then apply for the Marketing/Community API. Search access is heavily restricted and may be declined | Weeks, uncertain |
@@ -99,12 +99,24 @@ only for users who have connected their TikTok account.
 Design implication: TikTok results should be gated on a connected account rather than
 attempted and silently failing for everyone else.
 
-## Pinterest — re-authorisation needed
+## Pinterest — blocked by account 2FA, not by a bad secret
 
-The configured access token returns 401. Pinterest v5 access tokens expire; the app ID
-and secret are still valid, so this needs the OAuth flow re-run to mint a fresh token
-plus refresh token. Store the **refresh** token and renew automatically —
-`oauth.service.ts` already has that pattern.
+Three distinct probes, and the third is the informative one:
+
+| Probe | Result | Meaning |
+|---|---|---|
+| `GET /v5/user_account` with the stored token | `401 Authentication failed` | The user access token is dead or expired |
+| `POST /v5/oauth/token` `grant_type=client_credentials` | `400 Invalid parameters` | v5 does not support this grant; it needs the authorisation-code flow |
+| Same, with `scope=pins:read,boards:read` | **`1201 Two-factor authentication required`** | Pinterest **accepted the app ID and secret**, then challenged the account |
+
+That third response matters. It is not a credentials error — it proves the app secret is
+valid and locates the blocker in an **interactive 2FA challenge on the Pinterest account**.
+
+Consequence: minting a Pinterest token cannot be automated, scripted, or done from CI. The
+account owner has to complete the OAuth flow in a browser and satisfy 2FA. Once that is
+done, **store the refresh token** so `oauth.service.ts` renews it automatically rather than
+requiring the 2FA dance again — that pattern already exists in the codebase and is the
+difference between a one-off task and a recurring one.
 
 ## Reddit — treat as unavailable
 
