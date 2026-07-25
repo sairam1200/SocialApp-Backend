@@ -41,16 +41,21 @@ Playwright for login, search and profile journeys. `yarn type-check` and
 
 ## What is covered
 
-87 tests, 5 suites. Concentrated on the auth and search core, because that is where
-the audit found critical defects:
+119 tests, 7 suites. Concentrated on auth and search, because that is where the audit
+found critical defects:
 
 | Suite | Pins |
 |---|---|
 | `account.guard.spec.ts` | Token expiry (finding C1). Ordinary guards reject expired tokens; `RefreshTokenGuard` still accepts them. |
 | `permissions.guard.spec.ts` | Exact-match permissions (C3). Empty-string and coarse-substring grants must be rejected. |
 | `crypto.util.spec.ts` | `timingSafeEqual` length crash (C4), round-trips including Swedish/Arabic/CJK. |
+| `searchRateLimit.guard.spec.ts` | Atomic counting — 25 concurrent requests admit exactly the limit. Bounded fallback when Redis is down. |
+| `database-search.handler.spec.ts` | The aggregated projection. Mostly `buildSourceUrl`, because a wrong URL still renders a card and just 404s. |
 | `limitAllocator.util.spec.ts` | Result-limit conservation, exhaustive over all 15 skip combinations. |
 | `fuse.util.spec.ts` | Query normalisation — the search cache key. |
+
+Frontend: 41 Vitest tests (locale registry, colour-scheme provider). No end-to-end
+coverage in either repo yet.
 
 ## Conventions
 
@@ -63,6 +68,48 @@ the audit found critical defects:
   placeholder credentials are invalid on purpose.
 - **Reference the finding.** Security tests cite their audit ID in a comment so the
   reason survives a refactor.
+
+## Unit tests are not enough — run the thing
+
+Every unit test in this repo passed while four defects made the core product not work.
+All four were found by starting a real server against a real Postgres and a real API,
+and none was visible from reading code or from green unit tests:
+
+1. Aggregated results were persisted and never read back — the read path had zero
+   references to `contentStreams`.
+2. The migration chain could not build a database from empty (two separate holes).
+3. `data.source.ts` discarded five connection variables and hardcoded TLS, so
+   `POSTGRES_*` and `POSTGRES_SSL_REJECTUNAUTHORIZED` did nothing.
+4. `fuse.js` was imported in a way that compiled to `undefined` at runtime.
+
+The common shape: **each was a gap *between* correctly-written units.** Unit tests
+verify the pieces; only execution verifies the wiring.
+
+So for anything that crosses a boundary — HTTP → handler → repository → database, or
+our code → a third-party API — do this before claiming it works:
+
+```bash
+createdb gaddr_e2e                       # scratch database
+# .env.development (gitignored). Two traps:
+#   POSTGRES_ENTITIES must be RECURSIVE: /../../domain/entities/**/*.entity.js
+#   POSTGRES_PASSWORD must be non-empty — Joi rejects ''
+npm run build && node dist/main.js
+# then: real request -> query the table -> call the read endpoint
+```
+
+Full worked example, including the exact curl and psql commands:
+`docs/integrations/END_TO_END_VERIFICATION.md`.
+
+Two things that will bite you: the anonymous rate limit on `POST /search` is **5/min**,
+so a readiness-probe loop trips it (that is the limiter working); and
+`GET /search/suggestions` requires a keyword of **at least 3 characters**.
+
+**Check the compiled output, not just the transform.** ts-jest and `tsc` can disagree
+with `nest build` on module interop. The `fuse.js` bug reproduced only in `dist/`:
+
+```bash
+node -e "console.log(require('./dist/core/utils/fuse.util.js').normalizeSearchTerm('x',['xy']))"
+```
 
 ## Two habits worth keeping
 

@@ -26,16 +26,23 @@ export class ContentStreamRepository implements IContentStreamRepository {
     const parameters: Record<string, any> = {};
 
     if (searchQuery) {
-      whereConditions.push(`
-        (
-          cs.title ILIKE :searchQuery
-          OR EXISTS (
-            SELECT 1
-            FROM json_each_text(cs.metaData) AS kv(key, value)
-            WHERE value ILIKE :searchQuery
-          )
-        )
-      `);
+      // Matches against the denormalised `searchText` column (title + the platform's
+      // body text), which is backed by a pg_trgm GIN index.
+      //
+      // This replaced:
+      //   cs.title ILIKE :q OR EXISTS (
+      //     SELECT 1 FROM json_each_text(cs.metaData) AS kv(key, value)
+      //     WHERE value ILIKE :q)
+      //
+      // That expanded EVERY row's JSON on EVERY search — a full table scan with
+      // per-row JSON parsing, and it also matched non-textual keys like ids and
+      // thumbnail URLs, so a query could "match" a row via a URL fragment.
+      //
+      // The `title ILIKE` fallback stays for rows written before the backfill, and
+      // is itself index-assisted by idx_content_streams_title_trgm.
+      whereConditions.push(
+        `(cs.searchText ILIKE :searchQuery OR (cs.searchText IS NULL AND cs.title ILIKE :searchQuery))`,
+      );
       parameters.searchQuery = `%${searchQuery}%`;
     }
 

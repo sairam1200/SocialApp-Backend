@@ -65,6 +65,20 @@ relevant `modules/*.module.ts`.
 8. **Set a TTL on every cache key.** Redis has 30 MB.
 9. **Preserve API contracts.** Additive changes only.
 
+## Schema changes
+
+Load the `gaddr-database` skill. The short version:
+
+- **Never rely on `synchronize: true`** — a table it creates is invisible to every other
+  environment. Six tables reached production that way and the migration chain could not
+  rebuild the database at all until it was repaired.
+- **Never edit an applied migration.** TypeORM records them by name, so the edit runs
+  nowhere. Write a new one.
+- **Never depend on production-only state** in a migration. Guard data remediation on
+  the table existing; keep schema changes unconditional.
+- **Verify against an empty database**, not by reading. Expect 42 tables / 52
+  migrations.
+
 ## Non-obvious traps
 
 - `HttpContext.user` looks like shared static state but is `AsyncLocalStorage`-backed
@@ -77,6 +91,20 @@ relevant `modules/*.module.ts`.
   (`allowSyntheticDefaultImports` without `esModuleInterop`). That produced 500s on
   every search. Check any new `export =` dependency the same way.
 - Redis may be absent at runtime. Degrade explicitly.
+- **Entity globs must be recursive.** Entities live in `domain/entities/` *and* its
+  `identity/`, `notification/`, `collection/` subdirectories. A non-recursive glob loads
+  25 of 39 and fails with the misleading `Entity metadata for UserFollow#follower was
+  not found`.
+- **Persisting is not shipping.** Search has a write path (`POST /search` →
+  `contentStreams`) and a read path (`GET /search/results`). They were disconnected:
+  results were saved and never shown. If you add something to one, exercise the other.
+
+## Finishing a boundary-crossing change
+
+Unit tests pass while wiring is broken — that is how four defects survived here. If
+your change crosses HTTP → handler → repository → database, or calls a third-party API,
+run it: real server, real Postgres, real request, then query the table, then call the
+read endpoint. `docs/integrations/END_TO_END_VERIFICATION.md` has the commands.
 
 ## Finish by verifying
 
@@ -84,7 +112,7 @@ relevant `modules/*.module.ts`.
 ./scripts/ci.sh
 ```
 
-Typecheck, lint (0 errors required), 87 tests, secret scan, build. Add tests for
+Typecheck, lint (0 errors required), 119 tests, secret scan, build. Add tests for
 what you changed — co-locate as `*.spec.ts`. See the `gaddr-testing` skill.
 
 State the RAM, Redis, database and WebSocket impact of what you built.

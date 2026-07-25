@@ -18,6 +18,7 @@ file that matches your task.
 | Stripe, Gaddr Pay, payouts, marketplace, on-chain | skill `gaddr-payments` |
 | BankID, KYC, fraud, abuse, audit trails | skill `gaddr-fraud-identity` |
 | Adding or repairing a platform integration, or MCP exposure | skill `gaddr-platform-integration` |
+| Migrations, schema, indexes, query performance, provisioning | skill `gaddr-database` |
 | Writing tests, or a suite fails to start | skill `gaddr-testing` |
 
 Sub-agents in [`.claude/agents/`](.claude/agents/): **architect** (plans, no code),
@@ -27,7 +28,9 @@ Sub-agents in [`.claude/agents/`](.claude/agents/): **architect** (plans, no cod
 has the sequenced plan and what is deliberately deferred.
 **Search returning nothing?** Check
 [`docs/integrations/STATUS.md`](docs/integrations/STATUS.md) before debugging code —
-several platform credentials are dead, and a 401 is silent by design.
+several platform credentials are dead, and a 401 is silent by design. For how the
+whole chain was verified against the live YouTube API, and the four defects that
+found, see [`docs/integrations/END_TO_END_VERIFICATION.md`](docs/integrations/END_TO_END_VERIFICATION.md).
 
 ---
 
@@ -182,7 +185,7 @@ Individually:
 ```bash
 npx tsc -p tsconfig.json --noEmit   # must stay at 0 errors
 npx eslint src --ext .ts            # must stay at 0 errors
-npx jest                            # 87 tests, 5 suites
+npx jest                            # 119 tests, 7 suites
 npm run build
 ```
 

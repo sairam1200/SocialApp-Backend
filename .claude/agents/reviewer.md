@@ -62,14 +62,33 @@ and `Date` handling.
 - Third-party quota: does this increase API fan-out? YouTube allows ~100
   searches/day.
 
-**5. Tests**
+**5. Migrations and schema**
+- New table or column: is there a **migration**, not just an entity? An entity alone is
+  invisible outside whatever environment `synchronize` last touched. Six tables reached
+  production that way and left the chain unable to rebuild the database.
+- Was an **existing migration edited**? Reject — TypeORM records them by name, so the
+  edit applies nowhere. It must be a new migration.
+- Does a migration reference a table **no migration creates** (e.g. `gaddr_users_compat`)?
+  That breaks every fresh environment. Data remediation must be guarded on existence;
+  schema changes stay unconditional.
+- New query: is there a supporting **index in the same migration**? Note `ILIKE '%x%'`
+  cannot use a btree index, and JSON-column scans are full table scans.
+- Is a real invariant enforced only in application code? Uniqueness belongs in a
+  `UNIQUE` index, or concurrent writers race past it.
+
+**6. Wiring, not just units**
+The defects that got through here were all gaps *between* correct units. Ask: does the
+write path have a corresponding read path, and is it exercised? Persisting data that
+nothing reads back is the exact bug that hid in search for months.
+
+**7. Tests**
 - Is the changed behaviour pinned by a test? Security fixes especially.
 - Would the test **fail** if the fix were reverted? A test that passes against
   broken code certifies the bug.
 - New `.required()` env var added to `test/jest-setup-env.ts`? If not, every suite
   breaks at import.
 
-**6. Hygiene**
+**8. Hygiene**
 `console.log`, `TODO`, dead code, commented-out blocks, unused imports, `any` where
 a type is knowable.
 
@@ -79,5 +98,5 @@ Group by severity. For each: file:line, what is wrong, the concrete failure, and
 fix in one sentence. If the change is good, say so plainly and note anything worth
 watching. Do not invent findings to seem thorough.
 
-Confirm the gate: `./scripts/ci.sh` — typecheck, lint (0 errors), 87 tests, secret
+Confirm the gate: `./scripts/ci.sh` — typecheck, lint (0 errors), 119 tests, secret
 scan, build.

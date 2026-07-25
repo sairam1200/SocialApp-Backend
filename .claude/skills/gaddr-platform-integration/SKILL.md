@@ -27,7 +27,43 @@ curl -s -o /dev/null -w "%{http_code}\n" \
   "https://www.googleapis.com/youtube/v3/search?part=snippet&q=test&maxResults=1&key=$YOUTUBE_API_KEY"
 ```
 
-## How search is wired
+## How search is wired — both halves
+
+**This is the thing most likely to be missed.** Search has two halves, and they were
+disconnected until 2026-07-25: results were persisted and never shown.
+
+```
+WRITE PATH                              READ PATH (what the UI calls)
+POST /api/v1/search                     GET /api/v1/search/results
+  ↓ fan out to 12 platforms               GET /api/v1/search/suggestions
+  ↓ persist -> contentStreams  ─────────►  reads contentStreams  (aggregated)
+                                           reads identity.users  (profiles)
+                                           reads userContents    (native)
+```
+
+The read path lives in `features/search/database-search.handler.ts`. It previously
+injected only the identity, user-content and project repositories and contained **zero
+references to `contentStreams`** — so every cross-platform result existed solely in the
+immediate POST response and vanished from the product. Measured: a YouTube search wrote
+11 rows, `GET /search/results` returned `total: 0`.
+
+**If you add a platform, both halves must be exercised.** Persisting is not shipping.
+Verify with a real request, then query the table, then call the read endpoint. See
+`docs/integrations/END_TO_END_VERIFICATION.md` for the exact commands.
+
+Aggregated rows reach the client through the `AggregatedSearchResult` projection, not
+the raw entity — `metaData` is whatever the platform returned, and the API contract
+must not depend on twelve third-party payload shapes. When adding a platform, extend:
+
+- `extractThumbnail` — platforms disagree (`thumbnails.high.url`, `thumbnail_url`,
+  `media_url`, `picture.data.url`).
+- `buildSourceUrl` — **this is where it breaks quietly.** A wrong URL still renders a
+  result card, it just sends the user to a 404. Note YouTube needs three shapes:
+  `watch?v=` for a video, `/channel/` for a channel, `/playlist?list=` for a playlist.
+  Prefer a real `permalink` from the payload when present; prefer `null` over a guess.
+- `database-search.handler.spec.ts` — add cases for the new platform.
+
+## The write path, per platform
 
 `GlobalSearchQueryHandler` (`features/search/search.handler.ts`) fans out to all
 platforms in parallel, each wrapped in `.catch()` so one failure degrades that
@@ -67,8 +103,19 @@ locally rather than burning quota.
 6. **OAuth** — connect handler in `features/integrations/<platform>/connect/`.
    Encrypt stored tokens (see the `gaddr-encryption` skill — do not add a new
    caller of bare `encrypt`).
-7. **Frontend** — add the CDN hostname to `remotePatterns` in `next.config.ts`, or
+7. **Read path** — extend `extractThumbnail` and `buildSourceUrl` in
+   `database-search.handler.ts`, or rows persist but render with no thumbnail and no
+   working link. Add cases to `database-search.handler.spec.ts`.
+8. **Frontend** — add the CDN hostname to `remotePatterns` in `next.config.ts`, or
    `next/image` refuses to render the platform's media.
+9. **Verify end-to-end**, not by reading the code:
+   ```bash
+   curl -X POST localhost:8099/api/v1/search -H 'Content-Type: application/json' \
+     -d '{"searchTerm":"design","platforms":["<platform>"],"limit":10}'
+   psql -d gaddr_e2e -c 'SELECT platform, type, "externalId", title FROM "contentStreams"'
+   # aggregated MUST be non-empty — this is the step that was broken for every platform
+   curl 'localhost:8099/api/v1/search/results?keyword=design&limit=5'
+   ```
 
 ## Rules
 

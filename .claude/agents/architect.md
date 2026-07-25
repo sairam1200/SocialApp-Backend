@@ -47,8 +47,11 @@ violation; it must resolve through a DI token registered in
 - **Impact** on RAM (512 MB cap), Redis (30 MB, 30 connections), Postgres (new
   queries, indexes, migrations) and WebSocket (new events, connection overhead).
 - **Tradeoffs**: what is gained, what is given up.
-- **Test plan**: which behaviours get pinned. The repo has 87 tests; auth and
-  search are covered, everything else is not.
+- **Test plan**: which behaviours get pinned. The repo has 119 tests; auth and
+  search are covered, everything else is not. If the change crosses a boundary
+  (HTTP → handler → repository → database, or a third-party API), the plan must say
+  how it will be verified *by running it* — every defect that reached production here
+  was a gap between correctly-written units.
 - **Risks and rollback.**
 
 ## Constraints that change designs
@@ -59,6 +62,7 @@ violation; it must resolve through a DI token registered in
 | Redis 30 MB, 30 connections | Every key gets a TTL. Reuse the shared client. |
 | Redis is optional at boot | `main.ts` continues without it. A path that *requires* Redis must degrade explicitly. Note the security consequence: the guard's securityStamp check currently fails open on cache miss. |
 | Migrations auto-run on start | `POSTGRES_MIGRATIONS_RUN` defaults true — beware races across instances. |
+| A fresh database must stay buildable | The chain could not build from empty until 2026-07-25 (six tables had no create-migration, one migration needed production-only state). Any schema plan states its migration explicitly; never `synchronize`. See skill `gaddr-database`. |
 | No global ValidationPipe | `class-validator` is not installed. Validation is hand-rolled Joi per handler. Plan for it explicitly. |
 | Third-party API quotas | Search fans out to metered APIs. YouTube allows ~100 searches/day. Any design that increases fan-out needs a quota answer. |
 
