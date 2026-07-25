@@ -1,6 +1,7 @@
 ---
 name: gaddr-database
 description: Database work in the Gaddr backend — migrations, schema changes, TypeORM entities, indexes, query performance, and provisioning a new environment. Use when adding or altering a table, writing a migration, debugging a failed migration, or when a query is slow.
+when_to_use: Trigger phrases include "add a table", "add a column", "new migration", "migration failed", "QueryFailedError", "Entity metadata was not found", "synchronize", "set up a fresh database", "provision staging", "this query is slow", "add an index", "N+1", "ILIKE", "pg_trgm", "TypeORM", "Neon", "seed data", and any edit under src/infrastructure/migrations/ or src/domain/entities/.
 ---
 
 # Gaddr database

@@ -11,18 +11,39 @@ file that matches your task.
 
 ## Pick your entry point
 
+Seven skills live in [`.claude/skills/`](.claude/skills/). Only their descriptions sit
+in context; the body loads when one matches, so **naming the domain in your first
+sentence is what makes the right one fire**. Load explicitly with `/skill-name` when
+you already know which you need.
+
 | You are doing | Load this |
 |---|---|
-| Anything touching auth, guards, tokens, CORS, webhooks | skill `gaddr-security-review` |
+| Anything touching auth, guards, tokens, sessions, CORS, rate limiting, webhooks | skill `gaddr-security-review` |
 | Storing/reading secrets, OAuth tokens, the CBC→GCM migration | skill `gaddr-encryption` |
+| Migrations, schema, entities, indexes, query performance, provisioning | skill `gaddr-database` |
+| Adding or repairing a platform integration, or MCP exposure | skill `gaddr-platform-integration` |
+| Writing tests, a suite fails to start, or "does this actually work?" | skill `gaddr-testing` |
 | Stripe, Gaddr Pay, payouts, marketplace, on-chain | skill `gaddr-payments` |
 | BankID, KYC, fraud, abuse, audit trails | skill `gaddr-fraud-identity` |
-| Adding or repairing a platform integration, or MCP exposure | skill `gaddr-platform-integration` |
-| Migrations, schema, indexes, query performance, provisioning | skill `gaddr-database` |
-| Writing tests, or a suite fails to start | skill `gaddr-testing` |
 
-Sub-agents in [`.claude/agents/`](.claude/agents/): **architect** (plans, no code),
-**backend** (implements), **redis** (cache + BullMQ), **reviewer** (pre-merge review).
+Each skill carries the defects its area has already produced. Loading one costs less
+than rediscovering them — every rule in them was paid for once already.
+
+### Sub-agents
+
+Four in [`.claude/agents/`](.claude/agents/). Delegate when the work would otherwise
+flood this conversation, or when you want the constraint enforced rather than merely
+requested — `architect` and `reviewer` cannot write files at all.
+
+| Agent | Use it for | Writes code |
+|---|---|---|
+| **architect** | Planning a feature, root-causing a bug, evaluating a dependency, designing a refactor | No |
+| **backend** | Implementing in `src/` — endpoints, handlers, migrations, fixes | Yes |
+| **redis** | Cache strategy, BullMQ queues, TTLs, memory and connection budget | Yes |
+| **reviewer** | Pre-merge review of a diff or branch | No |
+
+Typical chain: `architect` → `backend` (+ `redis` if caching is involved) → `reviewer`,
+iterating until the reviewer reports no Critical or Major findings.
 
 **Planning work?** [`docs/roadmap/IMPLEMENTATION_PLAN.md`](docs/roadmap/IMPLEMENTATION_PLAN.md)
 has the sequenced plan and what is deliberately deferred.
@@ -44,15 +65,30 @@ critical findings, which of them are fixed, which are deliberately left open and
 that turned out not to be real. Reading it prevents you re-investigating settled
 ground or "fixing" something that is already correct.
 
-Open items you must not trip over:
+Two of the five critical findings are now **closed**, and the shape of each fix is
+load-bearing — don't undo it:
 
-- **Session revocation fails open** on Redis cache miss (`account.guard.ts`). Do
-  not make it fail closed without adding the DB fallback — you will log out every
-  user with a cold cache.
-- **OAuth tokens use a fixed IV with unauthenticated CBC** (`crypto.util.ts`).
-  Migrating to AES-GCM changes the stored format; it needs a dual-read migration.
+- **C5, session revocation — closed.** `account.guard.ts` now reads the authoritative
+  `securityStamp` from the database on a Redis cache miss, repopulates the cache, and
+  rejects if neither can confirm. The ordering mattered: failing closed *without* the
+  DB read would have logged out every user with a cold cache. Guards now take
+  `IIdentityRepository` as a second constructor argument — a new guard needs the same
+  wiring via `authGuard.module`.
+- **C4, token encryption — closed.** `crypto.util.ts` emits authenticated
+  **AES-256-GCM** with a per-message random IV, keyed by HKDF, formatted
+  `v2:<iv>:<ciphertext>:<authTag>`. `decrypt()` still routes hex CBC values to
+  `encryptLegacy`. **Never delete that legacy branch** until stored tokens have been
+  rewritten — every OAuth token in the database today is still CBC, so removing it is
+  data loss, not cleanup. Never pass `keyParam`/`ivParam`; either forces the legacy path.
+
+Still open:
+
+- **`ENCRYPTION_KEY` has not been rotated.** It was in the committed dump. Needs
+  production access, so it cannot be done from code.
 - **A production DB dump is still in git history** at `e4b5f3b`. Removed from
   `HEAD`; the blob persists. Never re-add dumps — `.gitignore` blocks them.
+- **Better Auth session tokens are stored in plaintext** in the `session` table
+  (H2). Store `sha256(token)` and compare hashes.
 - **`better-auth` is installed with zero imports** and its session logic is
   hand-rolled in raw SQL. Adopt-or-remove is a product decision; don't drift further.
 

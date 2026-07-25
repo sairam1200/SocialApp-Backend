@@ -1,6 +1,7 @@
 ---
 name: gaddr-testing
-description: Write and run tests in the Gaddr repos. Use when adding tests, when a test suite fails to start, or when asked about coverage, the CI gate, or how to verify a change. Covers the env bootstrap that makes importing real modules possible.
+description: Write and run tests in the Gaddr backend, and verify a change actually works end to end. Use when adding or fixing a test, when a suite fails to start with a Joi or config error, when asked about coverage or the CI gate, or when deciding how to prove a change works. Covers the env bootstrap that makes importing real modules possible.
+when_to_use: Trigger phrases include "add a test", "write tests", "the tests fail", "suite won't start", "how do I verify this", "does this actually work", "run CI", "ci.sh", "jest", "coverage", "no tests exist for this", and any change that crosses HTTP to handler to repository to database or calls a third-party API.
 ---
 
 # Gaddr testing
@@ -35,27 +36,32 @@ npx jest --coverage
 ./scripts/ci.sh --fast                     # skip the build
 ```
 
-Frontend has **no test runner yet**. Recommended: Vitest + Testing Library, with
-Playwright for login, search and profile journeys. `yarn type-check` and
-`yarn lint` already work and are gated by `frontend/scripts/ci.sh`.
+The frontend is a separate repository with its own runners — **Vitest 4** for units
+and **Playwright** for browser tests, both gated by `frontend/scripts/ci.sh`. It has
+its own `gaddr-frontend-testing` skill; use that when working there, not this one.
 
 ## What is covered
 
-119 tests, 7 suites. Concentrated on auth and search, because that is where the audit
-found critical defects:
+**Backend: 119 tests, 7 suites**, all passing. Concentrated on auth and search,
+because that is where the audit found critical defects:
 
 | Suite | Pins |
 |---|---|
 | `account.guard.spec.ts` | Token expiry (finding C1). Ordinary guards reject expired tokens; `RefreshTokenGuard` still accepts them. |
 | `permissions.guard.spec.ts` | Exact-match permissions (C3). Empty-string and coarse-substring grants must be rejected. |
-| `crypto.util.spec.ts` | `timingSafeEqual` length crash (C4), round-trips including Swedish/Arabic/CJK. |
+| `crypto.util.spec.ts` | 30 tests. GCM round-trips (Swedish/Arabic/CJK, multi-block), non-determinism, tamper detection on ciphertext and auth tag, HKDF derivation, the `timingSafeEqual` regression, and the dual-read path keeping legacy CBC readable. |
 | `searchRateLimit.guard.spec.ts` | Atomic counting — 25 concurrent requests admit exactly the limit. Bounded fallback when Redis is down. |
 | `database-search.handler.spec.ts` | The aggregated projection. Mostly `buildSourceUrl`, because a wrong URL still renders a card and just 404s. |
 | `limitAllocator.util.spec.ts` | Result-limit conservation, exhaustive over all 15 skip combinations. |
 | `fuse.util.spec.ts` | Query normalisation — the search cache key. |
 
-Frontend: 41 Vitest tests (locale registry, colour-scheme provider). No end-to-end
-coverage in either repo yet.
+**Frontend: 52 Vitest tests** (3 files — locale registry, content normaliser,
+colour-scheme provider) **and 12 Playwright tests** (6 cases in
+`e2e/search-aggregated.spec.ts`, run against desktop Chrome and a Pixel 7).
+
+There is still **no end-to-end coverage in this repository** — no suite here starts a
+real server. That gap is why the section below exists: for the backend, "end to end"
+is currently something you do by hand.
 
 ## Conventions
 
@@ -84,6 +90,15 @@ and none was visible from reading code or from green unit tests:
 
 The common shape: **each was a gap *between* correctly-written units.** Unit tests
 verify the pieces; only execution verifies the wiring.
+
+The frontend reached the same conclusion independently and acted on it: its
+`e2e/search-aggregated.spec.ts` exists because unit tests on **both** sides were green
+while aggregated results were saved, returned by this API, and never rendered. That
+suite is currently the only automated proof that a result this service persists
+reaches a user. If you change the search read path — `database-search.handler.ts`, the
+`AggregatedSearchResult` projection, or the shape of `GET /search/results` — say so in
+your summary, because the assertion that catches the regression lives in the other
+repository.
 
 So for anything that crosses a boundary — HTTP → handler → repository → database, or
 our code → a third-party API — do this before claiming it works:
@@ -117,11 +132,20 @@ node -e "console.log(require('./dist/core/utils/fuse.util.js').normalizeSearchTe
 A test that passes against broken code is worse than no test — it certifies a bug.
 Done for the expiry fix: with the check disabled, 6 tests fail.
 
-**Assert known-broken behaviour deliberately.** Where a defect is open because the
-fix needs a migration (C4's static IV, C5's fail-open revocation), the current
-behaviour is asserted with a `DOCUMENTS finding <id>` comment saying which
-expectation to invert when it is fixed. Failing tests there are the intended
+**Assert known-broken behaviour deliberately.** Where a defect must stay open for a
+while, the *current* behaviour is asserted with a `DOCUMENTS finding <id>` comment
+naming the expectation to invert once it is fixed. Failing tests there are the intended
 signal, not a regression.
+
+This has now paid off twice. C4 and C5 were both documented this way and are both
+closed; when the fixes landed, the assertions to flip were already written down.
+`crypto.util.spec.ts` went from asserting "identical plaintext yields identical
+ciphertext" to asserting the opposite, and grew a dual-read case so the legacy CBC path
+cannot be deleted silently.
+
+**Check what a `DOCUMENTS` comment still refers to before trusting it.** A closed
+finding whose assertion was never inverted is a test certifying a bug that no longer
+exists.
 
 ## What to test next
 

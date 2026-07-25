@@ -10,9 +10,11 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { IIdentityRepository } from '../../domain/repositories/iidentity.repository';
 
 function createAccountGuard(
   type?: UserType,
@@ -21,7 +23,14 @@ function createAccountGuard(
 ) {
   @Injectable()
   class AccessLevelGuard implements CanActivate {
-    constructor(public jwtService: JwtService) {}
+    constructor(
+      public jwtService: JwtService,
+      // Injected so session revocation can fall back to the database on a cache
+      // miss. See the securityStamp block below — without this the check was
+      // skipped entirely whenever Redis missed (finding C5).
+      @Inject(_const.IIDENTITY_REPOSITORY)
+      public identityRepository: IIdentityRepository,
+    ) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
       const request = context.switchToHttp().getRequest();
@@ -76,25 +85,81 @@ function createAccountGuard(
       const accountKey = redis.getRedisKey<string>(
         `${userId}${_const.REDIS.USER.ACCOUNT}`,
       );
-      const userAccount = await redis.getFromRedisAsync<{
+      let userAccount = await redis.getFromRedisAsync<{
         concurrencyStamp: string;
         securityStamp: string;
       }>(accountKey);
 
-      if (userAccount) {
-        if (concurrencyStamp !== userAccount.concurrencyStamp) {
-          response.setHeader('X-Token-Refresh-Required', 'true');
-        }
+      // Finding C5: this check used to run only `if (userAccount)`, so a cache miss
+      // skipped session revocation entirely. Since main.ts deliberately starts
+      // without Redis, and the cache entry expires after 7 days, that meant a
+      // password change did not reliably end existing sessions — the guard's happy
+      // path was the insecure one during any degradation.
+      //
+      // On a miss we now read the authoritative values from the database and
+      // repopulate the cache, so the check always runs against real state. Failing
+      // closed *without* this fallback would have logged out every user with a cold
+      // cache, which is why the DB read had to come first.
+      if (!userAccount) {
+        try {
+          const user = await this.identityRepository.getUserByIdAsync(userId);
 
-        if (securityStamp !== userAccount.securityStamp) {
-          logger.warn(
-            `[AccountGuard] SecurityStamp mismatch for user ${userId} - forcing re-authentication`,
+          if (!user) {
+            // The token names a user that no longer exists — deleted account, or a
+            // token minted against a different database.
+            logger.warn(
+              `[AccountGuard] Token references unknown user ${userId} - rejecting`,
+            );
+            throw new UnauthorizedException(
+              'Your session is no longer valid. Please log in again.',
+            );
+          }
+
+          userAccount = {
+            concurrencyStamp: user.concurrencyStamp,
+            securityStamp: user.securityStamp,
+          };
+
+          // Repopulate so the next request is served from cache. Best-effort: a
+          // Redis write failure must not fail the request now that the comparison
+          // below has authoritative values anyway.
+          await this.identityRepository
+            .cacheUserAccountAsync(
+              user,
+              _const.REDIS.USER.ACCOUNT_SESSION_TTL_SEC,
+            )
+            .catch(() => undefined);
+        } catch (error) {
+          // Rethrow our own rejection; anything else is an infrastructure failure.
+          if (error instanceof UnauthorizedException) throw error;
+
+          const message =
+            error instanceof Error ? error.message : String(error);
+          logger.error(
+            `[AccountGuard] Could not verify session for user ${userId} (${message}) - rejecting`,
           );
-          response.setHeader('X-Password-Change', 'true');
+
+          // Fail closed. If neither Redis nor the database can confirm the session is
+          // still valid, we cannot know whether it was revoked. Allowing the request
+          // is what made revocation unreliable in the first place.
           throw new UnauthorizedException(
-            'Your session has been invalidated. Please log in again.',
+            'Unable to verify your session. Please try again.',
           );
         }
+      }
+
+      if (concurrencyStamp !== userAccount.concurrencyStamp) {
+        response.setHeader('X-Token-Refresh-Required', 'true');
+      }
+
+      if (securityStamp !== userAccount.securityStamp) {
+        logger.warn(
+          `[AccountGuard] SecurityStamp mismatch for user ${userId} - forcing re-authentication`,
+        );
+        response.setHeader('X-Password-Change', 'true');
+        throw new UnauthorizedException(
+          'Your session has been invalidated. Please log in again.',
+        );
       }
 
       if (type && type != undefined) {

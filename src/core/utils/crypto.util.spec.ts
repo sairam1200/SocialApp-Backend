@@ -2,15 +2,15 @@ import * as crypto from 'crypto';
 import { cryptoUtils } from './crypto.util';
 
 /**
- * Tests for the encryption utility, including the fix for the
- * `timingSafeEqual` crash in finding C4 of
- * docs/audit/2026-07_Security_And_Correctness_Audit.md.
+ * Tests for the encryption utility.
  *
- * The remaining C4 problems (a process-wide static IV, and unauthenticated CBC)
- * are DOCUMENTED here as executable assertions rather than silently tolerated,
- * because fixing them changes the stored ciphertext format for live OAuth tokens
- * and needs a dual-read migration. When that migration lands, the tests marked
- * "DOCUMENTS finding C4" must be inverted — that is the intended signal.
+ * Finding C4 is now closed. `encrypt()` produces AES-256-GCM with a fresh random IV
+ * per message and an authentication tag; `decrypt()` routes by format so the hex CBC
+ * values already in the database keep working (dual-read).
+ *
+ * The assertions that previously documented the weaknesses — deterministic output,
+ * unauthenticated cipher — are inverted below. That inversion was the planned signal
+ * that the migration had landed.
  */
 describe('cryptoUtils', () => {
   describe('encrypt / decrypt round-trip', () => {
@@ -143,52 +143,133 @@ describe('cryptoUtils', () => {
     });
   });
 
-  describe('DOCUMENTS finding C4 — known weaknesses, not yet fixed', () => {
-    it('is deterministic: identical plaintext yields identical ciphertext', () => {
-      // Because the IV is process-wide and constant, encryption leaks equality.
-      // Anyone with database read access can tell which rows share a value
-      // without decrypting anything.
-      //
-      // When AES-GCM with per-message IVs lands, this must become
-      // `expect(first).not.toBe(second)`.
+  describe('finding C4 — authenticated encryption, now fixed', () => {
+    it('is NON-deterministic: identical plaintext yields different ciphertext', () => {
+      // The inversion of the old assertion. Under the previous static-IV CBC scheme
+      // these were byte-identical, which leaked equality to anyone with database
+      // read access — they could tell which rows shared a value without decrypting.
       const first = cryptoUtils.encrypt('same-token-value');
       const second = cryptoUtils.encrypt('same-token-value');
 
-      expect(first).toBe(second);
+      expect(first).not.toBe(second);
+      // Both still decrypt to the same plaintext.
+      expect(cryptoUtils.decrypt(first)).toBe('same-token-value');
+      expect(cryptoUtils.decrypt(second)).toBe('same-token-value');
     });
 
-    it('uses an unauthenticated cipher, so ciphertext is malleable', () => {
-      // aes-256-cbc provides confidentiality only. The authenticated helpers
-      // (encryptWithHMAC/verifyWithHMAC) exist but no production call site uses
-      // them — all OAuth token storage calls bare encrypt()/decrypt().
-      expect(cryptoUtils.algorithm).toBe('aes-256-cbc');
-      expect(cryptoUtils.algorithm).not.toMatch(
-        /gcm|ccm|ocb|chacha20-poly1305/,
+    it('emits the versioned v2 format', () => {
+      // The prefix is what makes dual-read possible without a schema change.
+      const encrypted = cryptoUtils.encrypt('payload');
+
+      expect(encrypted.startsWith('v2:')).toBe(true);
+      expect(cryptoUtils.isV2(encrypted)).toBe(true);
+      // v2:<iv>:<ciphertext>:<authTag>
+      expect(encrypted.split(':')).toHaveLength(4);
+    });
+
+    it('detects tampering instead of returning corrupted plaintext', () => {
+      // The whole point of authenticated encryption. Under CBC a flipped bit
+      // produced garbage or a padding error — a malleability and oracle risk.
+      const encrypted = cryptoUtils.encrypt('sensitive-oauth-token');
+      const parts = encrypted.split(':');
+
+      const ciphertext = Buffer.from(parts[2], 'base64');
+      ciphertext[0] ^= 1;
+      parts[2] = ciphertext.toString('base64');
+
+      expect(() => cryptoUtils.decrypt(parts.join(':'))).toThrow();
+    });
+
+    it('detects a tampered authentication tag', () => {
+      const encrypted = cryptoUtils.encrypt('sensitive-oauth-token');
+      const parts = encrypted.split(':');
+
+      const tag = Buffer.from(parts[3], 'base64');
+      tag[0] ^= 1;
+      parts[3] = tag.toString('base64');
+
+      expect(() => cryptoUtils.decrypt(parts.join(':'))).toThrow();
+    });
+
+    it('rejects a malformed v2 payload rather than misreading it', () => {
+      expect(() => cryptoUtils.decrypt('v2:only:three')).toThrow();
+      expect(() => cryptoUtils.decryptV2('not-v2-at-all')).toThrow();
+    });
+
+    it('uses an HKDF-derived key, not the raw secret', () => {
+      // Domain separation: the legacy key doubles as the HMAC key, so GCM must not
+      // reuse it. Also conditions operator-supplied UTF-8 of unknown entropy.
+      const expected = Buffer.from(
+        crypto.hkdfSync(
+          'sha256',
+          Buffer.from(process.env.ENCRYPTION_KEY!, 'utf-8'),
+          Buffer.alloc(0),
+          'gaddr-aes-256-gcm-v2',
+          32,
+        ),
+      );
+
+      // The GCM key is internal, so verify indirectly: a payload encrypted with the
+      // derived key must decrypt with it, and must NOT decrypt with the legacy key.
+      const encrypted = cryptoUtils.encrypt('payload');
+      const parts = encrypted.split(':');
+
+      const decipher = crypto.createDecipheriv(
+        'aes-256-gcm',
+        expected,
+        Buffer.from(parts[1], 'base64'),
+      );
+      decipher.setAuthTag(Buffer.from(parts[3], 'base64'));
+      const out = Buffer.concat([
+        decipher.update(Buffer.from(parts[2], 'base64')),
+        decipher.final(),
+      ]).toString('utf8');
+
+      expect(out).toBe('payload');
+      expect(expected.equals(cryptoUtils.key)).toBe(false);
+    });
+  });
+
+  describe('dual-read migration', () => {
+    it('still decrypts legacy CBC values with no prefix', () => {
+      // Everything already in the database is hex CBC. If this breaks, every stored
+      // OAuth token becomes unreadable — the migration would be a data-loss event.
+      const token = 'ya29.legacy-stored-token';
+      const legacy = cryptoUtils.encryptLegacy(token);
+
+      expect(cryptoUtils.isV2(legacy)).toBe(false);
+      expect(cryptoUtils.decrypt(legacy)).toBe(token);
+    });
+
+    it('routes each format to the right cipher', () => {
+      const token = 'shared-plaintext';
+      const legacy = cryptoUtils.encryptLegacy(token);
+      const modern = cryptoUtils.encrypt(token);
+
+      expect(legacy).not.toBe(modern);
+      expect(cryptoUtils.decrypt(legacy)).toBe(token);
+      expect(cryptoUtils.decrypt(modern)).toBe(token);
+    });
+
+    it('legacy CBC remains deterministic, which is why it is being retired', () => {
+      // Retained as the reason the migration exists, not as acceptable behaviour.
+      expect(cryptoUtils.encryptLegacy('x')).toBe(
+        cryptoUtils.encryptLegacy('x'),
       );
     });
 
-    it('derives the key by truncating raw UTF-8 rather than via a KDF', () => {
-      // Entropy equals whatever the operator typed, not 256 bits. A value shorter
-      // than 32 bytes yields a short buffer and createCipheriv throws at runtime
-      // rather than at boot.
-      expect(cryptoUtils.key).toHaveLength(32);
-      expect(cryptoUtils.iv).toHaveLength(16);
-      expect(
-        cryptoUtils.key.equals(
-          Buffer.from(process.env.ENCRYPTION_KEY!.slice(0, 32), 'utf-8'),
-        ),
-      ).toBe(true);
+    it('round-trips unicode through v2', () => {
+      const plaintext = 'åäöÅÄÖ — مرحبا — 日本語 — 🎉';
+      expect(cryptoUtils.decrypt(cryptoUtils.encrypt(plaintext))).toBe(
+        plaintext,
+      );
     });
 
-    it('reuses the same key for encryption and for the HMAC', () => {
-      // No domain separation between confidentiality and integrity keys.
-      const { encrypted, hmac } = cryptoUtils.encryptWithHMAC('payload');
-      const recomputedWithEncryptionKey = crypto
-        .createHmac('sha256', cryptoUtils.key)
-        .update(encrypted)
-        .digest('hex');
-
-      expect(hmac).toBe(recomputedWithEncryptionKey);
+    it('round-trips a payload larger than one AES block through v2', () => {
+      const plaintext = 'x'.repeat(5000);
+      expect(cryptoUtils.decrypt(cryptoUtils.encrypt(plaintext))).toBe(
+        plaintext,
+      );
     });
   });
 });

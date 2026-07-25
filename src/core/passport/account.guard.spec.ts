@@ -63,13 +63,38 @@ function makeContext() {
   return { context, response };
 }
 
-/** Instantiate one of the exported guard classes with a stub JwtService. */
+/** Authoritative values the database would return for the test user. */
+const DB_USER = {
+  id: 'user-1',
+  securityStamp: 'stamp-1',
+  concurrencyStamp: 'concurrency-1',
+};
+
+/** Stub identity repository. Overridable per test. */
+function identityRepo(overrides: Record<string, unknown> = {}) {
+  return {
+    getUserByIdAsync: jest.fn().mockResolvedValue(DB_USER),
+    cacheUserAccountAsync: jest.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+}
+
+/**
+ * Instantiate one of the exported guard classes.
+ *
+ * Two constructor args now: JwtService (unused by these paths) and the identity
+ * repository, which the guard reads when the session cache misses (finding C5).
+ */
 function build(
-  GuardClass: new (jwtService: unknown) => {
+  GuardClass: new (
+    jwtService: unknown,
+    identityRepository: unknown,
+  ) => {
     canActivate(c: ExecutionContext): Promise<boolean>;
   },
+  repo: unknown = identityRepo(),
 ) {
-  return new GuardClass({} as never);
+  return new GuardClass({} as never, repo);
 }
 
 describe('AccountGuard', () => {
@@ -254,19 +279,111 @@ describe('AccountGuard', () => {
       );
     });
 
-    it('DOCUMENTS finding C5: a cache miss skips revocation entirely', async () => {
-      // Known open issue, deliberately asserted so the current behaviour is
-      // visible rather than implied. A revoked session survives whenever Redis
-      // misses or is unavailable. When C5 is fixed (DB fallback on cache miss),
-      // this expectation must be inverted — that is the intended signal.
-      authenticateAs(claims({ [Globals.ClaimTypes.SecurityStamp]: 'stale' }));
-      jest.spyOn(redis, 'getFromRedisAsync').mockResolvedValue(null as never);
+    describe('cache miss — finding C5, now fixed', () => {
+      // Previously the whole securityStamp comparison sat inside `if (userAccount)`,
+      // so a cache miss skipped revocation entirely. Because main.ts starts without
+      // Redis by design and the entry expires after 7 days, a password change did not
+      // reliably end existing sessions. These tests pin the DB fallback.
 
-      const { context } = makeContext();
+      it('rejects a revoked session by reading the database', async () => {
+        // The token carries a stale stamp; the database has the rotated one.
+        authenticateAs(claims({ [Globals.ClaimTypes.SecurityStamp]: 'stale' }));
+        jest.spyOn(redis, 'getFromRedisAsync').mockResolvedValue(null as never);
 
-      await expect(build(UserAccoutGuard).canActivate(context)).resolves.toBe(
-        true,
-      );
+        const repo = identityRepo();
+        const { context } = makeContext();
+
+        await expect(
+          build(UserAccoutGuard, repo).canActivate(context),
+        ).rejects.toThrow(UnauthorizedException);
+
+        expect(repo.getUserByIdAsync).toHaveBeenCalledWith('user-1');
+      });
+
+      it('allows a valid session and repopulates the cache', async () => {
+        // The fallback must not log out users who are simply cold-cached — that is
+        // why failing closed without a DB read would have been an outage.
+        authenticateAs(claims());
+        jest.spyOn(redis, 'getFromRedisAsync').mockResolvedValue(null as never);
+
+        const repo = identityRepo();
+        const { context } = makeContext();
+
+        await expect(
+          build(UserAccoutGuard, repo).canActivate(context),
+        ).resolves.toBe(true);
+
+        expect(repo.cacheUserAccountAsync).toHaveBeenCalledTimes(1);
+      });
+
+      it('rejects when the token names a user that no longer exists', async () => {
+        authenticateAs(claims());
+        jest.spyOn(redis, 'getFromRedisAsync').mockResolvedValue(null as never);
+
+        const repo = identityRepo({
+          getUserByIdAsync: jest.fn().mockResolvedValue(null),
+        });
+        const { context } = makeContext();
+
+        await expect(
+          build(UserAccoutGuard, repo).canActivate(context),
+        ).rejects.toThrow(UnauthorizedException);
+      });
+
+      it('fails CLOSED when the database is also unreachable', async () => {
+        // Neither source can confirm the session is still valid, so it must not be
+        // trusted. Allowing the request is exactly what made revocation unreliable.
+        authenticateAs(claims());
+        jest.spyOn(redis, 'getFromRedisAsync').mockResolvedValue(null as never);
+
+        const repo = identityRepo({
+          getUserByIdAsync: jest
+            .fn()
+            .mockRejectedValue(new Error('connection refused')),
+        });
+        const { context } = makeContext();
+
+        await expect(
+          build(UserAccoutGuard, repo).canActivate(context),
+        ).rejects.toThrow(UnauthorizedException);
+      });
+
+      it('still succeeds when only the cache repopulation fails', async () => {
+        // A Redis write failure is not a reason to reject: the comparison already
+        // ran against authoritative database values.
+        authenticateAs(claims());
+        jest.spyOn(redis, 'getFromRedisAsync').mockResolvedValue(null as never);
+
+        const repo = identityRepo({
+          cacheUserAccountAsync: jest
+            .fn()
+            .mockRejectedValue(new Error('redis down')),
+        });
+        const { context } = makeContext();
+
+        await expect(
+          build(UserAccoutGuard, repo).canActivate(context),
+        ).resolves.toBe(true);
+      });
+
+      it('does not touch the database when the cache hits', async () => {
+        // The fallback must stay a fallback — a DB read on every request would add
+        // latency to the hot path.
+        authenticateAs(claims());
+        jest.spyOn(redis, 'getFromRedisAsync').mockResolvedValue({
+          securityStamp: 'stamp-1',
+          concurrencyStamp: 'concurrency-1',
+        } as never);
+
+        const repo = identityRepo();
+        const { context } = makeContext();
+
+        await expect(
+          build(UserAccoutGuard, repo).canActivate(context),
+        ).resolves.toBe(true);
+
+        expect(repo.getUserByIdAsync).not.toHaveBeenCalled();
+      });
     });
   });
 });

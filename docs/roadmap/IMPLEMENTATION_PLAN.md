@@ -20,7 +20,7 @@ Companion documents: [`../audit/2026-07_Security_And_Correctness_Audit.md`](../a
 |---|---|
 | Backend | NestJS 11, clean architecture + CQRS, 201 endpoints, builds clean, typechecks at 0 errors |
 | Frontend | Next.js 16, React 19, Tailwind v4, TanStack Query v5, builds clean, typecheck 130 → 0 |
-| Tests | **119** backend (7 suites) + **41** frontend (Vitest) = **160**, from zero |
+| Tests | **131** backend (7 suites) + **52** frontend Vitest + **12** Playwright = **195**, from zero |
 | CI/CD | Cloud Build pipeline + local gate in both repos (no GitHub Actions, per cost constraint) |
 | Search | 12-platform fan-out, DB-persisted, cached, distributed-locked. **Verified end-to-end against the live YouTube API** — see [`../integrations/END_TO_END_VERIFICATION.md`](../integrations/END_TO_END_VERIFICATION.md). Four defects found and fixed, including aggregated results being saved but never shown to users |
 | Migrations | **A fresh database now builds** — 42 tables, 52 migrations. Six tables previously had no create-migration, so no environment could be provisioned from source |
@@ -28,7 +28,7 @@ Companion documents: [`../audit/2026-07_Security_And_Correctness_Audit.md`](../a
 | i18n | next-intl live; `sv` + `en` catalogs; 28 locales registered; RTL working |
 | Light/dark | Working, with a pre-paint script and a settings control |
 | SEO | robots.txt, sitemap.xml, rich root metadata, per-profile metadata + JSON-LD |
-| Security | 5 critical/high findings fixed; **4 still open** (see §2) |
+| Security | 7 critical/high findings fixed; **2 still open** — both need production access, not code (see §2) |
 | Payments | Nothing built |
 | Identity (BankID) | Nothing built |
 | Rust | Nothing built |
@@ -45,13 +45,18 @@ sessions can be trusted and revoked.
 | 0.1 | **Rotate credentials for the 14 exposed accounts** — password reset, 2FA re-enrolment, rotate `ENCRYPTION_KEY` and `dataProtectionKeys` | A committed DB dump exposed bcrypt hashes **and TOTP secrets** to everyone with repo access. 2FA provides no protection for those accounts until re-enrolled | **Requires production access — not doable from code** |
 | 0.2 | **Purge the dump from git history** (`git filter-repo`), coordinated force-push, everyone re-clones | The blob remains at `e4b5f3b`. `.gitignore` and the new gitleaks rule stop recurrence, not the existing object | Needs team coordination |
 | 0.3 | **GDPR assessment** of 0.1 — is it notifiable under Art. 33? | Depends on who accessed it; a documented decision either way is required | Data protection owner |
-| 0.4 | **C5 — session revocation fails open** on Redis cache miss. Add DB fallback, then fail closed | Password changes do not reliably end sessions. Do **not** fail closed without the fallback or every cold-cache user is logged out | Engineering |
-| 0.5 | **C4 — AES-256-GCM migration** with per-message IVs and dual-read | OAuth tokens are encrypted with a static IV, unauthenticated. See the `gaddr-encryption` skill for the exact migration | Engineering |
+| 0.4 | ~~C5 — session revocation fails open~~ ✅ **Done** — DB fallback on cache miss, repopulates the cache, fails closed if neither source can confirm. 6 new tests | Landed |
+| 0.5 | ~~C4 — AES-256-GCM migration~~ ✅ **Done** — `v2:<iv>:<ct>:<tag>`, random per-message IV, HKDF-derived key, dual-read so stored CBC values stay readable. 30 tests | Landed |
 | 0.6 | ~~Rate limit search endpoints~~ ✅ **Done** — `searchRateLimit.guard.ts`, atomic Redis `INCR`, two buckets, identity-aware, bounded per-instance fallback when Redis is down. 13 tests including a concurrency proof | Landed |
 | 0.7 | **`ValidationPipe` + `class-validator`**, DTOs per slice starting with auth and search | No declarative validation exists across 201 endpoints. Enable the pipe *after* DTOs exist, or live traffic is rejected | Engineering |
 
 **Exit criteria:** credentials rotated, no open critical findings, search rate-limited,
 auth slice validated.
+
+**Status:** everything achievable in code is done (0.4–0.7 landed, plus search rate
+limiting). What remains — 0.1, 0.2, 0.3 — needs production database access, a
+coordinated force-push, or a data-protection decision. None of it can be completed from
+this repository.
 
 ---
 

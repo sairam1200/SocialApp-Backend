@@ -1,6 +1,7 @@
 ---
 name: gaddr-fraud-identity
 description: Identity verification and fraud/abuse defence for Gaddr — Mobile BankID, KYC for sellers and investors, account-takeover prevention, bot and spam defence, tracking and audit trails, and trust signals. Use when implementing verification badges, seller onboarding, abuse controls, or asked about BankID, KYC/AML, or fraud detection.
+when_to_use: Trigger phrases include "verified badge", "blue check", "verify a user", "BankID", "KYC", "AML", "onboard a seller", "prove identity", "account takeover", "suspicious login", "bot signup", "spam", "abuse report", "ban a user", "audit trail", "who changed this", "trust signal", and "is this account real".
 ---
 
 # Gaddr fraud, identity and trust
@@ -65,14 +66,12 @@ party.
 
 Ranked by how exposed they are today:
 
-1. **Unauthenticated, unrate-limited search** that fans out to metered third-party
-   APIs. This is the live one: it is both a billing attack and a scraping vector.
-   Needs a limiter keyed on the real client IP — `trust proxy` is now set, so
-   `req.ip` is finally correct.
-2. **Account takeover.** Access tokens sit in `localStorage` (XSS-readable), and
-   session revocation fails open on a Redis cache miss (finding C5). Fix those
-   before adding fraud scoring — detection on top of a session you cannot revoke
-   accomplishes nothing.
+1. **Account takeover.** Access tokens still sit in `localStorage` (XSS-readable) with
+   no CSP. That is now the largest open surface. Session revocation itself is fixed —
+   the guard falls back to the database and fails closed (C5).
+2. **Public search.** Now rate-limited with atomic Redis counting, per user when
+   authenticated and per client IP otherwise. Still worth watching as a scraping
+   vector.
 3. **Fake profiles and impersonation.** A universal-profile product is an
    impersonation target by design. OAuth-proven handles are the main defence; the
    badge must clearly distinguish proven from self-asserted.

@@ -1,6 +1,7 @@
 ---
 name: gaddr-payments
 description: Payments for Gaddr — Stripe, Gaddr Pay, international/SEPA, subscriptions, payouts to creators, selling posts and sponsored content, and on-chain settlement. Use when implementing checkout, webhooks, refunds, payout flows, marketplace splits, or asked about PCI, PSD2/SCA, or currency handling.
+when_to_use: Trigger phrases include "take a payment", "checkout", "Stripe", "subscription", "billing", "invoice", "refund", "chargeback", "pay out to a creator", "Connect account", "marketplace split", "sell a post", "sponsored content", "SEPA", "3D Secure", "SCA", "VAT", "currency", "idempotency key", "payment webhook", and "how should money move".
 ---
 
 # Gaddr payments
@@ -10,10 +11,23 @@ correctly rather than retrofitted.
 
 ## Read this first
 
-**Payments assume sessions can be trusted and revoked. Two of the audit's critical
-findings in that layer are still open** (C5 session revocation fails open, C4
-OAuth tokens unauthenticated). Close those before taking money — a payment flow on
-top of a session you cannot revoke is a chargeback engine.
+Payments assume sessions can be trusted and revoked. **The two critical findings that
+blocked this are now closed** — C5 (revocation now falls back to the database and fails
+closed) and C4 (tokens are authenticated AES-256-GCM). The auth layer is no longer the
+reason to wait.
+
+What remains genuinely blocking, and why each matters here:
+
+- **`ENCRYPTION_KEY` has not been rotated** after being exposed in the committed
+  database dump. Anything encrypted under it, including future payment metadata,
+  should be treated as compromised until it is.
+- **Better Auth session tokens are still plaintext** in the `session` table (H2). A
+  database read is a session takeover, which on a payment flow is a chargeback engine.
+- **No CSP, and access tokens sit in `localStorage`** on the client (H3). Card data
+  never reaches Gaddr, but an XSS that steals a session can still spend a stored
+  payment method.
+
+Close H2 and rotate the key before taking money.
 
 ## Hard rules
 

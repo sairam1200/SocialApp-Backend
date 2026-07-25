@@ -1,6 +1,7 @@
 ---
 name: gaddr-security-review
 description: Security review for the Gaddr backend and frontend. Use when touching authentication, authorization, guards, tokens, sessions, cookies, CORS, rate limiting, webhooks, or when asked to review changes for security. Encodes the known open findings so they are not re-discovered or accidentally reintroduced.
+when_to_use: Trigger phrases include "is this secure", "security review", "add a guard", "@UseGuards", "permissions", "can this user access", "IDOR", "expired token", "refresh token", "session revocation", "log out everywhere", "securityStamp", "CORS", "rate limit", "webhook signature", "XSS", "CSP", "secret in env", and any edit under src/core/passport/ or to cors.config.ts, configs.ts or an auth handler.
 ---
 
 # Gaddr security review
@@ -45,23 +46,29 @@ no `.default()`. A guessable default is a vulnerability, not a convenience — s
 findings M2 (`SYSTEM_ADMIN_PASSWORD` defaulting to a published string) and M6
 (`default_verify_token`).
 
-### Fail closed, with a fallback
+### Fail closed, with a fallback — C5 is CLOSED
 
-`account.guard.ts` currently **fails open** on a Redis cache miss: the
-`securityStamp` revocation check is skipped entirely when the cache entry is
-absent, so password changes do not reliably end sessions (finding C5, open).
+`account.guard.ts` used to skip the `securityStamp` revocation check entirely on a
+Redis cache miss, so password changes did not reliably end sessions. It now reads the
+authoritative stamps from the database on a miss, repopulates the cache, and compares.
+If neither Redis nor the database can confirm the session, it **rejects**.
 
-Do not simply invert it. Failing closed without a database fallback logs out every
-user with a cold cache — a self-inflicted outage. The fix is: cache miss → read
-from the database → populate cache → compare.
+The ordering mattered: failing closed *without* the database fallback would have logged
+out every user with a cold cache. The DB read had to come first. Keep that shape —
+a cache miss must never be more permissive than a cache hit, and it must never be an
+outage either.
+
+Note the guards now take a second constructor argument (`IIdentityRepository`), and
+`authGuard.module` provides it plus `TypeOrmModule.forFeature`. A new guard needs the
+same wiring.
 
 ## Review checklist
 
 Work through these against the diff:
 
 1. **AuthN** — does every new endpoint have a guard? 201 endpoints exist; a
-   missing `@UseGuards` is silent. Search endpoints are currently unauthenticated
-   *and* unrate-limited.
+   missing `@UseGuards` is silent. Search endpoints are intentionally public but are
+   now rate-limited.
 2. **AuthZ / IDOR** — does the handler verify the caller owns the resource, or
    only that they are logged in? Check every `userId` that arrives from the
    request body rather than from `HttpContext.getCurrentUserId`.
@@ -69,17 +76,20 @@ Work through these against the diff:
    installed. Validation is hand-rolled Joi per handler. Unvalidated input reaches
    387 raw SQL call sites. Those are parameterised (no injection found), but
    type confusion and oversized payloads are unguarded.
-4. **Rate limiting** — only 4 auth routes are limited, via non-atomic DB
-   read-then-write. Anything that fans out to a metered third-party API needs a
-   limiter or it is a billing incident waiting to happen.
+4. **Rate limiting** — `searchRateLimit.guard.ts` covers search with atomic Redis
+   `INCR`. The older `RateLimitMiddleware` still covers only 4 auth routes via a
+   non-atomic DB read-then-write; anything new that fans out to a metered third-party
+   API should use the guard, not the middleware.
 5. **Secrets in logs** — route through `core/utils/winston.util` (which redacts),
    never `console.log`. Never log tokens, even their length.
 6. **CORS** — `cors.config.ts` is environment-split. Never add a tunnel
    (`*.ngrok*`) or preview domain to `PRODUCTION_ORIGINS`; free tunnel subdomains
    are reassignable and CORS runs with `credentials: true`.
 7. **Webhooks** — verify signatures/tokens and fail closed when unconfigured.
-8. **Crypto** — see the `gaddr-encryption` skill. Never add a new caller of bare
-   `cryptoUtils.encrypt`.
+8. **Crypto** — `cryptoUtils.encrypt` now produces authenticated AES-256-GCM, so it
+   is safe to call. Never pass `keyParam`/`ivParam` (that forces the legacy CBC path),
+   and never remove the legacy branch in `decrypt()` — every stored token is still
+   CBC. See the `gaddr-encryption` skill.
 
 ## Frontend specifics
 

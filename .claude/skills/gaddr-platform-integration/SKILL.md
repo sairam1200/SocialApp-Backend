@@ -1,6 +1,7 @@
 ---
 name: gaddr-platform-integration
 description: Add or repair a social platform integration (YouTube, TikTok, Pinterest, Instagram, Reddit, Spotify, LinkedIn, Behance, Dribbble and similar) in the Gaddr backend, including OAuth connect, content import, search, webhooks, and exposing capabilities over API or MCP. Use when wiring a new platform, debugging why a platform returns no results, or checking which credentials actually work.
+when_to_use: Trigger phrases include "add a platform", "connect YouTube", "search returns nothing", "no results from TikTok", "why is this platform empty", "the thumbnail is missing", "the link 404s", "OAuth callback", "import content", "contentStreams", "aggregated results", "API quota", "rate limited by the platform", "expose this over MCP", and any edit under src/features/integrations/ or to search.service.ts or database-search.handler.ts.
 ---
 
 # Gaddr platform integration
@@ -124,9 +125,12 @@ locally rather than burning quota.
 - **Always persist to the database.** A search that only proxies burns quota on
   every repeat.
 - **Always set a cache TTL.** Redis is capped at 30 MB.
-- **Respect quota.** YouTube gives ~100 searches/day. Search endpoints are currently
-  **unauthenticated and unrate-limited** — an open door to a metered API. Add a
-  limiter before promoting any new platform.
+- **Respect quota.** YouTube gives ~100 searches/day. Search endpoints are public by
+  design but **are** rate-limited: `SearchRateLimitGuard` on `POST /search` and
+  `ExternalSearchRateLimitGuard` on the fan-out route, counting atomically in Redis
+  per user or per client IP, with a bounded per-instance fallback when Redis is down.
+  A new platform inherits that limit — check the budget still makes sense once the
+  fan-out is wider, since one user request becomes one call *per platform*.
 - **Degrade honestly.** When a platform is misconfigured, surface that in the
   response rather than an empty result set that looks like "no matches".
 - **Handle token refresh.** Access tokens expire; `oauth.service.ts` has the refresh

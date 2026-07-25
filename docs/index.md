@@ -20,21 +20,37 @@ Start from [`../AGENTS.md`](../AGENTS.md) if you are an AI agent.
 
 ## 1b. Skills and sub-agents
 
-Loadable capability documents, kept beside the code so they stay accurate.
+Loadable capability documents, kept beside the code so they stay accurate. Only the
+`description` and `when_to_use` of each sits in context at rest; the body loads when
+one matches the task, or on an explicit `/skill-name`.
 
 | Skill | Covers |
 |---|---|
-[`.claude/skills/gaddr-security-review`](../.claude/skills/gaddr-security-review/SKILL.md) | Auth, guards, tokens, CORS, webhooks, rate limiting |
-[`.claude/skills/gaddr-encryption`](../.claude/skills/gaddr-encryption/SKILL.md) | Data at rest, key management, the CBC→GCM migration |
-[`.claude/skills/gaddr-payments`](../.claude/skills/gaddr-payments/SKILL.md) | Stripe, Gaddr Pay, marketplace payouts, SCA/VAT, on-chain |
-[`.claude/skills/gaddr-fraud-identity`](../.claude/skills/gaddr-fraud-identity/SKILL.md) | Mobile BankID, KYC tiers, fraud signals, abuse defence |
-[`.claude/skills/gaddr-platform-integration`](../.claude/skills/gaddr-platform-integration/SKILL.md) | Adding or repairing a platform; API and MCP exposure |
-[`.claude/skills/gaddr-testing`](../.claude/skills/gaddr-testing/SKILL.md) | Writing and running tests; the env bootstrap |
+| [`gaddr-security-review`](../.claude/skills/gaddr-security-review/SKILL.md) | Auth, guards, tokens, sessions, CORS, webhooks, rate limiting |
+| [`gaddr-encryption`](../.claude/skills/gaddr-encryption/SKILL.md) | Data at rest, key management, the CBC→GCM migration |
+| [`gaddr-database`](../.claude/skills/gaddr-database/SKILL.md) | Migrations, entities, indexes, query performance, provisioning |
+| [`gaddr-platform-integration`](../.claude/skills/gaddr-platform-integration/SKILL.md) | Adding or repairing a platform; API and MCP exposure |
+| [`gaddr-testing`](../.claude/skills/gaddr-testing/SKILL.md) | Writing and running tests; the env bootstrap; end-to-end verification |
+| [`gaddr-payments`](../.claude/skills/gaddr-payments/SKILL.md) | Stripe, Gaddr Pay, marketplace payouts, SCA/VAT, on-chain |
+| [`gaddr-fraud-identity`](../.claude/skills/gaddr-fraud-identity/SKILL.md) | Mobile BankID, KYC tiers, fraud signals, abuse defence |
 
-Sub-agents in [`../.claude/agents/`](../.claude/agents/): `architect` (plans, writes
-no code), `backend` (implements), `redis` (cache and BullMQ), `reviewer` (pre-merge).
-Ported from the original OpenCode-format definitions and updated against current
-reality.
+Sub-agents in [`../.claude/agents/`](../.claude/agents/), with the skills each one
+carries into its own context:
+
+| Agent | Role | Writes code | Preloaded skill |
+|---|---|---|---|
+| `architect` | Plans, root-causes, evaluates dependencies | No — `Edit`/`Write` denied | none; loads per domain |
+| `backend` | Implements in `src/` | Yes | `gaddr-testing` |
+| `redis` | Cache strategy, BullMQ, TTL and memory budget | Yes | none; loads per domain |
+| `reviewer` | Pre-merge review | No — `Edit`/`Write` denied | `gaddr-security-review` |
+
+All four hold the `Skill` tool, so they can load any of the seven on demand. The
+read-only pair enforce that with `disallowedTools`, not just wording — an agent that
+is told not to edit but can still edit eventually does.
+
+> Frontend skills live in the other repository and do **not** load here: skills are
+> scoped to the directory tree they sit in. The frontend has `gaddr-frontend-ui`,
+> `gaddr-i18n` and `gaddr-frontend-testing`.
 
 ## 1c. Build and CI
 
@@ -135,12 +151,12 @@ stated product mandate".
 
 | Gap | State |
 |---|---|
-| Test coverage | **87 tests, 5 suites** (was 0). Concentrated on auth and search — the areas with critical findings. Everything else is uncovered. |
+| Test coverage | **119 tests, 7 suites**, all passing (was 0). Concentrated on auth and search — the areas with critical findings. Everything else is uncovered. No suite here starts a real server, so backend end-to-end verification is still manual; see `integrations/END_TO_END_VERIFICATION.md`. |
 | Request validation | No global `ValidationPipe`; `class-validator` not installed. Joi is used per-handler and for env config. |
-| Rate limiting | 4 auth routes only; **search and integrations unlimited** despite fanning out to metered third-party APIs. `trust proxy` is now set, so `req.ip` is finally correct. |
-| Security headers | No `helmet`; no CSP, HSTS, or frame options. |
-| Session revocation | Fails open on Redis cache miss (finding C5, open). Needs a DB fallback before it can fail closed. |
-| Token encryption | Static IV, unauthenticated CBC (finding C4, open). Needs the AES-GCM dual-read migration. |
+| Rate limiting | ✅ Search is limited by `searchRateLimit.guard.ts` using atomic Redis `INCR`, per user when authenticated and per client IP otherwise, with a bounded per-instance fallback when Redis is down. `trust proxy` is set, so `req.ip` is correct. **Outstanding:** the older `RateLimitMiddleware` still covers only 4 auth routes via a non-atomic DB read-then-write. |
+| Security headers | No `helmet`; no CSP, HSTS, or frame options. This is what makes the frontend's `localStorage` token exposure (H3) exploitable. |
+| Session revocation | ✅ **Closed (C5).** Cache miss now falls back to the database, repopulates, and fails closed. Guards take `IIdentityRepository`; wire new ones through `authGuard.module`. |
+| Token encryption | ✅ **Closed (C4).** AES-256-GCM, per-message random IV, HKDF-derived key, `v2:` format, with dual-read so stored CBC values stay readable. **Outstanding:** `ENCRYPTION_KEY` rotation (needs production access) and removal of the legacy branch once legacy reads reach zero. |
 | Payments / KYC | Nothing built. Both land on the auth layer — settle the open C-series findings first. |
 | Platform credentials | Only YouTube verified working, and it allows ~100 searches/day. See [`integrations/STATUS.md`](integrations/STATUS.md). |
 
