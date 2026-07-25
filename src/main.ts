@@ -4,6 +4,7 @@ import redis from './core/utils/redis.util';
 import logger from './core/utils/winston.util';
 import { VersioningType } from '@nestjs/common';
 import { AppModule } from './modules/app.module';
+import { DataSource } from 'typeorm';
 import dataSource from './infrastructure/persistence/data.source';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import {
@@ -67,10 +68,10 @@ async function bootstrap() {
 
   // OAUTH-DBG: Log TypeORM config info (no DB queries — avoids startup timeout)
   try {
-    const typeormDs = app.get('DataSource', { strict: false });
+    const typeormDs = app.get(DataSource, { strict: false });
     const typeormOpts = typeormDs?.options;
     if (typeormOpts) {
-      const connUrl = typeormOpts.url || 'unknown';
+      const connUrl = (typeormOpts as any).url || 'unknown';
       let connHost = 'unknown';
       let connDatabase = 'unknown';
       try {
