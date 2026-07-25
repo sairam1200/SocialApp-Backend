@@ -65,7 +65,7 @@ violation; it must resolve through a DI token registered in
 - **Impact** on RAM (512 MB cap), Redis (30 MB, 30 connections), Postgres (new
   queries, indexes, migrations) and WebSocket (new events, connection overhead).
 - **Tradeoffs**: what is gained, what is given up.
-- **Test plan**: which behaviours get pinned. The repo has 119 tests; auth and
+- **Test plan**: which behaviours get pinned. The repo has 136 tests; auth and
   search are covered, everything else is not. If the change crosses a boundary
   (HTTP → handler → repository → database, or a third-party API), the plan must say
   how it will be verified *by running it* — every defect that reached production here

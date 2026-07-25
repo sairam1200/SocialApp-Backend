@@ -114,5 +114,5 @@ Group by severity. For each: file:line, what is wrong, the concrete failure, and
 fix in one sentence. If the change is good, say so plainly and note anything worth
 watching. Do not invent findings to seem thorough.
 
-Confirm the gate: `./scripts/ci.sh` — typecheck, lint (0 errors), 119 tests, secret
+Confirm the gate: `./scripts/ci.sh` — typecheck, lint (0 errors), 136 tests, secret
 scan, build.

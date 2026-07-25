@@ -153,7 +153,10 @@ export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery
       },
     );
 
-    const allPlatforms = Object.values(_const.PLATFORMS);
+    // Only platforms with a dispatch case. Previously Object.values(PLATFORMS), which
+    // also contains twitch, github and discord — so every unfiltered search returned
+    // three "Unsupported platform" errors that clients had to know to ignore.
+    const allPlatforms = _const.SEARCHABLE_PLATFORMS;
 
     const normalizedPlatforms =
       platforms && platforms.length > 0

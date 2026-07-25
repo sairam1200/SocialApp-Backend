@@ -112,6 +112,39 @@ export default {
     DISCORD: 'discord',
   },
 
+  /**
+   * Platforms global search actually dispatches to.
+   *
+   * Deliberately NOT `Object.values(PLATFORMS)`. That set also covers identity linking
+   * and OAuth, and includes twitch, github and discord — which have no search
+   * implementation. Deriving the search fan-out from it meant every unfiltered search
+   * returned three `Unsupported platform: …` entries in `results`, which clients had to
+   * know to ignore.
+   *
+   * Add a platform here only once `searchPlatformOptimized` has a dispatch case for it,
+   * and note that two entries below are stubs rather than working integrations:
+   *
+   *   - `behance` — no public API; returns empty results.
+   *   - Dribbble is absent entirely: their v2 API has **no search endpoint**, only
+   *     authenticated reads of the signed-in user's own shots. A Dribbble "search"
+   *     cannot be built against the official API, so it would have to be a
+   *     connected-account content import instead. See docs/integrations/STATUS.md.
+   */
+  SEARCHABLE_PLATFORMS: [
+    'facebook',
+    'instagram',
+    'twitter',
+    'linkedin',
+    'youtube',
+    'spotify',
+    'reddit',
+    'pinterest',
+    'tiktok',
+    'snapchat',
+    'threads',
+    'behance',
+  ] as string[],
+
   KNOWN_PLATFORMS_URIS: [
     'facebook.com',
     'twitter.com',

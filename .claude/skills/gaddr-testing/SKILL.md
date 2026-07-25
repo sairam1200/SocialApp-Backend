@@ -42,7 +42,7 @@ its own `gaddr-frontend-testing` skill; use that when working there, not this on
 
 ## What is covered
 
-**Backend: 119 tests, 7 suites**, all passing. Concentrated on auth and search,
+**Backend: 136 tests, 8 suites**, all passing. Concentrated on auth and search,
 because that is where the audit found critical defects:
 
 | Suite | Pins |
@@ -54,6 +54,10 @@ because that is where the audit found critical defects:
 | `database-search.handler.spec.ts` | The aggregated projection. Mostly `buildSourceUrl`, because a wrong URL still renders a card and just 404s. |
 | `limitAllocator.util.spec.ts` | Result-limit conservation, exhaustive over all 15 skip combinations. |
 | `fuse.util.spec.ts` | Query normalisation — the search cache key. |
+| `const.spec.ts` | DI token and platform-constant integrity — a duplicated or renamed token fails resolution at boot, not at compile time. |
+
+Counts move. Re-measure with `npx jest` rather than trusting this paragraph, and
+update it when it changes.
 
 **Frontend: 52 Vitest tests** (3 files — locale registry, content normaliser,
 colour-scheme provider) **and 12 Playwright tests** (6 cases in

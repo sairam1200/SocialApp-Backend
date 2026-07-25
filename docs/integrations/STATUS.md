@@ -29,8 +29,12 @@ concluding that search is broken in code.
 | Spotify | ⛔ Not verified | — | No credentials configured |
 | Snapchat | ⛔ Not verified | — | No credentials configured |
 
-Search code exists for all twelve platforms in `search.service.ts`. Code presence is
-not connectivity.
+Search code exists for twelve platforms in `search.service.ts`, of which Behance is a
+stub. Code presence is not connectivity — and for Dribbble, connectivity is not
+possible either (see below).
+
+`_const.SEARCHABLE_PLATFORMS` is the authoritative fan-out list. Twitch, GitHub and
+Discord are in `PLATFORMS` for account linking but are **not** searchable.
 
 ---
 
@@ -77,12 +81,44 @@ that is a Terms of Service question, not a technical one (see the legal section 
 implementation plan). Either obtain OAuth credentials or drop Reddit from the platform
 list rather than shipping a permanently failing integration.
 
-## Dribbble — authorisation-code flow required
+## Dribbble — a search integration cannot be built
 
-Client ID and secret are valid but `client_credentials` is not a supported grant.
-Requires a redirect-based flow with a `code` exchange, i.e. a connected user account.
-Note Dribbble appears in the credentials document but has **no search implementation**
-in `search.service.ts` — Behance is implemented, Dribbble is not.
+Two separate blockers, and the second is the decisive one.
+
+1. `client_credentials` is not a supported grant; it needs a redirect-based
+   authorisation-code exchange, i.e. a connected user account.
+2. **Dribbble's v2 API has no search endpoint at all.** It exposes authenticated reads
+   of the signed-in user's own resources (`/v2/user`, `/v2/user/shots`, `/v2/projects`)
+   and nothing else. Search was removed from the public API.
+
+So "Dribbble search" is not a missing implementation — it is not possible against the
+official API. The options are:
+
+- **Recommended:** treat Dribbble as a *connected-account content import* rather than a
+  search source. Fetch the user's own shots via `/v2/user/shots` and surface them on
+  their Gaddr Me profile. That is the universal-profile use case and it works within the
+  API.
+- Scraping is a Terms of Service question, not a technical one. See the legal section of
+  the implementation plan before considering it.
+
+Dribbble is deliberately **absent** from `_const.SEARCHABLE_PLATFORMS` for this reason.
+
+## Behance — implemented, but a stub
+
+`searchBehanceAsync` exists and is dispatched, but Behance has no public API, so it
+returns empty `user` and `content` arrays. It is in `SEARCHABLE_PLATFORMS` because the
+dispatch case exists; it will never return results until Adobe provides an API or the
+approach changes. Worth knowing before debugging "why does Behance return nothing".
+
+## Twitch, GitHub, Discord — linking only, not searchable
+
+All three are legitimate `PLATFORMS` entries — users link those accounts — but none has
+a search implementation. They were previously included in the search fan-out because it
+derived from `Object.values(PLATFORMS)`, so **every unfiltered search returned three
+`Unsupported platform: …` entries** that clients had to know to ignore. The fan-out now
+comes from `SEARCHABLE_PLATFORMS`, guarded by `const.spec.ts` in both directions: no
+platform is dispatched without an implementation, and no implemented platform is left
+out.
 
 ---
 

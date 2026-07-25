@@ -136,7 +136,7 @@ read endpoint. `docs/integrations/END_TO_END_VERIFICATION.md` has the commands.
 ./scripts/ci.sh
 ```
 
-Typecheck, lint (0 errors required), 119 tests, secret scan, build. Add tests for
+Typecheck, lint (0 errors required), 136 tests, secret scan, build. Add tests for
 what you changed — co-locate as `*.spec.ts`. See the `gaddr-testing` skill.
 
 State the RAM, Redis, database and WebSocket impact of what you built.

@@ -151,7 +151,7 @@ stated product mandate".
 
 | Gap | State |
 |---|---|
-| Test coverage | **119 tests, 7 suites**, all passing (was 0). Concentrated on auth and search — the areas with critical findings. Everything else is uncovered. No suite here starts a real server, so backend end-to-end verification is still manual; see `integrations/END_TO_END_VERIFICATION.md`. |
+| Test coverage | **136 tests, 8 suites**, all passing (was 0). Concentrated on auth and search — the areas with critical findings. Everything else is uncovered. No suite here starts a real server, so backend end-to-end verification is still manual; see `integrations/END_TO_END_VERIFICATION.md`. |
 | Request validation | No global `ValidationPipe`; `class-validator` not installed. Joi is used per-handler and for env config. |
 | Rate limiting | ✅ Search is limited by `searchRateLimit.guard.ts` using atomic Redis `INCR`, per user when authenticated and per client IP otherwise, with a bounded per-instance fallback when Redis is down. `trust proxy` is set, so `req.ip` is correct. **Outstanding:** the older `RateLimitMiddleware` still covers only 4 auth routes via a non-atomic DB read-then-write. |
 | Security headers | No `helmet`; no CSP, HSTS, or frame options. This is what makes the frontend's `localStorage` token exposure (H3) exploitable. |
