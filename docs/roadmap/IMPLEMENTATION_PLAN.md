@@ -18,7 +18,7 @@ Companion documents: [`../audit/2026-07_Security_And_Correctness_Audit.md`](../a
 |---|---|
 | Backend | NestJS 11, clean architecture + CQRS, 201 endpoints, builds clean, typechecks at 0 errors |
 | Frontend | Next.js 16, React 19, Tailwind v4, TanStack Query v5, builds clean, typecheck 130 → 0 |
-| Tests | **87** backend tests, 5 suites (was 0). Frontend: still none |
+| Tests | **100** backend (6 suites) + **41** frontend (Vitest) = **141**, from zero |
 | CI/CD | Cloud Build pipeline + local gate in both repos (no GitHub Actions, per cost constraint) |
 | Search | 12-platform fan-out, DB-persisted, cached, distributed-locked. **A latent 500 was fixed this pass** |
 | Platform credentials | YouTube ✅ · TikTok ⚠️ partial · Pinterest ❌ · Reddit ❌ · Dribbble ⚠️ · see STATUS.md |
@@ -44,7 +44,7 @@ sessions can be trusted and revoked.
 | 0.3 | **GDPR assessment** of 0.1 — is it notifiable under Art. 33? | Depends on who accessed it; a documented decision either way is required | Data protection owner |
 | 0.4 | **C5 — session revocation fails open** on Redis cache miss. Add DB fallback, then fail closed | Password changes do not reliably end sessions. Do **not** fail closed without the fallback or every cold-cache user is logged out | Engineering |
 | 0.5 | **C4 — AES-256-GCM migration** with per-message IVs and dual-read | OAuth tokens are encrypted with a static IV, unauthenticated. See the `gaddr-encryption` skill for the exact migration | Engineering |
-| 0.6 | **Rate limit search endpoints** with atomic Redis `INCR` | Search is unauthenticated *and* unlimited while fanning out to metered APIs. This is a live billing-attack surface | Engineering |
+| 0.6 | ~~Rate limit search endpoints~~ ✅ **Done** — `searchRateLimit.guard.ts`, atomic Redis `INCR`, two buckets, identity-aware, bounded per-instance fallback when Redis is down. 13 tests including a concurrency proof | Landed |
 | 0.7 | **`ValidationPipe` + `class-validator`**, DTOs per slice starting with auth and search | No declarative validation exists across 201 endpoints. Enable the pipe *after* DTOs exist, or live traffic is rejected | Engineering |
 
 **Exit criteria:** credentials rotated, no open critical findings, search rate-limited,
@@ -96,10 +96,23 @@ Note `/platform-status` on the frontend is a **static marketing page**, not heal
 - Add relevance ranking across platforms. Results are currently grouped per platform
   with no cross-platform scoring — the "All" tab has no true ordering.
 
-### 3.4 Frontend tests
+### 3.4 Test coverage
 
-Vitest + Testing Library, then Playwright for login, search and profile. This is the
-last major untested surface.
+Vitest is installed with 41 tests (locale registry, colour-scheme provider) and the
+backend has 100 across 6 suites. Both gates are green.
+
+What is still uncovered, highest value first:
+
+1. **Playwright end-to-end** — login, search, profile. No end-to-end coverage exists.
+2. `httpContext.middleware.ts` — the dual auth paths, and that Better Auth sessions
+   get the right `UserType` (currently hardcoded to `User`, so an admin authenticating
+   that way is silently downgraded).
+3. `refresh-token.handler.ts` — the flow whose dependence on expired tokens shaped the
+   C1 fix.
+4. `search.service.ts` staleness and lock logic — `shouldFetchFromAPI` decides when to
+   spend paid quota.
+5. Repository query correctness against a real Postgres via Testcontainers.
+6. Frontend components beyond the two areas covered.
 
 ---
 
