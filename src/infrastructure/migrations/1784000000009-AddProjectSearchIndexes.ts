@@ -19,8 +19,6 @@ export class AddProjectSearchIndexes1784000000009 implements MigrationInterface 
     await queryRunner.query(
       `DROP INDEX IF EXISTS "IDX_project_description_trgm"`,
     );
-    await queryRunner.query(
-      `DROP INDEX IF EXISTS "IDX_project_title_trgm"`,
-    );
+    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_project_title_trgm"`);
   }
 }

@@ -36,9 +36,7 @@ export class TiktokImportCommand {
 }
 
 @CommandHandler(TiktokImportCommand)
-export class TiktokImportCommandHandler
-  implements ICommandHandler<TiktokImportCommand>
-{
+export class TiktokImportCommandHandler implements ICommandHandler<TiktokImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

@@ -57,9 +57,7 @@ const spotifyConnectCallbackValidations = Joi.object({
 });
 
 @CommandHandler(SpotifyConnectQuery)
-export class SpotifyConnectQueryHandler
-  implements ICommandHandler<SpotifyConnectQuery>
-{
+export class SpotifyConnectQueryHandler implements ICommandHandler<SpotifyConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -81,9 +79,7 @@ export class SpotifyConnectQueryHandler
 }
 
 @CommandHandler(SpotifyConnectCallbackQuery)
-export class SpotifyConnectCallbackQueryHandler
-  implements ICommandHandler<SpotifyConnectCallbackQuery>
-{
+export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<SpotifyConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

@@ -31,9 +31,7 @@ const updatePrivacySettingsValidations = Joi.object({
 });
 
 @CommandHandler(UpdatePrivacySettingsCommand)
-export class UpdatePrivacySettingsCommandHandler
-  implements ICommandHandler<UpdatePrivacySettingsCommand>
-{
+export class UpdatePrivacySettingsCommandHandler implements ICommandHandler<UpdatePrivacySettingsCommand> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

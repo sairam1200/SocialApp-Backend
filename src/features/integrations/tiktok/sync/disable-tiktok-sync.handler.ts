@@ -13,9 +13,7 @@ export class DisableTiktokSyncCommand {
 }
 
 @CommandHandler(DisableTiktokSyncCommand)
-export class DisableTiktokSyncCommandHandler
-  implements ICommandHandler<DisableTiktokSyncCommand>
-{
+export class DisableTiktokSyncCommandHandler implements ICommandHandler<DisableTiktokSyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

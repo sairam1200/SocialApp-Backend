@@ -39,9 +39,7 @@ const updatePermissionsValidations = Joi.object({
 });
 
 @CommandHandler(UpdatePermissionsCommand)
-export class UpdatePermissionsHandler
-  implements ICommandHandler<UpdatePermissionsCommand>
-{
+export class UpdatePermissionsHandler implements ICommandHandler<UpdatePermissionsCommand> {
   constructor(
     @Inject(_const.IROLE_REPOSITORY)
     private readonly roleRepository: IRoleRepository,

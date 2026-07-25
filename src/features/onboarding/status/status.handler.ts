@@ -14,9 +14,10 @@ export class GetOnboardingStatusQuery {
 }
 
 @QueryHandler(GetOnboardingStatusQuery)
-export class GetOnboardingStatusQueryHandler
-  implements IQueryHandler<GetOnboardingStatusQuery, OnboardingStatusModel>
-{
+export class GetOnboardingStatusQueryHandler implements IQueryHandler<
+  GetOnboardingStatusQuery,
+  OnboardingStatusModel
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

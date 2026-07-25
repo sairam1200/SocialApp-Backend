@@ -64,7 +64,7 @@ async function bootstrap() {
   app.setGlobalPrefix(globalPrefix);
   app.enableVersioning({
     type: VersioningType.URI,
-    defaultVersion: '1',  
+    defaultVersion: '1',
   });
 
   if (configs.env !== 'production') {

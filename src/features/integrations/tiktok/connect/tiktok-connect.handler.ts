@@ -59,9 +59,7 @@ const tiktokConnectCallbackValidations = Joi.object({
 });
 
 @CommandHandler(TikTokConnectQuery)
-export class TiktokConnectQueryHandler
-  implements ICommandHandler<TikTokConnectQuery>
-{
+export class TiktokConnectQueryHandler implements ICommandHandler<TikTokConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -85,9 +83,7 @@ export class TiktokConnectQueryHandler
 }
 
 @CommandHandler(TiktokConnectCallbackQuery)
-export class TiktokConnectCallbackQueryHandler
-  implements ICommandHandler<TiktokConnectCallbackQuery>
-{
+export class TiktokConnectCallbackQueryHandler implements ICommandHandler<TiktokConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

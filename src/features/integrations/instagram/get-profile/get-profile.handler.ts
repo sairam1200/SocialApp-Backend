@@ -21,9 +21,7 @@ export class InstagramProfileQuery {
 }
 
 @CommandHandler(InstagramProfileQuery)
-export class InstagramProfileQueryHandler
-  implements ICommandHandler<InstagramProfileQuery>
-{
+export class InstagramProfileQueryHandler implements ICommandHandler<InstagramProfileQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

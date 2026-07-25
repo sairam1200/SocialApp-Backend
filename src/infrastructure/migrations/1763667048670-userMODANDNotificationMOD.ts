@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class UserMODANDNotificationMOD1763667048670
-  implements MigrationInterface
-{
+export class UserMODANDNotificationMOD1763667048670 implements MigrationInterface {
   name = 'UserMODANDNotificationMOD1763667048670';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

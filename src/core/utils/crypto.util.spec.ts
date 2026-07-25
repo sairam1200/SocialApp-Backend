@@ -30,12 +30,16 @@ describe('cryptoUtils', () => {
       // The product targets Swedish, Arabic and Asian locales; token payloads and
       // profile data can carry any of these.
       const plaintext = 'åäöÅÄÖ — مرحبا — 日本語 — 🎉';
-      expect(cryptoUtils.decrypt(cryptoUtils.encrypt(plaintext))).toBe(plaintext);
+      expect(cryptoUtils.decrypt(cryptoUtils.encrypt(plaintext))).toBe(
+        plaintext,
+      );
     });
 
     it('handles a payload larger than one AES block', () => {
       const plaintext = 'x'.repeat(5000);
-      expect(cryptoUtils.decrypt(cryptoUtils.encrypt(plaintext))).toBe(plaintext);
+      expect(cryptoUtils.decrypt(cryptoUtils.encrypt(plaintext))).toBe(
+        plaintext,
+      );
     });
 
     it('round-trips a serialised OAuth token object', () => {
@@ -45,7 +49,9 @@ describe('cryptoUtils', () => {
         expires_in: 3600,
       });
 
-      expect(JSON.parse(cryptoUtils.decrypt(cryptoUtils.encrypt(payload)))).toEqual({
+      expect(
+        JSON.parse(cryptoUtils.decrypt(cryptoUtils.encrypt(payload))),
+      ).toEqual({
         access_token: 'test-access',
         refresh_token: 'test-refresh',
         expires_in: 3600,
@@ -84,7 +90,9 @@ describe('cryptoUtils', () => {
     ])('returns false for %s instead of throwing', (_label, badHmac) => {
       const { encrypted } = cryptoUtils.encryptWithHMAC('payload');
 
-      expect(() => cryptoUtils.verifyWithHMAC(encrypted, badHmac)).not.toThrow();
+      expect(() =>
+        cryptoUtils.verifyWithHMAC(encrypted, badHmac),
+      ).not.toThrow();
       expect(cryptoUtils.verifyWithHMAC(encrypted, badHmac)).toBe(false);
     });
 
@@ -154,7 +162,9 @@ describe('cryptoUtils', () => {
       // (encryptWithHMAC/verifyWithHMAC) exist but no production call site uses
       // them — all OAuth token storage calls bare encrypt()/decrypt().
       expect(cryptoUtils.algorithm).toBe('aes-256-cbc');
-      expect(cryptoUtils.algorithm).not.toMatch(/gcm|ccm|ocb|chacha20-poly1305/);
+      expect(cryptoUtils.algorithm).not.toMatch(
+        /gcm|ccm|ocb|chacha20-poly1305/,
+      );
     });
 
     it('derives the key by truncating raw UTF-8 rather than via a KDF', () => {
@@ -163,7 +173,11 @@ describe('cryptoUtils', () => {
       // rather than at boot.
       expect(cryptoUtils.key).toHaveLength(32);
       expect(cryptoUtils.iv).toHaveLength(16);
-      expect(cryptoUtils.key.equals(Buffer.from(process.env.ENCRYPTION_KEY!.slice(0, 32), 'utf-8'))).toBe(true);
+      expect(
+        cryptoUtils.key.equals(
+          Buffer.from(process.env.ENCRYPTION_KEY!.slice(0, 32), 'utf-8'),
+        ),
+      ).toBe(true);
     });
 
     it('reuses the same key for encryption and for the HMAC', () => {

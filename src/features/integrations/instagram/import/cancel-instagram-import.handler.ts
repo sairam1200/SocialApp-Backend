@@ -26,9 +26,7 @@ export class CancelInstagramImportCommand {
 }
 
 @CommandHandler(CancelInstagramImportCommand)
-export class CancelInstagramImportCommandHandler
-  implements ICommandHandler<CancelInstagramImportCommand>
-{
+export class CancelInstagramImportCommandHandler implements ICommandHandler<CancelInstagramImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

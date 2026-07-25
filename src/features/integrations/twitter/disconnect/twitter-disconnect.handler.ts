@@ -11,9 +11,7 @@ export class TwitterDisconnectCommand {
 }
 
 @CommandHandler(TwitterDisconnectCommand)
-export class TwitterDisconnectCommandHandler
-  implements ICommandHandler<TwitterDisconnectCommand>
-{
+export class TwitterDisconnectCommandHandler implements ICommandHandler<TwitterDisconnectCommand> {
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,

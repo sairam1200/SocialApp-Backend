@@ -86,9 +86,7 @@ const googleConnectCallbackValidations = Joi.object({
 });
 
 @CommandHandler(GoogleConnectQuery)
-export class GoogleConnectQueryHandler
-  implements ICommandHandler<GoogleConnectQuery>
-{
+export class GoogleConnectQueryHandler implements ICommandHandler<GoogleConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -128,9 +126,7 @@ export class GoogleConnectQueryHandler
 }
 
 @CommandHandler(GoogleConnectCallbackQuery)
-export class GoogleConnectCallbackQueryHandler
-  implements ICommandHandler<GoogleConnectCallbackQuery>
-{
+export class GoogleConnectCallbackQueryHandler implements ICommandHandler<GoogleConnectCallbackQuery> {
   constructor(
     @Inject(_const.ITOKEN_SERVICE)
     private readonly tokenService: ITokenService,

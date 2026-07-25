@@ -21,9 +21,7 @@ export class TwitterProfileQuery {
 }
 
 @CommandHandler(TwitterProfileQuery)
-export class TwitterProfileQueryHandler
-  implements ICommandHandler<TwitterProfileQuery>
-{
+export class TwitterProfileQueryHandler implements ICommandHandler<TwitterProfileQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

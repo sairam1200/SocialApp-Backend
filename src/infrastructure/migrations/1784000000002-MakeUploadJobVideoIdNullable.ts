@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class MakeUploadJobVideoIdNullable1784000000002
-  implements MigrationInterface
-{
+export class MakeUploadJobVideoIdNullable1784000000002 implements MigrationInterface {
   name = 'MakeUploadJobVideoIdNullable1784000000002';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

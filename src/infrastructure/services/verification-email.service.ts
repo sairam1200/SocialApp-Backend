@@ -34,7 +34,8 @@ export class VerificationEmailService {
   async sendVerificationEmail(
     options: SendVerificationEmailOptions,
   ): Promise<void> {
-    const { user, targetEmail, isEmailChange, updateUser, deliveryMode } = options;
+    const { user, targetEmail, isEmailChange, updateUser, deliveryMode } =
+      options;
 
     logger.info(
       `[VerificationEmail] CHECKPOINT 2: Service received targetEmail=${targetEmail} for userId=${user.id} (isEmailChange=${isEmailChange}, updateUser=${updateUser}, deliveryMode=${deliveryMode})`,
@@ -102,8 +103,14 @@ export class VerificationEmailService {
     verificationCode: string,
     confirmEmailLink: string,
   ): Promise<void> {
-    const { user, targetEmail, userAgent, ipAddress, isEmailChange, deliveryMode } =
-      options;
+    const {
+      user,
+      targetEmail,
+      userAgent,
+      ipAddress,
+      isEmailChange,
+      deliveryMode,
+    } = options;
 
     const geoInfo = ipUtil.getGeolocationDetails(ipAddress);
     const location = geoInfo

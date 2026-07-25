@@ -63,11 +63,10 @@ const itemSchema = Joi.object<SearchItemQuery>({
 });
 
 @QueryHandler(SearchSuggestionsQuery)
-export class SearchSuggestionsQueryHandler
-  implements IQueryHandler<SearchSuggestionsQuery>
-{
+export class SearchSuggestionsQueryHandler implements IQueryHandler<SearchSuggestionsQuery> {
   constructor(
-    @Inject(_const.IIDENTITY_REPOSITORY) private readonly users: IIdentityRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly users: IIdentityRepository,
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly contents: IUserContentRepository,
     @Inject(_const.IPROJECT_REPOSITORY)
@@ -141,11 +140,10 @@ export class SearchSuggestionsQueryHandler
 }
 
 @QueryHandler(SearchResultsQuery)
-export class SearchResultsQueryHandler
-  implements IQueryHandler<SearchResultsQuery>
-{
+export class SearchResultsQueryHandler implements IQueryHandler<SearchResultsQuery> {
   constructor(
-    @Inject(_const.IIDENTITY_REPOSITORY) private readonly users: IIdentityRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly users: IIdentityRepository,
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly contents: IUserContentRepository,
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
@@ -249,7 +247,8 @@ export class SearchResultsQueryHandler
 @QueryHandler(SearchItemQuery)
 export class SearchItemQueryHandler implements IQueryHandler<SearchItemQuery> {
   constructor(
-    @Inject(_const.IIDENTITY_REPOSITORY) private readonly users: IIdentityRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly users: IIdentityRepository,
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly contents: IUserContentRepository,
     @Inject(_const.IUSERFOLLOW_REPOSITORY)

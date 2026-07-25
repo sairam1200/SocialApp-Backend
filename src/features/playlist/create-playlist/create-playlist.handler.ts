@@ -33,9 +33,10 @@ export class CreatePlaylistCommand {
 }
 
 @CommandHandler(CreatePlaylistCommand)
-export class CreatePlaylistCommandHandler
-  implements ICommandHandler<CreatePlaylistCommand, PlaylistModel>
-{
+export class CreatePlaylistCommandHandler implements ICommandHandler<
+  CreatePlaylistCommand,
+  PlaylistModel
+> {
   constructor(
     @Inject(_const.IPLAYLIST_REPOSITORY)
     private readonly playlistRepository: IPlaylistRepository,

@@ -8,9 +8,10 @@ import { HttpContext } from '../../../../core/middlewares/httpContext.middleware
 export class Disable2FACommand {}
 
 @CommandHandler(Disable2FACommand)
-export class Disbale2FACommandHandler
-  implements ICommandHandler<Disable2FACommand, void>
-{
+export class Disbale2FACommandHandler implements ICommandHandler<
+  Disable2FACommand,
+  void
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

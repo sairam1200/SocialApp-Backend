@@ -31,9 +31,7 @@ export class ThreadsImportCommand {
 }
 
 @CommandHandler(ThreadsImportCommand)
-export class ThreadsImportCommandHandler
-  implements ICommandHandler<ThreadsImportCommand>
-{
+export class ThreadsImportCommandHandler implements ICommandHandler<ThreadsImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

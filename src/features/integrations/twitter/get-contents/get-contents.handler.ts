@@ -29,9 +29,7 @@ export class TwitterContentsQuery {
 }
 
 @CommandHandler(TwitterContentsQuery)
-export class TwitterContentsQueryHandler
-  implements ICommandHandler<TwitterContentsQuery>
-{
+export class TwitterContentsQueryHandler implements ICommandHandler<TwitterContentsQuery> {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,

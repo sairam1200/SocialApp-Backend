@@ -19,9 +19,10 @@ export class UpdateUserNameCommand {
 }
 
 @CommandHandler(UpdateUserNameCommand)
-export class UpdateUserNameCommandHandler
-  implements ICommandHandler<UpdateUserNameCommand, void>
-{
+export class UpdateUserNameCommandHandler implements ICommandHandler<
+  UpdateUserNameCommand,
+  void
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

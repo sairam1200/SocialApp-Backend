@@ -60,9 +60,7 @@ const instagramConnectCallbackValidations = Joi.object({
 });
 
 @CommandHandler(InstagramConnectQuery)
-export class InstagramConnectQueryHandler
-  implements ICommandHandler<InstagramConnectQuery>
-{
+export class InstagramConnectQueryHandler implements ICommandHandler<InstagramConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -87,9 +85,7 @@ export class InstagramConnectQueryHandler
  * Important: Instagram does not reviel the email address of the user
  */
 @CommandHandler(InstagramConnectCallbackQuery)
-export class InstagramConnectCallbackQueryHandler
-  implements ICommandHandler<InstagramConnectCallbackQuery>
-{
+export class InstagramConnectCallbackQueryHandler implements ICommandHandler<InstagramConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

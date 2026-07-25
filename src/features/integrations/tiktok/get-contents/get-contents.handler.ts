@@ -23,9 +23,7 @@ export class TiktokContentsQuery {
 }
 
 @CommandHandler(TiktokContentsQuery)
-export class TiktokContentsQueryHandler
-  implements ICommandHandler<TiktokContentsQuery>
-{
+export class TiktokContentsQueryHandler implements ICommandHandler<TiktokContentsQuery> {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,

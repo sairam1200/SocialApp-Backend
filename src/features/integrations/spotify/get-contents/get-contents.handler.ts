@@ -28,9 +28,7 @@ export class SpotifyContentsQuery {
 }
 
 @CommandHandler(SpotifyContentsQuery)
-export class SpotifyContentsQueryHandler
-  implements ICommandHandler<SpotifyContentsQuery>
-{
+export class SpotifyContentsQueryHandler implements ICommandHandler<SpotifyContentsQuery> {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,

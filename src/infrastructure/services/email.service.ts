@@ -56,7 +56,11 @@ export class EmailService implements IEmailService {
       new SendEmailEvent(options),
     );
 
-    if (result && typeof result === 'object' && typeof (result as any).catch === 'function') {
+    if (
+      result &&
+      typeof result === 'object' &&
+      typeof (result as any).catch === 'function'
+    ) {
       (result as Promise<void>).catch((error) => {
         logger.error(
           `[EmailService] CRITICAL: Async email delivery FAILED for to=${options.to} subject="${options.subject}"`,

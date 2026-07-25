@@ -55,9 +55,7 @@ const changePasswordValidations = Joi.object({
 });
 
 @CommandHandler(ChangePasswordCommand)
-export class ChangePasswordCommandHandler
-  implements ICommandHandler<ChangePasswordCommand>
-{
+export class ChangePasswordCommandHandler implements ICommandHandler<ChangePasswordCommand> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

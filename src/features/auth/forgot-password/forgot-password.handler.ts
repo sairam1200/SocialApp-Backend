@@ -49,9 +49,7 @@ const forgotPasswordValidations = Joi.object({
 });
 
 @CommandHandler(ForgotPasswordCommand)
-export class ForgotPasswordCommandHandler
-  implements ICommandHandler<ForgotPasswordCommand>
-{
+export class ForgotPasswordCommandHandler implements ICommandHandler<ForgotPasswordCommand> {
   constructor(
     @Inject(_const.IEMAIL_SERVICE) private readonly emailService: IEmailService,
     @Inject(_const.IIDENTITY_REPOSITORY)

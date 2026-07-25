@@ -32,9 +32,7 @@ export class FacebookImportCommand {
 }
 
 @CommandHandler(FacebookImportCommand)
-export class FacebookImportCommandHandler
-  implements ICommandHandler<FacebookImportCommand>
-{
+export class FacebookImportCommandHandler implements ICommandHandler<FacebookImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

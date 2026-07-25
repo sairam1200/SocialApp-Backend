@@ -60,9 +60,7 @@ const twitterConnectValidations = Joi.object({
 });
 
 @CommandHandler(TwitterConnectQuery)
-export class TwiiterConnectQueryHandler
-  implements ICommandHandler<TwitterConnectQuery>
-{
+export class TwiiterConnectQueryHandler implements ICommandHandler<TwitterConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -84,9 +82,7 @@ export class TwiiterConnectQueryHandler
 }
 
 @CommandHandler(TwitterConnectCallbackQuery)
-export class TwitterConnectCallbackQueryHandler
-  implements ICommandHandler<TwitterConnectCallbackQuery>
-{
+export class TwitterConnectCallbackQueryHandler implements ICommandHandler<TwitterConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

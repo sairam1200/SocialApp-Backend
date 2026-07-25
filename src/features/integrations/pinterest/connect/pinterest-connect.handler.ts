@@ -55,9 +55,7 @@ const pinterestConnectCallbackValidations = Joi.object({
 });
 
 @CommandHandler(PinterestConnectQuery)
-export class PinterestConnectQueryHandler
-  implements ICommandHandler<PinterestConnectQuery>
-{
+export class PinterestConnectQueryHandler implements ICommandHandler<PinterestConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -82,9 +80,7 @@ export class PinterestConnectQueryHandler
  * Important: Pinterest does not reviel the email address of the user
  */
 @CommandHandler(PinterestConnectCallbackQuery)
-export class PinterestConnectCallbackQueryHandler
-  implements ICommandHandler<PinterestConnectCallbackQuery>
-{
+export class PinterestConnectCallbackQueryHandler implements ICommandHandler<PinterestConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

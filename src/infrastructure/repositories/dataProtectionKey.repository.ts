@@ -4,9 +4,7 @@ import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { DataProtectionKey } from '../../domain/entities/dataProtectionKey.entity';
 import { IDataProtectionKeyRepository } from '../../domain/repositories/idataProtectionKey.repository';
 
-export class DataProtectionKeyRepository
-  implements IDataProtectionKeyRepository
-{
+export class DataProtectionKeyRepository implements IDataProtectionKeyRepository {
   constructor(
     @InjectRepository(DataProtectionKey)
     private readonly dataProtectionKeyContext: Repository<DataProtectionKey>,

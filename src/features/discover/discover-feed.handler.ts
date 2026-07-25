@@ -42,17 +42,14 @@ const validateDiscoverFeedQuery = Joi.object<DiscoverFeedQuery>({
 const DISCOVER_FEED_CACHE_TTL = 30;
 
 @CommandHandler(DiscoverFeedQuery)
-export class DiscoverFeedQueryHandler
-  implements
-    ICommandHandler<
-      DiscoverFeedQuery,
-      {
-        contents: DiscoverContentModel[];
-        nextCursor: string | null;
-        hasMore: boolean;
-      }
-    >
-{
+export class DiscoverFeedQueryHandler implements ICommandHandler<
+  DiscoverFeedQuery,
+  {
+    contents: DiscoverContentModel[];
+    nextCursor: string | null;
+    hasMore: boolean;
+  }
+> {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,

@@ -13,8 +13,7 @@ interface CurrentUserSuccessResponse {
 }
 
 type CurrentUserResponse =
-  | CurrentUserSuccessResponse
-  | { succeeded: false; message: string };
+  CurrentUserSuccessResponse | { succeeded: false; message: string };
 
 export class CurrentUserQuery {
   constructor(request: Partial<CurrentUserQuery> = {}) {
@@ -23,9 +22,10 @@ export class CurrentUserQuery {
 }
 
 @QueryHandler(CurrentUserQuery)
-export class CurrentUserQueryHandler
-  implements IQueryHandler<CurrentUserQuery, CurrentUserResponse>
-{
+export class CurrentUserQueryHandler implements IQueryHandler<
+  CurrentUserQuery,
+  CurrentUserResponse
+> {
   async execute(): Promise<CurrentUserResponse> {
     const user = HttpContext.user;
 

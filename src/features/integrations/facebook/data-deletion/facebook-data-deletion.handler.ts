@@ -17,9 +17,7 @@ export class FacebookDataDeletionCommand {
 }
 
 @CommandHandler(FacebookDataDeletionCommand)
-export class FacebookDataDeletionCommandHandler
-  implements ICommandHandler<FacebookDataDeletionCommand>
-{
+export class FacebookDataDeletionCommandHandler implements ICommandHandler<FacebookDataDeletionCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

@@ -26,9 +26,7 @@ export class CancelBehanceImportCommand {
 }
 
 @CommandHandler(CancelBehanceImportCommand)
-export class CancelBehanceImportCommandHandler
-  implements ICommandHandler<CancelBehanceImportCommand>
-{
+export class CancelBehanceImportCommandHandler implements ICommandHandler<CancelBehanceImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

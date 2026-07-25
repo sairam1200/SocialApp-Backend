@@ -18,9 +18,10 @@ export class UpdatePhoneNumberCommand {
 }
 
 @CommandHandler(UpdatePhoneNumberCommand)
-export class UpdatePhoneNumberCommandHandler
-  implements ICommandHandler<UpdatePhoneNumberCommand, void>
-{
+export class UpdatePhoneNumberCommandHandler implements ICommandHandler<
+  UpdatePhoneNumberCommand,
+  void
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

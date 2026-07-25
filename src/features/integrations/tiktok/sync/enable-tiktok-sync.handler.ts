@@ -16,9 +16,7 @@ export class EnableTiktokSyncCommand {
 }
 
 @CommandHandler(EnableTiktokSyncCommand)
-export class EnableTiktokSyncCommandHandler
-  implements ICommandHandler<EnableTiktokSyncCommand>
-{
+export class EnableTiktokSyncCommandHandler implements ICommandHandler<EnableTiktokSyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

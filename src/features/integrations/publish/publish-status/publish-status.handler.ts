@@ -6,9 +6,7 @@ import { PublishValidationError } from '../../../../core/exceptions/publishing.e
 import { PublishStatusQuery } from './publish-status.command';
 
 @QueryHandler(PublishStatusQuery)
-export class PublishStatusQueryHandler
-  implements IQueryHandler<PublishStatusQuery>
-{
+export class PublishStatusQueryHandler implements IQueryHandler<PublishStatusQuery> {
   constructor(
     @Inject(_const.IPUBLISHJOB_REPOSITORY)
     private readonly publishJobRepo: IPublishJobRepository,

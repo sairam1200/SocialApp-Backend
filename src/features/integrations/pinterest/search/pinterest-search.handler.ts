@@ -36,9 +36,7 @@ export class PinterestSearchQuery {
 }
 
 @QueryHandler(PinterestSearchQuery)
-export class PinterestSearchQueryHandler
-  implements IQueryHandler<PinterestSearchQuery>
-{
+export class PinterestSearchQueryHandler implements IQueryHandler<PinterestSearchQuery> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,

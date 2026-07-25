@@ -33,9 +33,10 @@ const enable2FAValidations = Joi.object({
 });
 
 @CommandHandler(Enable2FACommand)
-export class Enable2FACommandHandler
-  implements ICommandHandler<Enable2FACommand, void>
-{
+export class Enable2FACommandHandler implements ICommandHandler<
+  Enable2FACommand,
+  void
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

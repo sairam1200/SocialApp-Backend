@@ -13,9 +13,7 @@ export class DisableFacebookSyncCommand {
 }
 
 @CommandHandler(DisableFacebookSyncCommand)
-export class DisableFacebookSyncCommandHandler
-  implements ICommandHandler<DisableFacebookSyncCommand>
-{
+export class DisableFacebookSyncCommandHandler implements ICommandHandler<DisableFacebookSyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

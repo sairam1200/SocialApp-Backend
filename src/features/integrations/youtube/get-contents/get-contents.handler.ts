@@ -23,9 +23,7 @@ export class YoutubeContentsQuery {
 }
 
 @CommandHandler(YoutubeContentsQuery)
-export class YoutubeContentsQueryHandler
-  implements ICommandHandler<YoutubeContentsQuery>
-{
+export class YoutubeContentsQueryHandler implements ICommandHandler<YoutubeContentsQuery> {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,

@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class UserContentAddForeignKey1783167267345
-  implements MigrationInterface
-{
+export class UserContentAddForeignKey1783167267345 implements MigrationInterface {
   name = 'UserContentAddForeignKey1783167267345';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

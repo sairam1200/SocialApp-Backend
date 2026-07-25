@@ -27,9 +27,7 @@ export class UpdateProfileImageCommand {
 }
 
 @CommandHandler(UpdateProfileImageCommand)
-export class UpdateProfileImageCommandHandler
-  implements ICommandHandler<UpdateProfileImageCommand>
-{
+export class UpdateProfileImageCommandHandler implements ICommandHandler<UpdateProfileImageCommand> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

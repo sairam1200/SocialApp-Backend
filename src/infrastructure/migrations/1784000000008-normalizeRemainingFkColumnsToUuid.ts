@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class normalizeRemainingFkColumnsToUuid1784000000008
-  implements MigrationInterface
-{
+export class normalizeRemainingFkColumnsToUuid1784000000008 implements MigrationInterface {
   name = 'normalizeRemainingFkColumnsToUuid1784000000008';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

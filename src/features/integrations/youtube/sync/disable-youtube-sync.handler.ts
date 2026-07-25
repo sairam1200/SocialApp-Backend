@@ -15,9 +15,7 @@ export class DisableYoutubeSyncCommand {
 }
 
 @CommandHandler(DisableYoutubeSyncCommand)
-export class DisableYoutubeSyncCommandHandler
-  implements ICommandHandler<DisableYoutubeSyncCommand>
-{
+export class DisableYoutubeSyncCommandHandler implements ICommandHandler<DisableYoutubeSyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

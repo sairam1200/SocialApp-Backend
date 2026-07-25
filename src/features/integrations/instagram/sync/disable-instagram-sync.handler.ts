@@ -13,9 +13,7 @@ export class DisableInstagramSyncCommand {
 }
 
 @CommandHandler(DisableInstagramSyncCommand)
-export class DisableInstagramSyncCommandHandler
-  implements ICommandHandler<DisableInstagramSyncCommand>
-{
+export class DisableInstagramSyncCommandHandler implements ICommandHandler<DisableInstagramSyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

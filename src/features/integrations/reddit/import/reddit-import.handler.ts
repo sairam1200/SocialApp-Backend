@@ -26,9 +26,7 @@ export class RedditImportCommand {
 }
 
 @CommandHandler(RedditImportCommand)
-export class RedditImportCommandHandler
-  implements ICommandHandler<RedditImportCommand>
-{
+export class RedditImportCommandHandler implements ICommandHandler<RedditImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

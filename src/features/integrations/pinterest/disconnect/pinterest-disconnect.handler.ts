@@ -11,9 +11,7 @@ export class PinterestDisconnectCommand {
 }
 
 @CommandHandler(PinterestDisconnectCommand)
-export class PinterestDisconnectCommandHandler
-  implements ICommandHandler<PinterestDisconnectCommand>
-{
+export class PinterestDisconnectCommandHandler implements ICommandHandler<PinterestDisconnectCommand> {
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,

@@ -29,9 +29,10 @@ const addPlaylistMemberValidations = Joi.object({
 });
 
 @CommandHandler(AddPlaylistMemberCommand)
-export class AddPlaylistMemberCommandHandler
-  implements ICommandHandler<AddPlaylistMemberCommand, PlaylistMemberModel>
-{
+export class AddPlaylistMemberCommandHandler implements ICommandHandler<
+  AddPlaylistMemberCommand,
+  PlaylistMemberModel
+> {
   constructor(
     @Inject(_const.IPLAYLIST_REPOSITORY)
     private readonly playlistRepository: IPlaylistRepository,

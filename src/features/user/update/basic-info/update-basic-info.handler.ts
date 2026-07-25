@@ -41,9 +41,7 @@ const updateBasicInfoValidations = Joi.object({
 });
 
 @CommandHandler(UpdateBasicInfoCommand)
-export class UpdateBasicInfoCommandHandler
-  implements ICommandHandler<UpdateBasicInfoCommand>
-{
+export class UpdateBasicInfoCommandHandler implements ICommandHandler<UpdateBasicInfoCommand> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

@@ -23,9 +23,10 @@ export class OnboardingStep4Command {
 }
 
 @CommandHandler(OnboardingStep4Command)
-export class OnboardingStep4CommandHandler
-  implements ICommandHandler<OnboardingStep4Command, OnboardingStatusModel>
-{
+export class OnboardingStep4CommandHandler implements ICommandHandler<
+  OnboardingStep4Command,
+  OnboardingStatusModel
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

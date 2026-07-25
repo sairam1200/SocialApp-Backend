@@ -26,9 +26,7 @@ export class CancelSnapchatImportCommand {
 }
 
 @CommandHandler(CancelSnapchatImportCommand)
-export class CancelSnapchatImportCommandHandler
-  implements ICommandHandler<CancelSnapchatImportCommand>
-{
+export class CancelSnapchatImportCommandHandler implements ICommandHandler<CancelSnapchatImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

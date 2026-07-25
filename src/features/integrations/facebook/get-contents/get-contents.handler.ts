@@ -23,9 +23,7 @@ export class FacebookContentsQuery {
 }
 
 @CommandHandler(FacebookContentsQuery)
-export class FacebookContentsQueryHandler
-  implements ICommandHandler<FacebookContentsQuery>
-{
+export class FacebookContentsQueryHandler implements ICommandHandler<FacebookContentsQuery> {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,

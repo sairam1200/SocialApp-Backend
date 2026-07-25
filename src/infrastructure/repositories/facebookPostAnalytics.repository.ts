@@ -5,9 +5,7 @@ import { FacebookPostAnalytics } from '../../domain/entities/facebookPostAnalyti
 import { IFacebookPostAnalyticsRepository } from '../../domain/repositories/ifacebookPostAnalytics.repository';
 
 @Injectable()
-export class FacebookPostAnalyticsRepository
-  implements IFacebookPostAnalyticsRepository
-{
+export class FacebookPostAnalyticsRepository implements IFacebookPostAnalyticsRepository {
   constructor(
     @InjectRepository(FacebookPostAnalytics)
     private readonly postAnalyticsContext: Repository<FacebookPostAnalytics>,

@@ -3,7 +3,14 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiHeader, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserModel } from '../../../domain/contracts/user.model';
 import { RegisterCommand, RegisterModel } from './register.handler';
-import { Body, Controller, HttpStatus, Post, Res, UseFilters } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UseFilters,
+} from '@nestjs/common';
 import { RequireTurnstile } from '../../../core/passport';
 import { ErrorHandlersFilter } from '../../../core/exceptions/exceptionHandler.filter';
 
@@ -31,16 +38,14 @@ export class RegisterController {
     @Body() request: RegisterModel,
     @Res() res: Response,
   ): Promise<Response> {
-    try {
-      const result = await this.commandBus.execute(
-        new RegisterCommand({
-          model: request,
-        }),
-      );
+    // No try/catch: rethrowing unchanged added nothing, and the global
+    // ErrorHandlersFilter already maps thrown exceptions to responses.
+    const result = await this.commandBus.execute(
+      new RegisterCommand({
+        model: request,
+      }),
+    );
 
-      return res.status(HttpStatus.CREATED).send(result);
-    } catch (error) {
-      throw error;
-    }
+    return res.status(HttpStatus.CREATED).send(result);
   }
 }

@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class DataProtectionKeyCreate1747420148752
-  implements MigrationInterface
-{
+export class DataProtectionKeyCreate1747420148752 implements MigrationInterface {
   name = 'DataProtectionKeyCreate1747420148752';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

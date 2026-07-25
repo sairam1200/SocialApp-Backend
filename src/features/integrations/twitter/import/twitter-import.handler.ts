@@ -34,9 +34,7 @@ export class TwitterImportCommand {
 }
 
 @CommandHandler(TwitterImportCommand)
-export class TwitterImportCommandHandler
-  implements ICommandHandler<TwitterImportCommand>
-{
+export class TwitterImportCommandHandler implements ICommandHandler<TwitterImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

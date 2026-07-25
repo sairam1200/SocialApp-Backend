@@ -53,9 +53,7 @@ const normalizeChannels = (
 };
 
 @CommandHandler(UpdateThemeCommand)
-export class UpdateThemeCommandHandler
-  implements ICommandHandler<UpdateThemeCommand>
-{
+export class UpdateThemeCommandHandler implements ICommandHandler<UpdateThemeCommand> {
   constructor(
     @Inject(_const.IUSERPREFERENCE_REPOSITORY)
     private readonly userPreferenceRepository: IUserPreferenceRepository,

@@ -21,9 +21,7 @@ const getRoleByNameQueryValidations = {
 };
 
 @CommandHandler(GetRoleByNameQuery)
-export class GetRoleByNameHandler
-  implements ICommandHandler<GetRoleByNameQuery>
-{
+export class GetRoleByNameHandler implements ICommandHandler<GetRoleByNameQuery> {
   constructor(
     @Inject(_const.IROLE_REPOSITORY)
     private readonly roleRepository: IRoleRepository,

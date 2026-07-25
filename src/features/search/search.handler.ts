@@ -115,9 +115,7 @@ export class GlobalSearchResponseModel {
 }
 
 @QueryHandler(GlobalSearchQuery)
-export class GlobalSearchQueryHandler
-  implements IQueryHandler<GlobalSearchQuery>
-{
+export class GlobalSearchQueryHandler implements IQueryHandler<GlobalSearchQuery> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,

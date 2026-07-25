@@ -32,9 +32,10 @@ export class UpdateEmailCommand {
 }
 
 @CommandHandler(UpdateEmailCommand)
-export class UpdateEmailCommandHandler
-  implements ICommandHandler<UpdateEmailCommand, void>
-{
+export class UpdateEmailCommandHandler implements ICommandHandler<
+  UpdateEmailCommand,
+  void
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,
@@ -120,8 +121,7 @@ export class UpdateEmailCommandHandler
 
       if (timeSinceLastChange < cooldownMilliseconds) {
         const daysRemaining = Math.ceil(
-          (cooldownMilliseconds - timeSinceLastChange) /
-            (24 * 60 * 60 * 1000),
+          (cooldownMilliseconds - timeSinceLastChange) / (24 * 60 * 60 * 1000),
         );
         throw new BadRequestException(
           `You cannot change your email yet. Please wait ${daysRemaining} more day(s) before requesting another email change.`,

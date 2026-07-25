@@ -18,9 +18,7 @@ export class GetCommonFollowersQuery {
 }
 
 @QueryHandler(GetCommonFollowersQuery)
-export class GetCommonFollowersQueryHandler
-  implements IQueryHandler<GetCommonFollowersQuery>
-{
+export class GetCommonFollowersQueryHandler implements IQueryHandler<GetCommonFollowersQuery> {
   constructor(
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
     private readonly follows: IUserFollowRepository,

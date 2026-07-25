@@ -17,9 +17,7 @@ export class ApproveFollowRequestCommand {
 }
 
 @CommandHandler(ApproveFollowRequestCommand)
-export class ApproveFollowRequestCommandHandler
-  implements ICommandHandler<ApproveFollowRequestCommand>
-{
+export class ApproveFollowRequestCommandHandler implements ICommandHandler<ApproveFollowRequestCommand> {
   constructor(
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
     private readonly follows: IUserFollowRepository,

@@ -23,9 +23,7 @@ export class BehanceContentsQuery {
 }
 
 @CommandHandler(BehanceContentsQuery)
-export class BehanceContentsQueryHandler
-  implements ICommandHandler<BehanceContentsQuery>
-{
+export class BehanceContentsQueryHandler implements ICommandHandler<BehanceContentsQuery> {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,

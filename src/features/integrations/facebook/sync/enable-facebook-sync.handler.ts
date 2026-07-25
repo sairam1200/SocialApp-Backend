@@ -15,9 +15,7 @@ export class EnableFacebookSyncCommand {
 }
 
 @CommandHandler(EnableFacebookSyncCommand)
-export class EnableFacebookSyncCommandHandler
-  implements ICommandHandler<EnableFacebookSyncCommand>
-{
+export class EnableFacebookSyncCommandHandler implements ICommandHandler<EnableFacebookSyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

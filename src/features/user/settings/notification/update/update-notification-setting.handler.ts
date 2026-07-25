@@ -54,9 +54,7 @@ const normalizeChannels = (
 };
 
 @CommandHandler(UpdateNotificationSettingCommand)
-export class UpdateNotificationSettingCommandHandler
-  implements ICommandHandler<UpdateNotificationSettingCommand>
-{
+export class UpdateNotificationSettingCommandHandler implements ICommandHandler<UpdateNotificationSettingCommand> {
   constructor(
     @Inject(_const.IUSERPREFERENCE_REPOSITORY)
     private readonly userPreferenceRepository: IUserPreferenceRepository,

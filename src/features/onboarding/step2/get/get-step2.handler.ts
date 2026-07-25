@@ -16,9 +16,10 @@ export class GetOnboardingStep2Query {
 }
 
 @QueryHandler(GetOnboardingStep2Query)
-export class GetOnboardingStep2QueryHandler
-  implements IQueryHandler<GetOnboardingStep2Query, OnboardingStep2Model>
-{
+export class GetOnboardingStep2QueryHandler implements IQueryHandler<
+  GetOnboardingStep2Query,
+  OnboardingStep2Model
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

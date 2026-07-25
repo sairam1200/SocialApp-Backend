@@ -21,9 +21,10 @@ const getPlaylistsValidations = Joi.object({
 });
 
 @CommandHandler(GetPlaylistsQuery)
-export class GetPlaylistsQueryHandler
-  implements ICommandHandler<GetPlaylistsQuery, PlaylistModel[]>
-{
+export class GetPlaylistsQueryHandler implements ICommandHandler<
+  GetPlaylistsQuery,
+  PlaylistModel[]
+> {
   constructor(
     @Inject(_const.IPLAYLIST_REPOSITORY)
     private readonly playlistRepository: IPlaylistRepository,

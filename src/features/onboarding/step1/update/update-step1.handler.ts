@@ -35,9 +35,10 @@ const step1Validations = Joi.object<OnboardingStep1Model>({
 });
 
 @CommandHandler(OnboardingStep1Command)
-export class OnboardingStep1CommandHandler
-  implements ICommandHandler<OnboardingStep1Command, OnboardingStatusModel>
-{
+export class OnboardingStep1CommandHandler implements ICommandHandler<
+  OnboardingStep1Command,
+  OnboardingStatusModel
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

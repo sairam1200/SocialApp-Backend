@@ -57,9 +57,7 @@ const discordConnectValidations = Joi.object({
 });
 
 @CommandHandler(DiscordConnectQuery)
-export class DiscordConnectQueryHandler
-  implements ICommandHandler<DiscordConnectQuery>
-{
+export class DiscordConnectQueryHandler implements ICommandHandler<DiscordConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -80,9 +78,7 @@ export class DiscordConnectQueryHandler
 }
 
 @CommandHandler(DiscordConnectCallbackQuery)
-export class DiscordConnectCallbackQueryHandler
-  implements ICommandHandler<DiscordConnectCallbackQuery>
-{
+export class DiscordConnectCallbackQueryHandler implements ICommandHandler<DiscordConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

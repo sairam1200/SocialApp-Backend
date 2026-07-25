@@ -1,7 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CreatePremiumRollupsTable1784000000006
-  implements MigrationInterface {
+export class CreatePremiumRollupsTable1784000000006 implements MigrationInterface {
   name = 'CreatePremiumRollupsTable1784000000006';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

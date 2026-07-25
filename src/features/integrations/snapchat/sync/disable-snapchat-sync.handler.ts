@@ -13,9 +13,7 @@ export class DisableSnapchatSyncCommand {
 }
 
 @CommandHandler(DisableSnapchatSyncCommand)
-export class DisableSnapchatSyncCommandHandler
-  implements ICommandHandler<DisableSnapchatSyncCommand>
-{
+export class DisableSnapchatSyncCommandHandler implements ICommandHandler<DisableSnapchatSyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

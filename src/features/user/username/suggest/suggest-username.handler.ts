@@ -29,10 +29,10 @@ export class SuggestUserNameCommand {
 }
 
 @CommandHandler(SuggestUserNameCommand)
-export class SuggestUserNameCommandHandler
-  implements
-    ICommandHandler<SuggestUserNameCommand, SuggestUserNameResponseModel>
-{
+export class SuggestUserNameCommandHandler implements ICommandHandler<
+  SuggestUserNameCommand,
+  SuggestUserNameResponseModel
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

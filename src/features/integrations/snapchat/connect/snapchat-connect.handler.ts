@@ -56,9 +56,7 @@ const snapchatConnectCallbackValidations = Joi.object({
 });
 
 @CommandHandler(SnapchatConnectQuery)
-export class SnapchatConnectQueryHandler
-  implements ICommandHandler<SnapchatConnectQuery>
-{
+export class SnapchatConnectQueryHandler implements ICommandHandler<SnapchatConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -79,9 +77,7 @@ export class SnapchatConnectQueryHandler
 }
 
 @CommandHandler(SnapchatConnectCallbackQuery)
-export class SnapchatConnectCallbackQueryHandler
-  implements ICommandHandler<SnapchatConnectCallbackQuery>
-{
+export class SnapchatConnectCallbackQueryHandler implements ICommandHandler<SnapchatConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

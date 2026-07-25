@@ -1,4 +1,8 @@
-import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import {
   AdminAccoutGuard,
   AuthenticatedAccountGuard,
@@ -60,7 +64,11 @@ function makeContext() {
 }
 
 /** Instantiate one of the exported guard classes with a stub JwtService. */
-function build(GuardClass: new (jwtService: unknown) => { canActivate(c: ExecutionContext): Promise<boolean> }) {
+function build(
+  GuardClass: new (jwtService: unknown) => {
+    canActivate(c: ExecutionContext): Promise<boolean>;
+  },
+) {
   return new GuardClass({} as never);
 }
 
@@ -98,9 +106,9 @@ describe('AccountGuard', () => {
       authenticateAs(claims({ exp: NOW_SECONDS() - 60 }));
       const { context } = makeContext();
 
-      await expect(
-        build(UserAccoutGuard).canActivate(context),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(build(UserAccoutGuard).canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('rejects a token expired long ago', async () => {
@@ -108,36 +116,36 @@ describe('AccountGuard', () => {
       authenticateAs(claims({ exp: NOW_SECONDS() - 365 * 24 * 60 * 60 }));
       const { context } = makeContext();
 
-      await expect(
-        build(UserAccoutGuard).canActivate(context),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(build(UserAccoutGuard).canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('rejects a token with no exp claim at all', async () => {
       authenticateAs(claims({ exp: undefined }));
       const { context } = makeContext();
 
-      await expect(
-        build(UserAccoutGuard).canActivate(context),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(build(UserAccoutGuard).canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('rejects a token whose exp is not numeric', async () => {
       authenticateAs(claims({ exp: 'not-a-number' }));
       const { context } = makeContext();
 
-      await expect(
-        build(UserAccoutGuard).canActivate(context),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(build(UserAccoutGuard).canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('sets the Token-Expired response header so the client can refresh', async () => {
       authenticateAs(claims({ exp: NOW_SECONDS() - 60 }));
       const { context, response } = makeContext();
 
-      await expect(
-        build(UserAccoutGuard).canActivate(context),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(build(UserAccoutGuard).canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
 
       expect(response.setHeader).toHaveBeenCalledWith('Token-Expired', 'true');
     });
@@ -158,9 +166,9 @@ describe('AccountGuard', () => {
       authenticateAs(claims({ exp: NOW_SECONDS() - 3600 }));
       const { context } = makeContext();
 
-      await expect(
-        build(RefreshTokenGuard).canActivate(context),
-      ).resolves.toBe(true);
+      await expect(build(RefreshTokenGuard).canActivate(context)).resolves.toBe(
+        true,
+      );
     });
   });
 
@@ -169,18 +177,18 @@ describe('AccountGuard', () => {
       authenticateAs(null);
       const { context } = makeContext();
 
-      await expect(
-        build(UserAccoutGuard).canActivate(context),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(build(UserAccoutGuard).canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('rejects when two-factor authentication is outstanding', async () => {
       authenticateAs(claims({ [Globals.ClaimTypes.TwoFARequired]: true }));
       const { context } = makeContext();
 
-      await expect(
-        build(UserAccoutGuard).canActivate(context),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(build(UserAccoutGuard).canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
@@ -223,9 +231,9 @@ describe('AccountGuard', () => {
 
       const { context } = makeContext();
 
-      await expect(
-        build(UserAccoutGuard).canActivate(context),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(build(UserAccoutGuard).canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('signals a token refresh when only the concurrencyStamp differs', async () => {

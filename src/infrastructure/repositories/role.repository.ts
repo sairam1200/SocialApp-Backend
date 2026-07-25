@@ -5,7 +5,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User, Role } from '../../domain/entities';
 import { Inject, Injectable } from '@nestjs/common';
 import { RoleAlreadyExistsException } from '../../core/exceptions';
-import { IIdentityRepository, IRoleRepository } from '../../domain/repositories';
+import {
+  IIdentityRepository,
+  IRoleRepository,
+} from '../../domain/repositories';
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 
 @Injectable()

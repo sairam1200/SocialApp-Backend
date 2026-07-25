@@ -21,9 +21,7 @@ export class SpotifyProfileQuery {
 }
 
 @CommandHandler(SpotifyProfileQuery)
-export class SpotifyProfileQueryHandler
-  implements ICommandHandler<SpotifyProfileQuery>
-{
+export class SpotifyProfileQueryHandler implements ICommandHandler<SpotifyProfileQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

@@ -28,9 +28,7 @@ export class CancelYoutubeImportCommand {
 }
 
 @CommandHandler(CancelYoutubeImportCommand)
-export class CancelYoutubeImportCommandHandler
-  implements ICommandHandler<CancelYoutubeImportCommand>
-{
+export class CancelYoutubeImportCommandHandler implements ICommandHandler<CancelYoutubeImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

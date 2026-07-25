@@ -18,9 +18,7 @@ const activateUserValidations = Joi.object({
 });
 
 @CommandHandler(ActivateUserCommand)
-export class ActivateUserCommandHandler
-  implements ICommandHandler<ActivateUserCommand>
-{
+export class ActivateUserCommandHandler implements ICommandHandler<ActivateUserCommand> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

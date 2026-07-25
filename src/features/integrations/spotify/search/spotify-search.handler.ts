@@ -39,9 +39,7 @@ export class SpotifySearchQuery {
 }
 
 @QueryHandler(SpotifySearchQuery)
-export class SpotifySearchQueryHandler
-  implements IQueryHandler<SpotifySearchQuery>
-{
+export class SpotifySearchQueryHandler implements IQueryHandler<SpotifySearchQuery> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,

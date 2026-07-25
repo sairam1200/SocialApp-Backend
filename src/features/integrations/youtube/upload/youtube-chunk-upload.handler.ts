@@ -87,9 +87,7 @@ interface ChunkCompleteResponse {
 }
 
 @CommandHandler(InitChunkUploadCommand)
-export class InitChunkUploadCommandHandler
-  implements ICommandHandler<InitChunkUploadCommand>
-{
+export class InitChunkUploadCommandHandler implements ICommandHandler<InitChunkUploadCommand> {
   async execute(
     command: InitChunkUploadCommand,
   ): Promise<{ uploadId: string }> {
@@ -116,9 +114,7 @@ export class InitChunkUploadCommandHandler
 }
 
 @CommandHandler(AppendChunkCommand)
-export class AppendChunkCommandHandler
-  implements ICommandHandler<AppendChunkCommand>
-{
+export class AppendChunkCommandHandler implements ICommandHandler<AppendChunkCommand> {
   async execute(command: AppendChunkCommand): Promise<ChunkProgressResponse> {
     const { uploadId, chunkBuffer, chunkIndex, totalChunks } = command;
     const sessionDir = path.join(CHUNK_TEMP_DIR, uploadId);
@@ -160,9 +156,7 @@ export class AppendChunkCommandHandler
 }
 
 @CommandHandler(CompleteChunkUploadCommand)
-export class CompleteChunkUploadCommandHandler
-  implements ICommandHandler<CompleteChunkUploadCommand>
-{
+export class CompleteChunkUploadCommandHandler implements ICommandHandler<CompleteChunkUploadCommand> {
   constructor(
     @Inject(_const.IR2_STORAGE_SERVICE)
     private readonly r2Storage: R2StorageService,
@@ -331,9 +325,7 @@ export class CompleteChunkUploadCommandHandler
 }
 
 @CommandHandler(AbortChunkUploadCommand)
-export class AbortChunkUploadCommandHandler
-  implements ICommandHandler<AbortChunkUploadCommand>
-{
+export class AbortChunkUploadCommandHandler implements ICommandHandler<AbortChunkUploadCommand> {
   async execute(command: AbortChunkUploadCommand): Promise<void> {
     const sessionDir = path.join(CHUNK_TEMP_DIR, command.uploadId);
     if (fs.existsSync(sessionDir)) {

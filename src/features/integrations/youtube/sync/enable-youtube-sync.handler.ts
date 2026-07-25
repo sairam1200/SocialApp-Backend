@@ -19,9 +19,7 @@ export class EnableYoutubeSyncCommand {
 }
 
 @CommandHandler(EnableYoutubeSyncCommand)
-export class EnableYoutubeSyncCommandHandler
-  implements ICommandHandler<EnableYoutubeSyncCommand>
-{
+export class EnableYoutubeSyncCommandHandler implements ICommandHandler<EnableYoutubeSyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

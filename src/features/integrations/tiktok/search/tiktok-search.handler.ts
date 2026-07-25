@@ -40,9 +40,7 @@ export class TiktokSearchQuery {
 }
 
 @QueryHandler(TiktokSearchQuery)
-export class TiktokSearchQueryHandler
-  implements IQueryHandler<TiktokSearchQuery>
-{
+export class TiktokSearchQueryHandler implements IQueryHandler<TiktokSearchQuery> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,

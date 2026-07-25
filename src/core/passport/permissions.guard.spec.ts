@@ -1,4 +1,8 @@
-import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PermissionsGuard } from './permissions.guard';
 import { Globals } from '../globals';
 import * as jwtUtil from '../utils/jwt.util';

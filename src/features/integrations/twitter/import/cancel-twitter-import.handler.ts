@@ -26,9 +26,7 @@ export class CancelTwitterImportCommand {
 }
 
 @CommandHandler(CancelTwitterImportCommand)
-export class CancelTwitterImportCommandHandler
-  implements ICommandHandler<CancelTwitterImportCommand>
-{
+export class CancelTwitterImportCommandHandler implements ICommandHandler<CancelTwitterImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

@@ -11,9 +11,7 @@ export class BehanceDisconnectCommand {
 }
 
 @CommandHandler(BehanceDisconnectCommand)
-export class BehanceDisconnectCommandHandler
-  implements ICommandHandler<BehanceDisconnectCommand>
-{
+export class BehanceDisconnectCommandHandler implements ICommandHandler<BehanceDisconnectCommand> {
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,

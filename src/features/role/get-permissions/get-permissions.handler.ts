@@ -27,9 +27,7 @@ const getPermissionsQueryValidations = {
 };
 
 @CommandHandler(GetPermissionsQuery)
-export class GetPermissionsHandler
-  implements ICommandHandler<GetPermissionsQuery>
-{
+export class GetPermissionsHandler implements ICommandHandler<GetPermissionsQuery> {
   constructor(
     private readonly permissions: Permissions,
     @Inject(_const.IROLE_REPOSITORY)

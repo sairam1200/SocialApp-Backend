@@ -11,9 +11,7 @@ export class LinkedInDisconnectCommand {
 }
 
 @CommandHandler(LinkedInDisconnectCommand)
-export class LinkedInDisconnectCommandHandler
-  implements ICommandHandler<LinkedInDisconnectCommand>
-{
+export class LinkedInDisconnectCommandHandler implements ICommandHandler<LinkedInDisconnectCommand> {
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,

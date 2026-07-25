@@ -13,9 +13,7 @@ export class DisableTwitterSyncCommand {
 }
 
 @CommandHandler(DisableTwitterSyncCommand)
-export class DisableTwitterSyncCommandHandler
-  implements ICommandHandler<DisableTwitterSyncCommand>
-{
+export class DisableTwitterSyncCommandHandler implements ICommandHandler<DisableTwitterSyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

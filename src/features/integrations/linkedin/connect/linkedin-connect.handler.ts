@@ -57,9 +57,7 @@ const linkedInConnectCallbackValidations = Joi.object({
 });
 
 @CommandHandler(LinkedInConnectQuery)
-export class LinkedInConnectQueryHandler
-  implements ICommandHandler<LinkedInConnectQuery>
-{
+export class LinkedInConnectQueryHandler implements ICommandHandler<LinkedInConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -81,9 +79,7 @@ export class LinkedInConnectQueryHandler
 }
 
 @CommandHandler(LinkedInConnectCallbackQuery)
-export class LinkedInConnectCallbackQueryHandler
-  implements ICommandHandler<LinkedInConnectCallbackQuery>
-{
+export class LinkedInConnectCallbackQueryHandler implements ICommandHandler<LinkedInConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

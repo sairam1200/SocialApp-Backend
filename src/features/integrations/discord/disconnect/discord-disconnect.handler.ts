@@ -11,9 +11,7 @@ export class DiscordDisconnectCommand {
 }
 
 @CommandHandler(DiscordDisconnectCommand)
-export class DiscordDisconnectCommandHandler
-  implements ICommandHandler<DiscordDisconnectCommand>
-{
+export class DiscordDisconnectCommandHandler implements ICommandHandler<DiscordDisconnectCommand> {
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,

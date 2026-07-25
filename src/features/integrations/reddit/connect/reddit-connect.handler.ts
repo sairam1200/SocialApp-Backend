@@ -42,9 +42,7 @@ const redditConnectCallbackValidations = Joi.object({
 });
 
 @CommandHandler(RedditConnectQuery)
-export class RedditConnectQueryHandler
-  implements ICommandHandler<RedditConnectQuery>
-{
+export class RedditConnectQueryHandler implements ICommandHandler<RedditConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -65,9 +63,7 @@ export class RedditConnectQueryHandler
 }
 
 @CommandHandler(RedditConnectCallbackQuery)
-export class RedditConnectCallbackQueryHandler
-  implements ICommandHandler<RedditConnectCallbackQuery>
-{
+export class RedditConnectCallbackQueryHandler implements ICommandHandler<RedditConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

@@ -56,9 +56,7 @@ const behanceConnectCallbackValidations = Joi.object({
 });
 
 @CommandHandler(BehanceConnectQuery)
-export class BehanceConnectQueryHandler
-  implements ICommandHandler<BehanceConnectQuery>
-{
+export class BehanceConnectQueryHandler implements ICommandHandler<BehanceConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -78,9 +76,7 @@ export class BehanceConnectQueryHandler
 }
 
 @CommandHandler(BehanceConnectCallbackQuery)
-export class BehanceConnectCallbackQueryHandler
-  implements ICommandHandler<BehanceConnectCallbackQuery>
-{
+export class BehanceConnectCallbackQueryHandler implements ICommandHandler<BehanceConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

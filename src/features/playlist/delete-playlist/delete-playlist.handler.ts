@@ -20,9 +20,10 @@ const removePlaylistContentValidation = Joi.object({
 });
 
 @CommandHandler(DeletePlaylistCommand)
-export class DeletePlaylistCommandHandler
-  implements ICommandHandler<DeletePlaylistCommand, void>
-{
+export class DeletePlaylistCommandHandler implements ICommandHandler<
+  DeletePlaylistCommand,
+  void
+> {
   constructor(
     @Inject(_const.IPLAYLIST_REPOSITORY)
     private readonly playlistRepository: IPlaylistRepository,

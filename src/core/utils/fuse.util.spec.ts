@@ -123,7 +123,14 @@ describe('normalizeSearchTerm', () => {
 
     // Only the first 5 candidates are indexed, so the result must come from that
     // capped window (or fall back to the sanitised query) — never from index 499.
-    const allowed = ['term 0', 'term 1', 'term 2', 'term 3', 'term 4', 'term 499'];
+    const allowed = [
+      'term 0',
+      'term 1',
+      'term 2',
+      'term 3',
+      'term 4',
+      'term 499',
+    ];
     expect(allowed).toContain(
       normalizeSearchTerm('term-499', many, { maxCandidates: 5 }),
     );

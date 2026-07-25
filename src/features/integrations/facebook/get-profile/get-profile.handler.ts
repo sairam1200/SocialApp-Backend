@@ -21,9 +21,7 @@ export class FacebookProfileQuery {
 }
 
 @CommandHandler(FacebookProfileQuery)
-export class FacebookProfileQueryHandler
-  implements ICommandHandler<FacebookProfileQuery>
-{
+export class FacebookProfileQueryHandler implements ICommandHandler<FacebookProfileQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

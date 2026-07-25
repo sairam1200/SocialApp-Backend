@@ -16,9 +16,7 @@ export class EnableInstagramSyncCommand {
 }
 
 @CommandHandler(EnableInstagramSyncCommand)
-export class EnableInstagramSyncCommandHandler
-  implements ICommandHandler<EnableInstagramSyncCommand>
-{
+export class EnableInstagramSyncCommandHandler implements ICommandHandler<EnableInstagramSyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

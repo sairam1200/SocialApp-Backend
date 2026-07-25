@@ -34,9 +34,7 @@ export class GetPreferencesQuery {
 }
 
 @CommandHandler(GetPreferencesQuery)
-export class GetPreferencesQueryHandler
-  implements ICommandHandler<GetPreferencesQuery>
-{
+export class GetPreferencesQueryHandler implements ICommandHandler<GetPreferencesQuery> {
   constructor(
     @Inject(_const.IUSERPREFERENCE_REPOSITORY)
     private readonly userPreferenceRepository: IUserPreferenceRepository,

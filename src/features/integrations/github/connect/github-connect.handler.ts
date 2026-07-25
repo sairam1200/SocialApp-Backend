@@ -57,9 +57,7 @@ const githubConnectValidations = Joi.object({
 });
 
 @CommandHandler(GithubConnectQuery)
-export class GithubConnectQueryHandler
-  implements ICommandHandler<GithubConnectQuery>
-{
+export class GithubConnectQueryHandler implements ICommandHandler<GithubConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -80,9 +78,7 @@ export class GithubConnectQueryHandler
 }
 
 @CommandHandler(GithubConnectCallbackQuery)
-export class GithubConnectCallbackQueryHandler
-  implements ICommandHandler<GithubConnectCallbackQuery>
-{
+export class GithubConnectCallbackQueryHandler implements ICommandHandler<GithubConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

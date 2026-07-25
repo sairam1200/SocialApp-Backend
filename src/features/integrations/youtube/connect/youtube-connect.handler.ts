@@ -64,9 +64,7 @@ const youtubeConnectCallbackValidations = Joi.object({
 });
 
 @CommandHandler(YoutubeConnectQuery)
-export class YoutubeConnectQueryHandler
-  implements ICommandHandler<YoutubeConnectQuery>
-{
+export class YoutubeConnectQueryHandler implements ICommandHandler<YoutubeConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -88,9 +86,7 @@ export class YoutubeConnectQueryHandler
 }
 
 @CommandHandler(YoutubeConnectCallbackQuery)
-export class YoutubeConnectCallbackQueryHandler
-  implements ICommandHandler<YoutubeConnectCallbackQuery>
-{
+export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<YoutubeConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

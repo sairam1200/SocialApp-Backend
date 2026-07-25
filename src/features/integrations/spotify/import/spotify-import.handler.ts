@@ -30,9 +30,7 @@ export class SpotifyImportCommand {
 }
 
 @CommandHandler(SpotifyImportCommand)
-export class SpotifyImportCommandHandler
-  implements ICommandHandler<SpotifyImportCommand>
-{
+export class SpotifyImportCommandHandler implements ICommandHandler<SpotifyImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

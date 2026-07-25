@@ -16,9 +16,7 @@ export class UnfollowUserCommand {
 }
 
 @CommandHandler(UnfollowUserCommand)
-export class UnfollowUserCommandHandler
-  implements ICommandHandler<UnfollowUserCommand>
-{
+export class UnfollowUserCommandHandler implements ICommandHandler<UnfollowUserCommand> {
   constructor(
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
     private readonly follows: IUserFollowRepository,

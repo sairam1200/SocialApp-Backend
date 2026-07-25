@@ -32,9 +32,7 @@ export class PinterestImportCommand {
 }
 
 @CommandHandler(PinterestImportCommand)
-export class PinterestImportCommandHandler
-  implements ICommandHandler<PinterestImportCommand>
-{
+export class PinterestImportCommandHandler implements ICommandHandler<PinterestImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

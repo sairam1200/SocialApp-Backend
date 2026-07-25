@@ -56,9 +56,7 @@ const threadsConnectCallbackValidations = Joi.object({
 });
 
 @CommandHandler(ThreadsConnectQuery)
-export class ThreadsConnectQueryHandler
-  implements ICommandHandler<ThreadsConnectQuery>
-{
+export class ThreadsConnectQueryHandler implements ICommandHandler<ThreadsConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -78,9 +76,7 @@ export class ThreadsConnectQueryHandler
 }
 
 @CommandHandler(ThreadsConnectCallbackQuery)
-export class ThreadsConnectCallbackQueryHandler
-  implements ICommandHandler<ThreadsConnectCallbackQuery>
-{
+export class ThreadsConnectCallbackQueryHandler implements ICommandHandler<ThreadsConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

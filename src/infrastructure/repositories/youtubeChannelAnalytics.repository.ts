@@ -8,9 +8,7 @@ import {
 } from '../../domain/repositories/iyoutubeChannelAnalytics.repository';
 
 @Injectable()
-export class YoutubeChannelAnalyticsRepository
-  implements IYoutubeChannelAnalyticsRepository
-{
+export class YoutubeChannelAnalyticsRepository implements IYoutubeChannelAnalyticsRepository {
   constructor(
     @InjectRepository(YoutubeChannelAnalytics)
     private readonly channelAnalyticsContext: Repository<YoutubeChannelAnalytics>,
