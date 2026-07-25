@@ -20,7 +20,7 @@ Companion documents: [`../audit/2026-07_Security_And_Correctness_Audit.md`](../a
 |---|---|
 | Backend | NestJS 11, clean architecture + CQRS, 201 endpoints, builds clean, typechecks at 0 errors |
 | Frontend | Next.js 16, React 19, Tailwind v4, TanStack Query v5, builds clean, typecheck 130 → 0 |
-| Tests | **131** backend (7 suites) + **52** frontend Vitest + **12** Playwright = **195**, from zero |
+| Tests | **136** backend (8 suites) + **52** frontend Vitest + **12** Playwright = **200**, from zero |
 | CI/CD | Cloud Build pipeline + local gate in both repos (no GitHub Actions, per cost constraint) |
 | Search | 12-platform fan-out, DB-persisted, cached, distributed-locked. **Verified end-to-end against the live YouTube API** — see [`../integrations/END_TO_END_VERIFICATION.md`](../integrations/END_TO_END_VERIFICATION.md). Four defects found and fixed, including aggregated results being saved but never shown to users |
 | Migrations | **A fresh database now builds** — 42 tables, 52 migrations. Six tables previously had no create-migration, so no environment could be provisioned from source |
@@ -130,12 +130,15 @@ paged independently, and relevance is not ranked across platforms — see §3.4.
 
 ### 3.5 Test coverage
 
-Vitest is installed with 41 tests (locale registry, colour-scheme provider) and the
-backend has 119 across 7 suites. Both gates are green.
+The frontend has **52 Vitest tests** (locale registry, colour-scheme provider, content
+normaliser) plus **12 Playwright browser tests**; the backend has **136 across 8
+suites**. Both gates are green.
 
 What is still uncovered, highest value first:
 
-1. **Playwright end-to-end** — login, search, profile. No end-to-end coverage exists.
+1. **Playwright coverage beyond search** — login, signup and profile journeys have no
+   browser coverage. The one existing spec (`e2e/search-aggregated.spec.ts`) proves
+   aggregated results reach the screen; nothing else is pinned at that layer.
 2. `httpContext.middleware.ts` — the dual auth paths, and that Better Auth sessions
    get the right `UserType` (currently hardcoded to `User`, so an admin authenticating
    that way is silently downgraded).
