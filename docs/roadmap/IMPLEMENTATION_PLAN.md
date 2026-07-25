@@ -81,34 +81,35 @@ YouTube works fully today, and it allows **~100 searches/day** (`search.list` co
 the DB-as-read-model design as the primary mitigation: it already means a repeated
 search costs nothing.
 
-### 3.2 Integration health endpoint
+### 3.2 Integration health endpoint — ✅ done
 
-Add `GET /api/v1/integrations/health` (admin-guarded) that probes each platform's
-credentials and reports `operational | degraded | misconfigured | not_configured`,
-cached in Redis. Today a dead credential is indistinguishable from "no results" —
-which is how a 401 goes unnoticed for weeks.
+`GET /api/v1/integrations/health` (admin-guarded, Redis-cached 5 min) probes every
+platform and reports `operational | degraded | misconfigured | not_configured |
+unknown` with latency, HTTP status and remediation.
 
-Note `/platform-status` on the frontend is a **static marketing page**, not health.
+Verified: it reproduced the manual audit on first run — YouTube operational, Pinterest
+misconfigured (401), TikTok degraded. `healthy` is false only on a *rejected*
+credential; a network failure reports `unknown` so an outage does not send someone to
+rotate a working key. The YouTube probe costs 1 quota unit, not 100.
 
-### 3.3 Search scale — `contentStreams` needs a real index
+Note `/platform-status` on the frontend remains a **static marketing page**, not
+health. Wiring it to this endpoint is a small follow-up.
 
-Now that aggregated content is actually served to users, its query path matters.
-`getEntriesAsync` searches with `title ILIKE '%term%'` plus a `json_each_text` scan
-over every row's `metaData`. That is a full table scan with a per-row JSON expansion —
-fine at the 11 rows verified, unworkable at production volume.
+### 3.3 Search scale — ✅ largely done
 
-Before this carries real traffic:
+`1784000000010-IndexContentStreamsForSearch` addressed the query path now that
+aggregated content is actually served:
 
-1. **Postgres full-text search** on `title` plus extracted metadata fields, with a
-   `GIN` index on the `tsvector`, or a `pg_trgm` index if substring matching must be
-   kept.
-2. **Stop scanning `metaData` wholesale.** Extract the two or three fields worth
-   searching (description/message/caption) into real columns at write time.
-3. **Add a unique index on `(platform, externalId)`.** Dedup is currently enforced only
-   in application code, so concurrent inserts of the same item from different queries
-   can still race past it. Cheap, and it makes the invariant real.
-4. **Cap and page** the aggregated section explicitly; it currently shares the caller's
-   `limit`.
+- `searchText` column (title + the platform's body text) with a **pg_trgm GIN index**,
+  replacing a `json_each_text` scan that expanded every row's JSON on every search.
+  Verified index-assisted via `EXPLAIN` (`Bitmap Index Scan`).
+- btree indexes on `(platform, lastRefreshed DESC)` and `(type, subType)`.
+- **UNIQUE `(platform, externalId)`**, so dedup is a database invariant rather than an
+  application-level read-then-write that two concurrent searches can both pass.
+  `createAsync` gained `ON CONFLICT DO NOTHING` to handle the race gracefully.
+
+**Still open:** the aggregated section shares the caller's `limit` rather than being
+paged independently, and relevance is not ranked across platforms — see §3.4.
 
 ### 3.4 Search quality
 

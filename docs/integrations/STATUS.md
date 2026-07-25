@@ -108,10 +108,25 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST \
   -d "client_key=$TIKTOK_CLIENT_ID&client_secret=$TIKTOK_CLIENT_SECRET&grant_type=client_credentials"
 ```
 
-**Planned:** replace this manual process with `GET /api/v1/integrations/health`
-(admin-guarded, Redis-cached) reporting
-`operational | degraded | misconfigured | not_configured` per platform. See §3.2 of the
-implementation plan.
+**Now automated:** `GET /api/v1/integrations/health` (admin-guarded, Redis-cached for
+5 minutes) probes every platform and reports
+`operational | degraded | misconfigured | not_configured | unknown` with latency, HTTP
+status and remediation text.
+
+It independently reproduced the table above on first run — YouTube operational (200),
+Pinterest misconfigured (401), TikTok degraded (token valid, cannot search content) —
+which is the point: nobody should have to run curl to discover a dead credential.
+
+```bash
+curl -H "Authorization: Bearer <admin-token>" \
+  https://<host>/api/v1/integrations/health
+```
+
+`healthy` is false only when a credential is **rejected**. `not_configured` is not a
+fault — a platform that was never onboarded is expected. A network failure reports
+`unknown` rather than `misconfigured`, so an outage does not send someone to rotate a
+key that is fine. The YouTube probe uses `i18nLanguages` (1 quota unit) rather than
+`search.list` (100), so health checking cannot itself drain the daily budget.
 
 Note that `/platform-status` in the frontend is a **static marketing page** driven by a
 hardcoded feature list — it is a roadmap view, not integration health.

@@ -9,6 +9,8 @@ import { NotificationModule } from './notification.module';
 
 import { AuthGuardsModule } from './authGuard.module';
 import { AnalyticsModule } from './analytics.module';
+import { IntegrationHealthService } from '../infrastructure/services/integrationHealth.service';
+import { IntegrationHealthController } from '../features/integrations/health/integration-health.endpoint';
 import { SearchCacheService } from 'infrastructure/services';
 import { PlatformRollbackListener } from '../infrastructure/background/listeners/platform-rollback.listener';
 import { SocialAccountLinkedListener } from '../infrastructure/background/listeners/social-account-linked.listener';
@@ -74,9 +76,17 @@ import { R2CleanupCron } from '../infrastructure/background/cron/jobs/r2-cleanup
       Project,
     ]),
   ],
-  controllers: [...integrations.addControllers(), ...search.addControllers()],
+  controllers: [
+    ...integrations.addControllers(),
+    ...search.addControllers(),
+    // Admin-guarded live probe of every platform credential. Exists because the
+    // search fan-out catches per-platform failures, so a dead credential is otherwise
+    // indistinguishable from "no results".
+    IntegrationHealthController,
+  ],
   providers: [
     JwtService,
+    IntegrationHealthService,
     SearchCacheService,
     PlatformRollbackListener,
     SocialAccountLinkedListener,
