@@ -9,7 +9,12 @@ import {
   Post,
   Query,
   Res,
+  UseGuards,
 } from '@nestjs/common';
+import {
+  ExternalSearchRateLimitGuard,
+  SearchRateLimitGuard,
+} from '../../core/passport/searchRateLimit.guard';
 import {
   GlobalSearchQuery,
   GlobalSearchRequestModel,
@@ -26,6 +31,12 @@ import {
   path: `/search`,
   version: '1',
 })
+// These endpoints are intentionally public — search is the product's front door and
+// must work before signup. Public plus unlimited is the problem, not public alone:
+// the POST below fans out to twelve platforms, several metered, and YouTube allows
+// roughly 100 searches per day in total. The guard bounds anonymous callers hard
+// while leaving signed-in users room to browse.
+@UseGuards(SearchRateLimitGuard)
 export class GlobalSearchController {
   constructor(private readonly queryBus: QueryBus) {}
 
@@ -53,7 +64,12 @@ export class GlobalSearchController {
     return this.queryBus.execute(new SearchItemQuery({ id, type }));
   }
 
+  // The expensive one: a twelve-platform fan-out that can spend third-party quota,
+  // and which accepts forceRefresh to bypass the cache deliberately. Tighter bucket
+  // than the database-backed GETs above.
   @Post()
+  @UseGuards(ExternalSearchRateLimitGuard)
+  @ApiResponse({ status: 429, description: 'TOO_MANY_REQUESTS' })
   @ApiResponse({
     status: 200,
     description: 'OK',
