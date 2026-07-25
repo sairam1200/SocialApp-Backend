@@ -20,7 +20,7 @@ Companion documents: [`../audit/2026-07_Security_And_Correctness_Audit.md`](../a
 |---|---|
 | Backend | NestJS 11, clean architecture + CQRS, 201 endpoints, builds clean, typechecks at 0 errors |
 | Frontend | Next.js 16, React 19, Tailwind v4, TanStack Query v5, builds clean, typecheck 130 → 0 |
-| Tests | **136** backend (8 suites) + **52** frontend Vitest + **12** Playwright = **200**, from zero |
+| Tests | **171** backend (9 suites) + **52** frontend Vitest + **12** Playwright = **235**, from zero |
 | CI/CD | Cloud Build pipeline + local gate in both repos (no GitHub Actions, per cost constraint) |
 | Search | 12-platform fan-out, DB-persisted, cached, distributed-locked. **Verified end-to-end against the live YouTube API** — see [`../integrations/END_TO_END_VERIFICATION.md`](../integrations/END_TO_END_VERIFICATION.md). Four defects found and fixed, including aggregated results being saved but never shown to users |
 | Migrations | **A fresh database now builds** — 42 tables, 52 migrations. Six tables previously had no create-migration, so no environment could be provisioned from source |
@@ -69,6 +69,19 @@ the other eleven platforms, quota headroom, an index that survives scale, and
 observability.
 
 ### 3.1 Credentials (highest leverage)
+
+**What is code-complete versus credential-blocked.** All twelve platforms' orchestration
+is now verified by `search.handler.spec.ts` (35 tests): each is dispatched to its own
+service method, a user's stored OAuth token reaches that platform *and no other*, one
+platform failing does not affect the rest, and results are counted and paginated per
+platform. That does not prove Pinterest's API returns data — nothing can until its token
+is re-authorised — but it does prove the token is used correctly when it arrives. The
+remaining work on these eleven is obtaining credentials, not writing code.
+
+Two are not credential problems at all: Dribbble's v2 API has **no search endpoint**, and
+Behance has no public API (its handler is a stub returning empty arrays). See
+[`../integrations/STATUS.md`](../integrations/STATUS.md).
+
 
 Verified state is in [`../integrations/STATUS.md`](../integrations/STATUS.md). Only
 YouTube works fully today, and it allows **~100 searches/day** (`search.list` costs

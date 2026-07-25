@@ -5,6 +5,12 @@
 The API credentials document asks for "clear documentation on all API integrations and
 which ones work and which ones need adjustments". This is that document.
 
+**Verified separately from credentials.** `search.handler.spec.ts` (35 tests) pins the
+orchestration for all twelve platforms without needing any working credential: per-platform
+dispatch, that a stored OAuth token reaches its own platform and no other, failure
+isolation, and per-platform result counting and pagination. So for the eleven platforms
+below that lack credentials, the gap is the credential — not the code.
+
 **Why it matters operationally:** a dead credential and "no results for this query"
 look identical to the user and in the logs. Every platform call in
 `GlobalSearchQueryHandler` is wrapped in `.catch()` so one failure degrades that
