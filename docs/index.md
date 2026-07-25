@@ -14,6 +14,35 @@ Start from [`../AGENTS.md`](../AGENTS.md) if you are an AI agent.
 | [`../AGENTS.md`](../AGENTS.md) | Agent entry point — architecture, request lifecycle, conventions, working rules |
 | [`../README.md`](../README.md) | Human onboarding — setup, environment, running locally |
 | [`audit/2026-07_Security_And_Correctness_Audit.md`](audit/2026-07_Security_And_Correctness_Audit.md) | **Read before touching auth, crypto or permissions.** Verified findings, remediation status, and settled non-issues |
+| [`roadmap/IMPLEMENTATION_PLAN.md`](roadmap/IMPLEMENTATION_PLAN.md) | **Where the platform is and what to build next.** Sequenced phases, what is deliberately deferred and why, plus the legal questions needing professional review |
+| [`integrations/STATUS.md`](integrations/STATUS.md) | **Which platform credentials actually work**, verified by live API call. Check this before debugging "search returns nothing" |
+
+## 1b. Skills and sub-agents
+
+Loadable capability documents, kept beside the code so they stay accurate.
+
+| Skill | Covers |
+|---|---|
+[`.claude/skills/gaddr-security-review`](../.claude/skills/gaddr-security-review/SKILL.md) | Auth, guards, tokens, CORS, webhooks, rate limiting |
+[`.claude/skills/gaddr-encryption`](../.claude/skills/gaddr-encryption/SKILL.md) | Data at rest, key management, the CBC→GCM migration |
+[`.claude/skills/gaddr-payments`](../.claude/skills/gaddr-payments/SKILL.md) | Stripe, Gaddr Pay, marketplace payouts, SCA/VAT, on-chain |
+[`.claude/skills/gaddr-fraud-identity`](../.claude/skills/gaddr-fraud-identity/SKILL.md) | Mobile BankID, KYC tiers, fraud signals, abuse defence |
+[`.claude/skills/gaddr-platform-integration`](../.claude/skills/gaddr-platform-integration/SKILL.md) | Adding or repairing a platform; API and MCP exposure |
+[`.claude/skills/gaddr-testing`](../.claude/skills/gaddr-testing/SKILL.md) | Writing and running tests; the env bootstrap |
+
+Sub-agents in [`../.claude/agents/`](../.claude/agents/): `architect` (plans, writes
+no code), `backend` (implements), `redis` (cache and BullMQ), `reviewer` (pre-merge).
+Ported from the original OpenCode-format definitions and updated against current
+reality.
+
+## 1c. Build and CI
+
+| File | Purpose |
+|---|---|
+| [`../cloudbuild.yaml`](../cloudbuild.yaml) | Cloud Build pipeline → Cloud Run. GitHub Actions deliberately unused (cost) |
+| [`../scripts/ci.sh`](../scripts/ci.sh) | Same gate, locally. Typecheck, lint, tests, secret scan, build |
+| [`../.gitleaks.toml`](../.gitleaks.toml) | Secret-scan config. Allowlists verified false positives; adds a rule catching committed DB dumps by content |
+| [`../test/jest-setup-env.ts`](../test/jest-setup-env.ts) | Env bootstrap that makes importing real modules in tests possible |
 
 ## 2. Source-tree documentation
 
@@ -105,9 +134,13 @@ stated product mandate".
 
 | Gap | State |
 |---|---|
-| Test coverage | **0 unit tests** across 818 TS files. Jest is configured; `test/app.e2e-spec.ts` is the untouched scaffold. |
-| Request validation | No global `ValidationPipe`; `class-validator` not installed. Joi is used for env config only. |
-| Rate limiting | 4 auth routes only; search and integrations unlimited despite fanning out to metered third-party APIs. |
+| Test coverage | **87 tests, 5 suites** (was 0). Concentrated on auth and search — the areas with critical findings. Everything else is uncovered. |
+| Request validation | No global `ValidationPipe`; `class-validator` not installed. Joi is used per-handler and for env config. |
+| Rate limiting | 4 auth routes only; **search and integrations unlimited** despite fanning out to metered third-party APIs. `trust proxy` is now set, so `req.ip` is finally correct. |
 | Security headers | No `helmet`; no CSP, HSTS, or frame options. |
-| CI/CD | `.github/` holds only a PR template. GitHub Actions is deliberately out of scope on cost grounds — Cloud Build fits the existing GCP footprint. |
-| Payments / KYC | No Stripe, Gaddr Pay, BankID or chain integration yet. All of it lands on the auth layer — settle the audit's C-series findings first. |
+| Session revocation | Fails open on Redis cache miss (finding C5, open). Needs a DB fallback before it can fail closed. |
+| Token encryption | Static IV, unauthenticated CBC (finding C4, open). Needs the AES-GCM dual-read migration. |
+| Payments / KYC | Nothing built. Both land on the auth layer — settle the open C-series findings first. |
+| Platform credentials | Only YouTube verified working, and it allows ~100 searches/day. See [`integrations/STATUS.md`](integrations/STATUS.md). |
+
+Full sequencing in [`roadmap/IMPLEMENTATION_PLAN.md`](roadmap/IMPLEMENTATION_PLAN.md).

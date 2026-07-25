@@ -9,6 +9,28 @@ file that matches your task.
 
 ---
 
+## Pick your entry point
+
+| You are doing | Load this |
+|---|---|
+| Anything touching auth, guards, tokens, CORS, webhooks | skill `gaddr-security-review` |
+| Storing/reading secrets, OAuth tokens, the CBC→GCM migration | skill `gaddr-encryption` |
+| Stripe, Gaddr Pay, payouts, marketplace, on-chain | skill `gaddr-payments` |
+| BankID, KYC, fraud, abuse, audit trails | skill `gaddr-fraud-identity` |
+| Adding or repairing a platform integration, or MCP exposure | skill `gaddr-platform-integration` |
+| Writing tests, or a suite fails to start | skill `gaddr-testing` |
+
+Sub-agents in [`.claude/agents/`](.claude/agents/): **architect** (plans, no code),
+**backend** (implements), **redis** (cache + BullMQ), **reviewer** (pre-merge review).
+
+**Planning work?** [`docs/roadmap/IMPLEMENTATION_PLAN.md`](docs/roadmap/IMPLEMENTATION_PLAN.md)
+has the sequenced plan and what is deliberately deferred.
+**Search returning nothing?** Check
+[`docs/integrations/STATUS.md`](docs/integrations/STATUS.md) before debugging code —
+several platform credentials are dead, and a 401 is silent by design.
+
+---
+
 ## Read this first
 
 **[`docs/audit/2026-07_Security_And_Correctness_Audit.md`](docs/audit/2026-07_Security_And_Correctness_Audit.md)**
@@ -30,6 +52,14 @@ Open items you must not trip over:
   `HEAD`; the blob persists. Never re-add dumps — `.gitignore` blocks them.
 - **`better-auth` is installed with zero imports** and its session logic is
   hand-rolled in raw SQL. Adopt-or-remove is a product decision; don't drift further.
+
+One fixed defect worth remembering, because the shape recurs: `fuse.util.ts` used
+`import Fuse from 'fuse.js'`, but fuse.js declares `export =`, and this tsconfig
+sets `allowSyntheticDefaultImports` **without** `esModuleInterop`. That silences the
+type error while emitting `new fuse_js_1.default(...)` — `undefined` at runtime. It
+produced 500s on every global search once search history existed, so it worsened
+gradually rather than failing on day one. Use `import X = require('…')` for any
+`export =` dependency, and check the compiled `dist/` output, not just the types.
 
 ---
 
@@ -141,13 +171,40 @@ Known naming defects, safe to correct on sight: `UserAccoutGuard` /
 ## Verify your work
 
 ```bash
-npm run build          # nest build — must pass
-npx tsc --noEmit       # must stay at 0 errors
-npm run lint
-npm test               # jest — currently 0 tests; add them with your change
+./scripts/ci.sh        # the whole gate — run this before pushing
+./scripts/ci.sh --fast # skip the build step
 ```
 
-Both `build` and `tsc --noEmit` pass on `main`. Keep it that way.
+Runs typecheck, lint, tests, secret scan and build in the same order as
+[`cloudbuild.yaml`](cloudbuild.yaml), so a failure here is a failure in CI.
+Individually:
 
-There are **no unit tests** in this repo. If you touch auth, crypto or
-permissions, add tests — the audit's findings are a ready-made specification.
+```bash
+npx tsc -p tsconfig.json --noEmit   # must stay at 0 errors
+npx eslint src --ext .ts            # must stay at 0 errors
+npx jest                            # 87 tests, 5 suites
+npm run build
+```
+
+**All green on `main`. Keep it that way.**
+
+Two things to know:
+
+- **Lint has a warning budget, not a zero target.** 284 warnings remain (239
+  `no-unused-vars`). `scripts/ci.sh` fails if the count *rises*. Lower
+  `LINT_WARNING_BUDGET` as you clean up; never raise it. Errors always fail.
+- **Adding a `.required()` env var to `src/configs.ts`?** Add it to
+  `test/jest-setup-env.ts` too, or every suite fails at import with a Joi error
+  that looks unrelated to your change. See skill `gaddr-testing`.
+
+Test coverage is concentrated on auth and search, where the audit found critical
+defects. Everything else is uncovered — if you touch it, you are the first.
+
+### CI/CD
+
+GitHub Actions is deliberately unused (cost). [`cloudbuild.yaml`](cloudbuild.yaml)
+runs install → (typecheck ‖ lint ‖ test ‖ secret-scan) → compile → docker →
+deploy to Cloud Run, pinned to the immutable `$SHORT_SHA` tag so rollback is a
+traffic switch. Secret scanning is configured in
+[`.gitleaks.toml`](.gitleaks.toml) — it allowlists verified false positives and
+adds a rule that catches committed database dumps by content.
