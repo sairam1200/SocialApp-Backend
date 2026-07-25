@@ -1,4 +1,24 @@
-import Fuse from 'fuse.js';
+/**
+ * Do NOT change this back to `import Fuse from 'fuse.js'`.
+ *
+ * fuse.js declares `export = Fuse`, and its CommonJS build sets
+ * `module.exports = Fuse` — so `require('fuse.js')` returns the constructor
+ * directly, with no `.default` property.
+ *
+ * This tsconfig targets `module: commonjs` with `allowSyntheticDefaultImports`
+ * but WITHOUT `esModuleInterop`. That combination silences the *type* error on a
+ * default import while still emitting `new fuse_js_1.default(...)` — which is
+ * `undefined is not a constructor` at runtime.
+ *
+ * The effect was a live 500 on global search. normalizeSearchTerm only reaches
+ * `new Fuse(...)` when candidate terms exist, so search worked against an empty
+ * search history and started failing once users accumulated one, which is why it
+ * survived review.
+ *
+ * `import X = require(...)` is the correct form for an `export =` module under
+ * commonjs; main.ts uses the same pattern for cookie-parser.
+ */
+import Fuse = require('fuse.js');
 
 type NormalizeOptions = {
   threshold?: number;

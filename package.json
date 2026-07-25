@@ -123,9 +123,19 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.(t|j)s",
+      "!**/*.spec.ts",
+      "!**/index.ts",
+      "!**/*.entity.ts",
+      "!**/*.module.ts"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "modulePaths": [
+      "<rootDir>"
+    ],
+    "setupFiles": [
+      "<rootDir>/../test/jest-setup-env.ts"
+    ]
   }
 }
