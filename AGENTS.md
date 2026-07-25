@@ -11,7 +11,7 @@ file that matches your task.
 
 ## Pick your entry point
 
-Seven skills live in [`.claude/skills/`](.claude/skills/). Only their descriptions sit
+Eight skills live in [`.claude/skills/`](.claude/skills/). Only their descriptions sit
 in context; the body loads when one matches, so **naming the domain in your first
 sentence is what makes the right one fire**. Load explicitly with `/skill-name` when
 you already know which you need.
@@ -22,6 +22,7 @@ you already know which you need.
 | Storing/reading secrets, OAuth tokens, the CBC→GCM migration | skill `gaddr-encryption` |
 | Migrations, schema, entities, indexes, query performance, provisioning | skill `gaddr-database` |
 | Adding or repairing a platform integration, or MCP exposure | skill `gaddr-platform-integration` |
+| Any outbound call to a third-party API — timeouts, retries, 429s, quota, circuit breakers, or a failure you cannot diagnose from the logs | skill `gaddr-api-resilience` |
 | Writing tests, a suite fails to start, or "does this actually work?" | skill `gaddr-testing` |
 | Stripe, Gaddr Pay, payouts, marketplace, on-chain | skill `gaddr-payments` |
 | BankID, KYC, fraud, abuse, audit trails | skill `gaddr-fraud-identity` |
@@ -47,8 +48,11 @@ iterating until the reviewer reports no Critical or Major findings.
 
 **Planning work?** [`docs/roadmap/IMPLEMENTATION_PLAN.md`](docs/roadmap/IMPLEMENTATION_PLAN.md)
 has the sequenced plan and what is deliberately deferred.
-**Search returning nothing?** Check
-[`docs/integrations/STATUS.md`](docs/integrations/STATUS.md) before debugging code. A
+**Search returning nothing?** Work through
+[`docs/integrations/RESILIENCE_AND_LOGGING.md`](docs/integrations/RESILIENCE_AND_LOGGING.md)
+§5 — it orders the checks cheapest-first, and the first two (is it configured, is its
+circuit open) answer most cases without reading any code. Then
+[`docs/integrations/STATUS.md`](docs/integrations/STATUS.md). A
 platform whose credential is dead returns an empty array, not an error — by design, so
 one bad integration cannot fail the whole search. That means "no results" is far more
 often a credential than a bug. Two entries there are not credential problems at all:
@@ -236,7 +240,7 @@ Individually:
 ```bash
 npx tsc -p tsconfig.json --noEmit   # must stay at 0 errors
 npx eslint src --ext .ts            # must stay at 0 errors
-npx jest                            # 177 tests, 9 suites
+npx jest                            # 218 tests, 11 suites
 npm run build
 ```
 

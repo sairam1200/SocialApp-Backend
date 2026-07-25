@@ -232,14 +232,72 @@ class Logger {
     return `${match.substring(0, 2)}${'*'.repeat(Math.min(match.length - 4, 10))}${match.substring(match.length - 2)}`;
   }
 
+  /**
+   * Turn whatever a caller passed as `meta` into a plain object that survives to the log.
+   *
+   * ## Why this is necessary
+   *
+   * The signature says `Record<string, any>`, but 86 call sites pass a bare `error` —
+   * legitimately, because it reads naturally and because `catch (error: any)` makes it
+   * typecheck. The transports then receive `{ ...error }`, and **an Error spreads to
+   * `{}`**: `message` and `stack` are non-enumerable, so `Object.keys(new Error('x'))` is
+   * `[]`. Every one of those sites logged a message with no cause attached.
+   *
+   * Raw Winston handles an Error passed as `meta` specially. This wrapper bypassed that by
+   * spreading, so the special handling never ran. The result was the worst possible
+   * failure mode for a logger: it looked like it was working.
+   *
+   * A primitive is normalised too — spreading a string yields `{0:'a',1:'b',…}`, which is
+   * noise rather than information.
+   *
+   * ## Why Error fields are copied selectively
+   *
+   * An axios error carries enumerable `config` and `request`, and `config.headers`
+   * contains the `Authorization` header. Spreading it wholesale would write live
+   * credentials to the log. Redaction would catch most of that, but not writing a secret
+   * down at all is the stronger guarantee — so only the diagnostic fields are taken:
+   * message, stack, error code, and the response status and body.
+   */
+  private normaliseMeta(meta?: unknown): LogObject | undefined {
+    if (meta === undefined || meta === null) return undefined;
+
+    if (meta instanceof Error) {
+      const axiosLike = meta as Error & {
+        code?: string;
+        response?: { status?: number; data?: unknown };
+      };
+
+      const normalised: LogObject = { reason: meta.message };
+      if (meta.stack) normalised.stack = meta.stack;
+      if (axiosLike.code) normalised.code = axiosLike.code;
+      if (axiosLike.response?.status !== undefined) {
+        normalised.status = axiosLike.response.status;
+      }
+      if (axiosLike.response?.data !== undefined) {
+        normalised.response = axiosLike.response.data;
+      }
+      return normalised;
+    }
+
+    if (typeof meta !== 'object') return { reason: String(meta) };
+
+    // Plain object, already the intended shape. An empty one adds nothing to the line.
+    return Object.keys(meta as LogObject).length > 0
+      ? (meta as LogObject)
+      : undefined;
+  }
+
   private formatMessage(
     message: string,
     meta?: LogObject,
   ): { message: string; meta?: LogObject } {
-    const redactedMeta =
-      meta && typeof meta === 'object'
-        ? this.redactSensitiveData(meta)
-        : undefined;
+    // Normalise first, then redact: the fields lifted off an Error are exactly the ones
+    // most likely to contain a token echoed back by a platform, so they must go through
+    // redaction rather than around it.
+    const normalised = this.normaliseMeta(meta);
+    const redactedMeta = normalised
+      ? this.redactSensitiveData(normalised)
+      : undefined;
     const redactedMessage = this.redactSensitiveString(message);
     return { message: redactedMessage, meta: redactedMeta };
   }

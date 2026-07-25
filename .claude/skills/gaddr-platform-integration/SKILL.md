@@ -31,11 +31,38 @@ persisted to `contentStreams` and served back through the read path in 0.46 s.
 |---|---|---|
 | **TikTok** | ⚠️ Token issues | `client_credentials` works but cannot search content — needs a **user-authorised** token, by TikTok's design |
 | **Pinterest** | ❌ Blocked | `1201: Two-factor authentication required`. The app secret is **valid**; Pinterest challenges the *account*. Token minting cannot be scripted — the owner must complete OAuth in a browser |
-| **Reddit** | ❌ Blocked | 403 from datacenter IPs on `www`, `old.reddit` and subreddit listings, retested with Reddit's required UA format. API access was **declined** |
-| Twitter/X | ⛔ | Developer account needs email + phone verification, then a paid tier |
+| **Reddit** | ❌ Blocked | 403 from datacenter IPs on `www`, `old.reddit` and subreddit listings, retested with Reddit's required UA format. API access was **declined**, and commercial use is now **$0.24 per 1,000 calls** — so even if approved it is metered |
+| Twitter/X | ⛔ | **Free tier for new developers ended February 2026.** Pay-per-use only: ~$5 per 1,000 reads with 7-day search; full-archive is enterprise ($42k+/mo). Costs money before it returns a single result. |
 | LinkedIn | ⛔ | Developer portal inaccessible |
 | Meta (FB/IG/Threads) | ⛔ | App review required for useful scopes |
 | Spotify | ⛔ not configured | **Cheapest remaining win** — `client_credentials` suffices for catalogue search, so ~30 minutes end to end |
+
+### The 2026 direction of travel
+
+Researched July 2026, and it matters for planning: the era of open social APIs is over.
+X removed its free tier, Reddit meters per call, Meta requires weeks of app review, TikTok
+gates content search behind user tokens *by design*, and Pinterest challenges the account
+with 2FA during OAuth.
+
+**So the four credential-free sources are the strategic asset, not the filler.** GitHub,
+Apple/iTunes, Openverse and Hacker News cannot be revoked, repriced, or lost when the person
+holding a developer account leaves. Every keyed platform is a liability with an owner and a
+renewal risk. Build depth on the ones that cannot be taken away, and treat each gated
+platform as a bonus that may disappear.
+
+Verified-working but not yet integrated (probed July 2026 — **Deezer is the best remaining
+win**: real music platform, no auth, 0.4 s):
+
+| API | Probe result | Covers |
+|---|---|---|
+| **Deezer** | 200, `total: 120`, 0.4 s | Music |
+| Open Library | 200, `numFound: 12857` | Books, authors |
+| Wikipedia | 200 | Entities, people — relevant to Gaddr Me |
+| Wikimedia Commons | 200 | Licensed media, complements Openverse |
+| MusicBrainz | 200, 3.7 s, 1 req/s | Music metadata — Deezer is better for the same vertical |
+| Internet Archive | 200 | Archived media and texts |
+
+Full resilience guidance for these calls lives in skill `gaddr-api-resilience`.
 
 ### Not credential problems — these will never be search integrations
 
@@ -124,9 +151,12 @@ public async searchFooAsync(params: PlatformSearchParamsModel): Promise<any> {
     _const.PLATFORMS.FOO,
     params,
     async (term, perPage, page) => {
-      const { data } = await axios.get('https://api.example.com/search', {
+      // resilientGet, never axios directly: timeout, jittered retry on 429/5xx only, and a
+      // per-platform circuit breaker so a dead platform costs microseconds instead of a
+      // full timeout on every search. See skill `gaddr-api-resilience`.
+      const { data } = await resilientGet<any>('https://api.example.com/search', {
+        platform: _const.PLATFORMS.FOO,
         params: { q: term, per_page: perPage, page },
-        timeout: 8000,
       });
       const items = (data?.results ?? []).map((r: any) => new ContentStream({
         type: StreamEntityType.Content,

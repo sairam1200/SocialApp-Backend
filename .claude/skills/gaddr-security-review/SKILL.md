@@ -109,6 +109,6 @@ Work through these against the diff:
 ./scripts/ci.sh
 ```
 
-Runs typecheck, lint, 136 tests, and a gitleaks scan configured in
+Runs typecheck, lint, the full test suite, and a gitleaks scan configured in
 `.gitleaks.toml`. Add a regression test for any security fix — the audit's
 findings are a ready-made specification.

@@ -20,7 +20,7 @@ Companion documents: [`../audit/2026-07_Security_And_Correctness_Audit.md`](../a
 |---|---|
 | Backend | NestJS 11, clean architecture + CQRS, 201 endpoints, builds clean, typechecks at 0 errors |
 | Frontend | Next.js 16, React 19, Tailwind v4, TanStack Query v5, builds clean, typecheck 130 → 0 |
-| Tests | **177** backend (9 suites) + **52** frontend Vitest + **12** Playwright = **235**, from zero |
+| Tests | **218** backend (11 suites) + **66** frontend Vitest + **20** Playwright = **304**, from zero |
 | CI/CD | Cloud Build pipeline + local gate in both repos (no GitHub Actions, per cost constraint) |
 | Search | 12-platform fan-out, DB-persisted, cached, distributed-locked. **Verified end-to-end against the live YouTube API** — see [`../integrations/END_TO_END_VERIFICATION.md`](../integrations/END_TO_END_VERIFICATION.md). Four defects found and fixed, including aggregated results being saved but never shown to users |
 | Migrations | **A fresh database now builds** — 42 tables, 52 migrations. Six tables previously had no create-migration, so no environment could be provisioned from source |
@@ -143,8 +143,8 @@ paged independently, and relevance is not ranked across platforms — see §3.4.
 
 ### 3.5 Test coverage
 
-The frontend has **52 Vitest tests** (locale registry, colour-scheme provider, content
-normaliser) plus **12 Playwright browser tests**; the backend has **136 across 8
+The frontend has **66 Vitest tests** (locale registry, colour-scheme provider, content
+normaliser, card helpers) plus **20 Playwright browser tests**; the backend has **218 across 11
 suites**. Both gates are green.
 
 What is still uncovered, highest value first:

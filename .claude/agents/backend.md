@@ -32,7 +32,7 @@ less than rediscovering them:
 | A table, migration, entity, index, or a slow query | `gaddr-database` |
 | Auth, guards, tokens, sessions, CORS, rate limiting, webhooks | `gaddr-security-review` |
 | Anything encrypted at rest, or `crypto.util.ts` | `gaddr-encryption` |
-| A platform integration, OAuth connect, content import, MCP | `gaddr-platform-integration` |
+| A platform integration, OAuth connect, content import, MCP | `gaddr-platform-integration` (and `gaddr-api-resilience` for any outbound call — timeouts, retries, breakers, and why `logger.error(msg, error)` used to lose the cause) |
 | Stripe, payouts, marketplace, subscriptions | `gaddr-payments` |
 | BankID, KYC, verification, abuse defence | `gaddr-fraud-identity` |
 
@@ -136,7 +136,7 @@ read endpoint. `docs/integrations/END_TO_END_VERIFICATION.md` has the commands.
 ./scripts/ci.sh
 ```
 
-Typecheck, lint (0 errors required), 136 tests, secret scan, build. Add tests for
+Typecheck, lint (0 errors required), the full suite, secret scan, build. Add tests for
 what you changed — co-locate as `*.spec.ts`. See the `gaddr-testing` skill.
 
 State the RAM, Redis, database and WebSocket impact of what you built.

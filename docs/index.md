@@ -16,6 +16,7 @@ Start from [`../AGENTS.md`](../AGENTS.md) if you are an AI agent.
 | [`audit/2026-07_Security_And_Correctness_Audit.md`](audit/2026-07_Security_And_Correctness_Audit.md) | **Read before touching auth, crypto or permissions.** Verified findings, remediation status, and settled non-issues |
 | [`roadmap/IMPLEMENTATION_PLAN.md`](roadmap/IMPLEMENTATION_PLAN.md) | **Where the platform is and what to build next.** Sequenced phases, what is deliberately deferred and why, plus the legal questions needing professional review |
 | [`integrations/STATUS.md`](integrations/STATUS.md) | **Which platform credentials actually work**, verified by live API call. Check this before debugging "search returns nothing" |
+| [`integrations/RESILIENCE_AND_LOGGING.md`](integrations/RESILIENCE_AND_LOGGING.md) | Outbound HTTP protections (timeout, jittered retry, per-platform circuit breaker), credential guards, and why 86 log sites recorded no cause — plus how to diagnose "this platform returns nothing" |
 | [`integrations/END_TO_END_VERIFICATION.md`](integrations/END_TO_END_VERIFICATION.md) | A real run of the full search chain — five live platform APIs → Postgres → user-facing endpoint — with the five defects it exposed and how to reproduce it |
 
 ## 1b. Skills and sub-agents
@@ -30,6 +31,7 @@ one matches the task, or on an explicit `/skill-name`.
 | [`gaddr-encryption`](../.claude/skills/gaddr-encryption/SKILL.md) | Data at rest, key management, the CBC→GCM migration |
 | [`gaddr-database`](../.claude/skills/gaddr-database/SKILL.md) | Migrations, entities, indexes, query performance, provisioning |
 | [`gaddr-platform-integration`](../.claude/skills/gaddr-platform-integration/SKILL.md) | Adding or repairing a platform; API and MCP exposure |
+| [`gaddr-api-resilience`](../.claude/skills/gaddr-api-resilience/SKILL.md) | Outbound HTTP: timeouts, retries, jittered backoff, circuit breakers, rate limits, quota, and diagnostic logging |
 | [`gaddr-testing`](../.claude/skills/gaddr-testing/SKILL.md) | Writing and running tests; the env bootstrap; end-to-end verification |
 | [`gaddr-payments`](../.claude/skills/gaddr-payments/SKILL.md) | Stripe, Gaddr Pay, marketplace payouts, SCA/VAT, on-chain |
 | [`gaddr-fraud-identity`](../.claude/skills/gaddr-fraud-identity/SKILL.md) | Mobile BankID, KYC tiers, fraud signals, abuse defence |
@@ -151,7 +153,7 @@ stated product mandate".
 
 | Gap | State |
 |---|---|
-| Test coverage | **177 tests, 9 suites**, all passing (was 0). Concentrated on auth and search — the areas with critical findings. Everything else is uncovered. No suite here starts a real server, so backend end-to-end verification is still manual; see `integrations/END_TO_END_VERIFICATION.md`. |
+| Test coverage | **218 tests, 11 suites**, all passing (was 0). Concentrated on auth and search — the areas with critical findings. Everything else is uncovered. No suite here starts a real server, so backend end-to-end verification is still manual; see `integrations/END_TO_END_VERIFICATION.md`. |
 | Request validation | No global `ValidationPipe`; `class-validator` not installed. Joi is used per-handler and for env config. |
 | Rate limiting | ✅ Search is limited by `searchRateLimit.guard.ts` using atomic Redis `INCR`, per user when authenticated and per client IP otherwise, with a bounded per-instance fallback when Redis is down. `trust proxy` is set, so `req.ip` is correct. **Outstanding:** the older `RateLimitMiddleware` still covers only 4 auth routes via a non-atomic DB read-then-write. |
 | Security headers | No `helmet`; no CSP, HSTS, or frame options. This is what makes the frontend's `localStorage` token exposure (H3) exploitable. |

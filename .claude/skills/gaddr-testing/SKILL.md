@@ -42,7 +42,7 @@ its own `gaddr-frontend-testing` skill; use that when working there, not this on
 
 ## What is covered
 
-**Backend: 177 tests, 9 suites**, all passing. Concentrated on auth and search,
+**Backend: 218 tests, 11 suites**, all passing. Concentrated on auth and search,
 because that is where the audit found critical defects:
 
 | Suite | Pins |
@@ -71,8 +71,8 @@ assertion. Prefer stubbing the barrel in that one spec over growing
 jest.mock('../../domain/entities', () => ({ ContentStream: class {} }));
 ```
 
-**Frontend: 52 Vitest tests** (3 files — locale registry, content normaliser,
-colour-scheme provider) **and 12 Playwright tests** (6 cases in
+**Frontend: 66 Vitest tests** (4 files — locale registry, content normaliser,
+colour-scheme provider, card helpers) **and 20 Playwright tests** (10 cases in
 `e2e/search-aggregated.spec.ts`, run against desktop Chrome and a Pixel 7).
 
 There is still **no end-to-end coverage in this repository** — no suite here starts a

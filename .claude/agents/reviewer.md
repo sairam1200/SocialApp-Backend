@@ -21,7 +21,7 @@ Read `docs/audit/2026-07_Security_And_Correctness_Audit.md` first — especially
 
 `gaddr-security-review` is preloaded. Pull the one that matches the diff with the
 `Skill` tool: `gaddr-database` for a migration, entity or query; `gaddr-encryption`
-for anything stored encrypted; `gaddr-platform-integration` for a platform change;
+for anything stored encrypted; `gaddr-platform-integration` (and `gaddr-api-resilience` for any outbound call — timeouts, retries, breakers, and why `logger.error(msg, error)` used to lose the cause) for a platform change;
 `gaddr-testing` to judge whether the tests actually pin the behaviour. Each records
 defects this area has already produced — a review that misses a repeat of one of
 those is the review failing, not the code.
@@ -98,6 +98,16 @@ a migration is invisible everywhere `synchronize` has not run.
   request for Better Auth sessions.
 - Third-party quota: does this increase API fan-out? YouTube allows ~100
   searches/day.
+- **Any new outbound call must go through `resilientGet`/`resilientPost`, not `axios`
+  directly.** Axios has no default timeout, so a raw call is an unbounded wait — three
+  existed here, including two OAuth token exchanges. The wrapper also supplies the
+  per-platform circuit breaker, without which a known-blocked platform costs its full
+  timeout on every single search.
+- Does the call **guard on credentials first**? Unset config interpolates as the string
+  `"undefined"`, is sent as real basic auth, and returns 401 — a wasted round trip per
+  search, a misleading log line, and an opened breaker for what is a config problem.
+- Is a retry being added for a **4xx**? Reject it. Only 429 and 5xx can succeed on a second
+  attempt; retrying a 401 against a metered key spends quota on errors.
 
 **6. Migrations and schema**
 - New table or column: is there a **migration**, not just an entity? An entity alone is
@@ -120,7 +130,19 @@ a migration is invisible everywhere `synchronize` has not run.
 - New `.required()` env var added to `test/jest-setup-env.ts`? If not, every suite
   breaks at import.
 
-**8. Hygiene**
+**8. Diagnosability**
+Assume the next person sees only the logs.
+- Does a failure path log *why*, not just *that*? Pass an Error or a plain object to
+  `logger.error` — both now work, because `normaliseMeta` lifts `reason`/`stack`/`status`
+  off an Error. Before that, `{ ...error }` spread to `{}` (message and stack are
+  non-enumerable) and **86 call sites logged no cause at all**. Watch for any new logging
+  helper that spreads meta without normalising it.
+- Is a secret about to be logged? Never widen what is copied off an axios error —
+  `config.headers` holds the `Authorization` header. Copy diagnostic fields, not the object.
+- Is a swallowed error swallowed *silently*? An empty catch on a platform call is how
+  "search returns nothing" became unattributable.
+
+**9. Hygiene**
 `console.log`, `TODO`, dead code, commented-out blocks, unused imports, `any` where
 a type is knowable.
 
@@ -130,5 +152,5 @@ Group by severity. For each: file:line, what is wrong, the concrete failure, and
 fix in one sentence. If the change is good, say so plainly and note anything worth
 watching. Do not invent findings to seem thorough.
 
-Confirm the gate: `./scripts/ci.sh` — typecheck, lint (0 errors), 136 tests, secret
+Confirm the gate: `./scripts/ci.sh` — typecheck, lint (0 errors), the full suite, secret
 scan, build.

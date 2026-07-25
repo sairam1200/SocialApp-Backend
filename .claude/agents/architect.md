@@ -22,7 +22,7 @@ rejected in review.
 | Auth, guards, tokens, sessions, CORS, rate limiting, webhooks | `gaddr-security-review` |
 | Secrets at rest, OAuth tokens, `crypto.util.ts` | `gaddr-encryption` |
 | A table, migration, index, or query performance | `gaddr-database` |
-| A new platform, OAuth connect, content import, MCP exposure | `gaddr-platform-integration` |
+| A new platform, OAuth connect, content import, MCP exposure | `gaddr-platform-integration` (and `gaddr-api-resilience` for any outbound call — timeouts, retries, breakers, and why `logger.error(msg, error)` used to lose the cause) |
 | Stripe, payouts, marketplace, subscriptions | `gaddr-payments` |
 | BankID, KYC, verification badges, abuse defence | `gaddr-fraud-identity` |
 | How the change will be verified | `gaddr-testing` |
@@ -65,7 +65,7 @@ violation; it must resolve through a DI token registered in
 - **Impact** on RAM (512 MB cap), Redis (30 MB, 30 connections), Postgres (new
   queries, indexes, migrations) and WebSocket (new events, connection overhead).
 - **Tradeoffs**: what is gained, what is given up.
-- **Test plan**: which behaviours get pinned. The repo has 136 tests; auth and
+- **Test plan**: which behaviours get pinned. Coverage is concentrated on auth and
   search are covered, everything else is not. If the change crosses a boundary
   (HTTP → handler → repository → database, or a third-party API), the plan must say
   how it will be verified *by running it* — every defect that reached production here

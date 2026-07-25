@@ -4,6 +4,7 @@ import configs from '../../configs';
 import _const from '../../core/utils/const';
 import redis from '../../core/utils/redis.util';
 import logger from '../../core/utils/winston.util';
+import { circuitSnapshot } from '../../core/utils/resilientHttp.util';
 
 /**
  * Live health of each platform integration.
@@ -49,6 +50,14 @@ export type IntegrationHealth = {
   checkedAt: string;
 };
 
+/** A platform the outbound HTTP layer is currently skipping. */
+export type OpenCircuit = {
+  platform: string;
+  consecutiveFailures: number;
+  /** Milliseconds until the next trial request is allowed through. */
+  openForMs: number;
+};
+
 export type IntegrationHealthReport = {
   checkedAt: string;
   /** True when no platform needs action. */
@@ -57,6 +66,20 @@ export type IntegrationHealthReport = {
   platforms: IntegrationHealth[];
   /** Whether this response came from cache rather than a live probe. */
   cached: boolean;
+  /**
+   * Platforms whose circuit breaker is open right now, so search is skipping them.
+   *
+   * Reported separately from the probes above because it answers a different question.
+   * A probe says "are these credentials valid"; this says "is this instance currently
+   * refusing to call out". A platform can be perfectly configured and still return
+   * nothing because it failed five times in a row a moment ago — and without this that
+   * state is completely invisible, which makes it the worst kind of bug to chase.
+   *
+   * Never cached: the whole point is that it reflects this instance, right now. Breaker
+   * state is deliberately per-instance (see `resilientHttp.util.ts`), so a value here is
+   * about the container that served the request, not the fleet.
+   */
+  openCircuits: OpenCircuit[];
 };
 
 /**
@@ -72,6 +95,18 @@ const CACHE_KEY = 'integrations:health';
 /** Probes must never hang a request. */
 const PROBE_TIMEOUT_MS = 5000;
 
+/**
+ * Breakers that are open right now, worst first.
+ *
+ * Only open ones are reported. A platform with two failures and a closed breaker is
+ * healthy enough that listing it would be noise.
+ */
+function currentOpenCircuits(): OpenCircuit[] {
+  return circuitSnapshot()
+    .filter((entry) => entry.openForMs > 0)
+    .sort((a, b) => b.openForMs - a.openForMs);
+}
+
 @Injectable()
 export class IntegrationHealthService {
   async getHealthAsync(forceRefresh = false): Promise<IntegrationHealthReport> {
@@ -81,7 +116,16 @@ export class IntegrationHealthService {
       try {
         const cached =
           await redis.getFromRedisAsync<IntegrationHealthReport>(cacheKey);
-        if (cached) return { ...cached, cached: true };
+        // Breaker state is refreshed even on a cache hit. A five-minute-old list of open
+        // circuits would be actively misleading: it is the one field here that describes
+        // *now* rather than the last probe.
+        if (cached) {
+          return {
+            ...cached,
+            cached: true,
+            openCircuits: currentOpenCircuits(),
+          };
+        }
       } catch {
         // Redis is optional at boot; fall through to a live probe.
       }
@@ -153,6 +197,7 @@ export class IntegrationHealthService {
       summary,
       platforms,
       cached: false,
+      openCircuits: currentOpenCircuits(),
     };
 
     try {

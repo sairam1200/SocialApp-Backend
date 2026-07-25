@@ -1,4 +1,8 @@
 import axios from 'axios';
+import {
+  resilientGet,
+  resilientPost,
+} from '../../core/utils/resilientHttp.util';
 import { GithubSearchResponseModel } from '../../domain/contracts/github.model';
 import { StreamEntityType } from '../../domain/enums';
 import _const from '../../core/utils/const';
@@ -241,13 +245,15 @@ export class SearchService implements ISearchService {
         access_token: accessToken,
       };
 
-      const response = await axios.get(baseUrl, { params });
+      const response = await resilientGet<FacebookAPIResponseModel>(baseUrl, {
+        platform: _const.PLATFORMS.FACEBOOK,
+        params,
+      });
       return response.data;
     } catch (error: any) {
-      logger.error(
-        'Error fetching Facebook data:',
-        error?.response?.data || error.message || error,
-      );
+      logger.error('Error fetching Facebook data:', {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       return emptyResult;
     }
   }
@@ -1408,12 +1414,19 @@ export class SearchService implements ISearchService {
         params.key = configs.youtube.apiKey;
       }
 
-      const response = await axios.get<YouTubeSearchResponseDataType>(
+      const response = await resilientGet<YouTubeSearchResponseDataType>(
         'https://www.googleapis.com/youtube/v3/search',
         {
+          platform: _const.PLATFORMS.YOUTUBE,
           params,
           headers,
           timeout: 10000,
+          // The quota-critical one. `search.list` costs 100 of 10,000 daily units — about
+          // 100 searches a day — so a retry against a 403 (quota exhausted) or 401 (bad
+          // key) would spend the remaining budget on errors. The wrapper only retries
+          // 429 and 5xx, which is exactly right here: a quota 403 is a permanent answer
+          // until midnight Pacific, while a 429 is genuinely "try again shortly".
+          maxRetries: 1,
         },
       );
 
@@ -1426,10 +1439,9 @@ export class SearchService implements ISearchService {
       // if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
       //   throw new ApplicationException('YouTube API request timeout. Please try again.');
       // }
-      logger.error(
-        `Error fetching YouTube videos for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching YouTube videos for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       // throw error;
       return emptyResult;
     }
@@ -1576,14 +1588,28 @@ export class SearchService implements ISearchService {
   }
 
   private async getRedditAppOnlyTokenAsync(): Promise<string> {
+    // Check before calling out.
+    //
+    // Without this, unset credentials interpolate as the string "undefined", are sent as
+    // real basic auth, and come back 401 — a wasted round trip on every search, and a log
+    // line that reads like rejected credentials rather than absent ones. It also opened
+    // the circuit breaker, conflating "not configured" with "broken": two different faults
+    // with two different remedies.
+    if (!configs.reddit?.clientId || !configs.reddit?.clientSecret) {
+      throw new Error(
+        'Reddit is not configured — set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET',
+      );
+    }
+
     try {
       const basicAuth = Buffer.from(
         `${configs.reddit.clientId}:${configs.reddit.clientSecret}`,
       ).toString('base64');
-      const response = await axios.post(
+      const response = await resilientPost<{ access_token: string }>(
         'https://www.reddit.com/api/v1/access_token',
         'grant_type=client_credentials',
         {
+          platform: `${_const.PLATFORMS.REDDIT}:token`,
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             Authorization: `Basic ${basicAuth}`,
@@ -1593,10 +1619,9 @@ export class SearchService implements ISearchService {
       );
       return response.data.access_token;
     } catch (error: any) {
-      logger.error(
-        'Error getting Reddit app-only token:',
-        error?.response?.data || error?.message,
-      );
+      logger.error('Error getting Reddit app-only token:', {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw new ApplicationException('Failed to authenticate with Reddit API.');
     }
   }
@@ -1659,10 +1684,9 @@ export class SearchService implements ISearchService {
           'Reddit API request timeout. Please try again.',
         );
       }
-      logger.error(
-        `Error fetching Reddit results for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching Reddit results for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw error;
     }
   }
@@ -1839,14 +1863,27 @@ export class SearchService implements ISearchService {
   }
 
   private async getSpotifyClientCredentialsTokenAsync(): Promise<string> {
+    // Same guard as Reddit. Spotify is the cheapest unclaimed integration —
+    // `client_credentials` alone suffices for catalogue search — so this is the message a
+    // maintainer is most likely to act on.
+    if (!configs.spotify?.clientId || !configs.spotify?.clientSecret) {
+      throw new Error(
+        'Spotify is not configured — set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET',
+      );
+    }
+
     try {
       const basicAuth = Buffer.from(
         `${configs.spotify.clientId}:${configs.spotify.clientSecret}`,
       ).toString('base64');
-      const response = await axios.post(
+      const response = await resilientPost<{ access_token: string }>(
         'https://accounts.spotify.com/api/token',
         'grant_type=client_credentials',
         {
+          // Separate breaker key from the search endpoints: a dead token endpoint and a
+          // dead search endpoint are different faults with different remedies, and
+          // collapsing them hides which one is actually broken.
+          platform: `${_const.PLATFORMS.SPOTIFY}:token`,
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             Authorization: `Basic ${basicAuth}`,
@@ -1855,10 +1892,9 @@ export class SearchService implements ISearchService {
       );
       return response.data.access_token;
     } catch (error: any) {
-      logger.error(
-        'Error getting Spotify client credentials token:',
-        error?.response?.data || error?.message,
-      );
+      logger.error('Error getting Spotify client credentials token:', {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw new ApplicationException(
         'Failed to authenticate with Spotify API.',
       );
@@ -1932,10 +1968,9 @@ export class SearchService implements ISearchService {
           'Spotify API request timeout. Please try again.',
         );
       }
-      logger.error(
-        `Error fetching Spotify results for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching Spotify results for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw error;
     }
   }
@@ -2120,10 +2155,9 @@ export class SearchService implements ISearchService {
           'Pinterest API request timeout. Please try again.',
         );
       }
-      logger.error(
-        `Error fetching Pinterest results for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching Pinterest results for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw error;
     }
   }
@@ -2316,10 +2350,9 @@ export class SearchService implements ISearchService {
           'TikTok API request timeout. Please try again.',
         );
       }
-      logger.error(
-        `Error fetching TikTok results for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching TikTok results for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw error;
     }
   }
@@ -2618,10 +2651,9 @@ export class SearchService implements ISearchService {
           'LinkedIn API request timeout. Please try again.',
         );
       }
-      logger.error(
-        `Error fetching LinkedIn results for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching LinkedIn results for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw error;
     }
   }
@@ -2814,10 +2846,9 @@ export class SearchService implements ISearchService {
           'Instagram API request timeout. Please try again.',
         );
       }
-      logger.error(
-        `Error fetching Instagram results for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching Instagram results for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw error;
     }
   }
@@ -3004,10 +3035,9 @@ export class SearchService implements ISearchService {
           'Twitter API request timeout. Please try again.',
         );
       }
-      logger.error(
-        `Error fetching Twitter results for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching Twitter results for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw error;
     }
   }
@@ -3220,12 +3250,14 @@ export class SearchService implements ISearchService {
     // Both kinds in parallel, each failing independently: a rate-limited user search
     // must not discard repository results that already succeeded.
     const [repoResult, userResult] = await Promise.allSettled([
-      axios.get('https://api.github.com/search/repositories', {
+      resilientGet<any>('https://api.github.com/search/repositories', {
+        platform: _const.PLATFORMS.GITHUB,
         params: { q: term, per_page: perPage, page: currentPage },
         headers,
         timeout: 8000,
       }),
-      axios.get('https://api.github.com/search/users', {
+      resilientGet<any>('https://api.github.com/search/users', {
+        platform: _const.PLATFORMS.GITHUB,
         params: { q: term, per_page: perPage, page: currentPage },
         headers,
         timeout: 8000,
@@ -3411,10 +3443,14 @@ export class SearchService implements ISearchService {
       _const.PLATFORMS.APPLE,
       params,
       async (term, perPage) => {
-        const { data } = await axios.get('https://itunes.apple.com/search', {
-          params: { term, limit: perPage, media: 'all' },
-          timeout: 8000,
-        });
+        const { data } = await resilientGet<any>(
+          'https://itunes.apple.com/search',
+          {
+            platform: _const.PLATFORMS.APPLE,
+            params: { term, limit: perPage, media: 'all' },
+            timeout: 8000,
+          },
+        );
 
         const items = (data?.results ?? []).map(
           (r: any) =>
@@ -3459,9 +3495,10 @@ export class SearchService implements ISearchService {
       _const.PLATFORMS.OPENVERSE,
       params,
       async (term, perPage, page) => {
-        const { data } = await axios.get(
+        const { data } = await resilientGet<any>(
           'https://api.openverse.org/v1/images/',
           {
+            platform: _const.PLATFORMS.OPENVERSE,
             params: { q: term, page_size: perPage, page },
             headers: { 'User-Agent': 'Gaddr-Search/1.0' },
             timeout: 8000,
@@ -3508,9 +3545,10 @@ export class SearchService implements ISearchService {
       _const.PLATFORMS.HACKERNEWS,
       params,
       async (term, perPage, page) => {
-        const { data } = await axios.get(
+        const { data } = await resilientGet<any>(
           'https://hn.algolia.com/api/v1/search',
           {
+            platform: _const.PLATFORMS.HACKERNEWS,
             // Algolia pages are zero-indexed.
             params: { query: term, hitsPerPage: perPage, page: page - 1 },
             timeout: 8000,
