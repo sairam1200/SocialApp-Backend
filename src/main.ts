@@ -65,7 +65,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   console.info('[startup] STEP 2 — NestFactory created');
 
-  // OAUTH-DBG: Log TypeORM connection info after NestFactory creation
+  // OAUTH-DBG: Log TypeORM config info (no DB queries — avoids startup timeout)
   try {
     const typeormDs = app.get('DataSource', { strict: false });
     const typeormOpts = typeormDs?.options;
@@ -81,29 +81,6 @@ async function bootstrap() {
       console.log(
         `[OAUTH-DBG] STARTUP TYPEORM-DB host=${connHost} database=${connDatabase} synchronize=${typeormOpts.synchronize} migrationsRun=${typeormOpts.migrationsRun} pid=${process.pid}`,
       );
-
-      // OAUTH-DBG: Count rows in dataProtectionKeys table
-      try {
-        const dpkResult = await typeormDs.query(
-          'SELECT COUNT(*) as cnt FROM "dataProtectionKeys"',
-        );
-        const dpkCount = dpkResult?.[0]?.cnt ?? 'unknown';
-        console.log(
-          `[OAUTH-DBG] STARTUP TABLE-COUNT dataProtectionKeys=${dpkCount}`,
-        );
-
-        // OAUTH-DBG: Check for indexes on key column
-        const idxResult = await typeormDs.query(
-          `SELECT indexdef FROM pg_indexes WHERE tablename = 'dataProtectionKeys' AND indexdef LIKE '%key%'`,
-        );
-        console.log(
-          `[OAUTH-DBG] STARTUP INDEXES dataProtectionKeys key-indexes=${JSON.stringify(idxResult?.map((r: any) => r.indexdef))}`,
-        );
-      } catch (qErr: any) {
-        console.log(
-          `[OAUTH-DBG] STARTUP TABLE-COUNT error=${qErr.message}`,
-        );
-      }
     }
   } catch (e: any) {
     console.log(
