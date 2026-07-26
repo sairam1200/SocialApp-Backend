@@ -1,5 +1,26 @@
 # Deploy status — 26 July 2026
 
+> **Update, 16:45 CEST — partly moved, still not automatic.**
+>
+> The live site advanced on its own from `8e1cbaf` to **`eb738ff`**, so the whole
+> Community layer *is* deployed, and `/api/v1/community/feed` now returns 200 —
+> the backend went out too. Nothing in this repository caused that, and nobody
+> touched either provider's settings from here.
+>
+> **But new pushes still do not deploy.** Two commits pushed at 15:32 and 15:35
+> CEST produced no new deployment: 70 minutes of polling `/api/version` returned
+> the same commit *and the same deployment id* throughout. So the backlog drained
+> once; the trigger did not come back. The checklist below still applies, and
+> the GitHub App installation is still the first thing to check.
+>
+> Everything below is kept as-is. The lasting outcome is
+> `scripts/verify-deploy.sh` and the two `/version` endpoints, which turn "is it
+> live?" from a two-hour inference into one command.
+>
+> Also still open: the backend serves but does not report its commit. Setting
+> `BUILD_SHA` in the Cloud Build pipeline would close the last `?` in the
+> verification output.
+
 Community is merged to `main` in both repositories and **neither deployment
 pipeline has run**. This note records exactly what was verified, so whoever
 picks it up does not have to re-derive it.
