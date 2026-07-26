@@ -34,6 +34,46 @@ let serverLog = "";
 child.stdout.on("data", (d) => (serverLog += d));
 child.stderr.on("data", (d) => (serverLog += d));
 
+/**
+ * Tables the run writes to, in an order CASCADE can resolve.
+ *
+ * The script is not idempotent without this: a second run finds Bo already in
+ * Anna's close friends from the first, and "a non-close-friend does not see the
+ * close-friends post" fails against state the previous run created. A test that
+ * only passes once is a test nobody runs twice.
+ *
+ * `identity.users` is deliberately *not* truncated — the seeded users are the
+ * fixture, and recreating them means re-hashing a bcrypt password per run.
+ */
+const RESET_TABLES = [
+	'social.audience_members',
+	'social.reactions',
+	'social.poll_votes',
+	'social.shares',
+	'social.engagement_events',
+	'social.topic_affinities',
+	'social.ledger_entries',
+	'social.invites',
+	'social.messages',
+	'social.conversation_members',
+	'social.conversations',
+	'social.posts',
+];
+
+async function resetAsync() {
+	const { Client } = require('pg');
+	const client = new Client({
+		host: env.POSTGRES_HOST,
+		port: Number(env.POSTGRES_PORT ?? 5432),
+		user: env.POSTGRES_USERNAME,
+		password: env.POSTGRES_PASSWORD,
+		database: env.POSTGRES_DATABASE,
+	});
+	await client.connect();
+	await client.query(`TRUNCATE ${RESET_TABLES.join(', ')} CASCADE`);
+	await client.end();
+}
+
 const results = [];
 function check(name, ok, detail = "") {
 	results.push({ name, ok, detail });
@@ -532,6 +572,7 @@ async function run() {
 
 setTimeout(async () => {
 	try {
+		await resetAsync();
 		await run();
 	} catch (error) {
 		console.log("SMOKE ERROR:", error.message);

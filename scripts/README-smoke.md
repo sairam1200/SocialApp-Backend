@@ -45,6 +45,12 @@ npm run build && SMOKE_ENV_FILE=/tmp/smoke-env.json node scripts/community-smoke
 
 Exit code 0 means every assertion held.
 
+**It resets its own tables first.** Without that, a second run finds Bo already
+in Anna's close friends from the first, and the visibility assertion fails
+against state the previous run created. A test that only passes once is a test
+nobody runs twice. `identity.users` is left alone — the seeded users are the
+fixture.
+
 ## What it proved, last run
 
 44/44, including the three that are easiest to get wrong:
