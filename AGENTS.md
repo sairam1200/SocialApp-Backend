@@ -39,7 +39,7 @@ validated, exposed, and read by nothing. When you add a variable, grep that some
 
 ## Pick your entry point
 
-Ten skills in [`.claude/skills/`](.claude/skills/). Only their descriptions sit in context;
+Eleven skills in [`.claude/skills/`](.claude/skills/). Only their descriptions sit in context;
 the body loads when one matches, so **naming the domain in your first sentence is what makes
 the right one fire**. Load explicitly with `/skill-name` when you know which you need.
 
@@ -55,6 +55,7 @@ the right one fire**. Load explicitly with `/skill-name` when you know which you
 | BankID, KYC, fraud, abuse, audit trails | skill `gaddr-fraud-identity` |
 | The Community social layer — feed, posts, composer, visibility and audiences, messaging, creator economy, livestreaming, learning | skill `gaddr-community` |
 | The recommender — candidate retrieval, Reciprocal Rank Fusion, multi-objective ranking, MMR diversification, sponsored blending, topic affinity | skill `gaddr-recommender` |
+| Returning text a user reads, error messages, or handling non-Latin scripts in search | skill `gaddr-i18n` |
 
 Each skill carries the defects its area has already produced. Loading one costs less than
 rediscovering them.
