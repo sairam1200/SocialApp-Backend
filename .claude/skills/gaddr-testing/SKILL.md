@@ -42,7 +42,7 @@ its own `gaddr-frontend-testing` skill; use that when working there, not this on
 
 ## What is covered
 
-**Backend: 218 tests, 11 suites**, all passing. Concentrated on auth and search,
+**Backend: 238 tests, 13 suites**, all passing. Concentrated on auth and search,
 because that is where the audit found critical defects:
 
 | Suite | Pins |

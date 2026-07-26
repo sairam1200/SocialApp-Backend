@@ -218,3 +218,84 @@ Stated plainly rather than implied:
   index is needed before this carries real traffic.
 - **Quota headroom.** YouTube allows ~100 searches/day at 100 units per
   `search.list`. Verified working; not verified sustainable. Request an increase.
+
+
+---
+
+## Search correctness and stability — measured 2026-07-26
+
+Added after the request to make search "work more stably and actually perform correct
+searches, and cache everything collected in our database". Each claim below is a measurement
+against a running service and a real Postgres, not a reading of the code.
+
+### Does everything collected get cached?
+
+Yes. 13 of 16 platform search methods persist to `contentStreams`, via a
+`fetchAndStore<Platform>Results` helper or via `searchOpenSourceAsync`:
+
+| Persists | Platforms |
+|---|---|
+| ✅ | facebook, instagram, pinterest, twitter, spotify, reddit, tiktok, youtube, linkedin, github, apple, openverse, hackernews |
+| n/a | snapchat, threads, behance |
+
+The three exceptions are **stubs**: each makes zero outbound calls and returns empty arrays,
+so there is nothing collected to cache. Worth knowing before debugging "why does Behance
+return nothing" — it has no public API at all.
+
+Caching is verified end to end, not just present in the code: three distinct searches each
+returned 24 results and produced exactly 18 rows per platform, with the read path then
+serving them from Postgres.
+
+### Are the results actually correct?
+
+Precision measured by checking the returned rows contain the query term:
+
+| Query | Returned | Contain the term | Precision |
+|---|---|---|---|
+| `jazz` | 20 | 20 | **100%** |
+| `rust` | 22 | 22 | **100%** |
+| `bicycle` | 22 | 22 | **100%** |
+
+### One real defect found: `%` returned the whole table
+
+`contentStream.repository.ts` interpolated the user's keyword straight into an `ILIKE`
+pattern. Every query was correctly parameterised — which stops injection but does nothing
+about a bound value being *interpreted as a pattern*.
+
+| keyword | before | after |
+|---|---|---|
+| `%` | **50** (the page limit — everything) | 0 |
+| `_` | **50** | 0 |
+| `%%%` | 50 | 0 |
+| `jazz` | 20 | 20 (unchanged) |
+| `zzzznomatch` | 0 | 0 |
+
+Two consequences, and the second is worse: arbitrary unrelated rows presented as results,
+and `searchText ILIKE '%%%'` cannot use the trigram index, so it degenerates to a sequential
+scan over the fastest-growing table in the schema — triggerable by any anonymous caller
+typing one character, on an instance with 512 MB and 0.1 vCPU.
+
+Fixed by `core/utils/likePattern.util.ts`. Escaping already existed as an ad-hoc one-liner in
+two of twelve pattern-building sites; it is now one shared helper applied at all of them,
+with a test that fails when a thirteenth unescaped site appears.
+
+### Is it stable?
+
+| Check | Result |
+|---|---|
+| Same read query 6× | Identical result set **and identical order** every time (md5 of ids constant) |
+| Cache effect | 0.177 s cold → **0.007 s** warm |
+| 8 concurrent identical searches | **0 duplicate `(platform, externalId)` pairs** — the unique index and `ON CONFLICT DO NOTHING` hold under parallel writes. Excess callers correctly got 429 from the anonymous external-search limiter. |
+| Empty / whitespace keyword | 400 |
+| 600-character keyword | 400 |
+| `'`, `%`, `_`, `100%`, `O'Brien` | 200, treated as literals |
+| `café münchen 日本語` | 200 |
+| `; DROP TABLE "contentStreams"; --` | 200, and all 72 rows still present |
+
+### Method note
+
+One measurement in this run was initially wrong in a way worth recording: a repeatability
+check appeared to show the result set changing between identical queries. The cause was the
+test, not the service — Python randomises string hashing per process, so `hash()` across
+separate invocations is meaningless. Re-run with md5 it was byte-identical. **Verify the
+instrument before reporting the defect.**

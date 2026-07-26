@@ -133,3 +133,38 @@ written, which is a reasonable demonstration that it works.)
 
 Use a scratch database and a small seed script for local work. If you need
 production-shaped data, generate it.
+
+
+## User input in a LIKE pattern must be escaped
+
+Parameterisation stops injection. It does **not** stop a bound value being interpreted as a
+pattern — `%` and `_` keep their wildcard meaning inside `LIKE`/`ILIKE`.
+
+Measured on the live aggregated-search endpoint against 72 rows:
+
+```
+keyword=%              -> 50 results (the page limit) — the whole table
+keyword=zzzzzznomatch  ->  0 results
+```
+
+Two problems, and the second is the serious one: unrelated rows presented as search results,
+and `searchText ILIKE '%%%'` cannot use the trigram index, so it becomes a sequential scan
+over the fastest-growing table in the schema — triggerable by any anonymous caller typing one
+character on a 512 MB instance.
+
+Use the helper, never a hand-built template:
+
+```ts
+import { containsPattern, escapeLikePattern } from '../../core/utils/likePattern.util';
+
+parameters.searchQuery = containsPattern(searchQuery);        // %escaped%
+setParameters({ prefix: `${escapeLikePattern(keyword)}%` });  // escaped%
+```
+
+Twelve sites built the pattern by hand and only two escaped, which is the expected outcome
+for a rule that must be remembered at every call site. `likePattern.util.spec.ts` scans the
+repositories and fails when a thirteenth appears.
+
+Do **not** escape quotes or semicolons here — they are already safe as bound parameters, and
+mangling them breaks legitimate searches like `O'Brien`.
+

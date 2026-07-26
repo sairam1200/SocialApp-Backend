@@ -240,7 +240,7 @@ Individually:
 ```bash
 npx tsc -p tsconfig.json --noEmit   # must stay at 0 errors
 npx eslint src --ext .ts            # must stay at 0 errors
-npx jest                            # 218 tests, 11 suites
+npx jest                            # 238 tests, 13 suites
 npm run build
 ```
 
