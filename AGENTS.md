@@ -9,9 +9,36 @@ file that matches your task.
 
 ---
 
+## How we build here
+
+**[`docs/ENGINEERING_PHILOSOPHY.md`](docs/ENGINEERING_PHILOSOPHY.md) is a
+governing document.** Read it once, apply it always. In one screen:
+
+1. **Reuse before you build.** Search first, say what you are reusing. Extend >
+   generalise > new. Never fork logic — two implementations of one idea is one
+   bug that has to be fixed twice and will not be.
+2. **Abstract, generalise, deduplicate.** One concept, one implementation, one
+   place. The test is not elegance: *when this changes, how many places change?*
+   More than one means the abstraction is wrong or missing.
+3. **Make the wrong thing impossible**, not merely discouraged. Allow-lists over
+   deny-lists. Fail closed. Money is `bigint` minor units so a float cannot
+   appear; a balance is `SUM()` over a ledger so it cannot disagree with itself.
+4. **Push work where it happens once.** Filter in SQL, batch at the boundary,
+   derive at write time.
+5. **Degrade, don't fail** — but never degrade an authorisation decision.
+6. **Comment the *why*.** Every rule in these files was paid for once already.
+7. **Prove it end to end.** A green gate is not evidence the application runs.
+8. **The user is not the product's opponent.** Where they could diverge, choose
+   the person.
+
+Generalise on the *second* case, not the first — but deduplicate the moment you
+are about to write the second copy. That is the cheapest it will ever be.
+
+---
+
 ## Pick your entry point
 
-Eight skills live in [`.claude/skills/`](.claude/skills/). Only their descriptions sit
+Ten skills live in [`.claude/skills/`](.claude/skills/). Only their descriptions sit
 in context; the body loads when one matches, so **naming the domain in your first
 sentence is what makes the right one fire**. Load explicitly with `/skill-name` when
 you already know which you need.
@@ -25,6 +52,8 @@ you already know which you need.
 | Any outbound call to a third-party API — timeouts, retries, 429s, quota, circuit breakers, or a failure you cannot diagnose from the logs | skill `gaddr-api-resilience` |
 | Writing tests, a suite fails to start, or "does this actually work?" | skill `gaddr-testing` |
 | Stripe, Gaddr Pay, payouts, marketplace, on-chain | skill `gaddr-payments` |
+| The feed, posts, profiles, the composer, visibility, streaming, the creator economy | skill `gaddr-community` |
+| Ranking, retrieval, candidate sources, why a post appears, the algorithm controls | skill `gaddr-recommender` |
 | BankID, KYC, fraud, abuse, audit trails | skill `gaddr-fraud-identity` |
 
 Each skill carries the defects its area has already produced. Loading one costs less
@@ -123,9 +152,10 @@ gradually rather than failing on day one. Use `import X = require('…')` for an
 
 ## What this service is
 
-The API behind **Gaddr Search** (cross-platform social search and aggregation)
-and **Gaddr Me** (universal profile). Part of the Gaddr family alongside Gaddr
-Jobs, Gaddr Pay and Gaddr Chains.
+The API behind **Gaddr Search** (cross-platform social search and aggregation),
+**Gaddr Me** (universal profile) and **Community** (the social layer — feed,
+creator economy, livestreaming, learning). Part of the Gaddr family alongside
+Gaddr Jobs, Gaddr Pay and Gaddr Chains.
 
 NestJS 11 · TypeScript · TypeORM 0.3 · PostgreSQL (Neon) · Redis · BullMQ ·
 Socket.IO · Cloudflare R2. Deployed to GCP Cloud Run. Live at `demo.gaddr.com`.
@@ -161,6 +191,40 @@ Per-feature READMEs exist for
 [notification](src/features/notification/README.md),
 [playlist](src/features/playlist/README.md) and
 [role](src/features/role/README.md).
+
+## Community — the social layer
+
+~36 tables in a `social` schema, 17 services, 8 controllers. Read
+[`docs/social/ARCHITECTURE.md`](docs/social/ARCHITECTURE.md) before touching
+any of it. Four decisions are load-bearing and easy to undo by accident:
+
+- **One table for every timeline object.** `social.posts` with a `kind` column.
+  A comment is a post with a parent, a repost is a post with a target, a story
+  is a post that expires. Splitting them forks visibility, ranking, moderation,
+  metrics, notifications and search — nine ways.
+- **One visibility decision.** `visibilityPredicate()` in
+  `core/utils/recommendation/visibility-scope.ts`, applied **in SQL**. A flat
+  `visibility IN (...)` is wrong: it shows every author's close-friends posts to
+  anyone who is somebody else's close friend. The predicate pairs each narrower
+  level with the authors that granted it. Filtering after the query also
+  silently shrinks pages and breaks the keyset cursor at boundaries.
+- **One follow graph.** Community dispatches `FollowUserCommand` against
+  `identity.user_follows`. Do not add a second graph keyed by profile.
+  Do **not** re-register those handlers in `CommunityModule` — `CqrsModule`
+  registers every handler into one global bus, and a second copy fails at boot
+  on `ProfileCacheService`.
+- **Sponsored posts are never boosted.** `blendSponsored` places them at a fixed
+  cadence; their score is computed identically and multiplied by 1.0. If you are
+  adding a ranker term for paid content, stop.
+
+The recommender's pure kernel is in `core/utils/recommendation/` — no Nest, no
+database, no clock — and has 87 unit tests. Put behaviour there, not in the
+service, wherever it can be a function of its arguments.
+
+**Crossing the layers?** `node scripts/community-smoke.js` drives 44 assertions
+over HTTP against a real Postgres. It is not in `ci.sh` (which must run without
+a database), so it is a manual gate before shipping social changes.
+See [`scripts/README-smoke.md`](scripts/README-smoke.md).
 
 ## Request lifecycle — know this before touching auth
 
@@ -211,6 +275,8 @@ Known naming defects, safe to correct on sight: `UserAccoutGuard` /
 ## Working rules
 
 1. **Search before creating.** `grep`/`glob` first; say what you are reusing.
+   This is rule 1 of [`docs/ENGINEERING_PHILOSOPHY.md`](docs/ENGINEERING_PHILOSOPHY.md)
+   and it is first for a reason.
 2. **Extend, don't fork.** No parallel implementation of existing logic. Two
    parallel auth systems already exist — don't make it three.
 3. **Preserve API contracts.** Additive changes only unless versioning.

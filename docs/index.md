@@ -18,6 +18,11 @@ Start from [`../AGENTS.md`](../AGENTS.md) if you are an AI agent.
 | [`integrations/STATUS.md`](integrations/STATUS.md) | **Which platform credentials actually work**, verified by live API call. Check this before debugging "search returns nothing" |
 | [`integrations/RESILIENCE_AND_LOGGING.md`](integrations/RESILIENCE_AND_LOGGING.md) | Outbound HTTP protections (timeout, jittered retry, per-platform circuit breaker), credential guards, and why 86 log sites recorded no cause — plus how to diagnose "this platform returns nothing" |
 | [`integrations/END_TO_END_VERIFICATION.md`](integrations/END_TO_END_VERIFICATION.md) | A real run of the full search chain — five live platform APIs → Postgres → user-facing endpoint — with the five defects it exposed and how to reproduce it |
+| [`ENGINEERING_PHILOSOPHY.md`](ENGINEERING_PHILOSOPHY.md) | **How we build here.** Governing document: reuse before building, abstract and deduplicate, make the wrong thing impossible, prove it end to end. Applies to every future change in both repositories |
+| [`social/ARCHITECTURE.md`](social/ARCHITECTURE.md) | **Community — the social layer.** One table for every timeline object, one visibility decision, one follow graph, one ledger. Read before touching anything under `features/community/` |
+| [`social/RECOMMENDER.md`](social/RECOMMENDER.md) | How the Recommended feed decides what you see: retrieval, Reciprocal Rank Fusion, the multi-objective ranker, MMR, and every knob the reader owns |
+| [`social/STREAMING.md`](social/STREAMING.md) | Livestreaming: RTMP/SRT/WHIP in, LL-HLS/WHEP out via MediaMTX, the transcode ladder, publish authorisation, simulcast |
+| [`social/CREATOR_ECONOMY.md`](social/CREATOR_ECONOMY.md) | Disclosure rules, why sponsored posts are never boosted, symmetric creator↔brand matching, the ledger, affiliate attribution, and what the free tier keeps |
 
 ## 1b. Skills and sub-agents
 
