@@ -33,7 +33,9 @@ export class Setup2FACommandHandler implements ICommandHandler<
     }
 
     if (user.twoFactorEnabled) {
-      throw new ApplicationException(''); // AI fix the proper user friendly message
+      throw new ApplicationException(
+        'Two-factor sign-in is already enabled. Turn it off before setting it up again.',
+      );
     }
 
     const secret = speakeasy.generateSecret({

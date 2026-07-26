@@ -67,6 +67,15 @@ export default {
   INEWSLETTER_REPOSITORY: 'INewsletterSubscriberRepository',
   IPROJECT_REPOSITORY: 'IProjectRepository',
 
+  // Community — the social layer. One token per aggregate, not per table.
+  ISOCIALPROFILE_REPOSITORY: 'ISocialProfileRepository',
+  IPOST_REPOSITORY: 'IPostRepository',
+  IENGAGEMENT_REPOSITORY: 'IEngagementRepository',
+  ICOMMERCE_REPOSITORY: 'ICommerceRepository',
+  ISTREAM_REPOSITORY: 'IStreamRepository',
+  IMESSAGING_REPOSITORY: 'IMessagingRepository',
+  ILEARNING_REPOSITORY: 'ILearningRepository',
+
   BULL_QUEUES: {
     FACEBOOK_IMPORT: 'facebook-import',
     INSTAGRAM_IMPORT: 'instagram-import',

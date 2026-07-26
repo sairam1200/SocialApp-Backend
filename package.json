@@ -135,6 +135,9 @@
     ],
     "setupFiles": [
       "<rootDir>/../test/jest-setup-env.ts"
+    ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!(nanoid|@?nanoid)/)"
     ]
   }
 }

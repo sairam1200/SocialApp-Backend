@@ -1,3 +1,8 @@
+import {
+  EnableTwoFactorEmailCommandHandler,
+  SendTwoFactorEmailCodeCommandHandler,
+} from './2fa/email/2fa-email.handler';
+import { TwoFactorEmailController } from './2fa/email/2fa-email.endpoint';
 import { Disbale2FACommandHandler } from './2fa/disable/2fa-disable.handler';
 import { Enable2FACommandHandler } from './2fa/enable/2fa-enable.handler';
 import { Setup2FACommandHandler } from './2fa/setup/2fa-setup.handler';
@@ -71,6 +76,11 @@ export { Verify2FAController } from './2fa/verify/2fa-verify.endpoint';
 export { Verify2FACommandHandler } from './2fa/verify/2fa-verify.handler';
 
 export { Enable2FAController } from './2fa/enable/2fa-enable.endpoint';
+export { TwoFactorEmailController } from './2fa/email/2fa-email.endpoint';
+export {
+  SendTwoFactorEmailCodeCommandHandler,
+  EnableTwoFactorEmailCommandHandler,
+} from './2fa/email/2fa-email.handler';
 export { Enable2FACommandHandler } from './2fa/enable/2fa-enable.handler';
 
 export { LogoutController } from './logout/logout.endpoint';
@@ -85,6 +95,7 @@ const controllers = [
   ResetPasswordController,
   Setup2FAController,
   Enable2FAController,
+  TwoFactorEmailController,
   Verify2FAController,
   Disable2FAController,
   LogoutController,
@@ -97,6 +108,8 @@ const handlers = [
   LoginCommandHandler,
   Verify2FACommandHandler,
   Enable2FACommandHandler,
+  SendTwoFactorEmailCodeCommandHandler,
+  EnableTwoFactorEmailCommandHandler,
   Setup2FACommandHandler,
   Disbale2FACommandHandler,
   RegisterCommandHandler,

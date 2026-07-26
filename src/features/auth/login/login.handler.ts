@@ -12,6 +12,8 @@ import { IIdentityRepository } from '../../../domain/repositories/iidentity.repo
 import { IAnalyticsService } from '../../../domain/services/ianalytics.service';
 import { TokenResponseModel } from '../../../domain/contracts/tokenResponse.model';
 import { IUserLoginRepository } from '../../../domain/repositories/iuserLogin.repository';
+import { TwoFactorMethod } from '../../../domain/enums';
+import { TwoFactorEmailService } from '../../../infrastructure/services/social/two-factor-email.service';
 
 export class TokenRequestModel {
   @ApiProperty()
@@ -68,6 +70,7 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
     private readonly emailService: IEmailService,
     @Inject(_const.IANALYTICS_SERVICE)
     private readonly analyticsService: IAnalyticsService,
+    private readonly twoFactorEmail: TwoFactorEmailService,
   ) {}
 
   public async execute(command: LoginCommand): Promise<TokenResponseModel> {
@@ -113,6 +116,22 @@ export class LoginCommandHandler implements ICommandHandler<LoginCommand> {
         model.userAgent,
         model.deviceId,
       );
+
+      // The emailed code is sent here rather than from a separate endpoint, so
+      // there is no window in which the client holds a 2FA token with no code
+      // on its way. A send failure still returns the challenge — the user can
+      // ask for a resend, which is better than being told the password was
+      // wrong.
+      if (user.twoFactorMethod === TwoFactorMethod.Email) {
+        const issued = await this.twoFactorEmail.issueAsync(user, {
+          device: model.userAgent,
+        });
+        if (!issued.sent && issued.reason === 'unavailable') {
+          logger.error(
+            `[login] could not send the two-factor code to user ${user.id}`,
+          );
+        }
+      }
 
       return new TokenResponseModel({
         access_token,

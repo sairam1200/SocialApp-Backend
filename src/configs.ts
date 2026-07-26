@@ -165,6 +165,34 @@ const envVarsSchema = Joi.object()
       'YouTube webhook callback URL',
     ),
     APP_URL: Joi.string().description('Application base URL'),
+
+    // Community — livestreaming. All optional: a deployment without a media
+    // server still serves the feed, and the UI reports streaming as
+    // unconfigured rather than showing broken ingest URLs.
+    MEDIA_SERVER_HOST: Joi.string()
+      .allow('')
+      .default('')
+      .description('Hostname of the MediaMTX ingest/playback server'),
+    MEDIA_SERVER_RTMP_PORT: Joi.number().default(1935),
+    MEDIA_SERVER_SRT_PORT: Joi.number().default(8890),
+    MEDIA_SERVER_PLAYBACK_BASE_URL: Joi.string()
+      .allow('')
+      .default('')
+      .description('Public HTTPS base for HLS/LL-HLS/WHEP playback'),
+    MEDIA_SERVER_WEBHOOK_SECRET: Joi.string()
+      .allow('')
+      .default('')
+      .description('Shared secret the media server signs its callbacks with'),
+    COMMUNITY_INVITE_REWARD_MINOR: Joi.number()
+      .default(500)
+      .description(
+        'Minor units credited to an inviter when an invite converts',
+      ),
+    COMMUNITY_PLATFORM_FEE_BPS: Joi.number()
+      .min(0)
+      .max(10000)
+      .default(1000)
+      .description('Platform fee on creator earnings, in basis points'),
     SPOTIFY_CLIENT_ID: Joi.string().description('Spotify OAuth client ID'),
     SPOTIFY_CLIENT_SECRET: Joi.string().description(
       'Spotify OAuth client secret',
@@ -503,6 +531,17 @@ export default {
   },
   frontend: {
     url: envVars.FRONTEND_URL,
+  },
+  media: {
+    host: envVars.MEDIA_SERVER_HOST,
+    rtmpPort: envVars.MEDIA_SERVER_RTMP_PORT,
+    srtPort: envVars.MEDIA_SERVER_SRT_PORT,
+    playbackBaseUrl: envVars.MEDIA_SERVER_PLAYBACK_BASE_URL,
+    webhookSecret: envVars.MEDIA_SERVER_WEBHOOK_SECRET,
+  },
+  community: {
+    inviteRewardMinor: envVars.COMMUNITY_INVITE_REWARD_MINOR,
+    platformFeeBps: envVars.COMMUNITY_PLATFORM_FEE_BPS,
   },
   betterAuth: {
     secret: envVars.BETTER_AUTH_SECRET,

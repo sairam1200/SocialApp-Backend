@@ -20,6 +20,7 @@ import { AnalyticsModule } from './analytics.module';
 import { DiscoverModule } from './discover.module';
 import { NewsletterModule } from './newsletter.module';
 import { ProjectModule } from './project.module';
+import { CommunityModule } from './community.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DataSeeder } from '../infrastructure/services/data.seeder';
 import {
@@ -66,6 +67,7 @@ import {
     DiscoverModule,
     NewsletterModule,
     ProjectModule,
+    CommunityModule,
   ],
   providers: [dependency.RateLimitRepository, RateLimitMiddleware],
 })

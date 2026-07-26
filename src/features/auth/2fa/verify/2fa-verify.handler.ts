@@ -12,6 +12,8 @@ import {
   IUserLoginRepository,
   IIdentityRepository,
 } from '../../../../domain/repositories';
+import { TwoFactorMethod } from '../../../../domain/enums';
+import { TwoFactorEmailService } from '../../../../infrastructure/services/social/two-factor-email.service';
 import {
   ApplicationException,
   UserNotFoundException,
@@ -63,6 +65,7 @@ export class Verify2FACommandHandler implements ICommandHandler<
     private readonly userRepository: IIdentityRepository,
     @Inject(_const.IUSERLOGIN_REPOSITORY)
     private readonly userLoginRepository: IUserLoginRepository,
+    private readonly twoFactorEmail: TwoFactorEmailService,
   ) {}
 
   public async execute(command: Verify2FACommand): Promise<TokenResponseModel> {
@@ -76,13 +79,24 @@ export class Verify2FACommandHandler implements ICommandHandler<
       throw new UserNotFoundException();
     }
 
-    if (user.twoFactorEnabled) {
-      throw new ApplicationException(''); // AI fix the proper user friendly message
+    // The guard here used to be `if (user.twoFactorEnabled) throw`, which is
+    // backwards: it rejected exactly the users who *need* to verify, so
+    // two-factor login could never complete. Verification requires 2FA to be
+    // on, not off.
+    if (!user.twoFactorEnabled) {
+      throw new ApplicationException(
+        'Two-factor sign-in is not enabled for this account.',
+      );
     }
 
-    const valid = this.verifyTwoFAOTP(model.userOTP, user.twoFactorSecret);
+    const valid =
+      user.twoFactorMethod === TwoFactorMethod.Email
+        ? (await this.twoFactorEmail.verifyAsync(user.id, model.userOTP)).valid
+        : this.verifyTwoFAOTP(model.userOTP, user.twoFactorSecret);
     if (!valid) {
-      throw new ApplicationException('Invalid OTP or secret.');
+      throw new ApplicationException(
+        'That code is not valid, or it has expired. Request a new one.',
+      );
     }
 
     this.checkForUnrecognizedDeviceOrIp(

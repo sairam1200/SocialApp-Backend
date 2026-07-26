@@ -114,3 +114,9 @@ export enum PostType {
   Message = 'message',
   Track = 'track',
 }
+
+/**
+ * Community social layer. Defined in `social.enums.ts` and re-exported here so
+ * every consumer keeps a single import path for enums.
+ */
+export * from './social.enums';
