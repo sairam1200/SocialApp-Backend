@@ -254,6 +254,41 @@ async function run() {
 		boIdsAfter.includes(privatePost.body.id),
 	);
 
+	// A post is not readable by id just because you know the id. `getByIdAsync`
+	// is a raw primary-key lookup with no visibility check; using it in the read
+	// path leaked the body of a close-friends post to anonymous callers.
+	const leakAnonymous = await api(`/community/posts/${privatePost.body.id}`);
+	check(
+		'a close-friends post is not readable by id anonymously',
+		leakAnonymous.status === 404,
+		`status=${leakAnonymous.status}`,
+	);
+	check(
+		'and its body is not in the response',
+		!JSON.stringify(leakAnonymous.body ?? '').includes('close friends see this'),
+	);
+
+	const threadLeak = await api(`/community/posts/${privatePost.body.id}/thread`);
+	check(
+		'nor is its thread',
+		threadLeak.status === 404,
+		`status=${threadLeak.status}`,
+	);
+
+	const authorRead = await api(
+		`/community/posts/${privatePost.body.id}`,
+		{},
+		anna.token,
+	);
+	check('but the author can still read it', authorRead.status === 200);
+
+	const draftLeak = await api(`/community/posts/${draft.body.id}`);
+	check(
+		'an unpublished draft is not readable by id either',
+		draftLeak.status === 404,
+		`status=${draftLeak.status}`,
+	);
+
 	// --- engagement ---------------------------------------------------------
 	const like = await api(
 		`/community/posts/${post.body.id}/react`,

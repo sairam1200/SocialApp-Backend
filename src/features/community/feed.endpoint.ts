@@ -156,10 +156,14 @@ export class CommunityFeedController {
   @Get('posts/:postId')
   @ApiResponse({ status: 200, type: PostModel })
   public async getPost(@Param('postId') postId: string): Promise<PostModel> {
-    const post = await this.posts.getByIdAsync(postId);
+    const viewerUserId = currentUserIdOrNull();
+    // Not `getByIdAsync` — that is a raw primary-key lookup with no visibility
+    // check, and using it here leaked the body of a close-friends post to
+    // anonymous callers. "Not found" rather than "forbidden": saying forbidden
+    // confirms the post exists, which is itself a leak.
+    const post = await this.feed.getVisiblePostAsync(postId, viewerUserId);
     if (!post) throw new NotFoundException('Post not found.');
 
-    const viewerUserId = currentUserIdOrNull();
     const model = await this.feed.mapPostAsync(post, viewerUserId);
 
     // A permalink read is a real signal — it is the strongest evidence short
@@ -189,13 +193,11 @@ export class CommunityFeedController {
     @Param('postId') postId: string,
     @Query('limit') limit?: string,
   ): Promise<ThreadModel> {
-    const post = await this.posts.getByIdAsync(postId);
+    const viewerUserId = currentUserIdOrNull();
+    const post = await this.feed.getVisiblePostAsync(postId, viewerUserId);
     if (!post) throw new NotFoundException('Post not found.');
 
-    const viewerUserId = currentUserIdOrNull();
-    const [root] = await Promise.all([
-      this.feed.mapPostAsync(post, viewerUserId),
-    ]);
+    const root = await this.feed.mapPostAsync(post, viewerUserId);
     const replies = await this.feed.getRepliesAsync(post.id, viewerUserId, {
       limit: clampInt(limit, 20, 1, 100),
     });

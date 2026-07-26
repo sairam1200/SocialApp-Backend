@@ -26,6 +26,7 @@ import {
 import {
   PUBLIC_SCOPE,
   VisibilityScope,
+  canView,
 } from '../../../core/utils/recommendation';
 import { RecommendationService } from './recommendation.service';
 import { VisibilityService } from './visibility.service';
@@ -286,6 +287,44 @@ export class FeedService {
     };
 
     return posts.map((post) => mapPost(post, context));
+  }
+
+  /**
+   * Fetch one post **and check the viewer may see it**.
+   *
+   * `IPostRepository.getByIdAsync` is a raw lookup by primary key — it does
+   * not apply the visibility scope, because the composer, the scheduler and
+   * the event listeners all legitimately need to load a post regardless of who
+   * is asking. That makes it the wrong thing for a read path, and using it
+   * directly in `GET /posts/:id` leaked the body of a close-friends post to an
+   * anonymous caller.
+   *
+   * Every endpoint that returns a post *to a reader* goes through here.
+   */
+  public async getVisiblePostAsync(
+    postId: string,
+    viewerUserId: string | null,
+  ): Promise<Post | null> {
+    const post = await this.posts.getByIdAsync(postId);
+    if (!post) return null;
+
+    // Unpublished content is only ever its author's to see. `status` is not
+    // part of `canView`, which decides audience rather than lifecycle.
+    const viewer = viewerUserId
+      ? await this.profiles.getByUserIdAsync(viewerUserId)
+      : null;
+    const isAuthor = viewer?.id === post.authorProfileId;
+
+    if (post.status !== PostStatus.Published && !isAuthor) return null;
+    if (post.expiresOn && post.expiresOn.getTime() <= Date.now() && !isAuthor) {
+      return null;
+    }
+
+    const relation = await this.visibility.resolveAsync(
+      viewer?.id ?? null,
+      post.authorProfileId,
+    );
+    return canView(post.visibility, relation) ? post : null;
   }
 
   /** A single post, with the same hydration as a feed page. */

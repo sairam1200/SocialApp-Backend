@@ -37,11 +37,11 @@ async function main() {
           "isLockedOut","accessFailedCount","type","securityStamp",
           "concurrencyStamp","twoFactorEnabled","profilePrivacy",
           "onboardingStep","twoFactorMethod")
-       VALUES ($1, now(), now(), $2, 'Smoke', true, $3, $4, upper($4), true, $5,
+       VALUES ($1, now(), now(), $2, 'Smoke', true, $3, $4, $5, true, $6,
                false, 0, 'User', gen_random_uuid()::text, gen_random_uuid()::text,
                false, 'Public', 'Completed', 'totp')
        ON CONFLICT ("id") DO NOTHING`,
-      [id, firstName, userName, email, hash],
+      [id, firstName, userName, email, email.toUpperCase(), hash],
     );
   }
 
