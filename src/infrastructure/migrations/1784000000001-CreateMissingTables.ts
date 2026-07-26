@@ -64,6 +64,16 @@ export class CreateMissingTables1784000000001 implements MigrationInterface {
         CONSTRAINT "PK_34cc4b2ed56792958d2b85650a1" PRIMARY KEY (id)
       )
     `);
+    // Production may have a Drizzle-created upload_jobs table that lacks the
+    // "videoId" column. The CREATE TABLE IF NOT EXISTS above is a no-op on
+    // that table, so we must ensure the column exists before indexing it.
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE public.upload_jobs ADD COLUMN "videoId" character varying;
+      EXCEPTION
+        WHEN duplicate_column THEN NULL;
+      END $$;
+    `);
     await queryRunner.query(
       `CREATE INDEX IF NOT EXISTS "IDX_ace55bd989b78450011dc5f98f" ON public.upload_jobs ("videoId")`,
     );

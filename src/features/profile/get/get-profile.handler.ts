@@ -17,7 +17,7 @@ import { getProfileImageUrl } from '../../../core/utils/profileImagePrivacy.util
 
 export class GetProfileQuery {
   userName: string;
-
+ 
   constructor(request: Partial<GetProfileQuery> = {}) {
     Object.assign(this, request);
   }
