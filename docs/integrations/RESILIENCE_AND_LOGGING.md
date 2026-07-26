@@ -208,3 +208,67 @@ Stated so nobody assumes otherwise.
 Both are unit suites. The live behaviour — a real breaker opening against a real platform,
 and a real "not configured" reason reaching the log — was verified by running the service,
 because that is the only thing that ever caught defects of this class here.
+
+
+---
+
+## 8. Startup must not depend on a dependency being reachable
+
+Added 2026-07-26 after a Cloud Run deploy failed with:
+
+```
+ERROR: (gcloud.run.services.update) The user-provided container failed to start and
+listen on the port defined provided by the PORT=8080 environment variable within the
+allocated timeout.
+```
+
+Build and push succeeded. The container was **alive and never listening** — 4m40s of nothing,
+and a message naming neither the cause nor the dependency.
+
+Reproduced by pointing `DATABASE_URL` at a closed port:
+
+```
+[startup] Redis connected
+[startup] STEP 1 — creating NestFactory
+Unable to connect to the database. Retrying (1)...
+Unable to connect to the database. Retrying (2)...
+   -> process alive, port never opened
+```
+
+`@nestjs/typeorm` retries **10 times, 3 s apart, inside `NestFactory.create()`** — before the
+HTTP server exists. Cloud Run's only startup contract is "listen on `$PORT`", so an
+unreachable database does not surface as a database error. It surfaces as a startup timeout.
+
+**Now:** 5 attempts at 2 s with `verboseRetryLog`, set at the `TypeOrmModule.forRoot` call site
+(they are Nest options, not `DataSourceOptions` — folding them in only typechecks behind a
+cast and misleads anyone using the data source from the CLI). Failure takes **11 s instead of
+never**, and prints `ECONNREFUSED <host>:<port>`.
+
+The deploy still fails, and it should — a service with no database cannot serve. But Cloud Run
+keeps the previous revision serving either way, so failing fast costs nothing and buys an
+error someone can act on.
+
+### Two Redis defects found in the same pass
+
+**`REDIS_URL` was never read.** `configs.ts` exposed only discrete `REDIS_HOST`/`REDIS_PORT`,
+with no default. An instance configured the normal way — the URL every managed provider hands
+you — fell through to ioredis's own default of `127.0.0.1:6379`, which on Cloud Run is nothing
+at all. This is character-for-character the defect `DATABASE_URL` had: validated config that
+nothing consumed. `REDIS_URL` now takes precedence, and `rediss://` enables TLS.
+
+**The reconnect loop never stopped.** `retryStrategy` returned a delay unconditionally, so
+with Redis unreachable it reconnected forever — and since every failure emits an error event,
+it logged forever too: **1,761 `ECONNREFUSED` lines and still climbing** during one local
+boot, on a service whose logs go to Cloud Logging. `main.ts` is explicitly designed to
+continue without Redis, but continuing while a background loop burns CPU and floods logs
+forever is not degrading gracefully. It now gives up after 10 attempts and says so once.
+
+Verified after the fix: happy path listens on `$PORT`, connects Redis **via `REDIS_URL`**, and
+logs **zero** connection errors.
+
+### The generalisable rule
+
+Anything awaited before `app.listen()` is a potential deploy-blocker, and its failure will be
+reported by the platform as a port problem rather than as itself. So for every dependency
+touched during bootstrap, ask: *is it bounded, and does its failure name itself?* Unbounded
+retry is the specific trap — it converts a clear error into a timeout.

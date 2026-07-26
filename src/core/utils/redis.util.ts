@@ -52,7 +52,25 @@ function clearMemoryCache(key?: string): void {
 // This is a BullMQ requirement and consumes 1 connection per worker.
 //
 // maxRetriesPerRequest: null is REQUIRED by BullMQ for workers/queues.
+/**
+ * Give up reconnecting after this many consecutive attempts.
+ *
+ * The previous strategy returned a delay unconditionally, so it **never stopped**. With
+ * Redis unreachable that produced an endless reconnect loop, and because every failure
+ * emits an error event it also produced endless log output: measured at 1,761 ECONNREFUSED
+ * lines and still climbing during a single local boot.
+ *
+ * That matters beyond tidiness. `main.ts` is explicitly designed to continue without Redis,
+ * but "continuing" while a background loop burns CPU and floods Cloud Logging forever is not
+ * degrading gracefully. Returning `null` ends it, and the app runs cache-less as intended.
+ */
+const MAX_RECONNECT_ATTEMPTS = 10;
+
 const REDIS_OPTS: RedisOptions = {
+  // `url` wins when set, matching the DATABASE_URL precedence on the Postgres side. Passing
+  // the discrete fields as well is harmless — ioredis ignores them when a URL is given —
+  // but the URL must come first for that to hold.
+  ...(configs.redis.url ? { ...parseRedisUrl(configs.redis.url) } : {}),
   host: configs.redis.host,
   port: configs.redis.port,
   username: configs.redis.username,
@@ -64,8 +82,14 @@ const REDIS_OPTS: RedisOptions = {
   keepAlive: 30000,
   connectTimeout: 10000,
   retryStrategy: (times: number) => {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
+    if (times > MAX_RECONNECT_ATTEMPTS) {
+      logger.error(
+        `Redis unreachable after ${MAX_RECONNECT_ATTEMPTS} attempts — giving up. ` +
+          `The application continues without a cache.`,
+      );
+      return null; // stop retrying
+    }
+    return Math.min(times * 50, 2000);
   },
   reconnectOnError: (err: Error) => {
     const targetError = 'READONLY';
@@ -75,6 +99,30 @@ const REDIS_OPTS: RedisOptions = {
     return false;
   },
 };
+
+/**
+ * Split a Redis URL into ioredis options.
+ *
+ * ioredis accepts a URL as its first constructor argument, but this module builds a single
+ * options object shared with BullMQ, so the parts are extracted instead. Anything
+ * unparseable is ignored rather than thrown: a malformed URL should degrade to the discrete
+ * values, not stop the process at import.
+ */
+function parseRedisUrl(url: string): Partial<RedisOptions> {
+  try {
+    const parsed = new URL(url);
+    const tls = parsed.protocol === 'rediss:';
+    return {
+      host: parsed.hostname || undefined,
+      port: parsed.port ? Number(parsed.port) : 6379,
+      username: parsed.username || undefined,
+      password: parsed.password || undefined,
+      ...(tls ? { tls: {} } : {}),
+    };
+  } catch {
+    return {};
+  }
+}
 
 const instance = new Redis(REDIS_OPTS);
 

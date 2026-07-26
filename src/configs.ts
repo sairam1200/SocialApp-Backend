@@ -172,6 +172,13 @@ const envVarsSchema = Joi.object()
     SPOTIFY_CALLBACK_URL: Joi.string().description(
       'Spotify OAuth callback URL',
     ),
+    // REDIS_URL is the convention every managed Redis provider hands you, and it was not
+    // read at all — only the discrete REDIS_HOST/REDIS_PORT below. An instance configured
+    // the normal way therefore fell back to ioredis's own default of 127.0.0.1:6379, which
+    // on Cloud Run is nothing at all. Exactly the same defect DATABASE_URL had.
+    REDIS_URL: Joi.string().description(
+      'Full Redis connection string. Takes precedence over the discrete REDIS_* values.',
+    ),
     REDIS_HOST: Joi.string().description('Redis server host'),
     REDIS_PORT: Joi.number().description('Redis server port'),
     REDIS_PASSWORD: Joi.string()
@@ -409,6 +416,7 @@ export default {
     redirectUri: envVars.REDDIT_CALLBACK_URL,
   },
   redis: {
+    url: envVars.REDIS_URL,
     host: envVars.REDIS_HOST,
     port: envVars.REDIS_PORT,
     username: envVars.REDIS_USERNAME,

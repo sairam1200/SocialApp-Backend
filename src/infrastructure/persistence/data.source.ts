@@ -168,6 +168,48 @@ if (configs.postgres.migrationsRun) {
   );
 }
 
+/**
+ * How long to keep retrying the database before giving up.
+ *
+ * TypeORM's Nest integration defaults to **10 attempts, 3 s apart**, and it does that retry
+ * loop *inside* `NestFactory.create()` — before the HTTP server is created. So an
+ * unreachable database does not produce an error: it produces a process that is alive,
+ * healthy-looking, and never listening.
+ *
+ * On Cloud Run that is the worst possible shape. The platform's only startup contract is
+ * "listen on $PORT", so the result is:
+ *
+ *   ERROR: The user-provided container failed to start and listen on the port defined
+ *   provided by the PORT=8080 environment variable within the allocated timeout.
+ *
+ * — a generic message, 4m40s after the deploy started, naming neither the database nor the
+ * connection error. Reproduced locally by pointing DATABASE_URL at a closed port: the
+ * process stayed up, logged "Unable to connect to the database. Retrying (1)…", and never
+ * opened the port.
+ *
+ * Five attempts at 2 s fails in about ten seconds instead. The deploy still fails — it must,
+ * because a service with no database cannot serve — but it fails *fast*, and `main.ts`
+ * catches the rejection and logs `FATAL` with the real reason. Cloud Run keeps the previous
+ * revision serving either way, so failing fast costs nothing and buys a usable error.
+ */
+const DB_RETRY_ATTEMPTS = 5;
+const DB_RETRY_DELAY_MS = 2_000;
+
+/**
+ * Nest-only connection options, applied at the `TypeOrmModule.forRoot` call site.
+ *
+ * Deliberately not folded into `postgresOptions`: they are read by `@nestjs/typeorm`, not by
+ * `DataSource`, so putting them here would only typecheck behind a cast and would mislead
+ * anyone using this data source from the CLI.
+ */
+export const nestRetryOptions = {
+  retryAttempts: DB_RETRY_ATTEMPTS,
+  retryDelay: DB_RETRY_DELAY_MS,
+  // Log every attempt with its error. Without this the retries are silent, and the only
+  // symptom is a startup timeout that names nothing.
+  verboseRetryLog: true,
+} as const;
+
 export const postgresOptions: DataSourceOptions = {
   type: 'postgres',
   ...connection,

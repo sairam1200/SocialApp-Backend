@@ -22,7 +22,10 @@ import { NewsletterModule } from './newsletter.module';
 import { ProjectModule } from './project.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DataSeeder } from '../infrastructure/services/data.seeder';
-import { postgresOptions } from '../infrastructure/persistence/data.source';
+import {
+  nestRetryOptions,
+  postgresOptions,
+} from '../infrastructure/persistence/data.source';
 import { HttpContextMiddleware } from '../core/middlewares/httpContext.middleware';
 import { RateLimitMiddleware } from '../core/middlewares/rate-limit.middleware';
 import { RateLimit, RateLimitLog } from '../domain/entities';
@@ -48,7 +51,7 @@ import {
       secret: configs.jwt.secret,
       signOptions: { expiresIn: configs.jwt.accessTokenExpiration },
     }),
-    TypeOrmModule.forRoot(postgresOptions),
+    TypeOrmModule.forRoot({ ...postgresOptions, ...nestRetryOptions }),
     TypeOrmModule.forFeature([RateLimit, RateLimitLog]),
     UserModule,
     RoleModule,

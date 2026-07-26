@@ -86,6 +86,29 @@ is a test asserting a bearer token cannot reach the log this way.
 So: pass an Error or a plain object, both work. If you write a *new* logging helper, do not
 spread meta without normalising it first.
 
+## Startup: anything awaited before `app.listen()` can block a deploy
+
+A Cloud Run deploy failed with *"container failed to start and listen on the port defined
+provided by the PORT=8080 environment variable"* — 4m40s, naming no cause. The container was
+alive the whole time. `@nestjs/typeorm` retries the database **10 times, 3 s apart, inside
+`NestFactory.create()`**, before the HTTP server exists, so an unreachable database is
+reported by the platform as a *port* problem.
+
+Rules that follow:
+
+- **Bound every startup retry.** DB retries are now 5 × 2 s with `verboseRetryLog`: 11 s to
+  fail instead of never, and it prints `ECONNREFUSED <host>:<port>`.
+- **Unbounded retry is the trap.** Redis's `retryStrategy` returned a delay unconditionally,
+  so it reconnected — and logged — forever: 1,761 `ECONNREFUSED` lines and climbing in one
+  boot. Return `null` to stop. "Continue without Redis" is not graceful if a loop burns CPU
+  and floods Cloud Logging behind it.
+- **Check the URL form is actually read.** `REDIS_URL` was validated in `configs.ts` and
+  consumed nowhere; ioredis silently used `127.0.0.1:6379`. Identical to the `DATABASE_URL`
+  defect. When a provider gives you a connection URL, grep that the code reads it.
+- Nest-only options (`retryAttempts`, `retryDelay`, `verboseRetryLog`) belong at
+  `TypeOrmModule.forRoot`, not in `DataSourceOptions` — they only typecheck there behind a
+  cast and mislead CLI users.
+
 ## Rate limits: read the response, don't guess
 
 Emit `RateLimit-*` and `Retry-After` on our own limited endpoints — `searchRateLimit.guard.ts`
