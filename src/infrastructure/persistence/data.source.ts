@@ -210,6 +210,42 @@ export const nestRetryOptions = {
   verboseRetryLog: true,
 } as const;
 
+/**
+ * Print the connection target at startup, with credentials stripped.
+ *
+ * Three deploys failed in a row with a message that named no host, no port and no cause,
+ * and diagnosing it from outside meant inferring from reproductions rather than reading
+ * facts. One line removes that: whatever the next failure is, the log now says exactly
+ * which endpoint was attempted and whether TLS was on.
+ *
+ * Username and password are never printed. The host and port are not secrets — they are in
+ * the connection string of every developer's environment — and without them a connection
+ * error is unactionable.
+ */
+function describeTarget(): string {
+  const ssl = resolveSsl();
+  const sslLabel =
+    ssl === false
+      ? 'off'
+      : `on (rejectUnauthorized=${(ssl as { rejectUnauthorized: boolean }).rejectUnauthorized})`;
+
+  if (configs.postgres.url) {
+    try {
+      const { hostname, port, pathname } = new URL(configs.postgres.url);
+      return `${hostname}:${port || 5432}${pathname} via DATABASE_URL, TLS ${sslLabel}`;
+    } catch {
+      return `unparseable DATABASE_URL, TLS ${sslLabel}`;
+    }
+  }
+
+  return (
+    `${configs.postgres.host}:${configs.postgres.port}/${configs.postgres.database} ` +
+    `via POSTGRES_* (DATABASE_URL not set), TLS ${sslLabel}`
+  );
+}
+
+console.log(`[data.source] connecting to ${describeTarget()}`);
+
 export const postgresOptions: DataSourceOptions = {
   type: 'postgres',
   ...connection,

@@ -152,3 +152,40 @@ describe('countMigrations directory resolution', () => {
     expect(count).toBeGreaterThan(40);
   });
 });
+
+describe('startup connection target', () => {
+  // Three deploys failed with a message naming no host, no port and no cause, and
+  // diagnosing from outside meant inferring from reproductions instead of reading facts.
+  // This line is what turns the next failure into a readable one.
+  it('is logged at startup', () => {
+    expect(dataSourceSource).toContain('[data.source] connecting to');
+  });
+
+  it('reports which variable the connection came from', () => {
+    // "via DATABASE_URL" vs "via POSTGRES_* (DATABASE_URL not set)" distinguishes a real
+    // configuration from a silent fallback — the exact confusion that hid the Redis defect,
+    // where REDIS_URL was set and never read.
+    expect(dataSourceSource).toContain('via DATABASE_URL');
+    expect(dataSourceSource).toContain('DATABASE_URL not set');
+  });
+
+  it('reports the TLS decision', () => {
+    // Neon refuses non-TLS connections, so POSTGRES_SSL=false turns every connection into a
+    // failure. Printing the decision makes that a one-glance diagnosis.
+    expect(dataSourceSource).toMatch(/TLS \$\{?sslLabel|TLS off|sslLabel/);
+  });
+
+  it('never prints the username or password', () => {
+    // The host and port are not secrets and are useless to withhold. The credentials are.
+    const fn = dataSourceSource.slice(
+      dataSourceSource.indexOf('function describeTarget'),
+      dataSourceSource.indexOf('export const postgresOptions'),
+    );
+
+    for (const forbidden of ['password', 'username', 'parsed.auth', '.href']) {
+      expect(fn).not.toContain(forbidden);
+    }
+    // Only the safe parts of the parsed URL are destructured.
+    expect(fn).toContain('hostname');
+  });
+});
