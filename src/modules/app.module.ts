@@ -21,6 +21,7 @@ import { DiscoverModule } from './discover.module';
 import { NewsletterModule } from './newsletter.module';
 import { ProjectModule } from './project.module';
 import { CommunityModule } from './community.module';
+import { VersionController } from '../features/version/version.endpoint';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DataSeeder } from '../infrastructure/services/data.seeder';
 import {
@@ -69,6 +70,10 @@ import {
     ProjectModule,
     CommunityModule,
   ],
+  // Deliberately on the root module rather than a feature module: it has no
+  // dependencies, and it must keep answering even if a feature module fails to
+  // resolve — that is exactly when you most need to know what is running.
+  controllers: [VersionController],
   providers: [dependency.RateLimitRepository, RateLimitMiddleware],
 })
 export class AppModule

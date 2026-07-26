@@ -97,6 +97,30 @@ It also found two defects the test suites could not, both since fixed:
    and the full body of a close-friends post. The metadata path was correct,
    which is precisely why this survived everything else.
 
+## Telling whether a deploy landed, from now on
+
+The reason this took two hours to even diagnose is that there was no way to ask
+what was running. The live commit had to be inferred from the *contents of a
+404 page* — grepping for a string only the newest build could produce. That
+works once, by luck, and not at all for a change with no visible surface.
+
+Both services now answer directly:
+
+```bash
+curl -s https://demo.gaddr.com/api/v1/version | jq   # backend
+curl -s https://demo.gaddr.com/api/version    | jq   # frontend
+```
+
+Compare `commit` to `git rev-parse --short HEAD`. Equal means that commit is
+serving.
+
+**Neither needs a pipeline change.** The backend reads Cloud Run's `K_REVISION`,
+which already carries the short SHA because `cloudbuild.yaml` deploys with
+`--revision-suffix=$SHORT_SHA`. The frontend reads `VERCEL_GIT_COMMIT_SHA`,
+which Vercel injects into every build automatically. Both fall back to
+`unknown` rather than throwing — a version endpoint that 500s when it cannot
+identify itself is worse than one that admits it does not know.
+
 ## What to check first
 
 Most likely, cheapest first:
