@@ -7,11 +7,27 @@
 > the backend went out too. Nothing in this repository caused that, and nobody
 > touched either provider's settings from here.
 >
-> **But new pushes still do not deploy.** Two commits pushed at 15:32 and 15:35
-> CEST produced no new deployment: 70 minutes of polling `/api/version` returned
-> the same commit *and the same deployment id* throughout. So the backlog drained
-> once; the trigger did not come back. The checklist below still applies, and
-> the GitHub App installation is still the first thing to check.
+> **But new pushes still do not deploy — and it is only Vercel.**
+>
+> The backend is current: `demo.gaddr.com/api/v1/search/unified` and
+> `/api/v1/community/live/categories` both answer, and neither existed before
+> today's commits. So Cloud Build is fine. Only the frontend is stuck.
+>
+> Five frontend commits pushed between 15:32 and 18:33 CEST produced no
+> deployment at all. Three separate watches, about three hours of polling
+> `/api/version`, returned the same commit **and the same deployment id**
+> (`dpl_3at92RMevj3S4Sj6yZ3TtR98rEmq`) every time. So the backlog drained once;
+> the trigger did not come back.
+>
+> Ruled out from here:
+>
+> - **Wrong branch.** The remote has only `main` and `staging`; `eb738ff` is on
+>   `main`, and `/api/version` reports `main` as what is deployed. The commits
+>   that are not deploying are on the same branch as the one that did.
+> - **Project config in the repo.** There is no `vercel.json`.
+>
+> That leaves the trigger itself, which cannot be inspected from here. The
+> GitHub App installation is still the first thing to check.
 >
 > Everything below is kept as-is. The lasting outcome is
 > `scripts/verify-deploy.sh` and the two `/version` endpoints, which turn "is it
