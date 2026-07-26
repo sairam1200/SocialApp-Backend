@@ -42,15 +42,60 @@ Community routes mapped, and the migration creates 36 tables and 21 indexes on
 
 ## Why it was not fixed here
 
-Neither deployment account is reachable from this machine:
+Neither deployment account is reachable from this machine. This was established
+by querying the APIs directly, not inferred:
 
-- `vercel whoami` → `ricky-billkrantz`, whose team does not contain the Gaddr
-  project. The `demo.gaddr.com` project lives on a different account.
-- `gcloud auth list` → `dena.azarang@gmail.com`, whose projects do not include
-  the one in `cloudbuild.yaml`.
+```
+GET api.vercel.com/v2/teams        → 1 team: ricky-billkrantzs-projects
+GET api.vercel.com/v9/projects     → 7 projects, none linked to a Gaddr repo
+GET .../projects (personal scope)  → 0
+gcloud auth list                   → dena.azarang@gmail.com
+gcloud projects list               → no project matching cloudbuild.yaml
+```
 
-Deploying with either would push to the wrong account and could change what
-serves a production domain. That is not a call to make without the owner.
+There is also **no CI-based deploy path** to fall back on: neither repository
+has a GitHub Actions workflow (`backend/.github/` holds only a PR template),
+and there are no deploy hooks in any config.
+
+Deploying with either credential would push to the wrong account and could
+change what serves a production domain. That is not a call to make without the
+owner.
+
+## Verified working, just not at that hostname
+
+Because the domain could not be reached, the whole stack was run locally and
+driven through a browser — production build, real Postgres, real API, no mocks:
+
+| | |
+|---|---|
+| Backend | `dist/main.js` against a real database, 82 Community routes mapped, migration applied |
+| Frontend | `next build` + `next start`, `AUTH_API_URL` pointed at it |
+| Driven | a real browser, both colour schemes |
+
+What that confirmed, beyond what the test suites cover:
+
+- the feed renders real posts with real dates, avatars and linked hashtags;
+- switching to Latest puts `?feed=latest` in the URL, returns different
+  content, and shows **no** ranking reasons — while Recommended does;
+- the **Paid partnership** label renders above the body of the sponsored post;
+- the poll shows "No votes yet" rather than its tally;
+- a profile page renders real follower/post counts and both timeline modes;
+- server-rendered metadata carries title, description, keywords and JSON-LD;
+- **a close-friends post produces generic metadata and `noindex`**, with no
+  body text and no JSON-LD anywhere in the HTML;
+- no console errors.
+
+It also found two defects the test suites could not, both since fixed:
+
+1. **The dashboard shell was `bg-white`** — invisible in dark mode. It survived
+   because every previous child painted its own background; Community's right
+   rail does not, so it rendered near-white text on white. Computed colour was
+   correct on every element, so a contrast check on the text alone would have
+   passed.
+2. **A post was readable by id regardless of visibility.** `GET /posts/:id`
+   used a raw primary-key lookup, so an anonymous caller with an id got a 200
+   and the full body of a close-friends post. The metadata path was correct,
+   which is precisely why this survived everything else.
 
 ## What to check first
 
