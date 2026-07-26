@@ -1,4 +1,5 @@
 import configs from './configs';
+import helmet from 'helmet';
 import { NestFactory } from '@nestjs/core';
 import redis from './core/utils/redis.util';
 import logger from './core/utils/winston.util';
@@ -58,6 +59,59 @@ async function bootstrap() {
   // Trust exactly one hop: the platform load balancer, which overwrites the
   // header. A larger value would let clients spoof their own address.
   app.set('trust proxy', 1);
+
+  // Security headers. Finding M-series in the audit: none of these were set, and their
+  // absence is specifically what made the frontend's localStorage token storage exploitable —
+  // without a CSP, any injected script can read it and post it anywhere.
+  //
+  // Configured for an **API**, not a website. The researched guidance for a JSON service is to
+  // start from a deny-all policy and add only what is needed, rather than trimming the
+  // browser-oriented defaults down:
+  //
+  // - `default-src 'none'` — this service returns JSON. It has no scripts, styles, fonts or
+  //   frames of its own to allow, so nothing needs to be permitted by default.
+  // - CSP is **skipped outside production**, because Swagger and Scalar are mounted there and
+  //   both need inline scripts and styles to render. Loosening the production policy to suit a
+  //   dev-only tool would be the wrong trade; in production those routes do not exist.
+  // - `crossOriginResourcePolicy: false` — the frontend is a different origin, and the default
+  //   `same-origin` would block it from reading responses. CORS above is what governs that,
+  //   deliberately and explicitly.
+  // - HSTS with a two-year max-age and `includeSubDomains`, since gaddr.com is HTTPS-only
+  //   behind Cloud Run. `preload` is left off on purpose: submitting to the browser preload
+  //   list is effectively irreversible, and that is a decision for whoever owns the domain.
+  app.use(
+    helmet({
+      contentSecurityPolicy:
+        configs.env === 'production'
+          ? {
+              // `useDefaults: false` is the whole point. Helmet merges directives into its
+              // browser-oriented defaults unless told not to, so the first version of this
+              // emitted `default-src 'none'` *alongside* `script-src 'self'`,
+              // `font-src 'self' https: data:` and `style-src 'unsafe-inline'` — a deny-all
+              // with a list of holes punched in it for content a JSON API does not serve.
+              // Verified by reading the emitted header rather than assuming.
+              useDefaults: false,
+              directives: {
+                defaultSrc: ["'none'"],
+                frameAncestors: ["'none'"],
+                baseUri: ["'none'"],
+                formAction: ["'none'"],
+              },
+            }
+          : false,
+      // DENY, not the SAMEORIGIN default. Nothing here should ever be framed, including by
+      // us — there is no page to frame.
+      frameguard: { action: 'deny' },
+      crossOriginResourcePolicy: false,
+      // Referrer is meaningless for an API and can leak a path to a third party.
+      referrerPolicy: { policy: 'no-referrer' },
+      hsts: {
+        maxAge: 63_072_000,
+        includeSubDomains: true,
+        preload: false,
+      },
+    }),
+  );
 
   app.use(cookieParser());
   const globalPrefix = 'api';

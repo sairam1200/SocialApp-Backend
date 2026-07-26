@@ -1,7 +1,4 @@
-export {
-  SocialProfileRepository,
-  escapeLike,
-} from './socialProfile.repository';
+export { SocialProfileRepository } from './socialProfile.repository';
 export { PostRepository } from './post.repository';
 export { EngagementRepository } from './engagement.repository';
 export { CommerceRepository } from './commerce.repository';

@@ -4,6 +4,7 @@ import { In, Not, Repository } from 'typeorm';
 import { SocialProfile } from '../../../domain/entities/social';
 import { ProfileKind, Visibility } from '../../../domain/enums';
 import { ISocialProfileRepository } from '../../../domain/repositories/isocial.repository';
+import { containsPattern } from '../../../core/utils/likePattern.util';
 
 @Injectable()
 export class SocialProfileRepository implements ISocialProfileRepository {
@@ -97,8 +98,9 @@ export class SocialProfileRepository implements ISocialProfileRepository {
     limit: number,
     kinds?: string[],
   ): Promise<SocialProfile[]> {
-    const needle = escapeLike(term);
-    if (!needle) return [];
+    const trimmed = (term ?? '').trim();
+    if (!trimmed) return [];
+    const needle = containsPattern(trimmed);
 
     const query = this.context
       .createQueryBuilder('p')
@@ -107,7 +109,7 @@ export class SocialProfileRepository implements ISocialProfileRepository {
       })
       .andWhere(
         '(p."handle" ILIKE :needle OR p."displayName" ILIKE :needle OR p."headline" ILIKE :needle)',
-        { needle: `%${needle}%` },
+        { needle },
       )
       .orderBy('p."followersCount"', 'DESC')
       .limit(Math.min(limit, 100));
@@ -162,15 +164,4 @@ export class SocialProfileRepository implements ISocialProfileRepository {
     }
     return query.getMany();
   }
-}
-
-/**
- * Escape LIKE wildcards in user input.
- *
- * Shared by every social repository that does an ILIKE. Exported so the one
- * implementation is reused rather than re-typed per file — a bare `%` reaching
- * `ILIKE` matched the entire table once already.
- */
-export function escapeLike(term: string): string {
-  return (term ?? '').trim().replace(/[\\%_]/g, (m) => `\\${m}`);
 }

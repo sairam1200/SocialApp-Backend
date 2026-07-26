@@ -75,6 +75,7 @@ export default {
   ISTREAM_REPOSITORY: 'IStreamRepository',
   IMESSAGING_REPOSITORY: 'IMessagingRepository',
   ILEARNING_REPOSITORY: 'ILearningRepository',
+  IGADDRJOBS_REPOSITORY: 'IGaddrJobsRepository',
 
   BULL_QUEUES: {
     FACEBOOK_IMPORT: 'facebook-import',

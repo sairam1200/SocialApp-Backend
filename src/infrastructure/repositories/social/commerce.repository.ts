@@ -14,7 +14,7 @@ import {
 } from '../../../domain/entities/social';
 import { CampaignStatus, LedgerEntryStatus } from '../../../domain/enums';
 import { ICommerceRepository } from '../../../domain/repositories/isocial.repository';
-import { escapeLike } from './socialProfile.repository';
+import { containsPattern } from '../../../core/utils/likePattern.util';
 
 @Injectable()
 export class CommerceRepository implements ICommerceRepository {
@@ -74,12 +74,14 @@ export class CommerceRepository implements ICommerceRepository {
     term: string,
     limit: number,
   ): Promise<Product[]> {
-    const needle = escapeLike(term);
-    if (!needle) return [];
+    const trimmed = (term ?? '').trim();
+    if (!trimmed) return [];
     return this.products
       .createQueryBuilder('p')
       .where('p."isActive" = true')
-      .andWhere('p."searchText" ILIKE :needle', { needle: `%${needle}%` })
+      .andWhere('p."searchText" ILIKE :needle', {
+        needle: containsPattern(trimmed),
+      })
       .orderBy('p."salesCount"', 'DESC')
       .limit(Math.min(limit, 100))
       .getMany();

@@ -40,6 +40,9 @@ export { FacebookVideoAnalytics } from './facebookVideoAnalytics.entity';
 export { NewsletterSubscriber } from './newsletterSubscriber.entity';
 
 export { Project } from './project.entity';
+/* Gaddr Jobs, our sister product. Read-only; it owns these tables and their
+ * migrations, so neither has one here. */
+export { ExternalJob } from './externalJob.entity';
 
 /* Community — the social layer. Grouped in `social/` and re-exported here so
  * `from '../domain/entities'` stays the single import path for every entity. */

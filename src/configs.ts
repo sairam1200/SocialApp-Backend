@@ -183,6 +183,10 @@ const envVarsSchema = Joi.object()
       .allow('')
       .default('')
       .description('Shared secret the media server signs its callbacks with'),
+    GADDR_JOBS_URL: Joi.string()
+      .allow('')
+      .default('')
+      .description('Public base URL of Gaddr Jobs, for linking to a result'),
     COMMUNITY_INVITE_REWARD_MINOR: Joi.number()
       .default(500)
       .description(
@@ -538,6 +542,9 @@ export default {
     srtPort: envVars.MEDIA_SERVER_SRT_PORT,
     playbackBaseUrl: envVars.MEDIA_SERVER_PLAYBACK_BASE_URL,
     webhookSecret: envVars.MEDIA_SERVER_WEBHOOK_SECRET,
+  },
+  gaddrJobs: {
+    url: envVars.GADDR_JOBS_URL,
   },
   community: {
     inviteRewardMinor: envVars.COMMUNITY_INVITE_REWARD_MINOR,

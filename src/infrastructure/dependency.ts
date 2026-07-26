@@ -69,6 +69,7 @@ import {
   SocialProfileRepository,
   StreamRepository,
 } from './repositories/social';
+import { GaddrJobsRepository } from './repositories/gaddrJobs.repository';
 
 /* This is the dependency object that holds all the repositories & services
  * used in the application. It is used to provide the dependencies to the
@@ -336,5 +337,11 @@ export const dependency = {
   LearningRepository: {
     provide: _const.ILEARNING_REPOSITORY,
     useClass: LearningRepository,
+  },
+
+  // Gaddr Jobs — our sister product, read-only over the shared database.
+  GaddrJobsRepository: {
+    provide: _const.IGADDRJOBS_REPOSITORY,
+    useClass: GaddrJobsRepository,
   },
 };

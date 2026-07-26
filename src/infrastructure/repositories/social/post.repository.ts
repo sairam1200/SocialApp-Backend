@@ -18,7 +18,7 @@ import {
   FeedQuery,
   IPostRepository,
 } from '../../../domain/repositories/isocial.repository';
-import { escapeLike } from './socialProfile.repository';
+import { containsPattern } from '../../../core/utils/likePattern.util';
 
 /** Candidate retrieval never looks further back than this, whatever is asked. */
 const MAX_CANDIDATE_LIMIT = 600;
@@ -416,11 +416,13 @@ export class PostRepository implements IPostRepository {
     scope: VisibilityScope,
     limit: number,
   ): Promise<Post[]> {
-    const needle = escapeLike(term);
-    if (!needle) return [];
+    const trimmed = (term ?? '').trim();
+    if (!trimmed) return [];
     return this.baseVisibleQuery('p', scope)
       .andWhere('p."kind" != :comment', { comment: PostKind.Comment })
-      .andWhere('p."searchText" ILIKE :needle', { needle: `%${needle}%` })
+      .andWhere('p."searchText" ILIKE :needle', {
+        needle: containsPattern(trimmed),
+      })
       .orderBy('p."hotScore"', 'DESC')
       .addOrderBy('p."publishedOn"', 'DESC')
       .limit(Math.min(limit, 100))

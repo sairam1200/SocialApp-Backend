@@ -3,6 +3,8 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { JwtService } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import community from '../features/community';
+import { UnifiedSearchController } from '../features/search/unified-search.endpoint';
+import { UnifiedSearchService } from '../infrastructure/services/search/unified-search.service';
 import { dependency } from '../infrastructure/dependency';
 import {
   AffiliateClick,
@@ -43,6 +45,9 @@ import {
   TopicAffinity,
 } from '../domain/entities/social';
 import {
+  ContentStream,
+  ExternalJob,
+  Project,
   Role,
   RoleClaim,
   Topic,
@@ -79,6 +84,13 @@ import {
  *
  * Registers every social entity with TypeORM, the seven aggregate
  * repositories, the services, the scheduler and the event listener.
+ *
+ * **Unified search lives here, not in `IntegrationsModule`.** It reaches every
+ * source at once — Community posts, profiles, live channels, Gaddr Jobs and
+ * aggregated platform content — and all but the last two are already wired
+ * here. Registering it in the search module instead would mean duplicating the
+ * whole social provider graph into a second module, which is the shape that
+ * eventually drifts. `GET /search/results` is untouched and stays where it is.
  *
  * Community dispatches `FollowUserCommand`/`UnfollowUserCommand` rather than
  * keeping a second follow graph. Those handlers are **not** re-registered
@@ -147,9 +159,14 @@ import {
       RoleClaim,
       Topic,
       UserTopic,
+      // Unified search reaches past Community: aggregated cross-platform
+      // content, and Gaddr Jobs over the shared database.
+      ContentStream,
+      Project,
+      ExternalJob,
     ]),
   ],
-  controllers: [...community.addControllers()],
+  controllers: [...community.addControllers(), UnifiedSearchController],
   providers: [
     JwtService,
 
@@ -169,6 +186,8 @@ import {
     dependency.UserRoleRepository,
     dependency.RoleClaimRepository,
     dependency.EmailService,
+    dependency.ContentStreamRepository,
+    dependency.GaddrJobsRepository,
 
     VisibilityService,
     RecommendationService,
@@ -187,10 +206,13 @@ import {
     BrandedEmailService,
     TwoFactorEmailService,
 
+    UnifiedSearchService,
+
     CommunityScheduler,
     CommunityEventListener,
   ],
   exports: [
+    UnifiedSearchService,
     BrandedEmailService,
     TwoFactorEmailService,
     FeedService,

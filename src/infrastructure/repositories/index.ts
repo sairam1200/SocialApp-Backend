@@ -27,3 +27,4 @@ export { FacebookPostAnalyticsRepository } from './facebookPostAnalytics.reposit
 export { FacebookVideoAnalyticsRepository } from './facebookVideoAnalytics.repository';
 export { NewsletterSubscriberRepository } from './newsletterSubscriber.repository';
 export { ProjectRepository } from './project.repository';
+export { GaddrJobsRepository } from './gaddrJobs.repository';
