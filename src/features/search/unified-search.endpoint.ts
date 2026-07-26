@@ -1,7 +1,5 @@
 import * as Joi from 'joi';
-import { Controller, Get, Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   SearchMode,
