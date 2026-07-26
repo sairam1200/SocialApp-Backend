@@ -362,6 +362,19 @@ export interface ICommerceRepository {
   ): Promise<CreatorSubscription>;
 }
 
+/**
+ * How to browse who is live.
+ *
+ * `viewers` puts the busiest channel first, which is what a directory is for;
+ * `recent` puts the one that just went live first, which is the only way a new
+ * channel is ever discovered. A directory with only the first ordering is a
+ * directory where nobody new is ever seen.
+ */
+export interface LiveListingOptions {
+  category?: string;
+  sort?: 'viewers' | 'recent';
+}
+
 export interface IStreamRepository {
   getByProfileAsync(profileId: string): Promise<LiveStream | null>;
   getByChannelKeyAsync(channelKey: string): Promise<LiveStream | null>;
@@ -371,7 +384,10 @@ export interface IStreamRepository {
     id: string,
     changes: Partial<LiveStream>,
   ): Promise<LiveStream | null>;
-  listLiveAsync(limit: number): Promise<LiveStream[]>;
+  listLiveAsync(
+    limit: number,
+    options?: LiveListingOptions,
+  ): Promise<LiveStream[]>;
 
   startSessionAsync(session: StreamSession): Promise<StreamSession>;
   endSessionAsync(

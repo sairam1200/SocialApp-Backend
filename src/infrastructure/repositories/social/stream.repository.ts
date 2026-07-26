@@ -1,6 +1,6 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
-import { IsNull, Repository } from 'typeorm';
+import { FindOptionsWhere, ILike, IsNull, Repository } from 'typeorm';
 import {
   LiveStream,
   StreamChatMessage,
@@ -14,7 +14,10 @@ import {
   StreamStatus,
   Visibility,
 } from '../../../domain/enums';
-import { IStreamRepository } from '../../../domain/repositories/isocial.repository';
+import {
+  IStreamRepository,
+  LiveListingOptions,
+} from '../../../domain/repositories/isocial.repository';
 
 @Injectable()
 export class StreamRepository implements IStreamRepository {
@@ -64,10 +67,24 @@ export class StreamRepository implements IStreamRepository {
     return this.getByIdAsync(id);
   }
 
-  public async listLiveAsync(limit: number): Promise<LiveStream[]> {
+  public async listLiveAsync(
+    limit: number,
+    options?: LiveListingOptions,
+  ): Promise<LiveStream[]> {
+    const where: FindOptionsWhere<LiveStream> = {
+      status: StreamStatus.Live,
+      visibility: Visibility.Public,
+    };
+    // Case-insensitive so "Music" and "music" are one category. The rail
+    // offers exact strings, but a hand-typed URL should still land.
+    if (options?.category) where.category = ILike(options.category);
+
     return this.streams.find({
-      where: { status: StreamStatus.Live, visibility: Visibility.Public },
-      order: { viewersCount: 'DESC' },
+      where,
+      order:
+        options?.sort === 'recent'
+          ? { startedOn: 'DESC' }
+          : { viewersCount: 'DESC' },
       take: Math.min(limit, 100),
     });
   }

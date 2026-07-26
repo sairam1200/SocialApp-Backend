@@ -14,7 +14,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import configs from '../../configs';
 import _const from '../../core/utils/const';
 import { cryptoUtils } from '../../core/utils/crypto.util';
@@ -88,10 +88,26 @@ export class CommunityStreamController {
 
   @Get('live')
   @ApiOperation({ summary: 'Who is live right now' })
+  @ApiQuery({ name: 'category', required: false })
+  @ApiQuery({
+    name: 'sort',
+    required: false,
+    enum: ['viewers', 'recent'],
+    description:
+      'Busiest first (default), or most recently started — the only ordering in which a new channel is ever seen.',
+  })
   @ApiResponse({ status: 200, type: [StreamModel] })
-  public async live(@Query('limit') limit?: string): Promise<StreamModel[]> {
+  public async live(
+    @Query('limit') limit?: string,
+    @Query('category') category?: string,
+    @Query('sort') sort?: string,
+  ): Promise<StreamModel[]> {
     const streams = await this.streams.listLiveAsync(
       clampInt(limit, 24, 1, 100),
+      {
+        category: category?.trim() || undefined,
+        sort: sort === 'recent' ? 'recent' : 'viewers',
+      },
     );
     const owners = await this.profiles.getManyByIdsAsync(
       streams.map((s) => s.profileId),
@@ -111,6 +127,40 @@ export class CommunityStreamController {
       playback: this.control.playbackUrls(s.channelKey),
       chatEnabled: s.chatEnabled,
     }));
+  }
+
+  /**
+   * The categories with someone live in them, busiest first.
+   *
+   * Its own endpoint rather than a field on `live`, for two reasons: the rail
+   * must keep showing every category once the reader has picked one — a facet
+   * counted over its own filter is a one-way door — and categories change far
+   * more slowly than viewer counts, so the client can cache this much longer
+   * than the listing it decorates.
+   */
+  @Get('live/categories')
+  @ApiOperation({ summary: 'Categories with someone live in them' })
+  @ApiResponse({ status: 200, type: [Object] })
+  public async liveCategories(): Promise<
+    Array<{ category: string; count: number; viewers: number }>
+  > {
+    const streams = await this.streams.listLiveAsync(100);
+
+    const counts = new Map<string, { count: number; viewers: number }>();
+    for (const stream of streams) {
+      const category = stream.category?.trim();
+      if (!category) continue;
+      const entry = counts.get(category) ?? { count: 0, viewers: 0 };
+      entry.count += 1;
+      entry.viewers += stream.viewersCount ?? 0;
+      counts.set(category, entry);
+    }
+
+    return Array.from(counts.entries())
+      .map(([category, entry]) => ({ category, ...entry }))
+      .sort(
+        (a, b) => b.viewers - a.viewers || a.category.localeCompare(b.category),
+      );
   }
 
   @Get('streams/:channelKey')

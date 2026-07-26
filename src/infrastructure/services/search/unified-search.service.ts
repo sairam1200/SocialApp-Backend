@@ -57,9 +57,14 @@ export interface UnifiedSearchRequest {
   /** Restrict to these platforms. Empty means all. */
   platforms?: SearchSourcePlatform[];
   kinds?: SearchResultKind[];
+  /** Themes to narrow to. Matching any one of them is enough. */
+  topics?: string[];
   /** Stable seed for `random`, so paging does not reshuffle. */
   seed?: string;
 }
+
+/** How many themes the category rail gets. Beyond this it stops being a rail. */
+const TOPIC_FACET_LIMIT = 24;
 
 /**
  * One search across everything.
@@ -121,7 +126,7 @@ export class UnifiedSearchService {
       }
     }
 
-    let ranked = await this.rankAsync(
+    const ranked = await this.rankAsync(
       request.mode,
       lists,
       byId,
@@ -129,19 +134,31 @@ export class UnifiedSearchService {
       request.seed ?? keyword,
     );
 
-    ranked = this.applyFilters(ranked, request);
+    const filtered = this.applyFilters(ranked, request);
 
     const start = (page - 1) * limit;
-    const pageItems = ranked.slice(start, start + limit);
+    const pageItems = filtered.slice(start, start + limit);
 
     return {
       mode: request.mode,
       keyword,
       items: pageItems,
-      total: ranked.length,
-      hasMore: start + limit < ranked.length,
-      sources: this.countSources(ranked),
-      kinds: this.countKinds(ranked),
+      total: filtered.length,
+      hasMore: start + limit < filtered.length,
+      // Each facet is counted with its *own* filter lifted, the way faceted
+      // search has to work. Counting all three over the fully filtered list
+      // would delete every chip the reader had not already picked, and once
+      // "Gaddr" was selected there would be no way to add "YouTube" — the
+      // filter would be a one-way door.
+      sources: this.countSources(
+        this.applyFilters(ranked, { ...request, platforms: undefined }),
+      ),
+      kinds: this.countKinds(
+        this.applyFilters(ranked, { ...request, kinds: undefined }),
+      ),
+      topics: this.countTopics(
+        this.applyFilters(ranked, { ...request, topics: undefined }),
+      ),
     };
   }
 
@@ -471,16 +488,24 @@ export class UnifiedSearchService {
 
   private applyFilters(
     items: SearchResultItem[],
-    request: UnifiedSearchRequest,
+    filters: Pick<UnifiedSearchRequest, 'platforms' | 'kinds' | 'topics'>,
   ): SearchResultItem[] {
     let result = items;
-    if (request.platforms?.length) {
-      const wanted = new Set(request.platforms);
+    if (filters.platforms?.length) {
+      const wanted = new Set(filters.platforms);
       result = result.filter((i) => wanted.has(i.source.platform));
     }
-    if (request.kinds?.length) {
-      const wanted = new Set(request.kinds);
+    if (filters.kinds?.length) {
+      const wanted = new Set(filters.kinds);
       result = result.filter((i) => wanted.has(i.kind));
+    }
+    if (filters.topics?.length) {
+      // Any, not all. Picking two themes should widen the view, which is what
+      // a reader browsing categories means by it.
+      const wanted = new Set(filters.topics.map(normaliseTopic));
+      result = result.filter((i) =>
+        i.topics.some((topic) => wanted.has(normaliseTopic(topic))),
+      );
     }
     return result;
   }
@@ -525,4 +550,39 @@ export class UnifiedSearchService {
       .map(([kind, count]) => ({ kind, count }))
       .sort((a, b) => b.count - a.count);
   }
+
+  /**
+   * The themes present in the results, most common first.
+   *
+   * Counted per item, not per occurrence: a post that says "#design" four
+   * times is one result about design, and counting mentions would let a single
+   * enthusiastic author decide the whole category rail.
+   */
+  private countTopics(
+    items: SearchResultItem[],
+  ): UnifiedSearchResponse['topics'] {
+    const counts = new Map<string, number>();
+    for (const item of items) {
+      for (const topic of new Set(item.topics.map(normaliseTopic))) {
+        if (!topic) continue;
+        counts.set(topic, (counts.get(topic) ?? 0) + 1);
+      }
+    }
+    return Array.from(counts.entries())
+      .map(([topic, count]) => ({ topic, count }))
+      .sort((a, b) => b.count - a.count || a.topic.localeCompare(b.topic))
+      .slice(0, TOPIC_FACET_LIMIT);
+  }
+}
+
+/**
+ * `" #Design "` → `"design"`.
+ *
+ * One spelling per theme. Topics arrive from six sources with six conventions
+ * — hashtags from posts, categories from live channels, tags from job boards —
+ * and without this the rail would show "Design", "design" and "#design" as
+ * three separate categories that each filter out the others' results.
+ */
+export function normaliseTopic(topic: string): string {
+  return topic.trim().replace(/^#+/, '').toLowerCase();
 }

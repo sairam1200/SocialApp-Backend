@@ -189,6 +189,18 @@ export class UnifiedSearchResponse {
 
   @ApiProperty({ type: [Object] })
   kinds: Array<{ kind: SearchResultKind; count: number }>;
+
+  /**
+   * The themes actually present in this result set, most common first.
+   *
+   * Categories are derived rather than declared. A fixed taxonomy would need
+   * curating in two places — here and in whatever each platform calls its own
+   * categories — and would go stale the moment a topic caught on. These are
+   * the topics on the results themselves, so the rail always describes what is
+   * really there.
+   */
+  @ApiProperty({ type: [Object] })
+  topics: Array<{ topic: string; count: number }>;
 }
 
 /** Labels, in one place, so a platform cannot be spelled two ways. */

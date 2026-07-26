@@ -8,7 +8,10 @@ import {
   UnifiedSearchResponse,
 } from '../../domain/contracts/unified-search.model';
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
-import { UnifiedSearchService } from '../../infrastructure/services/search/unified-search.service';
+import {
+  UnifiedSearchService,
+  normaliseTopic,
+} from '../../infrastructure/services/search/unified-search.service';
 import { SearchRateLimitGuard } from '../../core/passport/searchRateLimit.guard';
 
 const querySchema = Joi.object({
@@ -20,6 +23,7 @@ const querySchema = Joi.object({
   limit: Joi.number().integer().min(1).max(50).default(24),
   platforms: Joi.string().allow('', null),
   kinds: Joi.string().allow('', null),
+  topics: Joi.string().max(400).allow('', null),
   seed: Joi.string().max(64).allow('', null),
 });
 
@@ -65,6 +69,12 @@ export class UnifiedSearchController {
     required: false,
     description: 'Comma-separated, e.g. `video,job`',
   })
+  @ApiQuery({
+    name: 'topics',
+    required: false,
+    description:
+      'Comma-separated themes, e.g. `design,fitness`. Matching any one is enough. Case- and `#`-insensitive.',
+  })
   @ApiResponse({ status: 200, type: UnifiedSearchResponse })
   public async unified(
     @Query() query: Record<string, string>,
@@ -84,6 +94,7 @@ export class UnifiedSearchController {
       limit: value.limit,
       platforms: parseEnumList(value.platforms, SearchSourcePlatform),
       kinds: parseEnumList(value.kinds, SearchResultKind),
+      topics: parseTopicList(value.topics),
       seed: value.seed || undefined,
     });
   }
@@ -95,6 +106,28 @@ export class UnifiedSearchController {
  * Unknown values are dropped rather than rejected. A stale filter chip in a
  * bookmarked URL should narrow the results, not 400 the whole search.
  */
+/**
+ * `"Design, #fitness, ,"` → `["design", "fitness"]`.
+ *
+ * Themes are free text, so unlike the enum lists there is nothing to validate
+ * against — only to normalise, the same way the service does, and to bound so
+ * a hand-edited URL cannot turn one request into a hundred filters.
+ */
+export function parseTopicList(
+  raw: string | undefined | null,
+): string[] | undefined {
+  if (!raw) return undefined;
+  const parsed = Array.from(
+    new Set(
+      raw
+        .split(',')
+        .map((value) => normaliseTopic(value))
+        .filter((value) => value.length > 0 && value.length <= 64),
+    ),
+  ).slice(0, 20);
+  return parsed.length > 0 ? parsed : undefined;
+}
+
 export function parseEnumList<T extends Record<string, string>>(
   raw: string | undefined | null,
   enumObject: T,
