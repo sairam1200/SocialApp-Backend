@@ -87,8 +87,35 @@ const envVarsSchema = Joi.object()
       .default(false)
       .description('Enable PostgreSQL query logging'),
     POSTGRES_MIGRATIONS_RUN: Joi.boolean()
-      .default(true)
-      .description('Run migrations on application start'),
+      // Defaults to FALSE, changed from true on 2026-07-26 after it broke a deploy.
+      //
+      // The two settings were entangled. `POSTGRES_MIGRATIONS` had no default, so
+      // `data.source.ts` built an unresolvable glob, TypeORM discovered zero migrations,
+      // and `migrationsRun: true` was a silent no-op everywhere. Giving the glob a correct
+      // default therefore did not just fix fresh environments — it switched migrations on
+      // in every environment at once, including production, where the schema already
+      // existed. The first migration in the chain tried to create tables that were already
+      // there:
+      //
+      //   Migration "InitialCreate1747343277182" failed,
+      //   error: relation "userRoles" already exists
+      //
+      // TypeORM throws that during DataSource.initialize(), so the process exits, the
+      // container never passes its startup probe, and the Cloud Run deploy fails after a
+      // perfectly successful build and push.
+      //
+      // False is also the better default on its own merits, independent of that bug:
+      // Cloud Run runs up to four instances, and every one of them would race to apply the
+      // same migrations on boot. AGENTS.md already flagged that hazard.
+      //
+      // So migrations are now a deliberate step — `npm run migration:run` — and
+      // `data.source.ts` logs the resolved glob and the count at startup either way, so the
+      // state is never invisible again.
+      .default(false)
+      .description(
+        'Apply migrations on application start. Default false — see the comment above; ' +
+          'prefer running "npm run migration:run" as an explicit step.',
+      ),
     FACEBOOK_CLIENT_ID: Joi.string().description('Facebook OAuth client ID'),
     FACEBOOK_CLIENT_SECRET: Joi.string().description(
       'Facebook OAuth client secret',

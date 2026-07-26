@@ -93,7 +93,15 @@ const connection: Partial<DataSourceOptions> = configs.postgres.url
  *
  * That was observed on a fresh environment — 1 table where 42 were expected, and nothing
  * in the log to say so. So the defaults live here rather than being required of every
- * deployment, and an unset variable now yields a working database instead of an empty one.
+ * deployment.
+ *
+ * **Defaulting the glob is not the same as applying the migrations**, and conflating the two
+ * caused a failed production deploy. Once the glob resolved correctly, `migrationsRun` — which
+ * defaulted to `true` and had been a silent no-op everywhere — suddenly applied 53 migrations
+ * to a database whose schema already existed, and `InitialCreate` failed on
+ * `relation "userRoles" already exists`. `POSTGRES_MIGRATIONS_RUN` now defaults to **false**;
+ * see the comment on it in `configs.ts`. Applying migrations is a deliberate step:
+ * `npm run migration:run`.
  *
  * Both defaults are **recursive** on purpose. A non-recursive `*.entity.js` misses
  * entities in subdirectories, and the symptom is a runtime
@@ -114,45 +122,51 @@ const MIGRATIONS_GLOB = resolveGlob(
 );
 
 /**
- * Fail fast when the migration glob matches nothing.
+ * Count the compiled migrations a glob actually matches.
  *
- * A correct default fixes the *unset* case, but a wrong value fails the same silent way:
- * zero migrations applied, a `migrations` table created, and a clean startup log over an
- * empty database. The first symptom is then a confusing "relation does not exist" from
- * whichever query happens to run first, arbitrarily far from the cause.
- *
- * Only checked when `migrationsRun` is on. When it is off, an empty glob is a legitimate
- * configuration — someone is applying migrations out of band.
+ * Used for the startup report below rather than for a decision. It is deliberately **not**
+ * fatal: a diagnostic that can take the service down is worse than the thing it diagnoses.
+ * An earlier version threw here, and that is a mistake worth not repeating — a config typo
+ * would have blocked every deploy.
  */
-function assertMigrationsDiscoverable(glob: string): void {
-  if (!configs.postgres.migrationsRun) return;
-
-  // Everything up to the first wildcard is a literal directory path.
+function countMigrations(glob: string): number {
+  // Everything up to the first wildcard is a literal path. `path.dirname` is wrong here:
+  // the literal part already ends at the separator, so dirname climbs one level too high
+  // (`…/infrastructure/migrations/` → `…/infrastructure`) and counts the wrong directory.
   const wildcardAt = glob.indexOf('*');
-  const literalPath = wildcardAt === -1 ? glob : glob.slice(0, wildcardAt);
-  const directory = path.dirname(literalPath);
+  const literalPath =
+    wildcardAt === -1 ? path.dirname(glob) : glob.slice(0, wildcardAt);
+  const directory = literalPath.replace(/[\\/]+$/, '');
 
-  let hasMigrations = false;
   try {
-    hasMigrations = fs
-      .readdirSync(directory)
-      .some((entry) => entry.endsWith('.js'));
+    return fs.readdirSync(directory).filter((entry) => entry.endsWith('.js'))
+      .length;
   } catch {
-    // Unreadable or missing directory — treated the same as empty below.
-  }
-
-  if (!hasMigrations) {
-    throw new Error(
-      `POSTGRES_MIGRATIONS resolved to "${glob}", which contains no compiled ` +
-        `migrations. Starting with POSTGRES_MIGRATIONS_RUN=true would report success ` +
-        `against an empty database. Run "npm run build" first, or point ` +
-        `POSTGRES_MIGRATIONS at the compiled migrations directory ` +
-        `(default: /../migrations/*.js).`,
-    );
+    return 0;
   }
 }
 
-assertMigrationsDiscoverable(MIGRATIONS_GLOB);
+/**
+ * Say out loud what the migration configuration resolved to.
+ *
+ * The original defect was never the value — it was that **nothing reported it**. A garbage
+ * glob produced zero migrations, a created bookkeeping table, and a clean startup log over
+ * an empty database. One log line at boot removes that whole class of confusion, and unlike
+ * a thrown error it cannot cost availability.
+ */
+const DISCOVERED_MIGRATIONS = countMigrations(MIGRATIONS_GLOB);
+
+if (configs.postgres.migrationsRun) {
+  console.log(
+    `[data.source] POSTGRES_MIGRATIONS_RUN=true — applying ${DISCOVERED_MIGRATIONS} ` +
+      `migration(s) from ${MIGRATIONS_GLOB} on startup`,
+  );
+} else {
+  console.log(
+    `[data.source] POSTGRES_MIGRATIONS_RUN=false — ${DISCOVERED_MIGRATIONS} migration(s) ` +
+      `discovered at ${MIGRATIONS_GLOB} but NOT applied. Run "npm run migration:run" to apply.`,
+  );
+}
 
 export const postgresOptions: DataSourceOptions = {
   type: 'postgres',
