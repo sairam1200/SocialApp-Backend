@@ -111,8 +111,16 @@ curl -s https://demo.gaddr.com/api/v1/version | jq   # backend
 curl -s https://demo.gaddr.com/api/version    | jq   # frontend
 ```
 
-Compare `commit` to `git rev-parse --short HEAD`. Equal means that commit is
-serving.
+Or in one command, which does the comparison for you:
+
+```bash
+./scripts/verify-deploy.sh                     # against demo.gaddr.com
+./scripts/verify-deploy.sh https://other.host  # anywhere else
+```
+
+Exit 0 means both services are serving your checked-out commit. Non-zero says
+which one is not, and why — including the case that matters right now, where
+there is no version endpoint at all, because the running build predates it.
 
 **Neither needs a pipeline change.** The backend reads Cloud Run's `K_REVISION`,
 which already carries the short SHA because `cloudbuild.yaml` deploys with
