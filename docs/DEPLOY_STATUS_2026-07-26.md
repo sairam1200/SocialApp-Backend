@@ -16,6 +16,22 @@ picks it up does not have to re-derive it.
 Both pipelines were working immediately before: the error pages from `8e1cbaf`
 are live and were deployed automatically. Nothing deployed after ~07:20.
 
+## The pipelines stopped between 04:24 and 07:20
+
+This is the most useful fact, and it took a while to establish.
+
+`8e1cbaf` **is** the deployed commit. Not inferred loosely — `src/app/not-found.tsx`
+and `src/components/ui/error-state.tsx` were both added in exactly that commit
+(`git log --diff-filter=A`), and that component's output is what
+`demo.gaddr.com` serves on a 404 today.
+
+So the frontend pipeline was healthy at 04:24 CEST. The first commit of this
+work landed at 07:20. Nothing else happened in between.
+
+**Both pipelines stopped at the same time**, across two independent providers
+and two independent accounts. That is the shape of a single upstream cause, not
+two coincidental ones.
+
 ## It is not the code
 
 Verified from a **cold clone of the pushed commit**, which is what the build
@@ -26,6 +42,22 @@ git clone --branch main <repo> /tmp/cold && cd /tmp/cold
 corepack yarn install --immutable   # succeeded
 corepack yarn build                 # succeeded, all 10 /community routes emitted
 ```
+
+The backend's pipeline commands were run the same way, from a cold clone of the
+pushed commit — these are literally lines 12 and 16 of the `Dockerfile`:
+
+```bash
+npm ci          # exit 0
+npm run build   # exit 0
+```
+
+`dist/templates/email/layout.html` is present afterwards, so the new email asset
+survives `COPY --from=builder /app/dist ./dist`. (The Docker image itself was
+not built — the daemon is not running on this machine — but the only steps my
+work touches are those two, and the base image and apt layers are unchanged.)
+
+The frontend was additionally built on **Node 22** with a **2 GB heap cap**, to
+rule out Vercel's runtime and build-container memory. Clean.
 
 Both repositories' own gates are green on the pushed commits:
 
@@ -131,18 +163,30 @@ identify itself is worse than one that admits it does not know.
 
 ## What to check first
 
-Most likely, cheapest first:
+**Start at the organisation, not the two providers.** Both integrations are
+GitHub Apps installed on `TeamGaddr`, and both stopped at once. A single
+org-level event — a lapsed plan or payment, a suspended or revoked app
+installation, an owner leaving — takes both out simultaneously, and `git push`
+keeps working throughout because that uses an SSH key, not those apps. That
+fits every observation; two independent provider faults happening in the same
+hour does not.
 
-1. **Vercel → the project → Deployments.** Is there a build for `aa01e49` at
-   all? If none, the Git integration is disconnected or paused. If there is one
-   and it failed, the log says why — but note the cold-clone build above
-   succeeded, so a code-level failure would be surprising.
-2. **Is `demo.gaddr.com` aliased to a pinned deployment** rather than following
-   production? That would produce exactly this: an old commit serving
-   indefinitely while new deployments land on preview URLs.
-3. **Is the project's production branch `main`?** `staging` exists and is 18
-   commits behind; nothing has been pushed to it.
-4. **Cloud Build → Triggers** for the backend. Same three questions.
+1. **`github.com/organizations/TeamGaddr/settings/installations`** — are the
+   **Vercel** and **Google Cloud Build** apps still installed, and does their
+   repository access still include these two repos? A suspended installation
+   shows a banner here and nowhere else.
+2. **Billing on both providers.** A lapsed Vercel plan pauses deployments and a
+   disabled GCP billing account stops Cloud Build, both while leaving the last
+   deployment serving.
+3. **Vercel → the project → Deployments.** Is there a build for `c74b117` at
+   all? *No build queued* means the trigger never fired — go back to (1). *A
+   failed build* means read the log, though the cold-clone build above makes a
+   code-level failure unlikely.
+4. **Is `demo.gaddr.com` aliased to a pinned deployment** rather than following
+   production? That produces an old commit serving indefinitely while new
+   deployments land on preview URLs.
+5. **Is the production branch `main`?** `staging` exists and is 18 commits
+   behind; nothing has been pushed to it.
 
 ## After it deploys
 
