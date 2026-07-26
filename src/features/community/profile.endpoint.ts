@@ -20,6 +20,12 @@ import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { UserAccoutGuard } from '../../core/passport';
 import { CommunityProfileService } from '../../infrastructure/services/social/community-profile.service';
 import { EngagementService } from '../../infrastructure/services/social/engagement.service';
+import { Inject, NotFoundException } from '@nestjs/common';
+import { CommandBus } from '@nestjs/cqrs';
+import _const from '../../core/utils/const';
+import { ISocialProfileRepository } from '../../domain/repositories/isocial.repository';
+import { FollowUserCommand } from '../user/following/follow/follow.handler';
+import { UnfollowUserCommand } from '../user/following/unfollow/unfollow.handler';
 
 const updateValidations = Joi.object({
   handle: Joi.string().max(64),
@@ -65,6 +71,9 @@ export class CommunityProfileController {
   constructor(
     private readonly profiles: CommunityProfileService,
     private readonly engagement: EngagementService,
+    @Inject(_const.ISOCIALPROFILE_REPOSITORY)
+    private readonly profileRepository: ISocialProfileRepository,
+    private readonly commandBus: CommandBus,
   ) {}
 
   @Get('me')
@@ -163,6 +172,71 @@ export class CommunityProfileController {
       included: body?.included !== false,
     });
     return { ok: true };
+  }
+
+  /* ---------------------------------------------------------------- follow */
+
+  /**
+   * Follow or unfollow by *profile* id.
+   *
+   * Resolves to the user id and delegates to the existing follow handlers.
+   * Community deliberately does not keep its own follow graph: two graphs
+   * would need reconciling forever, and the one in `identity.user_follows`
+   * already carries the rate limits, the request/approve flow and the block
+   * semantics.
+   */
+  @HttpPost('profiles/:profileId/follow')
+  @UseGuards(UserAccoutGuard)
+  @ApiOperation({ summary: 'Follow a Community profile' })
+  public async follow(
+    @Param('profileId') profileId: string,
+  ): Promise<{ following: true }> {
+    const target = await this.profileRepository.getByIdAsync(profileId);
+    if (!target) throw new NotFoundException('Profile not found.');
+
+    await this.commandBus.execute(
+      new FollowUserCommand(HttpContext.getCurrentUserId, target.userId),
+    );
+    await this.profileRepository.incrementCountersAsync(target.id, {
+      followersCount: 1,
+    });
+
+    const viewer = await this.profileRepository.getByUserIdAsync(
+      HttpContext.getCurrentUserId,
+    );
+    if (viewer) {
+      await this.profileRepository.incrementCountersAsync(viewer.id, {
+        followingCount: 1,
+      });
+    }
+    return { following: true };
+  }
+
+  @HttpPost('profiles/:profileId/unfollow')
+  @UseGuards(UserAccoutGuard)
+  @ApiOperation({ summary: 'Stop following a Community profile' })
+  public async unfollow(
+    @Param('profileId') profileId: string,
+  ): Promise<{ following: false }> {
+    const target = await this.profileRepository.getByIdAsync(profileId);
+    if (!target) throw new NotFoundException('Profile not found.');
+
+    await this.commandBus.execute(
+      new UnfollowUserCommand(HttpContext.getCurrentUserId, target.userId),
+    );
+    await this.profileRepository.incrementCountersAsync(target.id, {
+      followersCount: -1,
+    });
+
+    const viewer = await this.profileRepository.getByUserIdAsync(
+      HttpContext.getCurrentUserId,
+    );
+    if (viewer) {
+      await this.profileRepository.incrementCountersAsync(viewer.id, {
+        followingCount: -1,
+      });
+    }
+    return { following: false };
   }
 
   /* ------------------------------------------------------------- mute/block */

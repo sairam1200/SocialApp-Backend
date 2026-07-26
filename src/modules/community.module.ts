@@ -80,6 +80,14 @@ import {
  * Registers every social entity with TypeORM, the seven aggregate
  * repositories, the services, the scheduler and the event listener.
  *
+ * Community dispatches `FollowUserCommand`/`UnfollowUserCommand` rather than
+ * keeping a second follow graph. Those handlers are **not** re-registered
+ * here: `CqrsModule` scans every module once at bootstrap and registers each
+ * handler into one global `CommandBus`, so `FollowModule` registering them is
+ * enough. Re-registering would construct a second copy in this module's
+ * injector — and fail at boot, because they depend on `ProfileCacheService`,
+ * which lives in `ProfileModule`.
+ *
  * **`TwoFactorEmailService` and `BrandedEmailService` are exported** because
  * the auth module's 2FA handlers depend on them. Nest resolves a provider in
  * the module where it is *used*, so an unexported service here would fail at
