@@ -23,9 +23,7 @@ export class YoutubeDisconnectCommand {
 }
 
 @CommandHandler(YoutubeDisconnectCommand)
-export class YoutubeDisconnectCommandHandler
-  implements ICommandHandler<YoutubeDisconnectCommand>
-{
+export class YoutubeDisconnectCommandHandler implements ICommandHandler<YoutubeDisconnectCommand> {
   constructor(
     private readonly dataSource: DataSource,
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)

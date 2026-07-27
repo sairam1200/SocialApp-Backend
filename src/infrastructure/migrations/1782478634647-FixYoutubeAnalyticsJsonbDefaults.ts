@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class FixYoutubeAnalyticsJsonbDefaults1782478634647
-  implements MigrationInterface
-{
+export class FixYoutubeAnalyticsJsonbDefaults1782478634647 implements MigrationInterface {
   name = 'FixYoutubeAnalyticsJsonbDefaults1782478634647';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

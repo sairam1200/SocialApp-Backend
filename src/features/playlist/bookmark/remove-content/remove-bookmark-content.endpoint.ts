@@ -3,6 +3,7 @@ import _const from '../../../../core/utils/const';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { PlaylistModel } from '../../../../domain/contracts/playlist.model';
 import {
   Controller,
@@ -59,7 +60,7 @@ export class RemoveBookmarkContentController {
         new GetPlaylistByNameQuery({
           model: {
             playlistName: _const.COLLECTION.BOOKMARK.NAME,
-            userNameOrId: '',
+            userNameOrId: HttpContext.getCurrentUserId,
           },
         }),
       );

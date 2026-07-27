@@ -26,9 +26,7 @@ export class CancelRedditImportCommand {
 }
 
 @CommandHandler(CancelRedditImportCommand)
-export class CancelRedditImportCommandHandler
-  implements ICommandHandler<CancelRedditImportCommand>
-{
+export class CancelRedditImportCommandHandler implements ICommandHandler<CancelRedditImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

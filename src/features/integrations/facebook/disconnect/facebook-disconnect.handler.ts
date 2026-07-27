@@ -11,9 +11,7 @@ export class FacebookDisconnectCommand {
 }
 
 @CommandHandler(FacebookDisconnectCommand)
-export class FacebookDisconnectCommandHandler
-  implements ICommandHandler<FacebookDisconnectCommand>
-{
+export class FacebookDisconnectCommandHandler implements ICommandHandler<FacebookDisconnectCommand> {
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,

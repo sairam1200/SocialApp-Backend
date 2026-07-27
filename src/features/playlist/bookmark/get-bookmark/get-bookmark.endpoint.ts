@@ -3,6 +3,7 @@ import { QueryBus } from '@nestjs/cqrs';
 import _const from '../../../../core/utils/const';
 import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
 import { PlaylistModel } from '../../../../domain/contracts/playlist.model';
 import { Controller, Get, HttpStatus, Res, UseGuards } from '@nestjs/common';
 import { GetPlaylistByNameQuery } from '../../get-playlist/get-playlist-by-name.handler';
@@ -27,7 +28,7 @@ export class GetBookmarkController {
       new GetPlaylistByNameQuery({
         model: {
           playlistName: _const.COLLECTION.BOOKMARK.NAME,
-          userNameOrId: '',
+          userNameOrId: HttpContext.getCurrentUserId,
         },
       }),
     );

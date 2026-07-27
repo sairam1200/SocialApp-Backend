@@ -4,9 +4,7 @@ import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { DataProtectionKey } from '../../domain/entities/dataProtectionKey.entity';
 import { IDataProtectionKeyRepository } from '../../domain/repositories/idataProtectionKey.repository';
 
-export class DataProtectionKeyRepository
-  implements IDataProtectionKeyRepository
-{
+export class DataProtectionKeyRepository implements IDataProtectionKeyRepository {
   constructor(
     @InjectRepository(DataProtectionKey)
     private readonly dataProtectionKeyContext: Repository<DataProtectionKey>,
@@ -14,9 +12,7 @@ export class DataProtectionKeyRepository
 
   public async getAllAsync(): Promise<DataProtectionKey[]> {
     const results = await this.dataProtectionKeyContext.find();
-    console.log(
-      `[OAUTH-DBG] REPO.getAllAsync totalCount=${results.length}`,
-    );
+    console.log(`[OAUTH-DBG] REPO.getAllAsync totalCount=${results.length}`);
     return results;
   }
 
@@ -25,10 +21,10 @@ export class DataProtectionKeyRepository
   }
 
   public async getByKeyAsync(key: string): Promise<DataProtectionKey | null> {
-    console.log(
-      `[OAUTH-DBG] REPO.getByKeyAsync LOOKUP lookupKey=${key}`,
-    );
-    const result = await this.dataProtectionKeyContext.findOne({ where: { key } });
+    console.log(`[OAUTH-DBG] REPO.getByKeyAsync LOOKUP lookupKey=${key}`);
+    const result = await this.dataProtectionKeyContext.findOne({
+      where: { key },
+    });
     console.log(
       `[OAUTH-DBG] REPO.getByKeyAsync RESULT lookupKey=${key} found=${!!result} rowId=${result?.id ?? 'NULL'} rowKey=${result?.key ?? 'NULL'} rowUserId=${result?.userId ?? 'NULL'} rowExpiresIn=${result?.expiresIn ?? 'NULL'}`,
     );
@@ -36,7 +32,9 @@ export class DataProtectionKeyRepository
   }
 
   public async getByUserIdAsync(userId: string): Promise<DataProtectionKey[]> {
-    const results = await this.dataProtectionKeyContext.find({ where: { userId } });
+    const results = await this.dataProtectionKeyContext.find({
+      where: { userId },
+    });
     console.log(
       `[OAUTH-DBG] REPO.getByUserIdAsync userId=${userId} count=${results.length} keyIds=${results.map((k) => `${k.id}:${k.key}`).join(', ')}`,
     );

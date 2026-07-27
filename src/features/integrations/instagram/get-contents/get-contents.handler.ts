@@ -23,9 +23,7 @@ export class InstagramContentsQuery {
 }
 
 @CommandHandler(InstagramContentsQuery)
-export class InstagramContentsQueryHandler
-  implements ICommandHandler<InstagramContentsQuery>
-{
+export class InstagramContentsQueryHandler implements ICommandHandler<InstagramContentsQuery> {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,

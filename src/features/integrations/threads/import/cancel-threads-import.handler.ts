@@ -26,9 +26,7 @@ export class CancelThreadsImportCommand {
 }
 
 @CommandHandler(CancelThreadsImportCommand)
-export class CancelThreadsImportCommandHandler
-  implements ICommandHandler<CancelThreadsImportCommand>
-{
+export class CancelThreadsImportCommandHandler implements ICommandHandler<CancelThreadsImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

@@ -21,9 +21,7 @@ export class LinkedInProfileQuery {
 }
 
 @QueryHandler(LinkedInProfileQuery)
-export class LinkedInProfileQueryHandler
-  implements IQueryHandler<LinkedInProfileQuery>
-{
+export class LinkedInProfileQueryHandler implements IQueryHandler<LinkedInProfileQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

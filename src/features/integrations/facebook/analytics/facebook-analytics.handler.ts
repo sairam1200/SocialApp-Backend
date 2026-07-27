@@ -88,9 +88,7 @@ export class GetFacebookGrowthQuery {
 // --- Handlers Implementation ---
 
 @CommandHandler(SyncFacebookAnalyticsCommand)
-export class SyncFacebookAnalyticsCommandHandler
-  implements ICommandHandler<SyncFacebookAnalyticsCommand>
-{
+export class SyncFacebookAnalyticsCommandHandler implements ICommandHandler<SyncFacebookAnalyticsCommand> {
   constructor(
     @Inject(_const.IFACEBOOKANALYTICS_SERVICE)
     private readonly analyticsService: IFacebookAnalyticsService,
@@ -104,9 +102,7 @@ export class SyncFacebookAnalyticsCommandHandler
 }
 
 @QueryHandler(GetFacebookPageAnalyticsQuery)
-export class GetFacebookPageAnalyticsQueryHandler
-  implements IQueryHandler<GetFacebookPageAnalyticsQuery>
-{
+export class GetFacebookPageAnalyticsQueryHandler implements IQueryHandler<GetFacebookPageAnalyticsQuery> {
   constructor(
     @Inject(_const.IFACEBOOKPAGEANALYTICS_REPOSITORY)
     private readonly pageAnalyticsRepository: IFacebookPageAnalyticsRepository,
@@ -126,9 +122,7 @@ export class GetFacebookPageAnalyticsQueryHandler
 }
 
 @QueryHandler(GetFacebookPostAnalyticsQuery)
-export class GetFacebookPostAnalyticsQueryHandler
-  implements IQueryHandler<GetFacebookPostAnalyticsQuery>
-{
+export class GetFacebookPostAnalyticsQueryHandler implements IQueryHandler<GetFacebookPostAnalyticsQuery> {
   constructor(
     @Inject(_const.IFACEBOOKPOSTANALYTICS_REPOSITORY)
     private readonly postAnalyticsRepository: IFacebookPostAnalyticsRepository,
@@ -150,9 +144,7 @@ export class GetFacebookPostAnalyticsQueryHandler
 }
 
 @QueryHandler(GetFacebookVideoAnalyticsQuery)
-export class GetFacebookVideoAnalyticsQueryHandler
-  implements IQueryHandler<GetFacebookVideoAnalyticsQuery>
-{
+export class GetFacebookVideoAnalyticsQueryHandler implements IQueryHandler<GetFacebookVideoAnalyticsQuery> {
   constructor(
     @Inject(_const.IFACEBOOKVIDEOANALYTICS_REPOSITORY)
     private readonly videoAnalyticsRepository: IFacebookVideoAnalyticsRepository,
@@ -174,9 +166,7 @@ export class GetFacebookVideoAnalyticsQueryHandler
 }
 
 @QueryHandler(GetFacebookAnalyticsTrendsQuery)
-export class GetFacebookAnalyticsTrendsQueryHandler
-  implements IQueryHandler<GetFacebookAnalyticsTrendsQuery>
-{
+export class GetFacebookAnalyticsTrendsQueryHandler implements IQueryHandler<GetFacebookAnalyticsTrendsQuery> {
   constructor(
     @Inject(_const.IFACEBOOKPAGEANALYTICS_REPOSITORY)
     private readonly pageAnalyticsRepository: IFacebookPageAnalyticsRepository,
@@ -213,9 +203,7 @@ export class GetFacebookAnalyticsTrendsQueryHandler
 }
 
 @QueryHandler(GetFacebookTopPostsQuery)
-export class GetFacebookTopPostsQueryHandler
-  implements IQueryHandler<GetFacebookTopPostsQuery>
-{
+export class GetFacebookTopPostsQueryHandler implements IQueryHandler<GetFacebookTopPostsQuery> {
   constructor(
     @Inject(_const.IFACEBOOKPOSTANALYTICS_REPOSITORY)
     private readonly postAnalyticsRepository: IFacebookPostAnalyticsRepository,
@@ -231,9 +219,7 @@ export class GetFacebookTopPostsQueryHandler
 }
 
 @QueryHandler(GetFacebookTopVideosQuery)
-export class GetFacebookTopVideosQueryHandler
-  implements IQueryHandler<GetFacebookTopVideosQuery>
-{
+export class GetFacebookTopVideosQueryHandler implements IQueryHandler<GetFacebookTopVideosQuery> {
   constructor(
     @Inject(_const.IFACEBOOKVIDEOANALYTICS_REPOSITORY)
     private readonly videoAnalyticsRepository: IFacebookVideoAnalyticsRepository,
@@ -249,9 +235,7 @@ export class GetFacebookTopVideosQueryHandler
 }
 
 @QueryHandler(GetFacebookGrowthQuery)
-export class GetFacebookGrowthQueryHandler
-  implements IQueryHandler<GetFacebookGrowthQuery>
-{
+export class GetFacebookGrowthQueryHandler implements IQueryHandler<GetFacebookGrowthQuery> {
   constructor(
     @Inject(_const.IFACEBOOKPAGEANALYTICS_REPOSITORY)
     private readonly pageAnalyticsRepository: IFacebookPageAnalyticsRepository,
@@ -291,9 +275,7 @@ export class GetFacebookGrowthQueryHandler
 }
 
 @QueryHandler(GetFacebookCompareQuery)
-export class GetFacebookCompareQueryHandler
-  implements IQueryHandler<GetFacebookCompareQuery>
-{
+export class GetFacebookCompareQueryHandler implements IQueryHandler<GetFacebookCompareQuery> {
   constructor(
     @Inject(_const.IFACEBOOKPAGEANALYTICS_REPOSITORY)
     private readonly pageAnalyticsRepository: IFacebookPageAnalyticsRepository,

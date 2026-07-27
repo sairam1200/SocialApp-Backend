@@ -63,9 +63,7 @@ const resetPasswordValidations = Joi.object({
 });
 
 @CommandHandler(ResetPasswordCommand)
-export class ResetPasswordCommandHandler
-  implements ICommandHandler<ResetPasswordCommand>
-{
+export class ResetPasswordCommandHandler implements ICommandHandler<ResetPasswordCommand> {
   constructor(
     @Inject(_const.IEMAIL_SERVICE)
     private readonly emailService: IEmailService,

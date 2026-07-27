@@ -165,6 +165,10 @@ export default {
       NAME: 'bookmark',
       DESCRIPTION: '',
     },
+    LIMITS: {
+      MAX_COLLECTIONS_PER_USER: 50,
+      MAX_ITEMS_PER_COLLECTION: 1000,
+    },
   },
 
   ANALYTICS_EVENTS: {

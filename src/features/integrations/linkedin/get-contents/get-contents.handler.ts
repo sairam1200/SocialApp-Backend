@@ -23,9 +23,7 @@ export class LinkedInContentsQuery {
 }
 
 @CommandHandler(LinkedInContentsQuery)
-export class LinkedInContentsQueryHandler
-  implements ICommandHandler<LinkedInContentsQuery>
-{
+export class LinkedInContentsQueryHandler implements ICommandHandler<LinkedInContentsQuery> {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,

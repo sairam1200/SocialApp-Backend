@@ -8,4 +8,5 @@ export const CORS_ORIGINS = [
   'https://almost-backtrack-drapery.ngrok-free.dev',
   'https://social-app-zeta-three.vercel.app',
   'https://demo.gaddr.com',
+  'https://dev.gaddr.com',
 ];

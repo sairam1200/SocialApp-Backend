@@ -5,6 +5,7 @@ import { User } from '../identity/user.entity';
 import { BaseEntity } from '../../baseEntity';
 import { PlaylistMember } from './playlistMember.entity';
 import { PlaylistContent } from './playlistContent.entity';
+import { PlaylistType, SystemCollectionType } from '../../enums';
 
 @Entity('playlists')
 export class Playlist extends BaseEntity {
@@ -16,6 +17,12 @@ export class Playlist extends BaseEntity {
 
   @Column({ type: 'text', nullable: true })
   description?: string;
+
+  @Column({ type: 'varchar', length: 20, default: PlaylistType.USER })
+  playlistType: PlaylistType;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  systemType?: SystemCollectionType;
 
   @ManyToOne(() => User, (user) => user.playlistMemberships, {
     nullable: false,
@@ -37,6 +44,27 @@ export class Playlist extends BaseEntity {
 
   @Column({ default: 0 })
   displayOrder: number;
+
+  @Column({ default: 0 })
+  pinOrder: number;
+
+  @Column({ type: 'varchar', length: 50, default: 'manual' })
+  sortBy: string;
+
+  @Column({ default: false })
+  isArchived: boolean;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  coverImage?: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  icon?: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  color?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastViewedAt?: Date;
 
   @BeforeInsert()
   private generateReferenceId() {

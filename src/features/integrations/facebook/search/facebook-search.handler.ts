@@ -36,9 +36,10 @@ export class FacebookSearchQuery {
 }
 
 @QueryHandler(FacebookSearchQuery)
-export class FacebookSearchQueryHandler
-  implements IQueryHandler<FacebookSearchQuery, FacebookSearchResponseModel>
-{
+export class FacebookSearchQueryHandler implements IQueryHandler<
+  FacebookSearchQuery,
+  FacebookSearchResponseModel
+> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,

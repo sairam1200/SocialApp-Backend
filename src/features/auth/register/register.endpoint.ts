@@ -3,7 +3,14 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiHeader, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserModel } from '../../../domain/contracts/user.model';
 import { RegisterCommand, RegisterModel } from './register.handler';
-import { Body, Controller, HttpStatus, Post, Res, UseFilters } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UseFilters,
+} from '@nestjs/common';
 import { RequireTurnstile } from '../../../core/passport';
 import { ErrorHandlersFilter } from '../../../core/exceptions/exceptionHandler.filter';
 

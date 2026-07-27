@@ -40,9 +40,7 @@ const deactivateUserRoleValidations = Joi.object({
 });
 
 @CommandHandler(DeactivateUserRoleCommand)
-export class DeactivateUserRoleCommandHandler
-  implements ICommandHandler<DeactivateUserRoleCommand>
-{
+export class DeactivateUserRoleCommandHandler implements ICommandHandler<DeactivateUserRoleCommand> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

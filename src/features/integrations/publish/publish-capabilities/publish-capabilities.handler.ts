@@ -5,9 +5,7 @@ import { PublishCapabilitiesQuery } from './publish-capabilities.command';
 import { PublishProviderRegistry } from '../../../../infrastructure/services/publishing/publish-provider.registry';
 
 @QueryHandler(PublishCapabilitiesQuery)
-export class PublishCapabilitiesQueryHandler
-  implements IQueryHandler<PublishCapabilitiesQuery>
-{
+export class PublishCapabilitiesQueryHandler implements IQueryHandler<PublishCapabilitiesQuery> {
   constructor(
     @Inject(_const.IPUBLISH_PROVIDER_REGISTRY)
     private readonly providerRegistry: PublishProviderRegistry,

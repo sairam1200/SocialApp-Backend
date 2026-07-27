@@ -23,9 +23,7 @@ export class PinterestContentsQuery {
 }
 
 @CommandHandler(PinterestContentsQuery)
-export class PinterestContentsQueryHandler
-  implements ICommandHandler<PinterestContentsQuery>
-{
+export class PinterestContentsQueryHandler implements ICommandHandler<PinterestContentsQuery> {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,

@@ -32,9 +32,10 @@ const getPublicProfileQueryValidations = {
 };
 
 @CommandHandler(GetPublicProfileQuery)
-export class GetPublicProfileQueryHandler
-  implements ICommandHandler<GetPublicProfileQuery, PublicProfileModel>
-{
+export class GetPublicProfileQueryHandler implements ICommandHandler<
+  GetPublicProfileQuery,
+  PublicProfileModel
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

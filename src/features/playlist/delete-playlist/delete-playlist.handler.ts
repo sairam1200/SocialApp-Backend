@@ -2,8 +2,10 @@ import * as Joi from 'joi';
 import _const from '../../../core/utils/const';
 import { Inject, NotFoundException } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { PlaylistType } from '../../../domain/enums';
 import { IPlaylistRepository } from '../../../domain/repositories/iplaylist.repository';
 import { IAnalyticsService } from '../../../domain/services/ianalytics.service';
+import { PlaylistUpdateNotAllowedException } from '../../../core/exceptions/playlist.exception';
 
 export class DeletePlaylistCommand {
   model: {
@@ -20,9 +22,10 @@ const removePlaylistContentValidation = Joi.object({
 });
 
 @CommandHandler(DeletePlaylistCommand)
-export class DeletePlaylistCommandHandler
-  implements ICommandHandler<DeletePlaylistCommand, void>
-{
+export class DeletePlaylistCommandHandler implements ICommandHandler<
+  DeletePlaylistCommand,
+  void
+> {
   constructor(
     @Inject(_const.IPLAYLIST_REPOSITORY)
     private readonly playlistRepository: IPlaylistRepository,
@@ -39,6 +42,13 @@ export class DeletePlaylistCommandHandler
     );
     if (!playlist) {
       throw new NotFoundException('Content not found');
+    }
+
+    if (playlist.playlistType === PlaylistType.SYSTEM) {
+      throw new PlaylistUpdateNotAllowedException(
+        model.playlistReferenceId,
+        'system-collection',
+      );
     }
 
     await this.playlistRepository.deleteAsync(playlist);

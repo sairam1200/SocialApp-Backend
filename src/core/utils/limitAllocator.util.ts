@@ -1,8 +1,5 @@
 type SearchSectionKey =
-  | 'contentStream'
-  | 'userContent'
-  | 'linkedAccount'
-  | 'manualProfile';
+  'contentStream' | 'userContent' | 'linkedAccount' | 'manualProfile';
 
 export interface SectionSkipMap {
   contentStream: boolean;

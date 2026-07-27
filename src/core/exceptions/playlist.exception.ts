@@ -26,7 +26,7 @@ export class PlaylistAlreadyExistsException extends ConflictException {
 export class PlaylistUpdateNotAllowedException extends UnauthorizedException {
   constructor(
     referenceId?: string,
-    reason?: 'not-member' | 'viewer' | 'not-owner',
+    reason?: 'not-member' | 'viewer' | 'not-owner' | 'system-collection',
   ) {
     let message = 'Updating the playlist is not allowed.';
 
@@ -40,6 +40,8 @@ export class PlaylistUpdateNotAllowedException extends UnauthorizedException {
       message = `You are a viewer in the playlist with reference ID "${referenceId}", and you do not have permission to edit.`;
     } else if (reason === 'not-owner') {
       message = `Only the owner can edit the playlist with reference ID "${referenceId}".`;
+    } else if (reason === 'system-collection') {
+      message = `System collections cannot be deleted.`;
     }
 
     super(message);

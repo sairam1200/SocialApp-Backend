@@ -91,9 +91,8 @@ export function addWebSocketDocs(app: INestApplication) {
     let cssPath: string;
 
     try {
-      const packageJsonPath = require.resolve(
-        '@asyncapi/react-component/package.json',
-      );
+      const packageJsonPath =
+        require.resolve('@asyncapi/react-component/package.json');
       componentPath = path.dirname(packageJsonPath);
       standaloneJsPath = path.join(
         componentPath,

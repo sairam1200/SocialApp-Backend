@@ -36,9 +36,7 @@ export class UploadVideoCommand {
 }
 
 @CommandHandler(UploadVideoCommand)
-export class UploadVideoCommandHandler
-  implements ICommandHandler<UploadVideoCommand>
-{
+export class UploadVideoCommandHandler implements ICommandHandler<UploadVideoCommand> {
   constructor(
     @Inject(_const.IR2_STORAGE_SERVICE)
     private readonly r2Storage: R2StorageService,

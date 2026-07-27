@@ -13,10 +13,10 @@ import {
 export class Setup2FACommand {}
 
 @CommandHandler(Setup2FACommand)
-export class Setup2FACommandHandler
-  implements
-    ICommandHandler<Setup2FACommand, { secret: string; qrCode: string }>
-{
+export class Setup2FACommandHandler implements ICommandHandler<
+  Setup2FACommand,
+  { secret: string; qrCode: string }
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

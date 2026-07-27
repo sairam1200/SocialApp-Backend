@@ -36,9 +36,7 @@ export class BehanceSearchQuery {
 }
 
 @QueryHandler(BehanceSearchQuery)
-export class BehanceSearchQueryHandler
-  implements IQueryHandler<BehanceSearchQuery>
-{
+export class BehanceSearchQueryHandler implements IQueryHandler<BehanceSearchQuery> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,

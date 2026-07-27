@@ -38,9 +38,7 @@ const sendVerificationEmailValidations = Joi.object({
 });
 
 @CommandHandler(SendVerificationEmailCommand)
-export class SendVerificationEmailCommandHandler
-  implements ICommandHandler<SendVerificationEmailCommand>
-{
+export class SendVerificationEmailCommandHandler implements ICommandHandler<SendVerificationEmailCommand> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

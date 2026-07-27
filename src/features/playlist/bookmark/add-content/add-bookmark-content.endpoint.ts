@@ -4,6 +4,8 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PlaylistNotFoundException } from '../../../../core/exceptions';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
+import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
+import { PlaylistType, SystemCollectionType } from '../../../../domain/enums';
 import {
   Body,
   Controller,
@@ -62,7 +64,7 @@ export class AddBookmarkContentController {
         new GetPlaylistByNameQuery({
           model: {
             playlistName: _const.COLLECTION.BOOKMARK.NAME,
-            userNameOrId: '',
+            userNameOrId: HttpContext.getCurrentUserId,
           },
         }),
       );
@@ -73,6 +75,8 @@ export class AddBookmarkContentController {
             model: {
               name: _const.COLLECTION.BOOKMARK.NAME,
               description: _const.COLLECTION.BOOKMARK.DESCRIPTION,
+              playlistType: PlaylistType.SYSTEM,
+              systemType: SystemCollectionType.BOOKMARK,
             },
           }),
         );

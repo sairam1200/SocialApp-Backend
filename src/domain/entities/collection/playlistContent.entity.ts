@@ -1,12 +1,20 @@
 import { BaseEntity } from '../../baseEntity';
 import { Playlist } from './playlist.entity';
 import { PlaylistMember } from './playlistMember.entity';
+import { UserContent } from '../userContent.entity';
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity('playlistContent')
 export class PlaylistContent extends BaseEntity {
   @ManyToOne(() => Playlist, (p) => p.contents, { onDelete: 'CASCADE' })
   playlist: Playlist;
+
+  @ManyToOne(() => UserContent, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'userContentId' })
+  userContent?: UserContent;
+
+  @Column({ type: 'uuid', nullable: true })
+  userContentId?: string;
 
   @Column({ type: 'varchar', length: 255 })
   type: string;

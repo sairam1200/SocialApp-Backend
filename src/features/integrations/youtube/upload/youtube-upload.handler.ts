@@ -48,9 +48,7 @@ const uploadValidationSchema = Joi.object({
 }).required();
 
 @CommandHandler(YoutubeUploadCommand)
-export class YoutubeUploadCommandHandler
-  implements ICommandHandler<YoutubeUploadCommand>
-{
+export class YoutubeUploadCommandHandler implements ICommandHandler<YoutubeUploadCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepo: ILinkedAccountRepository,

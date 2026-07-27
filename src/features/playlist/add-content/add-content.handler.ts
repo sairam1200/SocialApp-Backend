@@ -1,9 +1,10 @@
 import * as Joi from 'joi';
-import { Inject } from '@nestjs/common';
+import { Inject, NotFoundException } from '@nestjs/common';
 import _const from '../../../core/utils/const';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { mapToPlaylistContentModel } from '../../../domain/mappers/playlist.mpper';
 import { IPlaylistRepository } from '../../../domain/repositories/iplaylist.repository';
+import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
 import { PlaylistContent } from '../../../domain/entities/collection/playlistContent.entity';
 import { IAnalyticsService } from '../../../domain/services/ianalytics.service';
 import {
@@ -25,12 +26,15 @@ const addPlaylistContentValidation = Joi.object({
 });
 
 @CommandHandler(AddPlaylistContentContent)
-export class AddPlaylistContentCommandHandler
-  implements ICommandHandler<AddPlaylistContentContent, PlaylistContentModel>
-{
+export class AddPlaylistContentCommandHandler implements ICommandHandler<
+  AddPlaylistContentContent,
+  PlaylistContentModel
+> {
   constructor(
     @Inject(_const.IPLAYLIST_REPOSITORY)
     private readonly playlistRepository: IPlaylistRepository,
+    @Inject(_const.IUSERCONTENT_REPOSITORY)
+    private readonly userContentRepository: IUserContentRepository,
     @Inject(_const.IANALYTICS_SERVICE)
     private readonly analyticsService: IAnalyticsService,
   ) {}
@@ -41,9 +45,28 @@ export class AddPlaylistContentCommandHandler
     const { model, playlistReferenceId } = command;
     await addPlaylistContentValidation.validateAsync(model);
 
-    const content = await this.playlistRepository.addContentAsync(
-      playlistReferenceId,
-      new PlaylistContent({
+    let playlistContent: PlaylistContent;
+
+    if (model.userContentId) {
+      const userContent = await this.userContentRepository.getByIdAsync(
+        model.userContentId,
+      );
+      if (!userContent) {
+        throw new NotFoundException('UserContent not found');
+      }
+
+      playlistContent = new PlaylistContent({
+        userContentId: userContent.id,
+        contentId: userContent.externalId,
+        type: userContent.type,
+        platform: userContent.platform,
+        title: userContent.title,
+        contentUrl: userContent.sourceUrl,
+        thumbnailUrl: userContent.media?.[0]?.thumbnail,
+        metadata: userContent.metaData,
+      });
+    } else {
+      playlistContent = new PlaylistContent({
         contentId: model.contentId,
         type: model.type,
         platform: model.platform,
@@ -52,7 +75,12 @@ export class AddPlaylistContentCommandHandler
         thumbnailUrl: model.thumbnailUrl,
         description: model.description,
         metadata: model.metadata,
-      }),
+      });
+    }
+
+    const content = await this.playlistRepository.addContentAsync(
+      playlistReferenceId,
+      playlistContent,
     );
 
     const playlist =
@@ -67,10 +95,10 @@ export class AddPlaylistContentCommandHandler
 
       await this.analyticsService.trackEvent(eventName, {
         playlistId: playlist.id,
-        contentId: model.contentId,
-        type: model.type,
-        platform: model.platform,
-        title: model.title,
+        contentId: content.contentId,
+        type: content.type,
+        platform: content.platform,
+        title: content.title,
       });
     }
 

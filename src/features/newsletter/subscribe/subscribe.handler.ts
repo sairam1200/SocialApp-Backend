@@ -37,9 +37,10 @@ const subscribeValidations = Joi.object({
 });
 
 @CommandHandler(SubscribeCommand)
-export class SubscribeCommandHandler
-  implements ICommandHandler<SubscribeCommand, SubscribeResult>
-{
+export class SubscribeCommandHandler implements ICommandHandler<
+  SubscribeCommand,
+  SubscribeResult
+> {
   constructor(
     @Inject(_const.INEWSLETTER_REPOSITORY)
     private readonly newsletterRepo: INewsletterSubscriberRepository,

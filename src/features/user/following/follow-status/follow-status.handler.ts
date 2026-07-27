@@ -11,9 +11,10 @@ export class GetFollowStatusQuery {
 }
 
 @QueryHandler(GetFollowStatusQuery)
-export class GetFollowStatusQueryHandler
-  implements IQueryHandler<GetFollowStatusQuery, FollowStatusModel>
-{
+export class GetFollowStatusQueryHandler implements IQueryHandler<
+  GetFollowStatusQuery,
+  FollowStatusModel
+> {
   constructor(
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
     private readonly follows: IUserFollowRepository,

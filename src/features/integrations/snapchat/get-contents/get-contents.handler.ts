@@ -23,9 +23,7 @@ export class SnapchatContentsQuery {
 }
 
 @CommandHandler(SnapchatContentsQuery)
-export class SnapchatContentsQueryHandler
-  implements ICommandHandler<SnapchatContentsQuery>
-{
+export class SnapchatContentsQueryHandler implements ICommandHandler<SnapchatContentsQuery> {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,

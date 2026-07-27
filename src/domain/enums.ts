@@ -38,6 +38,17 @@ export enum PlaylistMemberRole {
   Viewer = 'Viewer',
 }
 
+export enum PlaylistType {
+  SYSTEM = 'System',
+  USER = 'User',
+}
+
+export enum SystemCollectionType {
+  BOOKMARK = 'Bookmark',
+  WATCH_LATER = 'WatchLater',
+  LIKED = 'Liked',
+}
+
 export enum StreamEntityType {
   Profile = 'Profile',
   Content = 'Content',

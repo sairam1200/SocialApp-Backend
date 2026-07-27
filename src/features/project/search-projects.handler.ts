@@ -21,19 +21,39 @@ export class SearchProjectsQuery {
 const searchProjectsSchema = Joi.object({
   q: Joi.string().trim().min(1).max(200).optional().allow('', null),
   status: Joi.string()
-    .valid('open', 'in_progress', 'completed', 'cancelled', 'paused', 'draft', 'funded')
+    .valid(
+      'open',
+      'in_progress',
+      'completed',
+      'cancelled',
+      'paused',
+      'draft',
+      'funded',
+    )
     .optional(),
   projectType: Joi.string()
-    .valid('open', 'invitationOnly', 'directOffer', 'packagedService', 'retainer', 'bounty', 'paidWorkTrial', 'projectToHire', 'confidentialEnterprise', 'communityFunded')
+    .valid(
+      'open',
+      'invitationOnly',
+      'directOffer',
+      'packagedService',
+      'retainer',
+      'bounty',
+      'paidWorkTrial',
+      'projectToHire',
+      'confidentialEnterprise',
+      'communityFunded',
+    )
     .optional(),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(50).default(20),
 });
 
 @CommandHandler(SearchProjectsQuery)
-export class SearchProjectsQueryHandler
-  implements ICommandHandler<SearchProjectsQuery, PagedResult<Project[]>>
-{
+export class SearchProjectsQueryHandler implements ICommandHandler<
+  SearchProjectsQuery,
+  PagedResult<Project[]>
+> {
   constructor(
     @Inject(_const.IPROJECT_REPOSITORY)
     private readonly projectRepository: IProjectRepository,

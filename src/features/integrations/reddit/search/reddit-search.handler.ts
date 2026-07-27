@@ -40,9 +40,7 @@ export class RedditSearchQuery {
 }
 
 @QueryHandler(RedditSearchQuery)
-export class RedditSearchQueryHandler
-  implements IQueryHandler<RedditSearchQuery>
-{
+export class RedditSearchQueryHandler implements IQueryHandler<RedditSearchQuery> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,

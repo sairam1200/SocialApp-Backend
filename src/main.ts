@@ -84,9 +84,7 @@ async function bootstrap() {
       );
     }
   } catch (e: any) {
-    console.log(
-      `[OAUTH-DBG] STARTUP TYPEORM-DB error=${e.message}`,
-    );
+    console.log(`[OAUTH-DBG] STARTUP TYPEORM-DB error=${e.message}`);
   }
 
   app.enableShutdownHooks();
@@ -95,7 +93,7 @@ async function bootstrap() {
   app.setGlobalPrefix(globalPrefix);
   app.enableVersioning({
     type: VersioningType.URI,
-    defaultVersion: '1',  
+    defaultVersion: '1',
   });
 
   if (configs.env !== 'production') {

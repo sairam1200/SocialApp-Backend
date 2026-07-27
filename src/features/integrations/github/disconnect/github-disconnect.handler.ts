@@ -11,9 +11,7 @@ export class GithubDisconnectCommand {
 }
 
 @CommandHandler(GithubDisconnectCommand)
-export class GithubDisconnectCommandHandler
-  implements ICommandHandler<GithubDisconnectCommand>
-{
+export class GithubDisconnectCommandHandler implements ICommandHandler<GithubDisconnectCommand> {
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,

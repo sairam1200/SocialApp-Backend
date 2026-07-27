@@ -21,9 +21,7 @@ export class BehanceProfileQuery {
 }
 
 @CommandHandler(BehanceProfileQuery)
-export class BehanceProfileQueryHandler
-  implements ICommandHandler<BehanceProfileQuery>
-{
+export class BehanceProfileQueryHandler implements ICommandHandler<BehanceProfileQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

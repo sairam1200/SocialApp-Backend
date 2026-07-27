@@ -15,9 +15,7 @@ export class EnableLinkedInSyncCommand {
 }
 
 @CommandHandler(EnableLinkedInSyncCommand)
-export class EnableLinkedInSyncCommandHandler
-  implements ICommandHandler<EnableLinkedInSyncCommand>
-{
+export class EnableLinkedInSyncCommandHandler implements ICommandHandler<EnableLinkedInSyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

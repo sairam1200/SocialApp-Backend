@@ -11,9 +11,7 @@ export class TwitchDisconnectCommand {
 }
 
 @CommandHandler(TwitchDisconnectCommand)
-export class TwitchDisconnectCommandHandler
-  implements ICommandHandler<TwitchDisconnectCommand>
-{
+export class TwitchDisconnectCommandHandler implements ICommandHandler<TwitchDisconnectCommand> {
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,

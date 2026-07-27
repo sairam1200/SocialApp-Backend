@@ -13,9 +13,7 @@ export class DisableSpotifySyncCommand {
 }
 
 @CommandHandler(DisableSpotifySyncCommand)
-export class DisableSpotifySyncCommandHandler
-  implements ICommandHandler<DisableSpotifySyncCommand>
-{
+export class DisableSpotifySyncCommandHandler implements ICommandHandler<DisableSpotifySyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

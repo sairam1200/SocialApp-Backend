@@ -2,28 +2,31 @@ import { ApiProperty } from '@nestjs/swagger';
 import { PlaylistMemberRole } from '../enums';
 
 export class AddPlaylistContentModel {
-  @ApiProperty()
-  contentId: string;
+  @ApiProperty({ required: false })
+  userContentId?: string;
 
-  @ApiProperty()
-  type: string;
+  @ApiProperty({ required: false })
+  contentId?: string;
 
-  @ApiProperty()
-  platform: string;
+  @ApiProperty({ required: false })
+  type?: string;
 
-  @ApiProperty()
-  title: string;
+  @ApiProperty({ required: false })
+  platform?: string;
 
-  @ApiProperty()
-  contentUrl: string;
+  @ApiProperty({ required: false })
+  title?: string;
 
-  @ApiProperty()
-  thumbnailUrl: string;
+  @ApiProperty({ required: false })
+  contentUrl?: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
+  thumbnailUrl?: string;
+
+  @ApiProperty({ required: false })
   description?: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
   metadata?: Record<string, any>;
 }
 
@@ -33,6 +36,9 @@ export class PlaylistContentModel {
 
   @ApiProperty()
   playlistReferenceId: string;
+
+  @ApiProperty({ required: false })
+  userContentId?: string;
 
   @ApiProperty()
   contentId: string;
@@ -97,6 +103,12 @@ export class PlaylistModel {
   @ApiProperty({ required: false })
   description?: string;
 
+  @ApiProperty({ required: false })
+  playlistType?: string;
+
+  @ApiProperty({ required: false })
+  systemType?: string;
+
   @ApiProperty({ type: [PlaylistContentModel], required: false })
   contents?: PlaylistContentModel[];
 
@@ -119,4 +131,22 @@ export class PlaylistModel {
 
   @ApiProperty()
   referenceId: string;
+
+  @ApiProperty({ required: false })
+  pinOrder?: number;
+
+  @ApiProperty({ required: false })
+  isArchived?: boolean;
+
+  @ApiProperty({ required: false })
+  coverImage?: string;
+
+  @ApiProperty({ required: false })
+  icon?: string;
+
+  @ApiProperty({ required: false })
+  color?: string;
+
+  @ApiProperty({ required: false })
+  lastViewedAt?: Date;
 }

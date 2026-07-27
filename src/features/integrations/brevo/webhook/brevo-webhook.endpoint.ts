@@ -33,9 +33,7 @@ export class BrevoWebhookController {
       throw new BadRequestException('Invalid webhook payload');
     }
 
-    await this.commandBus.execute(
-      new BrevoWebhookCommand({ model: body }),
-    );
+    await this.commandBus.execute(new BrevoWebhookCommand({ model: body }));
 
     return { status: 'ok' };
   }

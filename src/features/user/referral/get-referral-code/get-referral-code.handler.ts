@@ -10,9 +10,7 @@ export class GetReferralCodeQuery {
 }
 
 @CommandHandler(GetReferralCodeQuery)
-export class GetReferralCodeQueryHandler
-  implements ICommandHandler<GetReferralCodeQuery>
-{
+export class GetReferralCodeQueryHandler implements ICommandHandler<GetReferralCodeQuery> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

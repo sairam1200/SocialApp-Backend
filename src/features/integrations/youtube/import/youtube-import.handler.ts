@@ -37,9 +37,7 @@ export class YoutubeImportCommand {
 }
 
 @CommandHandler(YoutubeImportCommand)
-export class YoutubeImportCommandHandler
-  implements ICommandHandler<YoutubeImportCommand>
-{
+export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

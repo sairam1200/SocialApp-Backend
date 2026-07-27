@@ -53,9 +53,10 @@ const verify2FAValidations = Joi.object({
 });
 
 @CommandHandler(Verify2FACommand)
-export class Verify2FACommandHandler
-  implements ICommandHandler<Verify2FACommand, TokenResponseModel>
-{
+export class Verify2FACommandHandler implements ICommandHandler<
+  Verify2FACommand,
+  TokenResponseModel
+> {
   constructor(
     @Inject(_const.ITOKEN_SERVICE) private readonly tokenService: ITokenService,
     @Inject(_const.IIDENTITY_REPOSITORY)

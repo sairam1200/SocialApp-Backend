@@ -26,9 +26,10 @@ const deleteManualProfileValidations = Joi.object({
 });
 
 @CommandHandler(DeleteManualProfileCommand)
-export class DeleteManualProfileCommandHandler
-  implements ICommandHandler<DeleteManualProfileCommand, void>
-{
+export class DeleteManualProfileCommandHandler implements ICommandHandler<
+  DeleteManualProfileCommand,
+  void
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

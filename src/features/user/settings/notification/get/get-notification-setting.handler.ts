@@ -34,9 +34,7 @@ export class GetNotificationSettingQuery {
 }
 
 @CommandHandler(GetNotificationSettingQuery)
-export class GetNotificationSettingQueryHandler
-  implements ICommandHandler<GetNotificationSettingQuery>
-{
+export class GetNotificationSettingQueryHandler implements ICommandHandler<GetNotificationSettingQuery> {
   constructor(
     @Inject(_const.IUSERPREFERENCE_REPOSITORY)
     private readonly userPreferenceRepository: IUserPreferenceRepository,

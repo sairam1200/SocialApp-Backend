@@ -58,9 +58,7 @@ const completeOnboardingValidations = Joi.object({
 });
 
 @CommandHandler(CompleteOnboardingCommand)
-export class CompleteOnboardingCommandHandler
-  implements ICommandHandler<CompleteOnboardingCommand>
-{
+export class CompleteOnboardingCommandHandler implements ICommandHandler<CompleteOnboardingCommand> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

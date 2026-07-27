@@ -29,9 +29,7 @@ export class LinkedInImportCommand {
 }
 
 @CommandHandler(LinkedInImportCommand)
-export class LinkedInImportCommandHandler
-  implements ICommandHandler<LinkedInImportCommand>
-{
+export class LinkedInImportCommandHandler implements ICommandHandler<LinkedInImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

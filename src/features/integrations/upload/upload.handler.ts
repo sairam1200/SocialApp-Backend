@@ -24,9 +24,7 @@ export class UploadMediaCommand {
 }
 
 @CommandHandler(UploadMediaCommand)
-export class UploadMediaCommandHandler
-  implements ICommandHandler<UploadMediaCommand>
-{
+export class UploadMediaCommandHandler implements ICommandHandler<UploadMediaCommand> {
   public async execute(command: UploadMediaCommand): Promise<{ url: string }> {
     const file = command.file;
 

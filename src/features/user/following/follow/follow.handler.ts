@@ -32,11 +32,10 @@ export class FollowUserCommand {
 }
 
 @CommandHandler(FollowUserCommand)
-export class FollowUserCommandHandler
-  implements ICommandHandler<FollowUserCommand>
-{
+export class FollowUserCommandHandler implements ICommandHandler<FollowUserCommand> {
   constructor(
-    @Inject(_const.IIDENTITY_REPOSITORY) private readonly users: IIdentityRepository,
+    @Inject(_const.IIDENTITY_REPOSITORY)
+    private readonly users: IIdentityRepository,
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
     private readonly follows: IUserFollowRepository,
     private readonly profileCache: ProfileCacheService,

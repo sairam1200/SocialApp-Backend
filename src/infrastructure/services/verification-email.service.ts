@@ -34,7 +34,8 @@ export class VerificationEmailService {
   async sendVerificationEmail(
     options: SendVerificationEmailOptions,
   ): Promise<void> {
-    const { user, targetEmail, isEmailChange, updateUser, deliveryMode } = options;
+    const { user, targetEmail, isEmailChange, updateUser, deliveryMode } =
+      options;
 
     console.log(
       `[OAUTH-DBG] SEND-VERIFICATION-EMAIL userId=${user.id} targetEmail=${targetEmail} isEmailChange=${isEmailChange} — WILL CALL rotateTokens WHICH DELETES ALL DATA PROTECTION KEYS`,
@@ -94,9 +95,7 @@ export class VerificationEmailService {
       `[OAUTH-DBG] ROTATE-TOKENS ENTRY userId=${userId} — THIS DELETES ALL DATA PROTECTION KEYS FOR THIS USER`,
     );
     await this.dataProtectionKeyRepository.deleteByUserIdAsync(userId, em);
-    console.log(
-      `[OAUTH-DBG] ROTATE-TOKENS COMPLETE userId=${userId}`,
-    );
+    console.log(`[OAUTH-DBG] ROTATE-TOKENS COMPLETE userId=${userId}`);
   }
 
   private buildConfirmationUrl(
@@ -112,8 +111,14 @@ export class VerificationEmailService {
     verificationCode: string,
     confirmEmailLink: string,
   ): Promise<void> {
-    const { user, targetEmail, userAgent, ipAddress, isEmailChange, deliveryMode } =
-      options;
+    const {
+      user,
+      targetEmail,
+      userAgent,
+      ipAddress,
+      isEmailChange,
+      deliveryMode,
+    } = options;
 
     const geoInfo = ipUtil.getGeolocationDetails(ipAddress);
     const location = geoInfo

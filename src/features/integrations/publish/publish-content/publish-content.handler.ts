@@ -34,9 +34,7 @@ const publishValidationSchema = Joi.object({
 }).required();
 
 @CommandHandler(PublishContentCommand)
-export class PublishContentCommandHandler
-  implements ICommandHandler<PublishContentCommand>
-{
+export class PublishContentCommandHandler implements ICommandHandler<PublishContentCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepo: ILinkedAccountRepository,

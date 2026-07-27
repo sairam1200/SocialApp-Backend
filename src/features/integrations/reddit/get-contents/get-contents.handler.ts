@@ -23,9 +23,7 @@ export class RedditContentsQuery {
 }
 
 @CommandHandler(RedditContentsQuery)
-export class RedditContentsQueryHandler
-  implements ICommandHandler<RedditContentsQuery>
-{
+export class RedditContentsQueryHandler implements ICommandHandler<RedditContentsQuery> {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,

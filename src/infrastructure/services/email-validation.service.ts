@@ -106,9 +106,7 @@ export class EmailValidationService implements IEmailValidationService {
     return null;
   }
 
-  private async validateMx(
-    domain: string,
-  ): Promise<EmailValidationResult> {
+  private async validateMx(domain: string): Promise<EmailValidationResult> {
     const cached = this.getCached(domain);
     if (cached) {
       if (!cached.result.valid) {

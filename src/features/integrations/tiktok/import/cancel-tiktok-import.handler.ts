@@ -26,9 +26,7 @@ export class CancelTiktokImportCommand {
 }
 
 @CommandHandler(CancelTiktokImportCommand)
-export class CancelTiktokImportCommandHandler
-  implements ICommandHandler<CancelTiktokImportCommand>
-{
+export class CancelTiktokImportCommandHandler implements ICommandHandler<CancelTiktokImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

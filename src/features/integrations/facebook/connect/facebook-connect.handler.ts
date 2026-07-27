@@ -75,9 +75,7 @@ const facebookConnectCallbackValidations = Joi.object({
 });
 
 @CommandHandler(FacebookConnectQuery)
-export class FacebookConnectQueryHandler
-  implements ICommandHandler<FacebookConnectQuery>
-{
+export class FacebookConnectQueryHandler implements ICommandHandler<FacebookConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -112,9 +110,7 @@ export class FacebookConnectQueryHandler
 }
 
 @CommandHandler(FacebookConnectCallbackQuery)
-export class FacebookConnectCallbackQueryHandler
-  implements ICommandHandler<FacebookConnectCallbackQuery>
-{
+export class FacebookConnectCallbackQueryHandler implements ICommandHandler<FacebookConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

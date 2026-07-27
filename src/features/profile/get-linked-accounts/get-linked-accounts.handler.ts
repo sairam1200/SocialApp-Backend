@@ -24,9 +24,10 @@ const getUserQueryValidations = {
 };
 
 @CommandHandler(GetUserLinkedAccountsQuery)
-export class GetUserLinkedAccountsQueryHandler
-  implements ICommandHandler<GetUserLinkedAccountsQuery, LinkedAccountModel[]>
-{
+export class GetUserLinkedAccountsQueryHandler implements ICommandHandler<
+  GetUserLinkedAccountsQuery,
+  LinkedAccountModel[]
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

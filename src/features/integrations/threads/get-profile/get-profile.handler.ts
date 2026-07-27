@@ -21,9 +21,7 @@ export class ThreadsProfileQuery {
 }
 
 @CommandHandler(ThreadsProfileQuery)
-export class ThreadsProfileQueryHandler
-  implements ICommandHandler<ThreadsProfileQuery>
-{
+export class ThreadsProfileQueryHandler implements ICommandHandler<ThreadsProfileQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

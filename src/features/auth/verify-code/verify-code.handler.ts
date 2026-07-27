@@ -43,9 +43,10 @@ const verifyCodeValidations = Joi.object({
 const AllowedPurposes = new Set<string>(Object.values(_const.TOKEN.PURPOSE));
 
 @CommandHandler(VerifyCodeCommand)
-export class VerifyCodeCommandHandler
-  implements ICommandHandler<VerifyCodeCommand, VerifyCodeResponseModel>
-{
+export class VerifyCodeCommandHandler implements ICommandHandler<
+  VerifyCodeCommand,
+  VerifyCodeResponseModel
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

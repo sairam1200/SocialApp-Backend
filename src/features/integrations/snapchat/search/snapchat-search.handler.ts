@@ -33,9 +33,7 @@ export class SnapchatSearchQuery {
 }
 
 @QueryHandler(SnapchatSearchQuery)
-export class SnapchatSearchQueryHandler
-  implements IQueryHandler<SnapchatSearchQuery>
-{
+export class SnapchatSearchQueryHandler implements IQueryHandler<SnapchatSearchQuery> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,

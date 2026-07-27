@@ -36,9 +36,7 @@ export class ThreadsSearchQuery {
 }
 
 @QueryHandler(ThreadsSearchQuery)
-export class ThreadsSearchQueryHandler
-  implements IQueryHandler<ThreadsSearchQuery>
-{
+export class ThreadsSearchQueryHandler implements IQueryHandler<ThreadsSearchQuery> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,

@@ -11,9 +11,7 @@ export class RedditDisconnectCommand {
 }
 
 @CommandHandler(RedditDisconnectCommand)
-export class RedditDisconnectCommandHandler
-  implements ICommandHandler<RedditDisconnectCommand>
-{
+export class RedditDisconnectCommandHandler implements ICommandHandler<RedditDisconnectCommand> {
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,

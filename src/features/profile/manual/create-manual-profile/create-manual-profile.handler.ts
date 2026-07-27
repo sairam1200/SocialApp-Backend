@@ -31,9 +31,10 @@ const createUserValidations = Joi.object({
 });
 
 @CommandHandler(CreateManualProfileCommand)
-export class CreateManualProfileCommandHandler
-  implements ICommandHandler<CreateManualProfileCommand, ManualProfileModel>
-{
+export class CreateManualProfileCommandHandler implements ICommandHandler<
+  CreateManualProfileCommand,
+  ManualProfileModel
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

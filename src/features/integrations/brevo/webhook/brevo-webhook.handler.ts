@@ -27,9 +27,7 @@ const brevoWebhookValidations = Joi.object({
 });
 
 @CommandHandler(BrevoWebhookCommand)
-export class BrevoWebhookHandler
-  implements ICommandHandler<BrevoWebhookCommand>
-{
+export class BrevoWebhookHandler implements ICommandHandler<BrevoWebhookCommand> {
   constructor(
     @Inject(_const.IEMAIL_BOUNCE_SERVICE)
     private readonly emailBounceService: IEmailBounceService,

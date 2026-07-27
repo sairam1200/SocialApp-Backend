@@ -27,6 +27,14 @@ export interface IPlaylistRepository {
     referenceId: string,
     contentId: string,
   ): Promise<PlaylistContent | null>;
+  isContentInPlaylist(
+    playlistReferenceId: string,
+    userContentId: string,
+  ): Promise<boolean>;
+  getContentIdsInPlaylist(
+    playlistReferenceId: string,
+    userContentIds: string[],
+  ): Promise<string[]>;
 
   getMembersAsync(referenceId: string): Promise<PlaylistMember[]>;
   removeMemberAsync(referenceId: string, member: PlaylistMember): Promise<void>;

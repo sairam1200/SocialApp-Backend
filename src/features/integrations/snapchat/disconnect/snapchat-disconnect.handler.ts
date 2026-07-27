@@ -11,9 +11,7 @@ export class SnapchatDisconnectCommand {
 }
 
 @CommandHandler(SnapchatDisconnectCommand)
-export class SnapchatDisconnectCommandHandler
-  implements ICommandHandler<SnapchatDisconnectCommand>
-{
+export class SnapchatDisconnectCommandHandler implements ICommandHandler<SnapchatDisconnectCommand> {
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,

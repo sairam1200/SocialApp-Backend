@@ -36,9 +36,10 @@ export class InstagramSearchQuery {
 }
 
 @QueryHandler(InstagramSearchQuery)
-export class InstagramSearchQueryHandler
-  implements IQueryHandler<InstagramSearchQuery, InstagramSearchResponseModel>
-{
+export class InstagramSearchQueryHandler implements IQueryHandler<
+  InstagramSearchQuery,
+  InstagramSearchResponseModel
+> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,

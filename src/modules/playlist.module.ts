@@ -13,6 +13,7 @@ import {
   PlaylistMember,
   Role,
   User,
+  UserContent,
   UserRole,
 } from '../domain/entities';
 
@@ -28,6 +29,7 @@ import {
       Playlist,
       PlaylistMember,
       PlaylistContent,
+      UserContent,
     ]),
   ],
   controllers: [...playlist.addControllers(), ...bookmark.addControllers()],
@@ -36,6 +38,7 @@ import {
 
     ...playlist.addHandlers(),
     dependency.PlaylistRepository,
+    dependency.UserContentRepository,
   ],
   exports: [],
 })

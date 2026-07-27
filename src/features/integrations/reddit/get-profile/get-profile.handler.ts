@@ -22,9 +22,7 @@ export class RedditProfileQuery {
 }
 
 @CommandHandler(RedditProfileQuery)
-export class RedditProfileQueryHandler
-  implements ICommandHandler<RedditProfileQuery>
-{
+export class RedditProfileQueryHandler implements ICommandHandler<RedditProfileQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

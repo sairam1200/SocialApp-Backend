@@ -5,9 +5,7 @@ import { NewsletterSubscriber } from '../../domain/entities/newsletterSubscriber
 import { INewsletterSubscriberRepository } from '../../domain/repositories/inewsletterSubscriber.repository';
 
 @Injectable()
-export class NewsletterSubscriberRepository
-  implements INewsletterSubscriberRepository
-{
+export class NewsletterSubscriberRepository implements INewsletterSubscriberRepository {
   constructor(
     @InjectRepository(NewsletterSubscriber)
     private readonly db: Repository<NewsletterSubscriber>,

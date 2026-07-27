@@ -26,9 +26,7 @@ export class CancelPinterestImportCommand {
 }
 
 @CommandHandler(CancelPinterestImportCommand)
-export class CancelPinterestImportCommandHandler
-  implements ICommandHandler<CancelPinterestImportCommand>
-{
+export class CancelPinterestImportCommandHandler implements ICommandHandler<CancelPinterestImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

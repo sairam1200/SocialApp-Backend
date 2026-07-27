@@ -13,9 +13,7 @@ export class DisableBehanceSyncCommand {
 }
 
 @CommandHandler(DisableBehanceSyncCommand)
-export class DisableBehanceSyncCommandHandler
-  implements ICommandHandler<DisableBehanceSyncCommand>
-{
+export class DisableBehanceSyncCommandHandler implements ICommandHandler<DisableBehanceSyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

@@ -28,9 +28,7 @@ export class InstagramImportCommand {
 }
 
 @CommandHandler(InstagramImportCommand)
-export class InstagramImportCommandHandler
-  implements ICommandHandler<InstagramImportCommand>
-{
+export class InstagramImportCommandHandler implements ICommandHandler<InstagramImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

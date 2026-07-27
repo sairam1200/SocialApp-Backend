@@ -13,9 +13,10 @@ export class EmailInuseCommand {
 }
 
 @CommandHandler(EmailInuseCommand)
-export class EmailInUseCommandHandler
-  implements ICommandHandler<EmailInuseCommand, boolean>
-{
+export class EmailInUseCommandHandler implements ICommandHandler<
+  EmailInuseCommand,
+  boolean
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

@@ -11,9 +11,10 @@ export class GetTopicsQuery {
 }
 
 @QueryHandler(GetTopicsQuery)
-export class GetTopicsQueryHandler
-  implements IQueryHandler<GetTopicsQuery, TopicModel[]>
-{
+export class GetTopicsQueryHandler implements IQueryHandler<
+  GetTopicsQuery,
+  TopicModel[]
+> {
   constructor(
     @Inject(_const.ITOPIC_REPOSITORY)
     private readonly topicRepository: ITopicRepository,

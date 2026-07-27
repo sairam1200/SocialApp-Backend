@@ -161,9 +161,7 @@ export class GetYoutubeRevenueQuery {
 // --- Handlers Implementation ---
 
 @CommandHandler(SyncYoutubeAnalyticsCommand)
-export class SyncYoutubeAnalyticsCommandHandler
-  implements ICommandHandler<SyncYoutubeAnalyticsCommand>
-{
+export class SyncYoutubeAnalyticsCommandHandler implements ICommandHandler<SyncYoutubeAnalyticsCommand> {
   constructor(
     @Inject(_const.IYOUTUBEANALYTICS_SERVICE)
     private readonly analyticsService: IYoutubeAnalyticsService,
@@ -177,9 +175,7 @@ export class SyncYoutubeAnalyticsCommandHandler
 }
 
 @QueryHandler(GetYoutubeChannelAnalyticsQuery)
-export class GetYoutubeChannelAnalyticsQueryHandler
-  implements IQueryHandler<GetYoutubeChannelAnalyticsQuery>
-{
+export class GetYoutubeChannelAnalyticsQueryHandler implements IQueryHandler<GetYoutubeChannelAnalyticsQuery> {
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
@@ -207,9 +203,7 @@ export class GetYoutubeChannelAnalyticsQueryHandler
 }
 
 @QueryHandler(GetYoutubeVideoAnalyticsQuery)
-export class GetYoutubeVideoAnalyticsQueryHandler
-  implements IQueryHandler<GetYoutubeVideoAnalyticsQuery>
-{
+export class GetYoutubeVideoAnalyticsQueryHandler implements IQueryHandler<GetYoutubeVideoAnalyticsQuery> {
   constructor(
     @Inject(_const.IYOUTUBEVIDEOANALYTICS_REPOSITORY)
     private readonly videoAnalyticsRepository: IYoutubeVideoAnalyticsRepository,
@@ -249,9 +243,7 @@ export class GetYoutubeVideoAnalyticsQueryHandler
 }
 
 @QueryHandler(GetYoutubeAnalyticsTrendsQuery)
-export class GetYoutubeAnalyticsTrendsQueryHandler
-  implements IQueryHandler<GetYoutubeAnalyticsTrendsQuery>
-{
+export class GetYoutubeAnalyticsTrendsQueryHandler implements IQueryHandler<GetYoutubeAnalyticsTrendsQuery> {
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
@@ -309,9 +301,7 @@ export class GetYoutubeAnalyticsTrendsQueryHandler
 }
 
 @QueryHandler(GetYoutubeTopVideosQuery)
-export class GetYoutubeTopVideosQueryHandler
-  implements IQueryHandler<GetYoutubeTopVideosQuery>
-{
+export class GetYoutubeTopVideosQueryHandler implements IQueryHandler<GetYoutubeTopVideosQuery> {
   constructor(
     @Inject(_const.IYOUTUBEVIDEOANALYTICS_REPOSITORY)
     private readonly videoAnalyticsRepository: IYoutubeVideoAnalyticsRepository,
@@ -441,9 +431,7 @@ export class GetYoutubeTopVideosQueryHandler
 }
 
 @QueryHandler(GetYoutubeOverviewQuery)
-export class GetYoutubeOverviewQueryHandler
-  implements IQueryHandler<GetYoutubeOverviewQuery>
-{
+export class GetYoutubeOverviewQueryHandler implements IQueryHandler<GetYoutubeOverviewQuery> {
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
@@ -552,9 +540,7 @@ export class GetYoutubeOverviewQueryHandler
 }
 
 @QueryHandler(GetYoutubeDailyViewsQuery)
-export class GetYoutubeDailyViewsQueryHandler
-  implements IQueryHandler<GetYoutubeDailyViewsQuery>
-{
+export class GetYoutubeDailyViewsQueryHandler implements IQueryHandler<GetYoutubeDailyViewsQuery> {
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
@@ -589,9 +575,7 @@ export class GetYoutubeDailyViewsQueryHandler
 }
 
 @QueryHandler(GetYoutubeWatchTimeQuery)
-export class GetYoutubeWatchTimeQueryHandler
-  implements IQueryHandler<GetYoutubeWatchTimeQuery>
-{
+export class GetYoutubeWatchTimeQueryHandler implements IQueryHandler<GetYoutubeWatchTimeQuery> {
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
@@ -626,9 +610,7 @@ export class GetYoutubeWatchTimeQueryHandler
 }
 
 @QueryHandler(GetYoutubeSubscriberGrowthQuery)
-export class GetYoutubeSubscriberGrowthQueryHandler
-  implements IQueryHandler<GetYoutubeSubscriberGrowthQuery>
-{
+export class GetYoutubeSubscriberGrowthQueryHandler implements IQueryHandler<GetYoutubeSubscriberGrowthQuery> {
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
@@ -663,9 +645,7 @@ export class GetYoutubeSubscriberGrowthQueryHandler
 }
 
 @QueryHandler(GetYoutubeTrafficSourcesQuery)
-export class GetYoutubeTrafficSourcesQueryHandler
-  implements IQueryHandler<GetYoutubeTrafficSourcesQuery>
-{
+export class GetYoutubeTrafficSourcesQueryHandler implements IQueryHandler<GetYoutubeTrafficSourcesQuery> {
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
@@ -693,9 +673,7 @@ export class GetYoutubeTrafficSourcesQueryHandler
 }
 
 @QueryHandler(GetYoutubeAudienceQuery)
-export class GetYoutubeAudienceQueryHandler
-  implements IQueryHandler<GetYoutubeAudienceQuery>
-{
+export class GetYoutubeAudienceQueryHandler implements IQueryHandler<GetYoutubeAudienceQuery> {
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
@@ -723,9 +701,7 @@ export class GetYoutubeAudienceQueryHandler
 }
 
 @QueryHandler(GetYoutubeGeographyQuery)
-export class GetYoutubeGeographyQueryHandler
-  implements IQueryHandler<GetYoutubeGeographyQuery>
-{
+export class GetYoutubeGeographyQueryHandler implements IQueryHandler<GetYoutubeGeographyQuery> {
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
@@ -753,9 +729,7 @@ export class GetYoutubeGeographyQueryHandler
 }
 
 @QueryHandler(GetYoutubeDevicesQuery)
-export class GetYoutubeDevicesQueryHandler
-  implements IQueryHandler<GetYoutubeDevicesQuery>
-{
+export class GetYoutubeDevicesQueryHandler implements IQueryHandler<GetYoutubeDevicesQuery> {
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
@@ -783,9 +757,7 @@ export class GetYoutubeDevicesQueryHandler
 }
 
 @QueryHandler(GetYoutubePlaybackLocationsQuery)
-export class GetYoutubePlaybackLocationsQueryHandler
-  implements IQueryHandler<GetYoutubePlaybackLocationsQuery>
-{
+export class GetYoutubePlaybackLocationsQueryHandler implements IQueryHandler<GetYoutubePlaybackLocationsQuery> {
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,
@@ -813,9 +785,7 @@ export class GetYoutubePlaybackLocationsQueryHandler
 }
 
 @QueryHandler(GetYoutubeRevenueQuery)
-export class GetYoutubeRevenueQueryHandler
-  implements IQueryHandler<GetYoutubeRevenueQuery>
-{
+export class GetYoutubeRevenueQueryHandler implements IQueryHandler<GetYoutubeRevenueQuery> {
   constructor(
     @Inject(_const.IYOUTUBECHANNELANALYTICS_REPOSITORY)
     private readonly channelAnalyticsRepository: IYoutubeChannelAnalyticsRepository,

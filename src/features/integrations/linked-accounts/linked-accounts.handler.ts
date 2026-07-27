@@ -10,10 +10,10 @@ export class GetUserLinkedAccountsQuery {
 }
 
 @CommandHandler(GetUserLinkedAccountsQuery)
-export class GetUserLinkedAccountsQueryHandler
-  implements
-    ICommandHandler<GetUserLinkedAccountsQuery, { platforms: string[] }>
-{
+export class GetUserLinkedAccountsQueryHandler implements ICommandHandler<
+  GetUserLinkedAccountsQuery,
+  { platforms: string[] }
+> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

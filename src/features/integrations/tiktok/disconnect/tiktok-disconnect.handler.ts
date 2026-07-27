@@ -11,9 +11,7 @@ export class TiktokDisconnectCommand {
 }
 
 @CommandHandler(TiktokDisconnectCommand)
-export class TiktokDisconnectCommandHandler
-  implements ICommandHandler<TiktokDisconnectCommand>
-{
+export class TiktokDisconnectCommandHandler implements ICommandHandler<TiktokDisconnectCommand> {
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,

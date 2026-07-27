@@ -40,9 +40,7 @@ export class TwitterSearchQuery {
 }
 
 @QueryHandler(TwitterSearchQuery)
-export class TwitterSearchQueryHandler
-  implements IQueryHandler<TwitterSearchQuery>
-{
+export class TwitterSearchQueryHandler implements IQueryHandler<TwitterSearchQuery> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,

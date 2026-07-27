@@ -36,9 +36,7 @@ const updateTypeValidations = Joi.object({
 });
 
 @CommandHandler(UpdateTypeCommand)
-export class UpdateTypeCommandHandler
-  implements ICommandHandler<UpdateTypeCommand>
-{
+export class UpdateTypeCommandHandler implements ICommandHandler<UpdateTypeCommand> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

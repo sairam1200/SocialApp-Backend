@@ -28,9 +28,7 @@ const updateProfileImagePrivacyValidations = Joi.object({
 });
 
 @CommandHandler(UpdateProfileImagePrivacyCommand)
-export class UpdateProfileImagePrivacyCommandHandler
-  implements ICommandHandler<UpdateProfileImagePrivacyCommand>
-{
+export class UpdateProfileImagePrivacyCommandHandler implements ICommandHandler<UpdateProfileImagePrivacyCommand> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

@@ -31,9 +31,7 @@ export class SnapchatImportCommand {
 }
 
 @CommandHandler(SnapchatImportCommand)
-export class SnapchatImportCommandHandler
-  implements ICommandHandler<SnapchatImportCommand>
-{
+export class SnapchatImportCommandHandler implements ICommandHandler<SnapchatImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

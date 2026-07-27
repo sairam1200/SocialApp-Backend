@@ -13,9 +13,7 @@ export class DisableRedditSyncCommand {
 }
 
 @CommandHandler(DisableRedditSyncCommand)
-export class DisableRedditSyncCommandHandler
-  implements ICommandHandler<DisableRedditSyncCommand>
-{
+export class DisableRedditSyncCommandHandler implements ICommandHandler<DisableRedditSyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

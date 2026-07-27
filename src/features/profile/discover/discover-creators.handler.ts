@@ -25,19 +25,16 @@ const validateDiscoverCreatorsQuery = Joi.object<DiscoverCreatorsQuery>({
 });
 
 @CommandHandler(DiscoverCreatorsQuery)
-export class DiscoverCreatorsQueryHandler
-  implements
-    ICommandHandler<
-      DiscoverCreatorsQuery,
-      {
-        profiles: PublicProfileModel[];
-        page: number;
-        limit: number;
-        totalResults: number;
-        hasNextPage: boolean;
-      }
-    >
-{
+export class DiscoverCreatorsQueryHandler implements ICommandHandler<
+  DiscoverCreatorsQuery,
+  {
+    profiles: PublicProfileModel[];
+    page: number;
+    limit: number;
+    totalResults: number;
+    hasNextPage: boolean;
+  }
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,

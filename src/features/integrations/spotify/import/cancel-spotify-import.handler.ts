@@ -28,9 +28,7 @@ export class CancelSpotifyImportCommand {
 }
 
 @CommandHandler(CancelSpotifyImportCommand)
-export class CancelSpotifyImportCommandHandler
-  implements ICommandHandler<CancelSpotifyImportCommand>
-{
+export class CancelSpotifyImportCommandHandler implements ICommandHandler<CancelSpotifyImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

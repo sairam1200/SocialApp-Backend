@@ -60,9 +60,7 @@ const instagramConnectCallbackValidations = Joi.object({
 });
 
 @CommandHandler(InstagramConnectQuery)
-export class InstagramConnectQueryHandler
-  implements ICommandHandler<InstagramConnectQuery>
-{
+export class InstagramConnectQueryHandler implements ICommandHandler<InstagramConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -100,9 +98,7 @@ export class InstagramConnectQueryHandler
  * Important: Instagram does not reviel the email address of the user
  */
 @CommandHandler(InstagramConnectCallbackQuery)
-export class InstagramConnectCallbackQueryHandler
-  implements ICommandHandler<InstagramConnectCallbackQuery>
-{
+export class InstagramConnectCallbackQueryHandler implements ICommandHandler<InstagramConnectCallbackQuery> {
   private static callbackInvocationCount = 0;
 
   constructor(
@@ -124,7 +120,8 @@ export class InstagramConnectCallbackQueryHandler
     expiresIn: number;
     profile: InstagramProfileModel;
   }> {
-    const invocationNum = ++InstagramConnectCallbackQueryHandler.callbackInvocationCount;
+    const invocationNum =
+      ++InstagramConnectCallbackQueryHandler.callbackInvocationCount;
     const { model } = query;
 
     console.log(
@@ -290,7 +287,10 @@ export class InstagramConnectCallbackQueryHandler
     }
   }
 
-  private async validateState(state: string, invocationNum: number): Promise<void> {
+  private async validateState(
+    state: string,
+    invocationNum: number,
+  ): Promise<void> {
     console.log(
       `[OAUTH-DBG] VALIDATE-STATE ENTRY state=${state} invocation=${invocationNum} nowEpochSec=${Math.floor(Date.now() / 1000)}`,
     );

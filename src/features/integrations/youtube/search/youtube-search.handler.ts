@@ -40,9 +40,7 @@ export class YoutubeSearchQuery {
 }
 
 @QueryHandler(YoutubeSearchQuery)
-export class YoutubeSearchQueryHandler
-  implements IQueryHandler<YoutubeSearchQuery>
-{
+export class YoutubeSearchQueryHandler implements IQueryHandler<YoutubeSearchQuery> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,

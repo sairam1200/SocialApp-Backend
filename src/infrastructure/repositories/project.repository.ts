@@ -66,8 +66,15 @@ export class ProjectRepository implements IProjectRepository {
         '(project.title ILIKE :keyword OR project.description ILIKE :keyword)',
         { keyword: likeKeyword },
       )
-      .andWhere('project.isConfidential = :confidential', { confidential: false })
-      .select(['project.id', 'project.title', 'project.description', 'project.status'])
+      .andWhere('project.isConfidential = :confidential', {
+        confidential: false,
+      })
+      .select([
+        'project.id',
+        'project.title',
+        'project.description',
+        'project.status',
+      ])
       .orderBy('project.createdAt', 'DESC')
       .take(limit)
       .getMany();

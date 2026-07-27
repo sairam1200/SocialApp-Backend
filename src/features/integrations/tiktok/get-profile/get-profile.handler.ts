@@ -20,9 +20,7 @@ export class TiktokProfileQuery {
 }
 
 @CommandHandler(TiktokProfileQuery)
-export class TiktokProfileQueryHandler
-  implements ICommandHandler<TiktokProfileQuery>
-{
+export class TiktokProfileQueryHandler implements ICommandHandler<TiktokProfileQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

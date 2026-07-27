@@ -66,9 +66,7 @@ const twitchConnectValidations = Joi.object({
 });
 
 @CommandHandler(TwitchConnectQuery)
-export class TwitchConnectQueryHandler
-  implements ICommandHandler<TwitchConnectQuery>
-{
+export class TwitchConnectQueryHandler implements ICommandHandler<TwitchConnectQuery> {
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
@@ -89,9 +87,7 @@ export class TwitchConnectQueryHandler
 }
 
 @CommandHandler(TwitchConnectCallbackQuery)
-export class TwitchConnectCallbackQueryHandler
-  implements ICommandHandler<TwitchConnectCallbackQuery>
-{
+export class TwitchConnectCallbackQueryHandler implements ICommandHandler<TwitchConnectCallbackQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

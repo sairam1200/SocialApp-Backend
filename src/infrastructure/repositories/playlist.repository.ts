@@ -66,7 +66,14 @@ export class PlaylistRepository implements IPlaylistRepository {
   public async getByIdAsync(referenceId: string): Promise<Playlist | null> {
     return await this.playlistContext.findOne({
       where: { referenceId },
-      relations: ['owner', 'members'],
+      relations: [
+        'owner',
+        'members',
+        'contents',
+        'contents.userContent',
+        'contents.addedBy',
+        'contents.addedBy.user',
+      ],
     });
   }
 
@@ -75,7 +82,7 @@ export class PlaylistRepository implements IPlaylistRepository {
   ): Promise<PlaylistContent[]> {
     return await this.playlistContentContext.find({
       where: { playlist: { referenceId } },
-      relations: ['playlist', 'addedBy'],
+      relations: ['playlist', 'addedBy', 'addedBy.user'],
     });
   }
 
@@ -85,7 +92,7 @@ export class PlaylistRepository implements IPlaylistRepository {
   ): Promise<PlaylistContent | null> {
     return await this.playlistContentContext.findOne({
       where: { id: contentId, playlist: { referenceId } },
-      relations: ['playlist', 'addedBy'],
+      relations: ['playlist', 'addedBy', 'addedBy.user'],
     });
   }
 
@@ -113,7 +120,12 @@ export class PlaylistRepository implements IPlaylistRepository {
     content.playlist = member.playlist;
     content.addedBy = member;
 
-    return await this.playlistContentContext.save(content);
+    const saved = await this.playlistContentContext.save(content);
+
+    return await this.playlistContentContext.findOne({
+      where: { id: saved.id },
+      relations: ['playlist', 'addedBy', 'addedBy.user', 'userContent'],
+    });
   }
 
   public async removeContentAsync(
@@ -149,7 +161,7 @@ export class PlaylistRepository implements IPlaylistRepository {
         { owner: { userName: userNameOrId }, name: playlistName },
         { owner: { id: userNameOrId }, name: playlistName },
       ],
-      relations: ['owner', 'members'],
+      relations: ['owner', 'members', 'contents', 'contents.userContent'],
     });
   }
 
@@ -168,7 +180,19 @@ export class PlaylistRepository implements IPlaylistRepository {
       });
     }
 
-    return await this.playlistContext.save(playlist);
+    const saved = await this.playlistContext.save(playlist);
+
+    if (!saved.members?.length) {
+      const ownerMember = this.playlistMemberContext.create({
+        playlist: saved,
+        user: user,
+        role: PlaylistMemberRole.Owner,
+      });
+      await this.playlistMemberContext.save(ownerMember);
+      saved.members = [ownerMember];
+    }
+
+    return saved;
   }
 
   public async updateAsync(playlist: Playlist): Promise<boolean> {
@@ -322,5 +346,40 @@ export class PlaylistRepository implements IPlaylistRepository {
     }
 
     return member;
+  }
+
+  public async isContentInPlaylist(
+    playlistReferenceId: string,
+    userContentId: string,
+  ): Promise<boolean> {
+    const count = await this.playlistContentContext
+      .createQueryBuilder('pc')
+      .innerJoin('pc.playlist', 'p')
+      .where('p."referenceId" = :playlistReferenceId', { playlistReferenceId })
+      .andWhere('pc."userContentId" = :userContentId', { userContentId })
+      .getCount();
+
+    return count > 0;
+  }
+
+  public async getContentIdsInPlaylist(
+    playlistReferenceId: string,
+    userContentIds: string[],
+  ): Promise<string[]> {
+    if (userContentIds.length === 0) {
+      return [];
+    }
+
+    const rows = await this.playlistContentContext
+      .createQueryBuilder('pc')
+      .innerJoin('pc.playlist', 'p')
+      .select('pc."userContentId"')
+      .where('p."referenceId" = :playlistReferenceId', { playlistReferenceId })
+      .andWhere('pc."userContentId" IN (:...userContentIds)', {
+        userContentIds,
+      })
+      .getMany();
+
+    return rows.map((r) => r.userContentId).filter((id): id is string => !!id);
   }
 }

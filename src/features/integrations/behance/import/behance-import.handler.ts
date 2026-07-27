@@ -31,9 +31,7 @@ export class BehanceImportCommand {
 }
 
 @CommandHandler(BehanceImportCommand)
-export class BehanceImportCommandHandler
-  implements ICommandHandler<BehanceImportCommand>
-{
+export class BehanceImportCommandHandler implements ICommandHandler<BehanceImportCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

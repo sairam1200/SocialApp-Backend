@@ -11,9 +11,7 @@ export class InstagramDisconnectCommand {
 }
 
 @CommandHandler(InstagramDisconnectCommand)
-export class InstagramDisconnectCommandHandler
-  implements ICommandHandler<InstagramDisconnectCommand>
-{
+export class InstagramDisconnectCommandHandler implements ICommandHandler<InstagramDisconnectCommand> {
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,

@@ -21,9 +21,7 @@ export class PinterestProfileQuery {
 }
 
 @CommandHandler(PinterestProfileQuery)
-export class PinterestProfileQueryHandler
-  implements ICommandHandler<PinterestProfileQuery>
-{
+export class PinterestProfileQueryHandler implements ICommandHandler<PinterestProfileQuery> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

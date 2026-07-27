@@ -42,7 +42,11 @@ export class ErrorHandlersFilter implements ExceptionFilter {
       });
 
       Logger.error(
-        serializeObject({ ...problem, detail: err.stack, originalMessage: err.message }),
+        serializeObject({
+          ...problem,
+          detail: err.stack,
+          originalMessage: err.message,
+        }),
       );
 
       response.status(err.statusCode || HttpStatus.BAD_REQUEST).json(problem);
@@ -60,7 +64,11 @@ export class ErrorHandlersFilter implements ExceptionFilter {
       });
 
       Logger.error(
-        serializeObject({ ...problem, detail: err.stack, originalMessage: err.message }),
+        serializeObject({
+          ...problem,
+          detail: err.stack,
+          originalMessage: err.message,
+        }),
       );
 
       response.status(HttpStatus.BAD_REQUEST).json(problem);

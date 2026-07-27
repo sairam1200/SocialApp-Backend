@@ -1688,11 +1688,7 @@ export class SearchService implements ISearchService {
 
     dbResults.contentStream.forEach((content) => {
       const type = content.subType as
-        | 'playlist'
-        | 'track'
-        | 'album'
-        | 'show'
-        | 'artist';
+        'playlist' | 'track' | 'album' | 'show' | 'artist';
       const baseItem = {
         id: content.id,
         name: content.title,

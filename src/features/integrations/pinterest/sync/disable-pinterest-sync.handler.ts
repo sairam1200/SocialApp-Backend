@@ -13,9 +13,7 @@ export class DisablePinterestSyncCommand {
 }
 
 @CommandHandler(DisablePinterestSyncCommand)
-export class DisablePinterestSyncCommandHandler
-  implements ICommandHandler<DisablePinterestSyncCommand>
-{
+export class DisablePinterestSyncCommandHandler implements ICommandHandler<DisablePinterestSyncCommand> {
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

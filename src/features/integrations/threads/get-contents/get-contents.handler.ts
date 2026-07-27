@@ -23,9 +23,7 @@ export class ThreadsContentsQuery {
 }
 
 @CommandHandler(ThreadsContentsQuery)
-export class ThreadsContentsQueryHandler
-  implements ICommandHandler<ThreadsContentsQuery>
-{
+export class ThreadsContentsQueryHandler implements ICommandHandler<ThreadsContentsQuery> {
   constructor(
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,

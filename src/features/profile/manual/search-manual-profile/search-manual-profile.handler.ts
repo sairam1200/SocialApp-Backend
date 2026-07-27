@@ -29,9 +29,7 @@ const searchManualProfileValidations = Joi.object<SearchManualProfileQuery>({
 });
 
 @CommandHandler(SearchManualProfileQuery)
-export class SearchManualProfileQueryHandler
-  implements ICommandHandler<SearchManualProfileQuery>
-{
+export class SearchManualProfileQueryHandler implements ICommandHandler<SearchManualProfileQuery> {
   constructor(
     @Inject(_const.IMANUALPROFILE_REPOSITORY)
     private readonly manualProfileRepository: IManualProfileRepository,

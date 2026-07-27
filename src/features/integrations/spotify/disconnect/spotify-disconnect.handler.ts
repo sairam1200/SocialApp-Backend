@@ -11,9 +11,7 @@ export class SpotifyDisconnectCommand {
 }
 
 @CommandHandler(SpotifyDisconnectCommand)
-export class SpotifyDisconnectCommandHandler
-  implements ICommandHandler<SpotifyDisconnectCommand>
-{
+export class SpotifyDisconnectCommandHandler implements ICommandHandler<SpotifyDisconnectCommand> {
   constructor(
     @Inject(_const.IPLATFORM_DISCONNECT_SERVICE)
     private readonly disconnectService: IPlatformDisconnectService,

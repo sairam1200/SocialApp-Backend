@@ -10,6 +10,7 @@ import { mapToPlaylistModel } from '../../../domain/mappers/playlist.mpper';
 import { IAnalyticsService } from '../../../domain/services/ianalytics.service';
 import { IPlaylistRepository } from '../../../domain/repositories/iplaylist.repository';
 import { PlaylistAlreadyExistsException } from '../../../core/exceptions/playlist.exception';
+import { PlaylistType, SystemCollectionType } from '../../../domain/enums';
 
 export class CreatePlaylistModel {
   @ApiProperty()
@@ -17,11 +18,23 @@ export class CreatePlaylistModel {
 
   @ApiProperty({ required: false })
   description?: string;
+
+  @ApiProperty({ required: false, enum: PlaylistType })
+  playlistType?: PlaylistType;
+
+  @ApiProperty({ required: false, enum: SystemCollectionType })
+  systemType?: SystemCollectionType;
 }
 
 const createPlaylistValidations = Joi.object({
   name: Joi.string().required(),
   description: Joi.string().optional(),
+  playlistType: Joi.string()
+    .valid(...Object.values(PlaylistType))
+    .optional(),
+  systemType: Joi.string()
+    .valid(...Object.values(SystemCollectionType))
+    .optional(),
 });
 
 export class CreatePlaylistCommand {
@@ -33,9 +46,10 @@ export class CreatePlaylistCommand {
 }
 
 @CommandHandler(CreatePlaylistCommand)
-export class CreatePlaylistCommandHandler
-  implements ICommandHandler<CreatePlaylistCommand, PlaylistModel>
-{
+export class CreatePlaylistCommandHandler implements ICommandHandler<
+  CreatePlaylistCommand,
+  PlaylistModel
+> {
   constructor(
     @Inject(_const.IPLAYLIST_REPOSITORY)
     private readonly playlistRepository: IPlaylistRepository,
@@ -61,6 +75,8 @@ export class CreatePlaylistCommandHandler
       new Playlist({
         name: model.name,
         description: model.description,
+        playlistType: model.playlistType ?? PlaylistType.USER,
+        systemType: model.systemType,
       }),
     );
 

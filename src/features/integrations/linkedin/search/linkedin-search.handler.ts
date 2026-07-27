@@ -40,9 +40,7 @@ export class LinkedInSearchQuery {
 }
 
 @QueryHandler(LinkedInSearchQuery)
-export class LinkedInSearchQueryHandler
-  implements IQueryHandler<LinkedInSearchQuery>
-{
+export class LinkedInSearchQueryHandler implements IQueryHandler<LinkedInSearchQuery> {
   constructor(
     @Inject(_const.ISEARCH_SERVICE)
     private readonly searchService: ISearchService,

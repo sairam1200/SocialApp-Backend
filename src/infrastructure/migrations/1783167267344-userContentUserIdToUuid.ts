@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class UserContentUserIdToUuid1783167267344
-  implements MigrationInterface
-{
+export class UserContentUserIdToUuid1783167267344 implements MigrationInterface {
   name = 'UserContentUserIdToUuid1783167267344';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

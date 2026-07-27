@@ -13,9 +13,10 @@ export class ConfirmPhoneNumberCommand {
 }
 
 @CommandHandler(ConfirmPhoneNumberCommand)
-export class ConfirmPhoneNumberCommandHandler
-  implements ICommandHandler<ConfirmPhoneNumberCommand, void>
-{
+export class ConfirmPhoneNumberCommandHandler implements ICommandHandler<
+  ConfirmPhoneNumberCommand,
+  void
+> {
   constructor(
     @Inject(_const.IIDENTITY_REPOSITORY)
     private readonly userRepository: IIdentityRepository,
