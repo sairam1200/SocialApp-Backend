@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { QueryBus } from '@nestjs/cqrs';
+import { CommandBus } from '@nestjs/cqrs';
 import _const from '../../../../core/utils/const';
 import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
@@ -16,7 +16,7 @@ import { GetPlaylistByNameQuery } from '../../get-playlist/get-playlist-by-name.
   version: '1',
 })
 export class GetBookmarkController {
-  constructor(private readonly queryBus: QueryBus) {}
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Get()
   @ApiResponse({ status: 200, description: 'OK', type: PlaylistModel })
@@ -24,7 +24,7 @@ export class GetBookmarkController {
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
   public async GetByName(@Res() res: Response): Promise<Response> {
-    const result = await this.queryBus.execute(
+    const result = await this.commandBus.execute(
       new GetPlaylistByNameQuery({
         model: {
           playlistName: _const.COLLECTION.BOOKMARK.NAME,

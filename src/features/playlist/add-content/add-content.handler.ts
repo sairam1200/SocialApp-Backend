@@ -43,7 +43,9 @@ export class AddPlaylistContentCommandHandler implements ICommandHandler<
     command: AddPlaylistContentContent,
   ): Promise<PlaylistContentModel> {
     const { model, playlistReferenceId } = command;
-    await addPlaylistContentValidation.validateAsync(model);
+    await addPlaylistContentValidation.validateAsync({
+      playlistReferenceId: command.playlistReferenceId,
+    });
 
     let playlistContent: PlaylistContent;
 

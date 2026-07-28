@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import _const from '../../../../core/utils/const';
-import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { CommandBus } from '@nestjs/cqrs';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
@@ -25,7 +25,6 @@ import { RemovePlaylistContentCommand } from '../../remove-content/remove-conten
 export class RemoveBookmarkContentController {
   constructor(
     private readonly commandBus: CommandBus,
-    private readonly queryBus: QueryBus,
   ) {}
 
   @Delete(':id/content/remove/:contentId')
@@ -56,7 +55,7 @@ export class RemoveBookmarkContentController {
 
   private async getBookmarkAsync(): Promise<PlaylistModel | null> {
     try {
-      return await this.queryBus.execute(
+      return await this.commandBus.execute(
         new GetPlaylistByNameQuery({
           model: {
             playlistName: _const.COLLECTION.BOOKMARK.NAME,

@@ -28,7 +28,7 @@ export class CreatePlaylistModel {
 
 const createPlaylistValidations = Joi.object({
   name: Joi.string().required(),
-  description: Joi.string().optional(),
+  description: Joi.string().allow('').optional(),
   playlistType: Joi.string()
     .valid(...Object.values(PlaylistType))
     .optional(),

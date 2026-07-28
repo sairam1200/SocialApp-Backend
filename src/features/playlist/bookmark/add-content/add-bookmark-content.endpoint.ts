@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import _const from '../../../../core/utils/const';
-import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { CommandBus } from '@nestjs/cqrs';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PlaylistNotFoundException } from '../../../../core/exceptions';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
@@ -32,7 +32,6 @@ import {
 export class AddBookmarkContentController {
   constructor(
     private readonly commandBus: CommandBus,
-    private readonly queryBus: QueryBus,
   ) {}
 
   @Put(':id/content/add')
@@ -60,7 +59,7 @@ export class AddBookmarkContentController {
 
   private async getBookmarkAsync(): Promise<PlaylistModel> {
     try {
-      return await this.queryBus.execute(
+      return await this.commandBus.execute(
         new GetPlaylistByNameQuery({
           model: {
             playlistName: _const.COLLECTION.BOOKMARK.NAME,

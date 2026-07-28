@@ -33,24 +33,28 @@ export class PlaylistRepository implements IPlaylistRepository {
   ) {}
 
   public async getAsync(userNameOrId: string): Promise<Playlist[]> {
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        userNameOrId,
+      );
+
     const ownedPlaylists = await this.playlistContext.find({
-      where: [
-        { owner: { id: userNameOrId } },
-        { owner: { userName: userNameOrId } },
-      ],
-      relations: ['owner', 'members'],
+      where: isUuid
+        ? [{ owner: { id: userNameOrId } }]
+        : [{ owner: { userName: userNameOrId } }],
+      relations: ['owner', 'members', 'members.user', 'members.playlist'],
     });
 
     const memberEntries = await this.playlistMemberContext.find({
-      where: [
-        { user: { id: userNameOrId } },
-        { user: { userName: userNameOrId } },
-      ],
+      where: isUuid
+        ? [{ user: { id: userNameOrId } }]
+        : [{ user: { userName: userNameOrId } }],
       relations: [
         'playlist',
         'playlist.owner',
         'playlist.members',
         'playlist.members.user',
+        'playlist.members.playlist',
       ],
     });
 
@@ -69,7 +73,10 @@ export class PlaylistRepository implements IPlaylistRepository {
       relations: [
         'owner',
         'members',
+        'members.user',
+        'members.playlist',
         'contents',
+        'contents.playlist',
         'contents.userContent',
         'contents.addedBy',
         'contents.addedBy.user',
@@ -161,7 +168,7 @@ export class PlaylistRepository implements IPlaylistRepository {
         { owner: { userName: userNameOrId }, name: playlistName },
         { owner: { id: userNameOrId }, name: playlistName },
       ],
-      relations: ['owner', 'members', 'contents', 'contents.userContent'],
+      relations: ['owner', 'members', 'members.user', 'members.playlist', 'contents', 'contents.playlist', 'contents.userContent', 'contents.addedBy', 'contents.addedBy.user'],
     });
   }
 
@@ -336,7 +343,7 @@ export class PlaylistRepository implements IPlaylistRepository {
     const member = await this.playlistMemberContext.findOne({
       where: {
         playlist: { referenceId },
-        user: { id: memberId },
+        id: memberId,
       },
       relations: ['playlist', 'user'],
     });

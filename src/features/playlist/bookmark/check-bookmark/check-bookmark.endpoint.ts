@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import _const from '../../../../core/utils/const';
-import { QueryBus } from '@nestjs/cqrs';
+import { CommandBus } from '@nestjs/cqrs';
 import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import { HttpContext } from '../../../../core/middlewares/httpContext.middleware';
@@ -27,7 +27,7 @@ import _constRepo from '../../../../core/utils/const';
 })
 export class CheckBookmarkController {
   constructor(
-    private readonly queryBus: QueryBus,
+    private readonly commandBus: CommandBus,
     @Inject(_constRepo.IPLAYLIST_REPOSITORY)
     private readonly playlistRepository: IPlaylistRepository,
   ) {}
@@ -42,7 +42,7 @@ export class CheckBookmarkController {
     let bookmarked = false;
 
     try {
-      const bookmark = await this.queryBus.execute(
+      const bookmark = await this.commandBus.execute(
         new GetPlaylistByNameQuery({
           model: {
             playlistName: _const.COLLECTION.BOOKMARK.NAME,
@@ -81,7 +81,7 @@ export class CheckBookmarkController {
     let bookmarkedIds: string[] = [];
 
     try {
-      const bookmark = await this.queryBus.execute(
+      const bookmark = await this.commandBus.execute(
         new GetPlaylistByNameQuery({
           model: {
             playlistName: _const.COLLECTION.BOOKMARK.NAME,
