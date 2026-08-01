@@ -16,6 +16,7 @@ import {
 } from '../../../domain/enums';
 import { INotificationRepository } from '../../../domain/repositories/inotification.repository';
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
+import { IContentStreamIndexService } from '../../../domain/services/icontentStreamIndex.service';
 import { PlatformConnectCleanupEvent } from '../../../domain/events/platform-connect-cleanup.event';
 
 export class PlatformRollbackListener {
@@ -30,6 +31,8 @@ export class PlatformRollbackListener {
     private readonly notificationRepository: INotificationRepository,
     @Inject(_const.IGENERAL_REPOSITORY)
     private readonly generalRepository: IGeneralRepository,
+    @Inject(_const.ICONTENTSTREAM_INDEX_SERVICE)
+    private readonly contentStreamIndexService: IContentStreamIndexService,
   ) {
     logger.info(`[PlatformRollback] Listener initialized`);
   }
@@ -99,7 +102,7 @@ export class PlatformRollbackListener {
           logger.debug(
             `[PlatformRollback] Moving ${contentsToMove.length} items to ContentStream`,
           );
-          await this.generalRepository.createAsync(contentsToMove);
+          await this.contentStreamIndexService.indexBatch(contentsToMove);
         }
 
         for (const userContent of userContents) {

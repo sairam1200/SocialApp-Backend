@@ -29,6 +29,8 @@ export default {
   INOTIFICATION_SERVICE: 'INotificationService',
   IQUEUE_SERVICE: 'IQueueService',
   IPLATFORM_DISCONNECT_SERVICE: 'IPlatformDisconnectService',
+  IOWNERSHIP_RESOLVER: 'IOwnershipResolver',
+  ICREATOR_IDENTITY_RESOLVER: 'ICreatorIdentityResolver',
   IYOUTUBE_IMPORT_SERVICE: 'IYoutubeImportService',
   IFACEBOOK_IMPORT_SERVICE: 'IFacebookImportService',
   IINSTAGRAM_IMPORT_SERVICE: 'IInstagramImportService',
@@ -62,6 +64,17 @@ export default {
   IFACEBOOKPOSTANALYTICS_REPOSITORY: 'IFacebookPostAnalyticsRepository',
   IFACEBOOKVIDEOANALYTICS_REPOSITORY: 'IFacebookVideoAnalyticsRepository',
   IFACEBOOKANALYTICS_SERVICE: 'IFacebookAnalyticsService',
+
+  // Unified Search
+  ICONTENTSTREAM_INDEX_SERVICE: 'IContentStreamIndexService',
+
+  // Feature Flags
+  SEARCH_ENABLED_PLATFORMS: ['youtube'] as string[],
+
+  // Search Provider Configuration
+  SEARCH_PROVIDER: {
+    OVERFETCH_MULTIPLIER: 1.5,
+  },
 
   // Newsletter
   INEWSLETTER_REPOSITORY: 'INewsletterSubscriberRepository',
@@ -150,6 +163,21 @@ export default {
     RESULT_FRESHNESS_WINDOW_MS: 60 * 60 * 1000,
     QUERY_CACHE_TTL_SEC: 5 * 60,
     QUERY_LOCK_TTL_SEC: 30,
+
+    // Unified search cache TTLs (seconds)
+    UNIFIED_CACHE_TTL: {
+      POPULAR: 30 * 60, // 30 minutes — high traffic, moderate freshness
+      NORMAL: 2 * 60 * 60, // 2 hours — balanced freshness and performance
+      RARE: 24 * 60 * 60, // 24 hours — low traffic, cache longer
+      NEGATIVE: 5 * 60, // 5 minutes — prevent repeated API calls for non-existent content
+    },
+
+    // Thresholds for query popularity classification (search count within TTL window)
+    QUERY_POPULARITY: {
+      POPULAR_THRESHOLD: 10, // >= 10 searches in window = popular
+      RARE_THRESHOLD: 2, // <= 2 searches in window = rare
+      COUNT_TTL_SEC: 60 * 60, // 1 hour window for counting
+    },
   },
 
   REDIS: {

@@ -2,31 +2,22 @@ import axios from 'axios';
 import _const from '../../core/utils/const';
 import logger from '../../core/utils/winston.util';
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  ContentStream,
-  LinkedAccount,
-  UserContent,
-} from '../../domain/entities';
+import { ContentStream, LinkedAccount } from '../../domain/entities';
 import { QueryOptions } from '../../domain/types/queryOptions.type';
 import { ISearchService } from '../../domain/services/isearch.service';
 import limitAllocatorUtil, {
   SectionSkipMap,
 } from '../../core/utils/limitAllocator.util';
 import {
+  YoutubeChannelDataType,
   YoutubeSearchResponseModel,
   YouTubeSearchResponseDataType,
   YouTubeContentModel,
 } from '../../domain/contracts/youtube.model';
-import {
-  ILinkedAccountRepository,
-  IUserContentRepository,
-} from '../../domain/repositories';
+import { ExpiringMemoryCache } from '../../core/utils/expiring-memory-cache';
+import { ILinkedAccountRepository } from '../../domain/repositories';
 import { IContentStreamRepository } from '../../domain/repositories/icontentStream.repository';
-import {
-  FacebookOnlineFilters,
-  FacebookUserContentFilters,
-} from 'domain/enums';
-import { IGeneralRepository } from 'domain/repositories/igeneral.repository';
+import { FacebookOnlineFilters } from 'domain/enums';
 import { PlatformSearchParamsModel } from 'domain/contracts/platform-search.model';
 import {
   FacebookAPIResponseModel,
@@ -54,42 +45,12 @@ import {
   mapFacebookOnlineResponseToContentStream,
   mapToFacebookProfileModel,
 } from 'domain/mappers/facebook.mapper';
-import { mapToYouTubeContentModel } from 'domain/mappers/youtube.mapper';
-import {
-  mapToRedditContentModel,
-  mapToRedditProfileModel,
-} from 'domain/mappers/reddit.mapper';
-import {
-  mapToSpotifyPlaylistModel,
-  mapToSpotifyTrackModel,
-  mapToSpotifyAlbumModel,
-  mapToSpotifyShowModel,
-} from 'domain/mappers/spotify.mapper';
-import {
-  mapToPinterestContentModel,
-  mapToPinterestProfileModel,
-} from 'domain/mappers/pinterest.mapper';
-import {
-  mapToInstagramContentModel,
-  mapToInstagramProfileModel,
-} from 'domain/mappers/instagram.mapper';
-import {
-  mapToTikTokContentModel,
-  mapToTiktokProfileModel,
-} from 'domain/mappers/tiktok.mapper';
-import {
-  mapToLinkedInContentModel,
-  mapToLinkedInProfileModel,
-} from 'domain/mappers/linkedin.mapper';
-import {
-  mapToUserTweetModel,
-  mapToLikedTweetModel,
-  mapToTwitterProfileModel,
-} from 'domain/mappers/twitter.mapper';
-import {
-  mapToSnapchatProfileModel,
-  mapToSnapchatContentModel,
-} from 'domain/mappers/snapchat.mapper';
+import { mapToRedditProfileModel } from 'domain/mappers/reddit.mapper';
+import { mapToPinterestProfileModel } from 'domain/mappers/pinterest.mapper';
+import { mapToInstagramProfileModel } from 'domain/mappers/instagram.mapper';
+import { mapToTiktokProfileModel } from 'domain/mappers/tiktok.mapper';
+import { mapToLinkedInProfileModel } from 'domain/mappers/linkedin.mapper';
+import { mapToTwitterProfileModel } from 'domain/mappers/twitter.mapper';
 import { RedditContentModel } from '../../domain/contracts/reddit.model';
 import { UserTweetModel } from '../../domain/contracts/twitter.model';
 import { PinterestContentModel } from '../../domain/contracts/pinterest.model';
@@ -99,20 +60,29 @@ import { LinkedInContentModel } from '../../domain/contracts/linkedin.model';
 import { SearchCacheService } from './searchCache.service';
 import { ApplicationException } from 'core/exceptions';
 import configs from '../../configs';
+import { IContentStreamIndexService } from '../../domain/services/icontentStreamIndex.service';
 
 @Injectable()
 export class SearchService implements ISearchService {
   constructor(
     @Inject(_const.ICONTENTSTREAM_REPOSITORY)
     private readonly contenStreamRepository: IContentStreamRepository,
-    @Inject(_const.IUSERCONTENT_REPOSITORY)
-    private readonly userContentRepository: IUserContentRepository,
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
-    @Inject(_const.IGENERAL_REPOSITORY)
-    private readonly generalRepository: IGeneralRepository,
     private readonly cacheService: SearchCacheService,
+    @Inject(_const.ICONTENTSTREAM_INDEX_SERVICE)
+    private readonly contentStreamIndexService: IContentStreamIndexService,
   ) {}
+
+  private readonly channelMetaCache = new ExpiringMemoryCache<
+    string,
+    {
+      name: string;
+      username?: string;
+      avatar?: string;
+      url: string;
+    }
+  >();
 
   public async searchFacebookAsync(
     params: PlatformSearchParamsModel,
@@ -193,7 +163,6 @@ export class SearchService implements ISearchService {
             skips,
           );
           dbResults.contentStream = updatedResults.contentStream;
-          dbResults.userContent = updatedResults.userContent;
           dbResults.linkedAccount = updatedResults.linkedAccount;
         }
       } catch (error) {
@@ -256,8 +225,7 @@ export class SearchService implements ISearchService {
       contentStream:
         filters.type &&
         !['Profile', 'Content', 'Community'].includes(filters.type),
-      userContent:
-        filters.type && !['feed', 'likes', 'video'].includes(filters.type),
+      userContent: true,
       linkedAccount:
         filters.type && !['page', 'group', 'event'].includes(filters.type),
       manualProfile: false,
@@ -268,7 +236,6 @@ export class SearchService implements ISearchService {
     originalQuery: string,
     dbResults: {
       contentStream: ContentStream[];
-      userContent: UserContent[];
       linkedAccount: LinkedAccount[];
     },
   ): FacebookSearchResponseModel {
@@ -292,29 +259,6 @@ export class SearchService implements ISearchService {
           break;
         case FacebookOnlineFilters.People:
           response.results.people.data.push(mappedContent);
-          break;
-      }
-    });
-
-    dbResults.userContent.forEach((content) => {
-      switch (content.type) {
-        case FacebookUserContentFilters.Feed:
-          response.results.feeds.data.push(content);
-          break;
-        case FacebookUserContentFilters.Posts:
-          response.results.posts.data.push(content);
-          break;
-        case FacebookUserContentFilters.Likes:
-          response.results.likes.data.push(content);
-          break;
-        case FacebookUserContentFilters.Groups:
-          response.results.groups.data.push(content);
-          break;
-        case FacebookUserContentFilters.Events:
-          response.results.events.data.push(content);
-          break;
-        case FacebookUserContentFilters.Videos:
-          response.results.videos.data.push(content);
           break;
       }
     });
@@ -353,24 +297,7 @@ export class SearchService implements ISearchService {
 
     if (!mappedResults.length) return;
 
-    const externalIds = mappedResults.map((c) => c.externalId);
-    const newIds = await this.generalRepository.checkExistingItemsAsync(
-      externalIds,
-      _const.PLATFORMS.FACEBOOK,
-    );
-    const toAdd = mappedResults.filter((c) => newIds.includes(c.externalId));
-    const existingIds = externalIds.filter((id) => !newIds.includes(id));
-
-    if (toAdd.length > 0) {
-      await this.generalRepository.createAsync(toAdd);
-    }
-
-    if (existingIds.length > 0) {
-      await this.updateContentRefreshTimestamp(
-        existingIds,
-        _const.PLATFORMS.FACEBOOK,
-      );
-    }
+    await this.indexSearchResults(mappedResults);
   }
 
   public async searchInstagramAsync(
@@ -452,7 +379,6 @@ export class SearchService implements ISearchService {
             skips,
           );
           dbResults.contentStream = updatedResults.contentStream;
-          dbResults.userContent = updatedResults.userContent;
           dbResults.linkedAccount = updatedResults.linkedAccount;
         }
       } catch (error) {
@@ -552,7 +478,6 @@ export class SearchService implements ISearchService {
             skips,
           );
           dbResults.contentStream = updatedResults.contentStream;
-          dbResults.userContent = updatedResults.userContent;
           dbResults.linkedAccount = updatedResults.linkedAccount;
         }
       } catch (error) {
@@ -654,7 +579,6 @@ export class SearchService implements ISearchService {
             skips,
           );
           dbResults.contentStream = updatedResults.contentStream;
-          dbResults.userContent = updatedResults.userContent;
           dbResults.linkedAccount = updatedResults.linkedAccount;
         }
       } catch (error) {
@@ -754,7 +678,6 @@ export class SearchService implements ISearchService {
             skips,
           );
           dbResults.contentStream = updatedResults.contentStream;
-          dbResults.userContent = updatedResults.userContent;
           dbResults.linkedAccount = updatedResults.linkedAccount;
         }
       } catch (error) {
@@ -854,7 +777,6 @@ export class SearchService implements ISearchService {
             skips,
           );
           dbResults.contentStream = updatedResults.contentStream;
-          dbResults.userContent = updatedResults.userContent;
           dbResults.linkedAccount = updatedResults.linkedAccount;
         }
       } catch (error) {
@@ -954,7 +876,6 @@ export class SearchService implements ISearchService {
             skips,
           );
           dbResults.contentStream = updatedResults.contentStream;
-          dbResults.userContent = updatedResults.userContent;
           dbResults.linkedAccount = updatedResults.linkedAccount;
         }
       } catch (error) {
@@ -1050,7 +971,7 @@ export class SearchService implements ISearchService {
         if (lockAcquired) {
           // After fetching from API, we may have stored many items in contentStream
           // Use full limit for contentStream to ensure we get all fetched items
-          // Other sections (userContent, linkedAccount) still use their section limits
+          // linkedAccount still uses its section limit
           const fullLimitSectionLimits = {
             ...sectionLimits,
             contentStream: limit, // Use full limit for contentStream after API fetch
@@ -1063,7 +984,6 @@ export class SearchService implements ISearchService {
             skips,
           );
           dbResults.contentStream = updatedResults.contentStream;
-          dbResults.userContent = updatedResults.userContent;
           dbResults.linkedAccount = updatedResults.linkedAccount;
         }
       } catch (error) {
@@ -1093,8 +1013,7 @@ export class SearchService implements ISearchService {
       contentStream:
         filters.type &&
         !['Profile', 'Content', 'Community'].includes(filters.type),
-      userContent:
-        filters.type && !['video', 'playlist'].includes(filters.type),
+      userContent: true,
       linkedAccount: filters.type && !['channel'].includes(filters.type),
       manualProfile: false,
     };
@@ -1107,18 +1026,12 @@ export class SearchService implements ISearchService {
     sectionLimits: any,
     skips: SectionSkipMap,
   ) {
-    const [contentStream, userContent, linkedAccount] = await Promise.all([
+    const [contentStream, linkedAccount] = await Promise.all([
       this.searchContentStreamAsync(skips.contentStream, {
         page,
         filter: filters,
         searchQuery: normalizedQuery,
         pageSize: sectionLimits.contentStream,
-      } as QueryOptions),
-      this.searchUserContentAsync(skips.userContent, {
-        page,
-        filter: filters,
-        searchQuery: normalizedQuery,
-        pageSize: sectionLimits.userContent,
       } as QueryOptions),
       this.searchLinkedAccountAsync(skips.linkedAccount, {
         page,
@@ -1130,7 +1043,6 @@ export class SearchService implements ISearchService {
 
     return {
       contentStream: contentStream[0],
-      userContent: userContent[0],
       linkedAccount: linkedAccount[0],
     };
   }
@@ -1138,7 +1050,6 @@ export class SearchService implements ISearchService {
   private shouldFetchFromAPI(
     dbResults: {
       contentStream: any[];
-      userContent: any[];
       linkedAccount: any[];
     },
     forceRefresh: boolean,
@@ -1150,16 +1061,10 @@ export class SearchService implements ISearchService {
     if (page > 1 && !pageToken) return false;
 
     const totalResults =
-      dbResults.contentStream.length +
-      dbResults.userContent.length +
-      dbResults.linkedAccount.length;
+      dbResults.contentStream.length + dbResults.linkedAccount.length;
     if (totalResults === 0) return true;
 
-    const allResults = [
-      ...dbResults.contentStream,
-      ...dbResults.userContent,
-      ...dbResults.linkedAccount,
-    ];
+    const allResults = [...dbResults.contentStream, ...dbResults.linkedAccount];
     const staleness = this.getDatabaseStalenessInfo(allResults);
 
     return staleness.stalePercentage >= 0.3 || totalResults < limit * 0.7;
@@ -1183,8 +1088,12 @@ export class SearchService implements ISearchService {
 
     if (!ytResults?.items?.length) return ytResults;
 
+    const channelMap = await this.fetchYouTubeChannelMetadata(
+      ytResults.items.map((i: any) => i.snippet?.channelId).filter(Boolean),
+    );
+
     const mappedResults = ytResults.items
-      .map((item) => {
+      .map((item: any) => {
         const kind = item.id?.kind || '';
         let type = 'Content';
         let subType = '';
@@ -1204,6 +1113,9 @@ export class SearchService implements ISearchService {
           externalId = item.id.playlistId || '';
         }
 
+        const channelId = item.snippet?.channelId;
+        const channelMeta = channelId ? channelMap.get(channelId) : undefined;
+
         return new ContentStream({
           type: type as any,
           subType,
@@ -1214,43 +1126,128 @@ export class SearchService implements ISearchService {
             description: item.snippet?.description,
             publishedAt: item.snippet?.publishedAt,
             thumbnails: item.snippet?.thumbnails,
-            channelId: item.snippet?.channelId,
+            channelId: channelId,
             channelTitle: item.snippet?.channelTitle,
+            channelName: channelMeta?.name,
+            channelUsername: channelMeta?.username,
+            channelProfileImage: channelMeta?.avatar,
+            channelUrl: channelMeta?.url,
           },
           lastRefreshed: new Date(),
         });
       })
-      .filter((c) => c.externalId);
+      .filter((c: ContentStream) => c.externalId);
 
     if (!mappedResults.length) return ytResults;
 
-    const externalIds = mappedResults.map((c) => c.externalId);
-    const newIds = await this.generalRepository.checkExistingItemsAsync(
-      externalIds,
-      _const.PLATFORMS.YOUTUBE,
-    );
-    const toAdd = mappedResults.filter((c) => newIds.includes(c.externalId));
-    const existingIds = externalIds.filter((id) => !newIds.includes(id));
+    await this.indexSearchResults(mappedResults);
 
-    if (toAdd.length > 0) {
-      await this.generalRepository.createAsync(toAdd);
+    return ytResults;
+  }
+
+  /**
+   * Single write path for upstream search results. Every provider's results
+   * are indexed through ContentStreamIndexService so they all share the same
+   * canonical document (searchText, publishedAt, engagementScore, creatorId).
+   * The (platform, externalId) conflict upsert inserts new rows and refreshes
+   * existing ones, so no deduplication or explicit refresh is needed here.
+   */
+  private async indexSearchResults(contents: ContentStream[]): Promise<void> {
+    if (contents.length === 0) return;
+
+    try {
+      await this.contentStreamIndexService.indexBatch(contents);
+    } catch (error) {
+      logger.warn(
+        `[SearchService] Failed to index content for unified search: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  private async fetchYouTubeChannelMetadata(
+    channelIds: string[],
+  ): Promise<
+    Map<
+      string,
+      { name: string; username?: string; avatar?: string; url: string }
+    >
+  > {
+    const result = new Map<
+      string,
+      { name: string; username?: string; avatar?: string; url: string }
+    >();
+    if (!channelIds.length) return result;
+
+    const uniqueIds = [...new Set(channelIds)];
+    const missingIds: string[] = [];
+
+    for (const id of uniqueIds) {
+      const cached = this.channelMetaCache.get(id);
+      if (cached) {
+        result.set(id, cached);
+      } else {
+        missingIds.push(id);
+      }
     }
 
-    if (existingIds.length > 0) {
-      await this.updateContentRefreshTimestamp(
-        existingIds,
-        _const.PLATFORMS.YOUTUBE,
+    if (!missingIds.length) return result;
+
+    try {
+      const chunkSize = 50;
+      const chunks: string[][] = [];
+      for (let i = 0; i < missingIds.length; i += chunkSize) {
+        chunks.push(missingIds.slice(i, i + chunkSize));
+      }
+
+      const responses = await Promise.all(
+        chunks.map((chunk) =>
+          axios.get<YoutubeChannelDataType>(
+            'https://www.googleapis.com/youtube/v3/channels',
+            {
+              params: {
+                part: 'snippet',
+                id: chunk.join(','),
+                key: configs.youtube.apiKey,
+              },
+              timeout: 10000,
+            },
+          ),
+        ),
+      );
+
+      for (const response of responses) {
+        for (const channel of response.data?.items ?? []) {
+          const thumbnails = channel.snippet?.thumbnails;
+          const avatar =
+            thumbnails?.high?.url ||
+            thumbnails?.medium?.url ||
+            thumbnails?.default?.url;
+          const meta = {
+            name: channel.snippet?.title || '',
+            username: channel.snippet?.customUrl || undefined,
+            avatar: avatar || undefined,
+            url: channel.id
+              ? `https://www.youtube.com/channel/${channel.id}`
+              : '',
+          };
+          this.channelMetaCache.set(channel.id, meta);
+          result.set(channel.id, meta);
+        }
+      }
+    } catch (error: any) {
+      logger.error(
+        `[SearchService] Failed to fetch YouTube channel metadata:`,
+        error?.response?.data || error?.message,
       );
     }
 
-    return ytResults;
+    return result;
   }
 
   private buildYoutubeResponse(
     originalQuery: string,
     dbResults: {
       contentStream: ContentStream[];
-      userContent: UserContent[];
       linkedAccount: LinkedAccount[];
     },
     apiResponse?: YouTubeSearchResponseDataType,
@@ -1277,16 +1274,14 @@ export class SearchService implements ISearchService {
       item.publishedAt = content.metaData?.publishedAt;
       item.videoId = content.metaData?.videoId;
       item.channelId = content.metaData?.channelId;
+      item.channelName = content.metaData?.channelName;
+      item.channelUsername = content.metaData?.channelUsername;
+      item.channelProfileImage = content.metaData?.channelProfileImage;
       item.viewCount = content.metaData?.viewCount;
       item.likeCount = content.metaData?.likeCount;
       item.commentCount = content.metaData?.commentCount;
       item.duration = content.metaData?.duration;
 
-      response.results.push(item);
-    });
-
-    dbResults.userContent.forEach((content) => {
-      const item = mapToYouTubeContentModel(content);
       response.results.push(item);
     });
 
@@ -1304,17 +1299,6 @@ export class SearchService implements ISearchService {
     return await this.linkedAccountRepository.getEntriesAsync(params);
   }
 
-  private async searchUserContentAsync(
-    skipSearch: boolean,
-    params: QueryOptions,
-  ): Promise<[UserContent[], number]> {
-    if (skipSearch) {
-      return [[], 0];
-    }
-
-    return await this.userContentRepository.getEntriesAsync(params);
-  }
-
   private async searchContentStreamAsync(
     skipSearch: boolean,
     params: QueryOptions,
@@ -1327,7 +1311,7 @@ export class SearchService implements ISearchService {
   }
 
   private getDatabaseStalenessInfo(
-    contents: Array<ContentStream | UserContent | LinkedAccount>,
+    contents: Array<ContentStream | LinkedAccount>,
   ): { staleCount: number; stalePercentage: number; totalCount: number } {
     if (contents.length === 0) {
       return { staleCount: 0, stalePercentage: 1.0, totalCount: 0 };
@@ -1345,22 +1329,6 @@ export class SearchService implements ISearchService {
       stalePercentage: staleCount / contents.length,
       totalCount: contents.length,
     };
-  }
-
-  private async updateContentRefreshTimestamp(
-    externalIds: string[],
-    platform: string,
-  ): Promise<void> {
-    if (externalIds.length === 0) return;
-
-    try {
-      await this.generalRepository.updateContentRefreshTimestampAsync(
-        externalIds,
-        platform,
-      );
-    } catch (error) {
-      logger.error(`Error updating lastRefreshed for ${platform}:`, error);
-    }
   }
 
   private async fetchYouTubeOnlineAsync(
@@ -1400,11 +1368,7 @@ export class SearchService implements ISearchService {
         'Content-Type': 'application/json',
       };
 
-      if (accessToken) {
-        headers.Authorization = `Bearer ${accessToken}`;
-      } else {
-        params.key = configs.youtube.apiKey;
-      }
+      params.key = configs.youtube.apiKey;
 
       const response = await axios.get<YouTubeSearchResponseDataType>(
         'https://www.googleapis.com/youtube/v3/search',
@@ -1437,7 +1401,7 @@ export class SearchService implements ISearchService {
   private getRedditSearchSkips(filters: Record<string, any>): SectionSkipMap {
     return {
       contentStream: false,
-      userContent: false,
+      userContent: true,
       linkedAccount:
         filters.type && !['user', 'subreddit'].includes(filters.type),
       manualProfile: false,
@@ -1448,7 +1412,6 @@ export class SearchService implements ISearchService {
     originalQuery: string,
     dbResults: {
       contentStream: ContentStream[];
-      userContent: UserContent[];
       linkedAccount: LinkedAccount[];
     },
   ): RedditSearchResponseModel {
@@ -1472,11 +1435,6 @@ export class SearchService implements ISearchService {
       item.selftext = content.metaData?.selftext;
       item.thumbnail = content.metaData?.thumbnail;
 
-      response.result.content.push(item);
-    });
-
-    dbResults.userContent.forEach((content) => {
-      const item = mapToRedditContentModel(content);
       response.result.content.push(item);
     });
 
@@ -1553,24 +1511,7 @@ export class SearchService implements ISearchService {
 
     if (!mappedResults.length) return;
 
-    const externalIds = mappedResults.map((c) => c.externalId);
-    const newIds = await this.generalRepository.checkExistingItemsAsync(
-      externalIds,
-      _const.PLATFORMS.REDDIT,
-    );
-    const toAdd = mappedResults.filter((c) => newIds.includes(c.externalId));
-    const existingIds = externalIds.filter((id) => !newIds.includes(id));
-
-    if (toAdd.length > 0) {
-      await this.generalRepository.createAsync(toAdd);
-    }
-
-    if (existingIds.length > 0) {
-      await this.updateContentRefreshTimestamp(
-        existingIds,
-        _const.PLATFORMS.REDDIT,
-      );
-    }
+    await this.indexSearchResults(mappedResults);
   }
 
   private async getRedditAppOnlyTokenAsync(): Promise<string> {
@@ -1669,7 +1610,7 @@ export class SearchService implements ISearchService {
   private getSpotifySearchSkips(filters: Record<string, any>): SectionSkipMap {
     return {
       contentStream: false,
-      userContent: false,
+      userContent: true,
       linkedAccount: true,
       manualProfile: false,
     };
@@ -1679,7 +1620,6 @@ export class SearchService implements ISearchService {
     originalQuery: string,
     dbResults: {
       contentStream: ContentStream[];
-      userContent: UserContent[];
       linkedAccount: LinkedAccount[];
     },
   ): SpotifySearchResponseModel {
@@ -1741,24 +1681,6 @@ export class SearchService implements ISearchService {
       }
     });
 
-    dbResults.userContent.forEach((content) => {
-      const type = content.type as 'playlist' | 'track' | 'album' | 'show';
-      switch (type) {
-        case 'track':
-          response.result.tracks.push(mapToSpotifyTrackModel(content));
-          break;
-        case 'album':
-          response.result.albums.push(mapToSpotifyAlbumModel(content));
-          break;
-        case 'playlist':
-          response.result.playlists.push(mapToSpotifyPlaylistModel(content));
-          break;
-        case 'show':
-          response.result.shows.push(mapToSpotifyShowModel(content));
-          break;
-      }
-    });
-
     return response;
   }
 
@@ -1816,24 +1738,7 @@ export class SearchService implements ISearchService {
 
     if (!mappedResults.length) return;
 
-    const externalIds = mappedResults.map((c) => c.externalId);
-    const newIds = await this.generalRepository.checkExistingItemsAsync(
-      externalIds,
-      _const.PLATFORMS.SPOTIFY,
-    );
-    const toAdd = mappedResults.filter((c) => newIds.includes(c.externalId));
-    const existingIds = externalIds.filter((id) => !newIds.includes(id));
-
-    if (toAdd.length > 0) {
-      await this.generalRepository.createAsync(toAdd);
-    }
-
-    if (existingIds.length > 0) {
-      await this.updateContentRefreshTimestamp(
-        existingIds,
-        _const.PLATFORMS.SPOTIFY,
-      );
-    }
+    await this.indexSearchResults(mappedResults);
   }
 
   private async getSpotifyClientCredentialsTokenAsync(): Promise<string> {
@@ -1944,7 +1849,7 @@ export class SearchService implements ISearchService {
   ): SectionSkipMap {
     return {
       contentStream: false,
-      userContent: false,
+      userContent: true,
       linkedAccount: filters.type && !['user'].includes(filters.type),
       manualProfile: false,
     };
@@ -1954,7 +1859,6 @@ export class SearchService implements ISearchService {
     originalQuery: string,
     dbResults: {
       contentStream: ContentStream[];
-      userContent: UserContent[];
       linkedAccount: LinkedAccount[];
     },
   ): PinterestSearchResponseModel {
@@ -1975,11 +1879,6 @@ export class SearchService implements ISearchService {
       item.createdAt = content.metaData?.createdAt;
       item.pinCount = content.metaData?.pinCount;
 
-      response.result.content.push(item);
-    });
-
-    dbResults.userContent.forEach((content) => {
-      const item = mapToPinterestContentModel(content);
       response.result.content.push(item);
     });
 
@@ -2045,24 +1944,7 @@ export class SearchService implements ISearchService {
 
     if (!mappedResults.length) return;
 
-    const externalIds = mappedResults.map((c) => c.externalId);
-    const newIds = await this.generalRepository.checkExistingItemsAsync(
-      externalIds,
-      _const.PLATFORMS.PINTEREST,
-    );
-    const toAdd = mappedResults.filter((c) => newIds.includes(c.externalId));
-    const existingIds = externalIds.filter((id) => !newIds.includes(id));
-
-    if (toAdd.length > 0) {
-      await this.generalRepository.createAsync(toAdd);
-    }
-
-    if (existingIds.length > 0) {
-      await this.updateContentRefreshTimestamp(
-        existingIds,
-        _const.PLATFORMS.PINTEREST,
-      );
-    }
+    await this.indexSearchResults(mappedResults);
   }
 
   private async fetchPinterestOnlineAsync(
@@ -2130,7 +2012,7 @@ export class SearchService implements ISearchService {
   private getTiktokSearchSkips(filters: Record<string, any>): SectionSkipMap {
     return {
       contentStream: false,
-      userContent: false,
+      userContent: true,
       linkedAccount: filters.type && !['user'].includes(filters.type),
       manualProfile: false,
     };
@@ -2140,7 +2022,6 @@ export class SearchService implements ISearchService {
     originalQuery: string,
     dbResults: {
       contentStream: ContentStream[];
-      userContent: UserContent[];
       linkedAccount: LinkedAccount[];
     },
   ): TiktokSearchResponseModel {
@@ -2175,11 +2056,6 @@ export class SearchService implements ISearchService {
 
         response.result.content.push(item);
       }
-    });
-
-    dbResults.userContent.forEach((content) => {
-      const item = mapToTikTokContentModel(content);
-      response.result.content.push(item);
     });
 
     dbResults.linkedAccount.forEach((account) => {
@@ -2241,24 +2117,7 @@ export class SearchService implements ISearchService {
 
     if (!mappedResults.length) return;
 
-    const externalIds = mappedResults.map((c) => c.externalId);
-    const newIds = await this.generalRepository.checkExistingItemsAsync(
-      externalIds,
-      _const.PLATFORMS.TIKTOK,
-    );
-    const toAdd = mappedResults.filter((c) => newIds.includes(c.externalId));
-    const existingIds = externalIds.filter((id) => !newIds.includes(id));
-
-    if (toAdd.length > 0) {
-      await this.generalRepository.createAsync(toAdd);
-    }
-
-    if (existingIds.length > 0) {
-      await this.updateContentRefreshTimestamp(
-        existingIds,
-        _const.PLATFORMS.TIKTOK,
-      );
-    }
+    await this.indexSearchResults(mappedResults);
   }
 
   private async fetchTiktokOnlineAsync(
@@ -2402,7 +2261,6 @@ export class SearchService implements ISearchService {
             skips,
           );
           dbResults.contentStream = updatedResults.contentStream;
-          dbResults.userContent = updatedResults.userContent;
           dbResults.linkedAccount = updatedResults.linkedAccount;
         }
       } catch (error) {
@@ -2426,7 +2284,7 @@ export class SearchService implements ISearchService {
   private getLinkedInSearchSkips(filters: Record<string, any>): SectionSkipMap {
     return {
       contentStream: false,
-      userContent: false,
+      userContent: true,
       linkedAccount:
         filters.type && !['person', 'company'].includes(filters.type),
       manualProfile: false,
@@ -2437,7 +2295,6 @@ export class SearchService implements ISearchService {
     originalQuery: string,
     dbResults: {
       contentStream: ContentStream[];
-      userContent: UserContent[];
       linkedAccount: LinkedAccount[];
     },
   ): LinkedInSearchResponseModel {
@@ -2463,11 +2320,6 @@ export class SearchService implements ISearchService {
 
         response.result.content.push(item);
       }
-    });
-
-    dbResults.userContent.forEach((content) => {
-      const item = mapToLinkedInContentModel(content);
-      response.result.content.push(item);
     });
 
     dbResults.linkedAccount.forEach((account) => {
@@ -2546,24 +2398,7 @@ export class SearchService implements ISearchService {
 
     if (!mappedResults.length) return;
 
-    const externalIds = mappedResults.map((c) => c.externalId);
-    const newIds = await this.generalRepository.checkExistingItemsAsync(
-      externalIds,
-      _const.PLATFORMS.LINKEDIN,
-    );
-    const toAdd = mappedResults.filter((c) => newIds.includes(c.externalId));
-    const existingIds = externalIds.filter((id) => !newIds.includes(id));
-
-    if (toAdd.length > 0) {
-      await this.generalRepository.createAsync(toAdd);
-    }
-
-    if (existingIds.length > 0) {
-      await this.updateContentRefreshTimestamp(
-        existingIds,
-        _const.PLATFORMS.LINKEDIN,
-      );
-    }
+    await this.indexSearchResults(mappedResults);
   }
 
   private async fetchLinkedInOnlineAsync(
@@ -2630,7 +2465,7 @@ export class SearchService implements ISearchService {
   ): SectionSkipMap {
     return {
       contentStream: false,
-      userContent: false,
+      userContent: true,
       linkedAccount:
         filters.type && !['user', 'hashtag'].includes(filters.type),
       manualProfile: false,
@@ -2641,7 +2476,6 @@ export class SearchService implements ISearchService {
     originalQuery: string,
     dbResults: {
       contentStream: ContentStream[];
-      userContent: UserContent[];
       linkedAccount: LinkedAccount[];
     },
   ): InstagramSearchResponseModel {
@@ -2664,11 +2498,6 @@ export class SearchService implements ISearchService {
       item.likeCount = content.metaData?.likeCount;
       item.commentsCount = content.metaData?.commentsCount;
 
-      response.result.content.push(item);
-    });
-
-    dbResults.userContent.forEach((content) => {
-      const item = mapToInstagramContentModel(content);
       response.result.content.push(item);
     });
 
@@ -2739,24 +2568,7 @@ export class SearchService implements ISearchService {
 
     if (!mappedResults.length) return;
 
-    const externalIds = mappedResults.map((c) => c.externalId);
-    const newIds = await this.generalRepository.checkExistingItemsAsync(
-      externalIds,
-      _const.PLATFORMS.INSTAGRAM,
-    );
-    const toAdd = mappedResults.filter((c) => newIds.includes(c.externalId));
-    const existingIds = externalIds.filter((id) => !newIds.includes(id));
-
-    if (toAdd.length > 0) {
-      await this.generalRepository.createAsync(toAdd);
-    }
-
-    if (existingIds.length > 0) {
-      await this.updateContentRefreshTimestamp(
-        existingIds,
-        _const.PLATFORMS.INSTAGRAM,
-      );
-    }
+    await this.indexSearchResults(mappedResults);
   }
 
   private async fetchInstagramOnlineAsync(
@@ -2824,7 +2636,7 @@ export class SearchService implements ISearchService {
   private getTwitterSearchSkips(filters: Record<string, any>): SectionSkipMap {
     return {
       contentStream: false,
-      userContent: false,
+      userContent: true,
       linkedAccount: filters.type && !['user'].includes(filters.type),
       manualProfile: false,
     };
@@ -2834,7 +2646,6 @@ export class SearchService implements ISearchService {
     originalQuery: string,
     dbResults: {
       contentStream: ContentStream[];
-      userContent: UserContent[];
       linkedAccount: LinkedAccount[];
     },
   ): TwitterSearchResponseModel {
@@ -2853,14 +2664,6 @@ export class SearchService implements ISearchService {
         };
         response.result.content.push(item);
       }
-    });
-
-    dbResults.userContent.forEach((content) => {
-      const item =
-        content.type === 'likedTweet'
-          ? mapToLikedTweetModel(content)
-          : mapToUserTweetModel(content);
-      response.result.content.push(item);
     });
 
     dbResults.linkedAccount.forEach((account) => {
@@ -2928,24 +2731,7 @@ export class SearchService implements ISearchService {
 
     if (!mappedResults.length) return;
 
-    const externalIds = mappedResults.map((c) => c.externalId);
-    const newIds = await this.generalRepository.checkExistingItemsAsync(
-      externalIds,
-      _const.PLATFORMS.TWITTER,
-    );
-    const toAdd = mappedResults.filter((c) => newIds.includes(c.externalId));
-    const existingIds = externalIds.filter((id) => !newIds.includes(id));
-
-    if (toAdd.length > 0) {
-      await this.generalRepository.createAsync(toAdd);
-    }
-
-    if (existingIds.length > 0) {
-      await this.updateContentRefreshTimestamp(
-        existingIds,
-        _const.PLATFORMS.TWITTER,
-      );
-    }
+    await this.indexSearchResults(mappedResults);
   }
 
   private async fetchTwitterOnlineAsync(

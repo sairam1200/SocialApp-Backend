@@ -168,7 +168,17 @@ export class PlaylistRepository implements IPlaylistRepository {
         { owner: { userName: userNameOrId }, name: playlistName },
         { owner: { id: userNameOrId }, name: playlistName },
       ],
-      relations: ['owner', 'members', 'members.user', 'members.playlist', 'contents', 'contents.playlist', 'contents.userContent', 'contents.addedBy', 'contents.addedBy.user'],
+      relations: [
+        'owner',
+        'members',
+        'members.user',
+        'members.playlist',
+        'contents',
+        'contents.playlist',
+        'contents.userContent',
+        'contents.addedBy',
+        'contents.addedBy.user',
+      ],
     });
   }
 

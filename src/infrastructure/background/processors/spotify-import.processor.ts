@@ -177,6 +177,7 @@ export class SpotifyImportProcessor extends WorkerHost {
           for (const item of items) {
             const content = new UserContent({
               userId: account.userId,
+              linkedAccountId: account.id,
               platform: _const.PLATFORMS.SPOTIFY,
               externalId: item.id,
             });

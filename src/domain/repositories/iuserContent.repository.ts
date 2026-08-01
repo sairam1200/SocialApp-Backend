@@ -16,6 +16,14 @@ export type SearchContentProjection = Pick<
   | 'engagement'
 > & {
   user: SearchUserProjection;
+  linkedAccount?: {
+    userName: string;
+    profileImage?: string | null;
+    verified: boolean;
+    externalUrl?: string | null;
+    metaData?: Record<string, any> | null;
+    platform: string;
+  } | null;
 };
 
 export interface IUserContentRepository {
@@ -43,10 +51,6 @@ export interface IUserContentRepository {
     page: number,
     limit: number,
   ): Promise<[SearchContentProjection[], number]>;
-  getGlobalSearchItemAsync(
-    id: string,
-    viewerUserId: string | null,
-  ): Promise<SearchContentProjection | null>;
   getVideoIdsByUserIdAndPlatformAsync(
     userId: string,
     platform: string,
@@ -85,4 +89,8 @@ export interface IUserContentRepository {
     externalIds: string[],
   ): Promise<void>;
   countByUserIdAsync(userId: string): Promise<number>;
+
+  findByLinkedAccountIdAsync(linkedAccountId: string): Promise<UserContent[]>;
+  deleteByLinkedAccountIdAsync(linkedAccountId: string): Promise<void>;
+  countByLinkedAccountIdAsync(linkedAccountId: string): Promise<number>;
 }

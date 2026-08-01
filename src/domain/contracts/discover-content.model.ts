@@ -7,6 +7,9 @@ export class DiscoverContentModel {
   @ApiProperty()
   userId: string;
 
+  @ApiProperty({ nullable: true })
+  linkedAccountId: string | null;
+
   @ApiProperty()
   userName: string;
 
@@ -46,7 +49,15 @@ export class DiscoverContentModel {
   @ApiProperty({ nullable: true })
   comments: number | null;
 
+  @ApiProperty()
+  verified: boolean;
+
+  @ApiProperty({ nullable: true })
+  profileUrl: string | null;
+
   constructor(partial?: Partial<DiscoverContentModel>) {
     Object.assign(this, partial);
+    this.verified = this.verified ?? false;
+    this.profileUrl = this.profileUrl ?? null;
   }
 }

@@ -53,6 +53,8 @@ export enum StreamEntityType {
   Profile = 'Profile',
   Content = 'Content',
   Community = 'Community',
+  Project = 'Project',
+  Job = 'Job',
 }
 
 export enum YouTubeUserContentFilters {

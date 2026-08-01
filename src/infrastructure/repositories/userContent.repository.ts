@@ -1,7 +1,11 @@
 import { Repository, In, MoreThan, Brackets } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserContent, UserBiometric } from '../../domain/entities';
+import {
+  UserContent,
+  UserBiometric,
+  LinkedAccount,
+} from '../../domain/entities';
 import { IUserContentRepository } from '../../domain/repositories';
 import { QueryOptions } from '../../domain/types/queryOptions.type';
 import { SearchContentProjection } from '../../domain/repositories/iuserContent.repository';
@@ -117,6 +121,7 @@ export class UserContentRepository implements IUserContentRepository {
       .createQueryBuilder('uc')
       .leftJoinAndSelect('uc.user', 'user')
       .leftJoinAndSelect('user.biometrics', 'bio')
+      .leftJoinAndSelect('uc.linkedAccount', 'linkedAccount')
       .addSelect(sortField, sortAlias)
       .orderBy(sortAlias, 'DESC')
       .addOrderBy('uc.id', 'DESC')
@@ -174,7 +179,10 @@ export class UserContentRepository implements IUserContentRepository {
   ): Promise<[UserContent[], number]> {
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;
     console.log('Query Options:', searchQuery);
-    const queryBuilder = this.userContentContext.createQueryBuilder('uc');
+    const queryBuilder = this.userContentContext
+      .createQueryBuilder('uc')
+      .leftJoinAndSelect('uc.user', 'user')
+      .leftJoinAndSelect('uc.linkedAccount', 'linkedAccount');
 
     if (!orderBy) {
       orderBy = 'title';
@@ -278,21 +286,12 @@ export class UserContentRepository implements IUserContentRepository {
     return [rows.map(this.mapSearchRow), count];
   }
 
-  public async getGlobalSearchItemAsync(
-    id: string,
-    viewerUserId: string | null,
-  ): Promise<SearchContentProjection | null> {
-    const row = await this.createGlobalSearchQuery(viewerUserId)
-      .andWhere('content.id = :id', { id })
-      .getRawOne();
-    return row ? this.mapSearchRow(row) : null;
-  }
-
   private createGlobalSearchQuery(viewerUserId: string | null) {
     const qb = this.userContentContext
       .createQueryBuilder('content')
       .innerJoin(User, 'creator', 'creator.id = content.userId')
       .leftJoin(UserBiometric, 'creatorbio', 'creatorbio."userId" = creator.id')
+      .leftJoin(LinkedAccount, 'la', 'la.id = content.linkedAccountId')
       .select([
         'content.id AS id',
         'content.title AS title',
@@ -312,6 +311,12 @@ export class UserContentRepository implements IUserContentRepository {
         'creatorbio."profileImageUrl" AS "profileImageUrl"',
         'creatorbio."defaultProfileImageUrl" AS "defaultProfileImageUrl"',
         'creatorbio.privacy AS "profileImagePrivacy"',
+        'la."userName" AS "linkedAccountUserName"',
+        'la."profileImage" AS "linkedAccountProfileImage"',
+        'la."verified" AS "linkedAccountVerified"',
+        'la."externalUrl" AS "linkedAccountExternalUrl"',
+        'la."metaData" AS "linkedAccountMetaData"',
+        'la."platform" AS "linkedAccountPlatform"',
       ])
       .where('creator.isActive = true');
 
@@ -333,6 +338,17 @@ export class UserContentRepository implements IUserContentRepository {
   }
 
   private mapSearchRow(row: any): SearchContentProjection {
+    const linkedAccount = row.linkedAccountUserName
+      ? {
+          userName: row.linkedAccountUserName,
+          profileImage: row.linkedAccountProfileImage ?? null,
+          verified: row.linkedAccountVerified ?? false,
+          externalUrl: row.linkedAccountExternalUrl ?? null,
+          metaData: row.linkedAccountMetaData ?? null,
+          platform: row.linkedAccountPlatform ?? row.platform,
+        }
+      : null;
+
     return {
       id: row.id,
       title: row.title,
@@ -344,6 +360,7 @@ export class UserContentRepository implements IUserContentRepository {
       media: row.media ?? null,
       metaData: row.metaData ?? null,
       engagement: row.engagement ?? null,
+      linkedAccount,
       user: {
         id: row.userId,
         firstName: row.userFirstName,
@@ -450,6 +467,33 @@ export class UserContentRepository implements IUserContentRepository {
       .createQueryBuilder('content')
       .where('content.userId = :userId', { userId })
       .getCount();
+  }
+
+  public async findByLinkedAccountIdAsync(
+    linkedAccountId: string,
+  ): Promise<UserContent[]> {
+    return this.userContentContext.find({
+      where: { linkedAccountId },
+    });
+  }
+
+  public async deleteByLinkedAccountIdAsync(
+    linkedAccountId: string,
+  ): Promise<void> {
+    await this.userContentContext
+      .createQueryBuilder()
+      .delete()
+      .from(UserContent)
+      .where('linkedAccountId = :linkedAccountId', { linkedAccountId })
+      .execute();
+  }
+
+  public async countByLinkedAccountIdAsync(
+    linkedAccountId: string,
+  ): Promise<number> {
+    return this.userContentContext.count({
+      where: { linkedAccountId },
+    });
   }
 
   private invalidateDiscoverFeedCache(): Promise<void> {

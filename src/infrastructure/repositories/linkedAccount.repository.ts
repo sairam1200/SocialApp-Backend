@@ -198,4 +198,13 @@ export class LinkedAccountRepository implements ILinkedAccountRepository {
   ): Promise<LinkedAccount> {
     return await this.linkedAccountContext.remove(linkedAccount);
   }
+
+  public async countByUserIdAndPlatformAsync(
+    userId: string,
+    platform: string,
+  ): Promise<number> {
+    return await this.linkedAccountContext.count({
+      where: { userId, platform },
+    });
+  }
 }

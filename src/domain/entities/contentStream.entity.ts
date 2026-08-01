@@ -22,6 +22,22 @@ export class ContentStream extends BaseEntity {
   @Column({ type: 'json', nullable: true })
   metaData?: Record<string, any>;
 
+  // Search columns (Phase 1: Unified Search)
+  @Column({ type: 'text', nullable: true })
+  searchText?: string;
+
+  @Column({ type: 'tsvector', nullable: true, select: false })
+  searchVector?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  publishedAt?: Date;
+
+  @Column({ type: 'double precision', nullable: true })
+  engagementScore?: number;
+
+  @Column({ type: 'uuid', nullable: true })
+  creatorId?: string;
+
   constructor(request: Partial<ContentStream> = {}) {
     super();
     Object.assign(this, request);

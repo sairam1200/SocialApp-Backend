@@ -1,0 +1,12 @@
+process.env.NODE_ENV = 'test';
+process.env.ENCRYPTION_KEY = 'test-encryption-key-that-is-32-chars-long!!';
+process.env.ENCRYPTION_IV = 'test-init-vector-16chars';
+process.env.CLOUDFLARE_ACCOUNT_ID = 'test-account-id';
+process.env.R2_BUCKET = 'test-bucket';
+process.env.R2_ACCESS_KEY_ID = 'test-access-key';
+process.env.R2_SECRET_ACCESS_KEY = 'test-secret-key';
+process.env.R2_PUBLIC_URL_BASE = 'https://test.example.com';
+process.env.JWT_SECRET = 'test-jwt-secret';
+process.env.JWT_AUDIENCE = 'https://localhost:80';
+process.env.JWT_ISSUER = 'https://localhost:80';
+process.env.BETTER_AUTH_SECRET = 'test-better-auth-secret';

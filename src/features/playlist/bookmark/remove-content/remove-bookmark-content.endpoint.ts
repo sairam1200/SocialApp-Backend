@@ -23,9 +23,7 @@ import { RemovePlaylistContentCommand } from '../../remove-content/remove-conten
   version: '1',
 })
 export class RemoveBookmarkContentController {
-  constructor(
-    private readonly commandBus: CommandBus,
-  ) {}
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Delete(':id/content/remove/:contentId')
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })

@@ -6,6 +6,7 @@ import { PlaylistMember } from '../collection/playlistMember.entity';
 import { UserBiometric } from './userBiometric.entity';
 import { UserFollow } from '../userFollow.entity';
 import { UserTopic } from '../userTopic.entity';
+import { LinkedAccount } from '../linkedAccount.entity';
 
 @Entity({ name: 'users', schema: 'identity' })
 export class User extends BaseEntity {
@@ -138,6 +139,9 @@ export class User extends BaseEntity {
 
   @OneToMany(() => UserTopic, (userTopic) => userTopic.user)
   userTopics: UserTopic[];
+
+  @OneToMany(() => LinkedAccount, (la) => la.user)
+  linkedAccounts: LinkedAccount[];
 
   constructor(request: Partial<User> = {}) {
     super();

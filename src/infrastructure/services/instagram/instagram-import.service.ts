@@ -5,6 +5,7 @@ import _const from '../../../core/utils/const';
 import logger from '../../../core/utils/winston.util';
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
 import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
+import { IOwnershipResolver } from '../../../domain/services/iownership-resolver.service';
 import { UserContent } from '../../../domain/entities/userContent.entity';
 
 @Injectable()
@@ -15,6 +16,9 @@ export class InstagramImportService {
 
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
+
+    @Inject(_const.IOWNERSHIP_RESOLVER)
+    private readonly ownershipResolver: IOwnershipResolver,
   ) {}
 
   async importMediaAsync(
@@ -23,6 +27,13 @@ export class InstagramImportService {
     instagramUserId: string,
   ): Promise<number> {
     let importedCount = 0;
+
+    const linkedAccountId = (
+      await this.ownershipResolver.resolveAsync(
+        userId,
+        _const.PLATFORMS.INSTAGRAM,
+      )
+    ).id;
 
     await this.userContentRepository.deleteByUserIdAndPlatformAsync(
       userId,
@@ -104,6 +115,8 @@ export class InstagramImportService {
       await this.userContentRepository.createAsync(
         new UserContent({
           userId,
+          linkedAccountId,
+
           platform: _const.PLATFORMS.INSTAGRAM,
 
           type: media.media_type,

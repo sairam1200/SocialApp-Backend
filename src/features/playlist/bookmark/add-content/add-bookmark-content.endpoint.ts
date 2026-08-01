@@ -30,9 +30,7 @@ import {
   version: '1',
 })
 export class AddBookmarkContentController {
-  constructor(
-    private readonly commandBus: CommandBus,
-  ) {}
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Put(':id/content/add')
   @ApiResponse({ status: 401, description: 'UNAUTHORIZED' })

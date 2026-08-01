@@ -3,6 +3,10 @@ import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { IUserContentRepository } from '../../domain/repositories/iuserContent.repository';
 import { IUserFollowRepository } from '../../domain/repositories/iuserFollow.repository';
+import {
+  ICreatorIdentityResolver,
+  ICREATOR_IDENTITY_RESOLVER,
+} from '../../domain/services/icreator-identity-resolver.service';
 import { DiscoverContentModel } from '../../domain/contracts/discover-content.model';
 import { UserContent } from '../../domain/entities';
 import { getProfileImageUrl } from '../../core/utils/profileImagePrivacy.util';
@@ -55,6 +59,8 @@ export class DiscoverFeedQueryHandler implements ICommandHandler<
     private readonly userContentRepository: IUserContentRepository,
     @Inject(_const.IUSERFOLLOW_REPOSITORY)
     private readonly userFollowRepository: IUserFollowRepository,
+    @Inject(ICREATOR_IDENTITY_RESOLVER)
+    private readonly creatorIdentityResolver: ICreatorIdentityResolver,
   ) {}
 
   async execute(query: DiscoverFeedQuery): Promise<{
@@ -122,13 +128,16 @@ export class DiscoverFeedQueryHandler implements ICommandHandler<
   private async commonFields(
     uc: UserContent,
   ): Promise<Partial<DiscoverContentModel>> {
-    const firstName = uc.user?.firstName ?? '';
-    const lastName = uc.user?.lastName ?? '';
-    const userName = uc.user?.userName ?? '';
+    const viewerUserId = HttpContext.getCurrentUserId;
 
-    let userProfileImage: string | null = null;
-    if (uc.user?.biometrics) {
-      const viewerUserId = HttpContext.getCurrentUserId;
+    const identity = this.creatorIdentityResolver.resolve({
+      linkedAccount: uc.linkedAccount ?? null,
+      user: uc.user ?? null,
+      importedMetadata: uc.metaData ?? null,
+    });
+
+    let userProfileImage: string | null = identity.profileImage;
+    if (!userProfileImage && uc.user?.biometrics) {
       userProfileImage = await getProfileImageUrl(
         uc.user.biometrics.profileImageUrl,
         uc.user.biometrics.defaultProfileImageUrl,
@@ -142,13 +151,16 @@ export class DiscoverFeedQueryHandler implements ICommandHandler<
     return {
       id: uc.id,
       userId: uc.userId,
-      userName: `${firstName} ${lastName}`.trim() || userName,
-      userHandle: userName ? `@${userName}` : '',
+      linkedAccountId: uc.linkedAccountId ?? null,
+      userName: identity.displayName,
+      userHandle: identity.handle,
       userProfileImage,
       platform: uc.platform,
       type: uc.type,
       title: uc.title,
       sourceUrl: uc.sourceUrl ?? null,
+      verified: identity.verified,
+      profileUrl: identity.profileUrl,
     };
   }
 

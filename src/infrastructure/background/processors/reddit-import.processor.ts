@@ -198,6 +198,7 @@ export class RedditImportProcessor extends WorkerHost {
 
             const content = new UserContent({
               userId: account.userId,
+              linkedAccountId: account.id,
               platform: _const.PLATFORMS.REDDIT,
               externalId: data.id,
             });

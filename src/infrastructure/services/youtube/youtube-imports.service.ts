@@ -10,7 +10,9 @@ import { IUserContentRepository } from '../../../domain/repositories/iuserConten
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
 import { IContentStreamRepository } from '../../../domain/repositories/icontentStream.repository';
 import { INotificationService } from '../../../domain/services/inotification.service';
+import { IOwnershipResolver } from '../../../domain/services/iownership-resolver.service';
 import { IYoutubeAnalyticsService } from '../../../domain/services/iyoutubeAnalytics.service';
+import { IContentStreamIndexService } from '../../../domain/services/icontentStreamIndex.service';
 import { NotificationStatus, NotificationType } from '../../../domain/enums';
 import { NotificationModel } from '../../../domain/contracts/notification.model';
 import { mapToNotificationModel } from '../../../domain/mappers/notification.mapper';
@@ -64,8 +66,12 @@ export class YoutubeImportService implements IYoutubeImportService {
     private readonly contentStreamRepository: IContentStreamRepository,
     @Inject(_const.INOTIFICATION_SERVICE)
     private readonly notificationService: INotificationService,
+    @Inject(_const.IOWNERSHIP_RESOLVER)
+    private readonly ownershipResolver: IOwnershipResolver,
     @Inject(_const.IYOUTUBEANALYTICS_SERVICE)
     private readonly youtubeAnalyticsService: IYoutubeAnalyticsService,
+    @Inject(_const.ICONTENTSTREAM_INDEX_SERVICE)
+    private readonly contentStreamIndexService: IContentStreamIndexService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -252,9 +258,11 @@ export class YoutubeImportService implements IYoutubeImportService {
     type: string,
     item: any,
     userId: string,
+    linkedAccountId: string,
   ): UserContent | null {
     const base = new UserContent({
       userId,
+      linkedAccountId,
       platform: _const.PLATFORMS.YOUTUBE,
     });
 
@@ -391,7 +399,20 @@ export class YoutubeImportService implements IYoutubeImportService {
       platform: _const.PLATFORMS.YOUTUBE,
       data: mapped,
     });
+
+    await this.indexImportedContent(saved);
+
     return saved;
+  }
+
+  private async indexImportedContent(content: UserContent): Promise<void> {
+    try {
+      await this.contentStreamIndexService.upsertFromUserContent(content);
+    } catch (error) {
+      logger.warn(
+        `[YoutubeImport] Failed to index content ${content.externalId} in unified search: ${(error as Error).message}`,
+      );
+    }
   }
 
   private async upsertNotification(
@@ -453,6 +474,13 @@ export class YoutubeImportService implements IYoutubeImportService {
   ): Promise<number> {
     let importedCount = 0;
     let pageCount = 0;
+
+    const linkedAccountId = (
+      await this.ownershipResolver.resolveAsync(
+        userId,
+        _const.PLATFORMS.YOUTUBE,
+      )
+    ).id;
 
     try {
       const channelRes = await axios.get(
@@ -539,6 +567,7 @@ export class YoutubeImportService implements IYoutubeImportService {
             await this.userContentRepository.createAsync(
               new UserContent({
                 userId,
+                linkedAccountId,
                 platform: _const.PLATFORMS.YOUTUBE,
                 type: 'uploaded_video',
                 externalId: videoId,
@@ -604,6 +633,14 @@ export class YoutubeImportService implements IYoutubeImportService {
     accessToken: string,
   ): Promise<number> {
     let importedCount = 0;
+
+    const linkedAccountId = (
+      await this.ownershipResolver.resolveAsync(
+        userId,
+        _const.PLATFORMS.YOUTUBE,
+      )
+    ).id;
+
     await this.userContentRepository.deleteByUserIdAndPlatformAsync(
       userId,
       _const.PLATFORMS.YOUTUBE,
@@ -669,6 +706,7 @@ export class YoutubeImportService implements IYoutubeImportService {
         await this.userContentRepository.createAsync(
           new UserContent({
             userId,
+            linkedAccountId,
             platform: _const.PLATFORMS.YOUTUBE,
             type: 'subscription_video',
             externalId: videoId,
@@ -857,7 +895,12 @@ export class YoutubeImportService implements IYoutubeImportService {
               if (pid) uploadsPlaylistId = pid;
             }
 
-            const content = this.mapContentByType(type, item, account.userId);
+            const content = this.mapContentByType(
+              type,
+              item,
+              account.userId,
+              account.id,
+            );
             if (content) {
               try {
                 const saved = await this.saveAndEmitContent(
@@ -966,6 +1009,7 @@ export class YoutubeImportService implements IYoutubeImportService {
 
             const content = new UserContent({
               userId: account.userId,
+              linkedAccountId: account.id,
               platform: _const.PLATFORMS.YOUTUBE,
               type: 'uploaded_video',
               title: item.snippet?.title || 'Untitled',
@@ -1163,11 +1207,20 @@ export class YoutubeImportService implements IYoutubeImportService {
     userId: string,
   ): Promise<string[]> {
     const ids: string[] = [];
+
+    const linkedAccountId = (
+      await this.ownershipResolver.resolveAsync(
+        userId,
+        _const.PLATFORMS.YOUTUBE,
+      )
+    ).id;
+
     try {
       const videos = await this.fetchPlaylistVideos(accessToken, playlistId);
       for (const video of videos) {
         const content = new UserContent({
           userId,
+          linkedAccountId,
           platform: _const.PLATFORMS.YOUTUBE,
           type: 'playlist_video',
           title: video.snippet?.title || 'Untitled',

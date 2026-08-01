@@ -4,6 +4,7 @@ import axios from 'axios';
 import _const from '../../../core/utils/const';
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
 import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
+import { IOwnershipResolver } from '../../../domain/services/iownership-resolver.service';
 import { UserContent } from '../../../domain/entities/userContent.entity';
 
 const BASE_URL = 'https://api.pinterest.com/v5';
@@ -16,6 +17,9 @@ export class PinterestImportService {
 
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
+
+    @Inject(_const.IOWNERSHIP_RESOLVER)
+    private readonly ownershipResolver: IOwnershipResolver,
   ) {}
 
   async importPinsAsync(
@@ -24,6 +28,13 @@ export class PinterestImportService {
     pinterestUserId: string,
   ): Promise<number> {
     let importedCount = 0;
+
+    const linkedAccountId = (
+      await this.ownershipResolver.resolveAsync(
+        userId,
+        _const.PLATFORMS.PINTEREST,
+      )
+    ).id;
 
     await this.userContentRepository.deleteByUserIdAndPlatformAsync(
       userId,
@@ -106,6 +117,8 @@ export class PinterestImportService {
           await this.userContentRepository.createAsync(
             new UserContent({
               userId,
+              linkedAccountId,
+
               platform: _const.PLATFORMS.PINTEREST,
               type: 'PIN',
               externalId: pin.id,

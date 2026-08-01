@@ -10,16 +10,9 @@ import {
   Query,
   Res,
 } from '@nestjs/common';
-import {
-  GlobalSearchQuery,
-  GlobalSearchRequestModel,
-  GlobalSearchResponseModel,
-} from './search.handler';
-import {
-  SearchItemQuery,
-  SearchResultsQuery,
-  SearchSuggestionsQuery,
-} from './database-search.handler';
+import { GlobalSearchQuery, GlobalSearchRequestModel } from './search.handler';
+import { SearchSuggestionsQuery } from './database-search.handler';
+import { SearchResponse } from '../../domain/contracts/search';
 
 @ApiTags('Search')
 @Controller({
@@ -34,30 +27,11 @@ export class GlobalSearchController {
     return this.queryBus.execute(new SearchSuggestionsQuery({ keyword }));
   }
 
-  @Get('results')
-  public results(
-    @Query('keyword') keyword: string,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
-  ) {
-    return this.queryBus.execute(
-      new SearchResultsQuery({ keyword, page, limit }),
-    );
-  }
-
-  @Get('item')
-  public item(
-    @Query('id') id: string,
-    @Query('type') type: 'user' | 'userContent',
-  ) {
-    return this.queryBus.execute(new SearchItemQuery({ id, type }));
-  }
-
   @Post()
   @ApiResponse({
     status: 200,
     description: 'OK',
-    type: GlobalSearchResponseModel,
+    type: Object,
   })
   @ApiResponse({ status: 400, description: 'BAD_REQUEST' })
   @ApiResponse({ status: 403, description: 'FORBIDDEN' })
@@ -65,7 +39,7 @@ export class GlobalSearchController {
   public async GlobalSearch(
     @Body() model: GlobalSearchRequestModel,
     @Res() res: Response,
-  ): Promise<Response | void> {
+  ): Promise<Response<SearchResponse>> {
     const result = await this.queryBus.execute(
       new GlobalSearchQuery({ model }),
     );

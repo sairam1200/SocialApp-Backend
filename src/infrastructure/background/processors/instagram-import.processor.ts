@@ -175,6 +175,7 @@ export class InstagramImportProcessor extends WorkerHost {
 
             const content = new UserContent({
               userId: account.userId,
+              linkedAccountId: account.id,
               platform: _const.PLATFORMS.INSTAGRAM,
               externalId: item.id,
             });

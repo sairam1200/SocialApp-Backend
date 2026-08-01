@@ -171,6 +171,7 @@ export class LinkedInImportProcessor extends WorkerHost {
 
             const content = new UserContent({
               userId: account.userId,
+              linkedAccountId: account.id,
               platform: _const.PLATFORMS.LINKEDIN,
               externalId: item.id || item.urn || `${type}-${account.userId}`,
             });

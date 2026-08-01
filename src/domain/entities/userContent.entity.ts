@@ -1,12 +1,16 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../baseEntity';
 import { User } from './identity/user.entity';
+import { LinkedAccount } from './linkedAccount.entity';
 
 @Entity({ name: 'userContents' })
 @Index(['userId', 'platform', 'externalId'], { unique: true })
 export class UserContent extends BaseEntity {
   @Column({ type: 'uuid', nullable: false })
   userId: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  linkedAccountId?: string;
 
   @Column({ nullable: false })
   type: string;
@@ -44,6 +48,15 @@ export class UserContent extends BaseEntity {
   @ManyToOne(() => User, { eager: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
+
+  @ManyToOne(() => LinkedAccount, (la) => la.userContents, {
+    eager: false,
+    onDelete: 'CASCADE',
+    nullable: true,
+  })
+  @JoinColumn({ name: 'linkedAccountId' })
+  linkedAccount?: LinkedAccount;
+
   constructor(request: Partial<UserContent> = {}) {
     super();
     Object.assign(this, request);

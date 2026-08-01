@@ -9,6 +9,7 @@ export class MakeUploadJobVideoIdNullable1784000000002 implements MigrationInter
         ALTER TABLE upload_jobs
         ALTER COLUMN "videoId" DROP NOT NULL;
       EXCEPTION
+        WHEN undefined_table THEN NULL;
         WHEN undefined_column THEN NULL;
       END $$;
     `);
@@ -16,8 +17,13 @@ export class MakeUploadJobVideoIdNullable1784000000002 implements MigrationInter
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-      ALTER TABLE upload_jobs
-      ALTER COLUMN "videoId" SET NOT NULL
+      DO $$ BEGIN
+        ALTER TABLE upload_jobs
+        ALTER COLUMN "videoId" SET NOT NULL;
+      EXCEPTION
+        WHEN undefined_table THEN NULL;
+        WHEN undefined_column THEN NULL;
+      END $$;
     `);
   }
 }

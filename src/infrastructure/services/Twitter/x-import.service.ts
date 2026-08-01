@@ -4,6 +4,7 @@ import axios from 'axios';
 import _const from '../../../core/utils/const';
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
 import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
+import { IOwnershipResolver } from '../../../domain/services/iownership-resolver.service';
 import { UserContent } from '../../../domain/entities/userContent.entity';
 
 @Injectable()
@@ -14,6 +15,9 @@ export class TwitterImportService {
 
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
+
+    @Inject(_const.IOWNERSHIP_RESOLVER)
+    private readonly ownershipResolver: IOwnershipResolver,
   ) {}
 
   async importTweetsAsync(
@@ -22,6 +26,13 @@ export class TwitterImportService {
     twitterUserId: string,
   ): Promise<number> {
     let importedCount = 0;
+
+    const linkedAccountId = (
+      await this.ownershipResolver.resolveAsync(
+        userId,
+        _const.PLATFORMS.TWITTER,
+      )
+    ).id;
 
     await this.userContentRepository.deleteByUserIdAndPlatformAsync(
       userId,
@@ -61,6 +72,7 @@ export class TwitterImportService {
       await this.userContentRepository.createAsync(
         new UserContent({
           userId,
+          linkedAccountId,
 
           platform: _const.PLATFORMS.TWITTER,
 

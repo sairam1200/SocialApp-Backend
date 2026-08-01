@@ -1,10 +1,19 @@
 import { BaseEntity } from '../baseEntity';
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import { User } from './identity/user.entity';
+import { UserContent } from './userContent.entity';
 
 @Entity({ name: 'linkedAccounts' })
 export class LinkedAccount extends BaseEntity {
   @Column({ type: 'uuid' })
   userId: string;
+
+  @ManyToOne(() => User, (user) => user.linkedAccounts, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' })
+  user: User;
+
+  @OneToMany(() => UserContent, (uc) => uc.linkedAccount)
+  userContents: UserContent[];
 
   @Column()
   platform: string;

@@ -20,6 +20,7 @@ import discover from '../features/discover';
     ...discover.addHandlers(),
     dependency.UserContentRepository,
     dependency.UserFollowRepository,
+    dependency.CreatorIdentityResolver,
   ],
 })
 export class DiscoverModule {}

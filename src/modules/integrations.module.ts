@@ -9,9 +9,11 @@ import { NotificationModule } from './notification.module';
 
 import { AuthGuardsModule } from './authGuard.module';
 import { AnalyticsModule } from './analytics.module';
+import { ProfileModule } from './profile.module';
 import { SearchCacheService } from 'infrastructure/services';
 import { PlatformRollbackListener } from '../infrastructure/background/listeners/platform-rollback.listener';
 import { SocialAccountLinkedListener } from '../infrastructure/background/listeners/social-account-linked.listener';
+import { LinkedAccountRemovedListener } from '../infrastructure/background/listeners/linked-account-removed.listener';
 import { VideoCodecService } from '../shared/video/video-codec.service';
 import { VideoTranscodingService } from '../shared/video/video-transcoding.service';
 import {
@@ -42,12 +44,37 @@ import {
 import { YoutubeAnalyticsCron } from '../infrastructure/background/cron/jobs/youtube-analytics.cron';
 import { FacebookAnalyticsCron } from '../infrastructure/background/cron/jobs/facebook-analytics.cron';
 import { R2CleanupCron } from '../infrastructure/background/cron/jobs/r2-cleanup.cron';
+
+// Layered Search Pipeline
+import {
+  SearchOrchestratorService,
+  SEARCH_REPOSITORIES,
+  CandidateFactory,
+  RankingEngine,
+  RankingStrategyRegistry,
+  ContentRankingStrategy,
+  ProfileRankingStrategy,
+  ProjectRankingStrategy,
+  JobRankingStrategy,
+  loadRankingWeights,
+  loadRankingFeatureFlags,
+  IRankingStrategy,
+  ResponseAdapter,
+  SearchIdentityResolver,
+} from '../features/search';
+import {
+  ContentStreamSearchRepository,
+  ProfileSearchRepository,
+  ProjectSearchRepository,
+  JobSearchRepository,
+} from '../infrastructure/search/repositories';
 @Module({
   imports: [
     CqrsModule,
     AuthGuardsModule,
     NotificationModule,
     AnalyticsModule,
+    ProfileModule,
     TypeOrmModule.forFeature([
       User,
       UserRole,
@@ -80,9 +107,94 @@ import { R2CleanupCron } from '../infrastructure/background/cron/jobs/r2-cleanup
     SearchCacheService,
     PlatformRollbackListener,
     SocialAccountLinkedListener,
+    LinkedAccountRemovedListener,
     YoutubeAnalyticsCron,
     ...integrations.addHandlers(),
     ...search.addHandlers(),
+
+    // Layered Search Pipeline
+    SearchOrchestratorService,
+    CandidateFactory,
+    ResponseAdapter,
+    SearchIdentityResolver,
+    RankingEngine,
+    ContentStreamSearchRepository,
+    ProfileSearchRepository,
+    ProjectSearchRepository,
+    JobSearchRepository,
+    {
+      provide: 'SEARCH_RANKING_WEIGHTS',
+      useFactory: () => loadRankingWeights(),
+    },
+    {
+      provide: 'SEARCH_RANKING_FLAGS',
+      useFactory: () => loadRankingFeatureFlags(),
+    },
+    {
+      provide: ContentRankingStrategy,
+      useFactory: (
+        weights: ReturnType<typeof loadRankingWeights>,
+        flags: ReturnType<typeof loadRankingFeatureFlags>,
+      ) => new ContentRankingStrategy(weights, flags),
+      inject: ['SEARCH_RANKING_WEIGHTS', 'SEARCH_RANKING_FLAGS'],
+    },
+    {
+      provide: ProfileRankingStrategy,
+      useFactory: (flags: ReturnType<typeof loadRankingFeatureFlags>) =>
+        new ProfileRankingStrategy(flags),
+      inject: ['SEARCH_RANKING_FLAGS'],
+    },
+    {
+      provide: ProjectRankingStrategy,
+      useFactory: (flags: ReturnType<typeof loadRankingFeatureFlags>) =>
+        new ProjectRankingStrategy(flags),
+      inject: ['SEARCH_RANKING_FLAGS'],
+    },
+    {
+      provide: JobRankingStrategy,
+      useFactory: (flags: ReturnType<typeof loadRankingFeatureFlags>) =>
+        new JobRankingStrategy(flags),
+      inject: ['SEARCH_RANKING_FLAGS'],
+    },
+    {
+      provide: 'SEARCH_RANKING_STRATEGIES',
+      useFactory: (
+        content: ContentRankingStrategy,
+        profile: ProfileRankingStrategy,
+        project: ProjectRankingStrategy,
+        job: JobRankingStrategy,
+      ) => [content, profile, project, job],
+      inject: [
+        ContentRankingStrategy,
+        ProfileRankingStrategy,
+        ProjectRankingStrategy,
+        JobRankingStrategy,
+      ],
+    },
+    {
+      provide: RankingStrategyRegistry,
+      useFactory: (strategies: IRankingStrategy[]) => {
+        const registry = new RankingStrategyRegistry();
+        registry.registerAll(strategies);
+        return registry;
+      },
+      inject: ['SEARCH_RANKING_STRATEGIES'],
+    },
+    {
+      provide: SEARCH_REPOSITORIES,
+      useFactory: (
+        content: ContentStreamSearchRepository,
+        profile: ProfileSearchRepository,
+        project: ProjectSearchRepository,
+        job: JobSearchRepository,
+      ) => [content, profile, project, job],
+      inject: [
+        ContentStreamSearchRepository,
+        ProfileSearchRepository,
+        ProjectSearchRepository,
+        JobSearchRepository,
+      ],
+    },
 
     dependency.RoleRepository,
     dependency.IdentityRepository,
@@ -93,11 +205,14 @@ import { R2CleanupCron } from '../infrastructure/background/cron/jobs/r2-cleanup
     dependency.DataProtectionKeyRepository,
     dependency.GeneralRepository,
     dependency.ContentStreamRepository,
+    dependency.ContentStreamIndexService,
     dependency.SearchService,
     dependency.SearchHistoryRepository,
     dependency.UserFollowRepository,
     dependency.YoubeWebHookService,
     dependency.PlatformDisconnectService,
+    dependency.OwnershipResolver,
+    dependency.CreatorIdentityResolver,
     dependency.YoutubeImportService,
     dependency.FacebookImportService,
     dependency.InstagramImportService,

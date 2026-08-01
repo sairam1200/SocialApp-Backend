@@ -13,21 +13,27 @@ export class normalizeRemainingFkColumnsToUuid1784000000008 implements Migration
     // identity.users holds the new UUID-based records.
     // Join on email to find the old→new mapping.
     await queryRunner.query(`
-      UPDATE "userContents" uc
-      SET "userId" = iu.id::text
-      FROM "gaddr_users_compat" gc
-      INNER JOIN "identity"."users" iu ON UPPER(gc.email) = UPPER(iu.email)
-      WHERE uc."userId" = gc.id
-        AND uc."userId" !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      DO $$ BEGIN
+        UPDATE "userContents" uc
+        SET "userId" = iu.id::text
+        FROM "gaddr_users_compat" gc
+        INNER JOIN "identity"."users" iu ON UPPER(gc.email) = UPPER(iu.email)
+        WHERE uc."userId" = gc.id
+          AND uc."userId" !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+      EXCEPTION WHEN undefined_table THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      UPDATE "userTopics" ut
-      SET "userId" = iu.id::text
-      FROM "gaddr_users_compat" gc
-      INNER JOIN "identity"."users" iu ON UPPER(gc.email) = UPPER(iu.email)
-      WHERE ut."userId" = gc.id
-        AND ut."userId" !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      DO $$ BEGIN
+        UPDATE "userTopics" ut
+        SET "userId" = iu.id::text
+        FROM "gaddr_users_compat" gc
+        INNER JOIN "identity"."users" iu ON UPPER(gc.email) = UPPER(iu.email)
+        WHERE ut."userId" = gc.id
+          AND ut."userId" !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+      EXCEPTION WHEN undefined_table THEN NULL;
+      END $$;
     `);
 
     // Step 2: Convert columns from text to uuid.

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "architect": {
+      "description": "Plans features, root-causes issues, evaluates dependencies — does not write code.",
+      "mode": "subagent",
+      "prompt": "{file:.opencode/agents/architect.md}",
+      "permission": {
+        "edit": "deny",
+        "write": "deny",
+        "skill": {
+          "gaddr-*": "allow"
+        }
+      }
+    },
+    "backend": {
+      "description": "Implements backend code in src/ — endpoints, handlers, entities, migrations, services, tests.",
+      "mode": "subagent",
+      "prompt": "{file:.opencode/agents/backend.md}",
+      "permission": {
+        "skill": {
+          "gaddr-*": "allow"
+        }
+      }
+    },
+    "redis": {
+      "description": "Redis and BullMQ specialist — cache strategy, TTL, session storage, rate-limit counters, queues.",
+      "mode": "subagent",
+      "prompt": "{file:.opencode/agents/redis.md}",
+      "permission": {
+        "skill": {
+          "gaddr-*": "allow"
+        }
+      }
+    },
+    "reviewer": {
+      "description": "Pre-merge security and correctness review — reads diffs, checks against known findings, reports issues.",
+      "mode": "subagent",
+      "prompt": "{file:.opencode/agents/reviewer.md}",
+      "permission": {
+        "edit": "deny",
+        "write": "deny",
+        "skill": {
+          "gaddr-*": "allow"
+        }
+      }
+    }
+  },
+  "permission": {
+    "skill": {
+      "gaddr-*": "allow"
+    }
+  }
+}

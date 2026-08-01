@@ -14,7 +14,10 @@ yarn-error.log*
 lerna-debug.log*
 
 #sub_agents
-.opencode/
+.opencode/node_modules
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/bun.lock
 
 # OS
 .DS_Store

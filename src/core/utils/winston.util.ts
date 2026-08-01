@@ -1,7 +1,7 @@
 import { format, transports, createLogger } from 'winston';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as DailyRotateFile from 'winston-daily-rotate-file';
+import DailyRotateFile from 'winston-daily-rotate-file';
 import configs from '../../configs';
 
 // Ensure log directory exists

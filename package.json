@@ -125,7 +125,14 @@
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
+    "moduleNameMapper": {
+      "^core/(.*)$": "<rootDir>/core/$1",
+      "^domain/(.*)$": "<rootDir>/domain/$1",
+      "^features/(.*)$": "<rootDir>/features/$1",
+      "^infrastructure/(.*)$": "<rootDir>/infrastructure/$1"
+    },
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
-  }
+      "testEnvironment": "node",
+      "setupFiles": ["<rootDir>/jest.setup.ts"]
+    }
 }

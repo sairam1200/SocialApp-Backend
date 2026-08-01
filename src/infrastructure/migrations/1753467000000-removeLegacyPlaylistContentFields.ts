@@ -9,17 +9,14 @@
  */
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class RemoveLegacyPlaylistContentFields1753467000000
-  implements MigrationInterface {
+export class RemoveLegacyPlaylistContentFields1753467000000 implements MigrationInterface {
   name = 'RemoveLegacyPlaylistContentFields1753467000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `ALTER TABLE "playlistContent" DROP COLUMN "contentId"`,
     );
-    await queryRunner.query(
-      `ALTER TABLE "playlistContent" DROP COLUMN "type"`,
-    );
+    await queryRunner.query(`ALTER TABLE "playlistContent" DROP COLUMN "type"`);
     await queryRunner.query(
       `ALTER TABLE "playlistContent" DROP COLUMN "platform"`,
     );

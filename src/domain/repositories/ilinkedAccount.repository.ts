@@ -30,4 +30,9 @@ export interface ILinkedAccountRepository {
     metaKey: string,
     metaValue: string,
   ): Promise<LinkedAccount | null>;
+
+  countByUserIdAndPlatformAsync(
+    userId: string,
+    platform: string,
+  ): Promise<number>;
 }

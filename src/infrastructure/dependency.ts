@@ -4,6 +4,7 @@ import { GeneralRepository } from './repositories/general.repository';
 import { ManualProfileRepository } from './repositories/manualProfile.repository';
 import { YoutubeImportService } from '../infrastructure/services/youtube/youtube-imports.service';
 import { YoutubePublishingService } from '../infrastructure/services/youtube/youtube-publishing.service';
+import { ContentStreamIndexService } from './search/contentStreamIndex.service';
 import { FacebookImportService } from '../infrastructure/services/facebook/facebook-imports.service';
 import { InstagramImportService } from '../infrastructure/services/instagram/instagram-import.service';
 import { TwitterImportService } from '../infrastructure/services/Twitter/x-import.service';
@@ -57,6 +58,8 @@ import {
   PlatformDisconnectService,
   YoutubeAnalyticsService,
   FacebookAnalyticsService,
+  OwnershipResolver,
+  CreatorIdentityResolver,
 } from './services';
 import { NewsletterSubscriberRepository } from './repositories/newsletterSubscriber.repository';
 import { ProjectRepository } from './repositories/project.repository';
@@ -168,6 +171,14 @@ export const dependency = {
   PlatformDisconnectService: {
     provide: _const.IPLATFORM_DISCONNECT_SERVICE,
     useClass: PlatformDisconnectService,
+  },
+  OwnershipResolver: {
+    provide: _const.IOWNERSHIP_RESOLVER,
+    useClass: OwnershipResolver,
+  },
+  CreatorIdentityResolver: {
+    provide: _const.ICREATOR_IDENTITY_RESOLVER,
+    useClass: CreatorIdentityResolver,
   },
   GeneralRepository: {
     provide: _const.IGENERAL_REPOSITORY,
@@ -297,5 +308,11 @@ export const dependency = {
   EmailBounceService: {
     provide: _const.IEMAIL_BOUNCE_SERVICE,
     useClass: EmailBounceService,
+  },
+
+  // Unified Search
+  ContentStreamIndexService: {
+    provide: _const.ICONTENTSTREAM_INDEX_SERVICE,
+    useClass: ContentStreamIndexService,
   },
 };

@@ -182,6 +182,15 @@ export class YouTubeContentModel {
   @ApiProperty({ required: false })
   channelId?: string;
 
+  @ApiProperty({ required: false })
+  channelName?: string;
+
+  @ApiProperty({ required: false })
+  channelUsername?: string;
+
+  @ApiProperty({ required: false })
+  channelProfileImage?: string;
+
   @ApiProperty({ required: false, default: 0 })
   viewCount?: number;
 

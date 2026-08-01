@@ -195,6 +195,7 @@ export class FacebookImportProcessor extends WorkerHost {
 
             let content = new UserContent({
               userId: account.userId,
+              linkedAccountId: account.id,
               platform: _const.PLATFORMS.FACEBOOK,
               externalId: facebookContent.id,
             });
