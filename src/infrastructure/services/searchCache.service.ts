@@ -141,6 +141,38 @@ export class SearchCacheService {
     }
   }
 
+  // ─── YouTube Import Lock ──────────────────────────────────────────────
+  //
+  // Guards the YouTube enrichment import so at most one request per query
+  // imports within a cache window. Unlike the platform search lock, Redis is
+  // treated as an optimization, not a dependency: acquisition THROWS on a
+  // Redis failure so the caller can distinguish "lock held" (false) from
+  // "Redis unavailable" and still import without the lock.
+
+  private buildYouTubeImportLockKey(normalizedQuery: string): string {
+    return redis.getRedisKey(
+      'youtube-search-import',
+      normalizedQuery.toLowerCase(),
+    );
+  }
+
+  async acquireYouTubeImportLock(normalizedQuery: string): Promise<boolean> {
+    const lockKey = this.buildYouTubeImportLockKey(normalizedQuery);
+    const result = await redis.instance.set(
+      lockKey,
+      Date.now().toString(),
+      'EX',
+      _const.SEARCH_CACHE.YOUTUBE_IMPORT_LOCK_TTL_SEC,
+      'NX',
+    );
+    return result === 'OK';
+  }
+
+  async releaseYouTubeImportLock(normalizedQuery: string): Promise<void> {
+    const lockKey = this.buildYouTubeImportLockKey(normalizedQuery);
+    await redis.removeFromRedisAsync(lockKey);
+  }
+
   // ─── Unified Search Cache Methods ─────────────────────────────────────
 
   buildUnifiedCacheKey(params: UnifiedSearchCacheParams): string {

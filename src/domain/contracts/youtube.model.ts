@@ -200,6 +200,12 @@ export class YouTubeContentModel {
   @ApiProperty({ required: false, default: 0 })
   commentCount?: number;
 
+  @ApiProperty({ required: false, default: 0 })
+  favoriteCount?: number;
+
+  @ApiProperty({ required: false, nullable: true })
+  shareCount?: number | null;
+
   @ApiProperty({ required: false })
   duration?: string;
   @ApiProperty({ required: false })

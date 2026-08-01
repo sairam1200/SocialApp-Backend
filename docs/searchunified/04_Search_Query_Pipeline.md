@@ -3,7 +3,7 @@
 Status: ✅ Implemented
 Phase: Phase 1
 Owner: Backend
-Last Updated: 2026-07-31
+Last Updated: 2026-08-01
 Depends On: [03_Search_Domain_Model](./03_Search_Domain_Model.md)
 Next Document: [05_Search_Provider](./05_Search_Provider.md)
 
@@ -170,152 +170,124 @@ const candidateValues = similarQueries.map(item => item.normalizedQuery).slice(0
 
 ---
 
-## 5. Stage 3: SearchProvider.search
+## 5. Stage 3: Repository Search (SearchOrchestratorService)
 
-**Input:** Normalized `SearchQuery`
-**Output:** `SearchCandidate[]`
-**Latency:** < 1ms (Redis cache hit), < 50ms (PostgreSQL), 200-2000ms (cache miss)
+**Input:** Normalized `SearchRepositoryQuery`
+**Output:** `IndexDocument[]` merged across repositories
+**Latency:** ~1ms (Redis cache hit), < 50ms (PostgreSQL), up to a few seconds when the YouTube fallback imports (content-index miss only)
 
-### 5.1 Provider Selection
+### 5.1 Flat Pipeline
 
-The feature flag routing was removed (2026-07-31). `POST /search` now always runs the consolidated pipeline: `SearchOrchestratorService` executes the registered providers concurrently (`unified`, `legacy`, `project`, each with a per-provider timeout), appends the direct `userContents` search results, re-runs the unified provider when the legacy provider persisted new external content, then passes everything through `MergePipeline` for deduplication, ranking and pagination.
+The consolidated pipeline is a flat `SearchOrchestratorService`. The `SearchProvider`, `SearchDocumentBuilder`, `SearchIndexer`, `MergePipeline`, `platformApiService` and `platformNormalizer` components named in earlier design docs do not exist in the codebase; the orchestrator reads repositories, then ranks and shapes the response itself.
 
-```typescript
-const providerResults = await this.executeProviders(model); // unified + legacy + project, raced with timeouts
-const userContentResults = await this.searchUserContents(model); // direct userContents search
-providerResults.push(userContentResults); // when non-empty
-
-// If legacy persisted external content that unified has not indexed yet, re-run unified once
-if (legacyContentResults > 0 && unifiedContentResults < legacyContentResults) {
-  const refreshedUnified = await this.executeSingleProvider('unified', model);
-  providerResults[unifiedIdx] = refreshedUnified;
-}
-
-const merged = this.mergePipeline.execute(providerResults);
+```mermaid
+graph TD
+    A[POST /v1/search] --> B[GlobalSearchQueryHandler]
+    B --> C[SearchOrchestratorService.execute]
+    C --> D{Unified Redis cache?}
+    D --> |Yes| E[Return cached SearchResponse]
+    D --> |No| F[gather: ISearchRepository[] concurrently]
+    F --> G[CandidateFactory.build]
+    G --> H[RankingEngine.rank via RankingStrategyRegistry]
+    H --> I[SearchIdentityResolver.resolve]
+    I --> J[ResponseAdapter -> flat SearchResponse]
+    J --> K[Store unified cache + return]
+    F --> |content portion empty| L[YouTube Search Fallback]
+    L --> F
 ```
 
-### 5.1.1 Creator Identity Resolution
+- `POST /v1/search` (`search.endpoint.ts`) → `GlobalSearchQueryHandler` → `SearchOrchestratorService.execute`.
+- The unified cache (`SearchCacheService`) keys on `(normalizedQuery, platforms, type, page, limit)` with popularity-based TTLs. `forceRefresh` bypasses it.
+- `gather()` runs every registered `ISearchRepository` concurrently — `contentStream`, `profile`, `project`, `job`. Each repository only retrieves and projects ranking primitives; it never ranks, resolves identity or builds wire DTOs. A single repository failure degrades to zero rows from that repository; the others still contribute.
+- The `contentStream` repository maps **every** contentStream row — videos and imported channels alike — to `SearchEntityType.CONTENT`, and intentionally returns `[]` when `entityType` is anything other than `CONTENT` (`content-stream.search.repository.ts`). The `profile` repository reads only `identity.users`, so imported YouTube rows never appear as PROFILE results.
+- Ranking happens once over the merged documents; pagination is applied to the final ranked list, not per source.
 
-Every result now carries structured creator identity. Identity is resolved in two places:
+### 5.2 Creator Identity Resolution
 
-- **PostgreSQL provider (`unified`)** — a correlated JSONB subquery (`gaddrIdentitySelect`) resolves the identity in the same SQL statement, joined as `contentStreams → userContents → identity.users → linkedAccounts`, restricted to `profilePrivacy = 'Public'`. No additional queries, no N+1. See §5.4.
-- **Direct userContents search** — `SearchOrchestratorService.searchUserContents` builds the identity from `uc.user` + `uc.linkedAccount` + `uc.metaData` (the repository now `leftJoinAndSelect`'s both relations) and passes it to `contentStreamToSearchResult`.
-- **Legacy provider** — routes its inline creator extraction through `resolveItemIdentity` (the same `ImportedMetadata` tier).
+Identity is attached to candidates after ranking (never N+1, never per-provider): for every candidate of type `PROFILE` or carrying a `creatorId`, `SearchIdentityResolver.resolve` is invoked and applied by the adapters as the `creator` object (preferred for the flat `creatorName` / `creatorUsername` / `creatorAvatar` fields). The `contentStream` repository already projects the creator join (`identity.users` on `creatorId`, privacy + active enforced) and follower/verified primitives, so the resolver only fills gaps.
 
-All three funnel into `CreatorIdentityResolver.resolve`, which returns a `ResolvedCreatorIdentity` (with `userId` when the creator is a Gaddr user). The adapters apply it as the `creator` object and prefer its values for the flat `creatorName`/`creatorUsername`/`creatorAvatar` fields.
+### 5.3 YouTube Search Fallback (Content-Index Miss)
 
-### 5.2 Search Execution with Three-Tier Retrieval
+When the **content** portion of a search returns nothing locally, the orchestrator enriches the canonical index once through the existing platform search, then re-reads locally. The ranking and response pipeline is untouched — there is no separate "YouTube search mode".
 
-```typescript
-async searchWithThreeTierRetrieval(query: SearchQuery): Promise<SearchCandidate[]> {
-  // 1. Check Redis cache first (fastest)
-  const cacheKey = this.buildCacheKey(query);
-  const cached = await this.redis.getFromRedisAsync(cacheKey);
-  if (cached) {
-    return cached; // Redis cache hit (< 1ms)
-  }
-
-  // 2. Search PostgreSQL contentStreams
-  const candidates = await this.searchProvider.search(query);
-
-  // 3. If results found, cache and return (PostgreSQL hit)
-  if (candidates.length > 0) {
-    await this.redis.storeInRedisAsync(cacheKey, candidates, SEARCH_CACHE.QUERY_CACHE_TTL_SEC);
-    return candidates;
-  }
-
-  // 4. If no results found (cache miss), trigger on-demand indexing
-  return this.onDemandIndex(query);
-}
+```mermaid
+graph TD
+    A[gather] --> B{content documents == 0?}
+    B --> |no| C[Continue ranking]
+    B --> |yes| D{shouldSearchYoutube?}
+    D --> |no| C
+    D --> |yes| E[acquire youtube-search-import lock]
+    E --> F{lock acquired?}
+    F --> |yes / Redis down| G[searchYoutubeAsync forceRefresh=false]
+    G --> H[release lock, only if acquired]
+    G --> I[re-gather immediately]
+    I --> |empty| J[wait 250ms, re-gather]
+    J --> |empty| K[wait 500ms, re-gather]
+    K --> L[Continue ranking with whatever landed]
+    F --> |held by another request| M[wait 300ms, re-gather locally only]
+    M --> N{content found?}
+    N --> |no| J
 ```
 
-### 5.3 On-Demand Indexing (Cache Miss)
+**Trigger** — fires only when the fallback can actually be read back:
 
 ```typescript
-private async onDemandIndex(query: SearchQuery): Promise<SearchCandidate[]> {
-  const platform = query.platforms?.[0] || 'youtube';
+const contentCount = documents.filter(
+  (d) => d.type === SearchEntityType.CONTENT,
+).length;
 
-  try {
-    // 1. Call platform API
-    const response = await this.platformApiService.search(platform, query.originalQuery);
-
-    // 2. Normalize response
-    const canonicalDocs = this.platformNormalizer.normalizeBatch(response.items);
-
-    // 3. Build search documents
-    const searchDocs = canonicalDocs.map(doc => this.searchDocumentBuilder.build(doc));
-
-    // 4. Index into contentStreams
-    await this.searchIndexer.indexBatch(searchDocs);
-
-    // 5. Search again (content is now indexed)
-    const candidates = await this.searchProvider.search(query);
-
-    // 6. Cache results in Redis
-    if (candidates.length > 0) {
-      const cacheKey = this.buildCacheKey(query);
-      await this.redis.storeInRedisAsync(cacheKey, candidates, SEARCH_CACHE.QUERY_CACHE_TTL_SEC);
-    }
-
-    return candidates;
-  } catch (error) {
-    // 7. On API failure, return empty results (never block search)
-    logger.warn(`On-demand indexing failed for ${platform}`, error);
-    return [];
-  }
+if (contentCount === 0 && shouldSearchYoutube(model)) {
+  await this.maybeRunYouTubeFallback(model, query, documents);
 }
 ```
 
-### 5.4 PostgreSQL Search Query
+`shouldSearchYoutube` requires: a non-empty search term, `entityType` is `undefined` or `CONTENT` (profile, project and job searches are excluded — their repositories filter content out, so an import could never surface), and `platforms` is empty or includes `youtube`.
 
-The `PostgresSearchProvider` runs a single SQL statement: the content match against `contentStreams` plus a correlated identity subquery. A raw `LATERAL` join is intentionally avoided because TypeORM mangles `LATERAL (...)` string joins; the correlated scalar `jsonb` subquery produces the same result (one index-scan per row, bounded by `LIMIT`).
+**Unified cache interaction** — a cached `SearchResponse` is normally returned as-is, but a cached response whose **content portion is empty** (`facets.content === 0`) for a fallback-eligible query is *not* returned early: the pipeline re-runs so the enrichment is evaluated. This is quota-safe (`searchYoutubeAsync` still honours its own platform cache and import lock, so the API is called at most once per query per window) and lets a stale empty cache self-heal once new entries exist.
 
-```sql
-SELECT cs.*,
-       ts_rank_cd(cs."searchVector", websearch_to_tsquery('english', :webQuery)) AS "textRelevance",
-       similarity(cs."searchText", :similarityQuery) AS "textSimilarity",
-       CASE WHEN cs.title ILIKE :exactQuery THEN 1 ELSE 0 END AS "exactMatch",
-       -- Correlated identity subquery (creator resolution, same statement)
-       (
-         SELECT to_jsonb(idn) FROM (
-           SELECT u."id" AS "userId",
-                  u."firstName", u."lastName", u."userName",
-                  la."userName" AS "linkedAccountUserName",
-                  la."profileImage" AS "linkedAccountProfileImage",
-                  la."verified" AS "linkedAccountVerified",
-                  la."externalUrl" AS "linkedAccountExternalUrl",
-                  la."metaData" AS "linkedAccountMetaData",
-                  la."platform" AS "linkedAccountPlatform"
-           FROM "userContents" uc
-           INNER JOIN "identity"."users" u ON u."id" = uc."userId"
-           LEFT JOIN "linkedAccounts" la ON la."id" = uc."linkedAccountId"
-           WHERE uc."platform" = cs."platform"
-             AND uc."externalId" = cs."externalId"
-             AND u."profilePrivacy" = 'Public'
-           LIMIT 1
-         ) idn
-       ) AS "gaddrIdentity"
-FROM contentStreams cs
-WHERE (
-  cs."searchVector" @@ websearch_to_tsquery('english', :webQuery)
-  OR cs."searchVector" @@ phraseto_tsquery('english', :phraseQuery)
-  OR cs."searchText" % :similarityQuery
-  OR cs."title" ILIKE :exactQuery
-)
-AND (:platform IS NULL OR cs.platform = :platform)
-AND (:type IS NULL OR cs.type = :type)
-ORDER BY
-  CASE WHEN :sortBy = 'relevance' THEN
-    COALESCE(ts_rank_cd(cs."searchVector", websearch_to_tsquery('english', :webQuery)), 0)
-  WHEN :sortBy = 'date' THEN
-    EXTRACT(EPOCH FROM cs."publishedAt")
-  WHEN :sortBy = 'engagement' THEN
-    cs."engagementScore"
-  END DESC
-LIMIT :limit OFFSET :offset
+| Search | Local Profiles | Local Content | Fallback |
+|---|---|---|---|
+| All | 15 | 0 | ✅ |
+| All | 0 | 0 | ✅ |
+| All | 5 | 8 | ❌ |
+| Content | — | 0 | ✅ |
+| Content | — | 12 | ❌ |
+| Profile | 0 | 0 | ❌ |
+| Project / Job | — | — | ❌ |
+| Platform = Twitter | 0 | 0 | ❌ |
+| Platform = YouTube | 0 | 0 | ✅ |
+
+**Import** — `ISearchService.searchYoutubeAsync({ page: 1, limit, originalQuery, normalizedQuery, filters: {}, forceRefresh: false })`. `forceRefresh=false` reuses the platform's own cache, staleness check, DB-first read and internal lock, so at most one YouTube `search.list` call happens per query per cache window. Imported rows land in `contentStreams` via `ContentStreamIndexService.indexBatch` (upsert on `(platform, externalId)`); `userContents` is **not** touched — it is written only by the separate import pipeline.
+
+**Lock** — a Redis lock (`youtube-search-import:{normalizedQuery}`, TTL 180s, `SEARCH_CACHE.YOUTUBE_IMPORT_LOCK_TTL_SEC`) is an **optimization, not a dependency**:
+
+- Acquired → import; released in `finally` only when this request acquired it.
+- Redis error → warn and import **without** the lock (a cache miss must not be an outage).
+- Held by another request → wait 300ms, then re-read locally only. Never a second YouTube call.
+
+**Retries** — deterministic local-only re-reads with backoff: immediate, then 250ms, then 500ms. Max two additional local reads; never another platform call. If a successful import still yields nothing, the reason is `no_new_results`.
+
+**Failure handling** — the fallback never throws to the handler. On import failure it logs, re-reads locally, and returns a valid (possibly empty) `SearchResponse` with `reason: 'api_error'`.
+
+### 5.4 Response Metadata
+
+`SearchResponse` gains an **optional** `fallback` field (additive; older clients are unaffected):
+
+```typescript
+fallback?: {
+  attempted: boolean;                  // a fallback was evaluated/run
+  succeeded: boolean;                  // content documents were returned
+  source?: 'youtube_import' | 'local'; // this request imported vs. a concurrent import landed
+  importedCount?: number;              // items the platform search found for the query
+  reason?: 'api_error' | 'no_new_results';
+}
 ```
 
-The identity subquery is backed by the `userContents (platform, externalId)` index added in migration `1785455366000-AddUserContentsPlatformExternalIdIndex`. Rows with no public Gaddr user match return `null` for `gaddrIdentity`, and the provider then resolves identity from the imported `metaData` via `CreatorIdentityResolver`.
+Frontend contract: treat `fallback` as optional telemetry only. `succeeded === true` means the response contains enriched content; ranking semantics are unchanged.
+
+### 5.5 PostgreSQL Content Query
+
+The `contentStream` repository runs a single SQL statement against `contentStreams` with a direct join to `identity.users` on `creatorId` (privacy + active enforced) and projects the ranking primitives: `ts_rank_cd` (web/phrase), `pg_trgm` similarity, exact title match, engagement, and a logarithmic creator-authority score. No `userContents` correlation is used; legacy non-uuid `creatorId` values simply do not match and the privacy rule drops the row.
 
 ---
 

@@ -93,6 +93,8 @@ import { YoutubeContentsQueryHandler } from './youtube/get-contents/get-contents
 import { YoutubeImportController } from './youtube/import/youtube-import.endpoint';
 import { YoutubeImportCommandHandler } from './youtube/import/youtube-import.handler';
 import { CancelYoutubeImportCommandHandler } from './youtube/import/cancel-youtube-import.handler';
+import { YoutubeSearchController } from './youtube/search/youtube-search.endpoint';
+import { YoutubeSearchQueryHandler } from './youtube/search/youtube-search.handler';
 import { EnableYoutubeSyncCommandHandler } from './youtube/sync/enable-youtube-sync.handler';
 import { DisableYoutubeSyncCommandHandler } from './youtube/sync/disable-youtube-sync.handler';
 import { YoutubeWebhookController } from './youtube/webhook/youtube-webhook.endpoint';
@@ -453,6 +455,8 @@ export { YoutubeContentsQueryHandler } from './youtube/get-contents/get-contents
 export { YoutubeImportController } from './youtube/import/youtube-import.endpoint';
 export { YoutubeImportCommandHandler } from './youtube/import/youtube-import.handler';
 export { CancelYoutubeImportCommandHandler } from './youtube/import/cancel-youtube-import.handler';
+export { YoutubeSearchController } from './youtube/search/youtube-search.endpoint';
+export { YoutubeSearchQueryHandler } from './youtube/search/youtube-search.handler';
 export { EnableYoutubeSyncCommandHandler } from './youtube/sync/enable-youtube-sync.handler';
 export { DisableYoutubeSyncCommandHandler } from './youtube/sync/disable-youtube-sync.handler';
 export { YoutubeWebhookController } from './youtube/webhook/youtube-webhook.endpoint';
@@ -632,6 +636,7 @@ const controllers = [
   YoutubeProfileController,
   YoutubeContentsController,
   YoutubeImportController,
+  YoutubeSearchController,
   YoutubeWebhookController,
   BrevoWebhookController,
   YoutubeDisconnectController,
@@ -753,6 +758,7 @@ const handlers = [
   YoutubeContentsQueryHandler,
   YoutubeImportCommandHandler,
   CancelYoutubeImportCommandHandler,
+  YoutubeSearchQueryHandler,
   YoutubeDisconnectCommandHandler,
   EnableYoutubeSyncCommandHandler,
   DisableYoutubeSyncCommandHandler,

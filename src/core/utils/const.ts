@@ -164,6 +164,11 @@ export default {
     QUERY_CACHE_TTL_SEC: 5 * 60,
     QUERY_LOCK_TTL_SEC: 30,
 
+    // Distributed lock around a YouTube search import (content-index miss).
+    // Serializes at most one import per normalized query per window; the lock
+    // is an optimization only - the import proceeds if Redis is unavailable.
+    YOUTUBE_IMPORT_LOCK_TTL_SEC: 180,
+
     // Unified search cache TTLs (seconds)
     UNIFIED_CACHE_TTL: {
       POPULAR: 30 * 60, // 30 minutes — high traffic, moderate freshness

@@ -1092,6 +1092,13 @@ export class SearchService implements ISearchService {
       ytResults.items.map((i: any) => i.snippet?.channelId).filter(Boolean),
     );
 
+    const videoItems = ytResults.items.filter(
+      (i: any) => i.id?.kind === 'youtube#video' && i.id?.videoId,
+    );
+    const statisticsMap = await this.fetchYouTubeVideoStatistics(
+      videoItems.map((i: any) => i.id.videoId),
+    );
+
     const mappedResults = ytResults.items
       .map((item: any) => {
         const kind = item.id?.kind || '';
@@ -1115,6 +1122,7 @@ export class SearchService implements ISearchService {
 
         const channelId = item.snippet?.channelId;
         const channelMeta = channelId ? channelMap.get(channelId) : undefined;
+        const statistics = statisticsMap.get(externalId);
 
         return new ContentStream({
           type: type as any,
@@ -1132,6 +1140,15 @@ export class SearchService implements ISearchService {
             channelUsername: channelMeta?.username,
             channelProfileImage: channelMeta?.avatar,
             channelUrl: channelMeta?.url,
+            ...(statistics
+              ? {
+                  viewCount: Number(statistics.viewCount || 0),
+                  likeCount: Number(statistics.likeCount || 0),
+                  commentCount: Number(statistics.commentCount || 0),
+                  favoriteCount: Number(statistics.favoriteCount || 0),
+                  shareCount: null,
+                }
+              : {}),
           },
           lastRefreshed: new Date(),
         });
@@ -1244,6 +1261,57 @@ export class SearchService implements ISearchService {
     return result;
   }
 
+  /**
+   * Batch-fetch YouTube video statistics for the videos returned by a search.
+   * shareCount is not exposed by the YouTube Data API v3, so it is not fetched.
+   * Fails safe: on any error the map stays empty and the caller skips enrichment.
+   */
+  private async fetchYouTubeVideoStatistics(
+    videoIds: string[],
+  ): Promise<Map<string, Record<string, any>>> {
+    const result = new Map<string, Record<string, any>>();
+    const uniqueIds = [...new Set(videoIds)].filter(Boolean);
+    if (!uniqueIds.length) return result;
+
+    try {
+      const chunkSize = 50;
+      const chunks: string[][] = [];
+      for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+        chunks.push(uniqueIds.slice(i, i + chunkSize));
+      }
+
+      const responses = await Promise.all(
+        chunks.map((chunk) =>
+          axios.get<{
+            items?: Array<{ id?: string; statistics?: Record<string, any> }>;
+          }>('https://www.googleapis.com/youtube/v3/videos', {
+            params: {
+              part: 'statistics',
+              id: chunk.join(','),
+              key: configs.youtube.apiKey,
+            },
+            timeout: 10000,
+          }),
+        ),
+      );
+
+      for (const response of responses) {
+        for (const video of response.data?.items ?? []) {
+          if (video?.id && video.statistics) {
+            result.set(video.id, video.statistics);
+          }
+        }
+      }
+    } catch (error: any) {
+      logger.error(
+        `[SearchService] Failed to fetch YouTube video statistics:`,
+        error?.response?.data || error?.message,
+      );
+    }
+
+    return result;
+  }
+
   private buildYoutubeResponse(
     originalQuery: string,
     dbResults: {
@@ -1280,6 +1348,8 @@ export class SearchService implements ISearchService {
       item.viewCount = content.metaData?.viewCount;
       item.likeCount = content.metaData?.likeCount;
       item.commentCount = content.metaData?.commentCount;
+      item.favoriteCount = content.metaData?.favoriteCount;
+      item.shareCount = content.metaData?.shareCount;
       item.duration = content.metaData?.duration;
 
       response.results.push(item);

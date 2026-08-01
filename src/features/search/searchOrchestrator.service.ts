@@ -8,6 +8,7 @@ import {
   SearchRepositoryQuery,
   SearchResponse,
   SearchResponseFacets,
+  SearchResponseFallback,
 } from '../../domain/contracts/search';
 import { SearchCandidate } from '../../domain/contracts/search/search-candidate.model';
 import { CandidateFactory, RankingEngine } from './ranking';
@@ -15,10 +16,17 @@ import { ResponseAdapter } from './adapters/response.adapter';
 import { SearchIdentityResolver } from './search-identity.resolver';
 import { SearchCacheService } from '../../infrastructure/services/searchCache.service';
 import { UnifiedSearchCacheParams } from '../../infrastructure/services/searchCache.service';
+import { ISearchService } from '../../domain/services/isearch.service';
 import { SearchTelemetry } from './search-telemetry';
 import logger from '../../core/utils/winston.util';
 
 export const SEARCH_REPOSITORIES = 'SEARCH_REPOSITORIES';
+
+interface YouTubeFallbackOutcome {
+  documents: IndexDocument[];
+  repoTelemetry: SearchTelemetry['repos'];
+  metadata: SearchResponseFallback;
+}
 
 /**
  * Flat search pipeline:
@@ -41,6 +49,8 @@ export class SearchOrchestratorService {
     private readonly responseAdapter: ResponseAdapter,
     private readonly identityResolver: SearchIdentityResolver,
     private readonly searchCacheService: SearchCacheService,
+    @Inject(_const.ISEARCH_SERVICE)
+    private readonly searchService: ISearchService,
   ) {}
 
   async execute(model: GlobalSearchRequestModel): Promise<SearchResponse> {
@@ -71,7 +81,7 @@ export class SearchOrchestratorService {
         await this.searchCacheService.getCachedUnifiedResults<SearchResponse>(
           cacheParams,
         );
-      if (cached) {
+      if (cached && !this.shouldEnrichCachedResponse(cached, model, query)) {
         this.logObservability({
           query: searchTerm,
           cacheHit: true,
@@ -88,7 +98,30 @@ export class SearchOrchestratorService {
       }
     }
 
-    const { documents, repoTelemetry } = await this.gather(query);
+    return this.runPipeline(model, query, cacheParams, searchStart);
+  }
+
+  private async runPipeline(
+    model: GlobalSearchRequestModel,
+    query: SearchRepositoryQuery,
+    cacheParams: UnifiedSearchCacheParams,
+    searchStart: number,
+  ): Promise<SearchResponse> {
+    const { searchTerm, page = 1, limit = 25 } = model;
+
+    const gathered = await this.gather(query);
+    let documents = gathered.documents;
+    let repoTelemetry = gathered.repoTelemetry;
+
+    const fallback = await this.maybeRunYouTubeFallback(
+      model,
+      query,
+      documents,
+    );
+    if (fallback) {
+      documents = fallback.documents;
+      repoTelemetry = fallback.repoTelemetry;
+    }
 
     const candidates = this.candidateFactory.build(documents);
 
@@ -129,8 +162,13 @@ export class SearchOrchestratorService {
       facets: this.computeFacets(ranked),
     };
 
-    const popularity =
-      await this.searchCacheService.trackQueryPopularity(normalizedQuery);
+    if (fallback) {
+      response.fallback = fallback.metadata;
+    }
+
+    const popularity = await this.searchCacheService.trackQueryPopularity(
+      query.normalizedQuery,
+    );
     const classification =
       this.searchCacheService.classifyQueryPopularity(popularity);
     await this.searchCacheService.setCachedUnifiedResults(
@@ -153,6 +191,22 @@ export class SearchOrchestratorService {
     });
 
     return response;
+  }
+
+  /**
+   * A cached response whose content portion is empty must not permanently
+   * suppress the YouTube enrichment. Re-running the pipeline is quota-safe:
+   * searchYoutubeAsync still honours its own platform cache (5 min) and the
+   * import lock, so the API is called at most once per query per window. This
+   * also lets a stale empty cache self-heal once new entries exist.
+   */
+  private shouldEnrichCachedResponse(
+    cached: SearchResponse,
+    model: GlobalSearchRequestModel,
+    query: SearchRepositoryQuery,
+  ): boolean {
+    const cachedContent = cached.facets?.[SearchEntityType.CONTENT] ?? 0;
+    return cachedContent === 0 && this.shouldSearchYoutube(model, query);
   }
 
   private async gather(query: SearchRepositoryQuery): Promise<{
@@ -181,6 +235,214 @@ export class SearchOrchestratorService {
     );
 
     return { documents, repoTelemetry };
+  }
+
+  /**
+   * YouTube content-index enrichment. When the content portion of a search
+   * returns nothing locally, import once through the existing platform search
+   * (cache/staleness/lock-aware, forceRefresh=false) and then re-read locally.
+   * The refreshed documents flow through the unchanged ranking pipeline - the
+   * orchestrator never branches into a separate YouTube search mode.
+   *
+   * The import lock is an optimization, not a dependency: a Redis failure
+   * must not disable the fallback, so the import still runs without it, and a
+   * lock held by a concurrent request means "wait briefly, then read locally"
+   * rather than a second YouTube call.
+   */
+  private async maybeRunYouTubeFallback(
+    model: GlobalSearchRequestModel,
+    query: SearchRepositoryQuery,
+    documents: IndexDocument[],
+  ): Promise<YouTubeFallbackOutcome | null> {
+    const contentCount = documents.filter(
+      (document) => document.type === SearchEntityType.CONTENT,
+    ).length;
+
+    if (contentCount > 0 || !this.shouldSearchYoutube(model, query)) {
+      return null;
+    }
+
+    const fallbackStart = Date.now();
+    const normalizedQuery = query.normalizedQuery;
+
+    let cacheHit = false;
+    try {
+      cacheHit = await this.hasCachedYouTubeResults(query);
+    } catch {
+      cacheHit = false;
+    }
+
+    let lockAcquired = false;
+    let redisUnavailable = false;
+    try {
+      lockAcquired =
+        await this.searchCacheService.acquireYouTubeImportLock(normalizedQuery);
+    } catch (error) {
+      redisUnavailable = true;
+      logger.warn(
+        `[SearchFallback] Redis unavailable, importing without lock: ${this.errorMessage(error)}`,
+      );
+    }
+
+    const importsHere = lockAcquired || redisUnavailable;
+
+    let importedCount = 0;
+    let importFailed = false;
+
+    if (importsHere) {
+      try {
+        const youtubeResponse = await this.searchService.searchYoutubeAsync({
+          page: 1,
+          limit: query.limit,
+          originalQuery: query.originalQuery || normalizedQuery,
+          normalizedQuery,
+          filters: {},
+          forceRefresh: false,
+        });
+        importedCount = Array.isArray(youtubeResponse.results)
+          ? youtubeResponse.results.length
+          : 0;
+      } catch (error) {
+        importFailed = true;
+        logger.warn(
+          `[SearchFallback] YouTube import failed: ${this.errorMessage(error)}`,
+        );
+      } finally {
+        // Only the request that acquired the lock releases it.
+        if (lockAcquired) {
+          try {
+            await this.searchCacheService.releaseYouTubeImportLock(
+              normalizedQuery,
+            );
+          } catch (error) {
+            logger.warn(
+              `[SearchFallback] Failed to release import lock: ${this.errorMessage(error)}`,
+            );
+          }
+        }
+      }
+    } else {
+      // A concurrent request is importing for this query. Wait for its
+      // results to land, then read locally. Never issue another YouTube call.
+      await this.delay(300);
+    }
+
+    const refreshed = await this.reGatherWithRetries(query, [250, 500]);
+    const foundContent = refreshed.documents.some(
+      (document) => document.type === SearchEntityType.CONTENT,
+    );
+
+    const metadata: SearchResponseFallback = {
+      attempted: true,
+      succeeded: foundContent,
+      source: importedCount > 0 ? 'youtube_import' : 'local',
+      importedCount,
+      ...(foundContent
+        ? {}
+        : {
+            reason: importFailed
+              ? ('api_error' as const)
+              : ('no_new_results' as const),
+          }),
+    };
+
+    logger.info('[SearchFallback] Enrichment completed', {
+      query: query.originalQuery,
+      attempted: true,
+      lockAcquired,
+      importedCount,
+      cacheHit,
+      durationMs: Date.now() - fallbackStart,
+      reason: metadata.reason,
+    });
+
+    return {
+      documents: refreshed.documents,
+      repoTelemetry: refreshed.repoTelemetry,
+      metadata,
+    };
+  }
+
+  /**
+   * Fallback eligibility. The fallback only enriches the content pipeline, so
+   * it fires only when the search could actually surface content documents:
+   * all-type searches or explicit content-type searches. Profile-only,
+   * project and job searches are excluded - the content repository is
+   * filtered out for them, so an import could never be read back.
+   */
+  private shouldSearchYoutube(
+    model: GlobalSearchRequestModel,
+    query: SearchRepositoryQuery,
+  ): boolean {
+    if (!query.normalizedQuery) return false;
+    if (
+      query.entityType !== undefined &&
+      query.entityType !== SearchEntityType.CONTENT
+    ) {
+      return false;
+    }
+    const platforms = model.platforms;
+    if (
+      platforms &&
+      platforms.length > 0 &&
+      !platforms.includes(_const.PLATFORMS.YOUTUBE)
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Local-only re-read with deterministic backoff. The first read happens
+   * immediately; only when the content index is still empty do we wait and
+   * read again. Never triggers another YouTube call.
+   */
+  private async reGatherWithRetries(
+    query: SearchRepositoryQuery,
+    delays: number[],
+  ): Promise<{
+    documents: IndexDocument[];
+    repoTelemetry: SearchTelemetry['repos'];
+  }> {
+    let result = await this.gather(query);
+    for (const delayMs of delays) {
+      if (
+        result.documents.some(
+          (document) => document.type === SearchEntityType.CONTENT,
+        )
+      ) {
+        break;
+      }
+      await this.delay(delayMs);
+      result = await this.gather(query);
+    }
+    return result;
+  }
+
+  /**
+   * Best-effort platform-cache probe for observability. Uses the exact params
+   * searchYoutubeAsync derives its cache key from (filters includes platform),
+   * so a hit here means no YouTube API call is about to happen.
+   */
+  private async hasCachedYouTubeResults(
+    query: SearchRepositoryQuery,
+  ): Promise<boolean> {
+    const cached = await this.searchCacheService.getCachedResults<unknown>({
+      platform: _const.PLATFORMS.YOUTUBE,
+      normalizedQuery: query.normalizedQuery,
+      filters: { platform: _const.PLATFORMS.YOUTUBE },
+      page: 1,
+      limit: query.limit,
+    });
+    return cached !== null;
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
   }
 
   private computeFacets(candidates: SearchCandidate[]): SearchResponseFacets {

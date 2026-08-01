@@ -6,6 +6,7 @@ export {
   SearchResponse,
   SearchResponsePagination,
   SearchResponseFacets,
+  SearchResponseFallback,
 } from './search-response.model';
 export {
   ISearchRepository,
