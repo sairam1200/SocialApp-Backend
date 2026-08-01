@@ -4,7 +4,9 @@ import axios from 'axios';
 import _const from '../../../core/utils/const';
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
 import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
+import { IContentStreamRepository } from '../../../domain/repositories/icontentStream.repository';
 import { IOwnershipResolver } from '../../../domain/services/iownership-resolver.service';
+import { IContentStreamIndexService } from '../../../domain/services/icontentStreamIndex.service';
 import { UserContent } from '../../../domain/entities/userContent.entity';
 
 const BASE_URL = 'https://api.pinterest.com/v5';
@@ -18,8 +20,14 @@ export class PinterestImportService {
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
 
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
+
     @Inject(_const.IOWNERSHIP_RESOLVER)
     private readonly ownershipResolver: IOwnershipResolver,
+
+    @Inject(_const.ICONTENTSTREAM_INDEX_SERVICE)
+    private readonly contentStreamIndexService: IContentStreamIndexService,
   ) {}
 
   async importPinsAsync(
@@ -29,12 +37,11 @@ export class PinterestImportService {
   ): Promise<number> {
     let importedCount = 0;
 
-    const linkedAccountId = (
-      await this.ownershipResolver.resolveAsync(
-        userId,
-        _const.PLATFORMS.PINTEREST,
-      )
-    ).id;
+    const linkedAccount = await this.ownershipResolver.resolveAsync(
+      userId,
+      _const.PLATFORMS.PINTEREST,
+    );
+    const linkedAccountId = linkedAccount.id;
 
     await this.userContentRepository.deleteByUserIdAndPlatformAsync(
       userId,
@@ -114,58 +121,66 @@ export class PinterestImportService {
             );
           }
 
-          await this.userContentRepository.createAsync(
-            new UserContent({
-              userId,
-              linkedAccountId,
+          const content = new UserContent({
+            userId,
+            linkedAccountId,
 
-              platform: _const.PLATFORMS.PINTEREST,
-              type: 'PIN',
-              externalId: pin.id,
+            platform: _const.PLATFORMS.PINTEREST,
+            type: 'PIN',
+            externalId: pin.id,
 
-              title:
-                pin.title ||
-                pin.description?.substring(0, 150) ||
-                'Pinterest Pin',
+            title:
+              pin.title ||
+              pin.description?.substring(0, 150) ||
+              'Pinterest Pin',
 
-              sourceUrl: pin.link || null,
+            sourceUrl: pin.link || null,
 
-              text: pin.description || undefined,
+            text: pin.description || undefined,
 
-              media: imageUrl
-                ? [{ url: imageUrl, type: 'image', thumbnail: imageUrl }]
-                : undefined,
+            media: imageUrl
+              ? [{ url: imageUrl, type: 'image', thumbnail: imageUrl }]
+              : undefined,
 
-              publishedAt: pin.created_at
-                ? new Date(pin.created_at)
-                : undefined,
+            publishedAt: pin.created_at ? new Date(pin.created_at) : undefined,
 
-              engagement: analytics
-                ? {
-                    views: analytics.impressions ?? 0,
-                    likes: analytics.saves ?? 0,
-                  }
-                : undefined,
+            engagement: analytics
+              ? {
+                  views: analytics.impressions ?? 0,
+                  likes: analytics.saves ?? 0,
+                }
+              : undefined,
 
-              metaData: {
-                description: pin.description,
-                imageUrl,
+            metaData: {
+              description: pin.description,
+              imageUrl,
 
-                boardId: board.id,
-                boardName: board.name,
+              boardId: board.id,
+              boardName: board.name,
 
-                link: pin.link,
+              link: pin.link,
 
-                createdAt: pin.created_at,
+              createdAt: pin.created_at,
 
-                note: pin.note,
+              note: pin.note,
 
-                analytics,
+              analytics,
 
-                importedAt: new Date().toISOString(),
-              },
-            }),
-          );
+              importedAt: new Date().toISOString(),
+
+              creatorName: linkedAccount.userName,
+              creatorUsername: linkedAccount.userName,
+              creatorAvatar: linkedAccount.profileImage,
+              creatorUrl:
+                linkedAccount.externalUrl ||
+                `https://www.pinterest.com/${linkedAccount.userName}/`,
+              verified: linkedAccount.verified,
+            },
+          });
+
+          await this.preserveExistingEngagement(content);
+          const saved = await this.userContentRepository.createAsync(content);
+          await this.contentStreamIndexService.upsertFromUserContent(saved);
 
           importedCount++;
         }
@@ -178,6 +193,74 @@ export class PinterestImportService {
     }
 
     return importedCount;
+  }
+
+  private async preserveExistingEngagement(
+    content: UserContent,
+  ): Promise<void> {
+    if (this.hasRealEngagement(content.engagement)) return;
+    const existing = await this.fetchExistingEngagement(
+      content.platform,
+      content.externalId,
+    );
+    if (!existing) return;
+    content.engagement = {
+      ...(existing.views != null ? { views: existing.views } : {}),
+      ...(existing.likes != null ? { likes: existing.likes } : {}),
+      ...(existing.comments != null ? { comments: existing.comments } : {}),
+      ...(existing.shares != null ? { shares: existing.shares } : {}),
+    };
+    content.metaData = {
+      ...(content.metaData ?? {}),
+      ...(existing.views != null ? { viewCount: existing.views } : {}),
+      ...(existing.likes != null ? { likeCount: existing.likes } : {}),
+      ...(existing.comments != null ? { commentCount: existing.comments } : {}),
+      ...(existing.shares != null ? { shareCount: existing.shares } : {}),
+    };
+  }
+
+  private hasRealEngagement(engagement: any): boolean {
+    if (!engagement || typeof engagement !== 'object') return false;
+    return [
+      engagement.views,
+      engagement.likes,
+      engagement.comments,
+      engagement.shares,
+    ].some((value) => Number(value) > 0);
+  }
+
+  private async fetchExistingEngagement(
+    platform: string,
+    externalId: string,
+  ): Promise<{
+    views?: number;
+    likes?: number;
+    comments?: number;
+    shares?: number;
+  } | null> {
+    try {
+      const [rows] = await this.contentStreamRepository.getEntriesAsync({
+        page: 1,
+        pageSize: 1,
+        filter: { platform, externalId },
+      });
+      const existing = rows?.[0]?.metaData?.engagement as
+        Record<string, any> | undefined;
+      if (!existing || typeof existing !== 'object') return null;
+      const toNum = (value: unknown): number | undefined => {
+        if (value == null) return undefined;
+        const n = Number(value);
+        return Number.isNaN(n) ? undefined : n;
+      };
+      return {
+        views: toNum(existing.viewCount ?? existing.views),
+        likes: toNum(existing.likeCount ?? existing.likes),
+        comments: toNum(existing.commentCount ?? existing.comments),
+        shares: toNum(existing.shareCount ?? existing.shares),
+      };
+    } catch {
+      return null;
+    }
   }
 
   async refreshProfileAsync(

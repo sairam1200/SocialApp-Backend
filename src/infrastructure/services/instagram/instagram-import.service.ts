@@ -5,7 +5,9 @@ import _const from '../../../core/utils/const';
 import logger from '../../../core/utils/winston.util';
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
 import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
+import { IContentStreamRepository } from '../../../domain/repositories/icontentStream.repository';
 import { IOwnershipResolver } from '../../../domain/services/iownership-resolver.service';
+import { IContentStreamIndexService } from '../../../domain/services/icontentStreamIndex.service';
 import { UserContent } from '../../../domain/entities/userContent.entity';
 
 @Injectable()
@@ -17,8 +19,14 @@ export class InstagramImportService {
     @Inject(_const.IUSERCONTENT_REPOSITORY)
     private readonly userContentRepository: IUserContentRepository,
 
+    @Inject(_const.ICONTENTSTREAM_REPOSITORY)
+    private readonly contentStreamRepository: IContentStreamRepository,
+
     @Inject(_const.IOWNERSHIP_RESOLVER)
     private readonly ownershipResolver: IOwnershipResolver,
+
+    @Inject(_const.ICONTENTSTREAM_INDEX_SERVICE)
+    private readonly contentStreamIndexService: IContentStreamIndexService,
   ) {}
 
   async importMediaAsync(
@@ -28,12 +36,11 @@ export class InstagramImportService {
   ): Promise<number> {
     let importedCount = 0;
 
-    const linkedAccountId = (
-      await this.ownershipResolver.resolveAsync(
-        userId,
-        _const.PLATFORMS.INSTAGRAM,
-      )
-    ).id;
+    const linkedAccount = await this.ownershipResolver.resolveAsync(
+      userId,
+      _const.PLATFORMS.INSTAGRAM,
+    );
+    const linkedAccountId = linkedAccount.id;
 
     await this.userContentRepository.deleteByUserIdAndPlatformAsync(
       userId,
@@ -112,66 +119,146 @@ export class InstagramImportService {
           logger.warn(`[Instagram] Insights unavailable for media ${media.id}`);
         }
       }
-      await this.userContentRepository.createAsync(
-        new UserContent({
-          userId,
-          linkedAccountId,
+      const content = new UserContent({
+        userId,
+        linkedAccountId,
 
-          platform: _const.PLATFORMS.INSTAGRAM,
+        platform: _const.PLATFORMS.INSTAGRAM,
 
-          type: media.media_type,
+        type: media.media_type,
 
-          externalId: media.id,
+        externalId: media.id,
 
-          title:
-            'Instagram ' +
-            (media.media_type ? ` ${media.media_type.toLowerCase()}` : ''),
+        title:
+          'Instagram ' +
+          (media.media_type ? ` ${media.media_type.toLowerCase()}` : ''),
 
-          sourceUrl: media.permalink,
+        sourceUrl: media.permalink,
 
-          text: media.caption || undefined,
+        text: media.caption || undefined,
 
-          media: [
-            {
-              url: media.media_url || media.thumbnail_url,
-              type: media.media_type,
-              thumbnail: media.thumbnail_url || media.media_url,
-            },
-          ],
-
-          publishedAt: media.timestamp ? new Date(media.timestamp) : undefined,
-
-          engagement: {
-            likes: media.like_count ?? 0,
-            comments: media.comments_count ?? 0,
+        media: [
+          {
+            url: media.media_url || media.thumbnail_url,
+            type: media.media_type,
+            thumbnail: media.thumbnail_url || media.media_url,
           },
+        ],
 
-          metaData: {
-            caption: media.caption,
-            mediaType: media.media_type,
-            mediaUrl: media.media_url,
-            permalink: media.permalink,
+        publishedAt: media.timestamp ? new Date(media.timestamp) : undefined,
 
-            likeCount: media.like_count ?? 0,
-            commentsCount: media.comments_count ?? 0,
+        engagement: {
+          likes: media.like_count ?? 0,
+          comments: media.comments_count ?? 0,
+        },
 
-            thumbnailUrl: media.thumbnail_url ?? media.media_url,
+        metaData: {
+          caption: media.caption,
+          mediaType: media.media_type,
+          mediaUrl: media.media_url,
+          permalink: media.permalink,
 
-            timestamp: media.timestamp,
+          likeCount: media.like_count ?? 0,
+          commentsCount: media.comments_count ?? 0,
 
-            importedAt: new Date().toISOString(),
-            reach,
+          thumbnailUrl: media.thumbnail_url ?? media.media_url,
 
-            saved,
-          },
-        }),
-      );
+          timestamp: media.timestamp,
+
+          importedAt: new Date().toISOString(),
+          reach,
+
+          saved,
+
+          creatorName: linkedAccount.userName,
+          creatorUsername: linkedAccount.userName,
+          creatorAvatar: linkedAccount.profileImage,
+          creatorUrl:
+            linkedAccount.externalUrl ||
+            `https://www.instagram.com/${linkedAccount.userName}/`,
+          verified: linkedAccount.verified,
+        },
+      });
+
+      await this.preserveExistingEngagement(content);
+      const savedContent =
+        await this.userContentRepository.createAsync(content);
+      await this.contentStreamIndexService.upsertFromUserContent(savedContent);
 
       importedCount++;
     }
 
     return importedCount;
   }
+
+  private async preserveExistingEngagement(
+    content: UserContent,
+  ): Promise<void> {
+    if (this.hasRealEngagement(content.engagement)) return;
+    const existing = await this.fetchExistingEngagement(
+      content.platform,
+      content.externalId,
+    );
+    if (!existing) return;
+    content.engagement = {
+      ...(existing.views != null ? { views: existing.views } : {}),
+      ...(existing.likes != null ? { likes: existing.likes } : {}),
+      ...(existing.comments != null ? { comments: existing.comments } : {}),
+      ...(existing.shares != null ? { shares: existing.shares } : {}),
+    };
+    content.metaData = {
+      ...(content.metaData ?? {}),
+      ...(existing.views != null ? { viewCount: existing.views } : {}),
+      ...(existing.likes != null ? { likeCount: existing.likes } : {}),
+      ...(existing.comments != null ? { commentCount: existing.comments } : {}),
+      ...(existing.shares != null ? { shareCount: existing.shares } : {}),
+    };
+  }
+
+  private hasRealEngagement(engagement: any): boolean {
+    if (!engagement || typeof engagement !== 'object') return false;
+    return [
+      engagement.views,
+      engagement.likes,
+      engagement.comments,
+      engagement.shares,
+    ].some((value) => Number(value) > 0);
+  }
+
+  private async fetchExistingEngagement(
+    platform: string,
+    externalId: string,
+  ): Promise<{
+    views?: number;
+    likes?: number;
+    comments?: number;
+    shares?: number;
+  } | null> {
+    try {
+      const [rows] = await this.contentStreamRepository.getEntriesAsync({
+        page: 1,
+        pageSize: 1,
+        filter: { platform, externalId },
+      });
+      const existing = rows?.[0]?.metaData?.engagement as
+        Record<string, any> | undefined;
+      if (!existing || typeof existing !== 'object') return null;
+      const toNum = (value: unknown): number | undefined => {
+        if (value == null) return undefined;
+        const n = Number(value);
+        return Number.isNaN(n) ? undefined : n;
+      };
+      return {
+        views: toNum(existing.viewCount ?? existing.views),
+        likes: toNum(existing.likeCount ?? existing.likes),
+        comments: toNum(existing.commentCount ?? existing.comments),
+        shares: toNum(existing.shareCount ?? existing.shares),
+      };
+    } catch {
+      return null;
+    }
+  }
+
   async refreshProfileAsync(
     userId: string,
     accessToken: string,

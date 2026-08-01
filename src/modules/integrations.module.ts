@@ -11,6 +11,7 @@ import { AuthGuardsModule } from './authGuard.module';
 import { AnalyticsModule } from './analytics.module';
 import { ProfileModule } from './profile.module';
 import { SearchCacheService } from 'infrastructure/services';
+import { ContentIndexCacheListener } from '../infrastructure/background/listeners/content-index-cache.listener';
 import { PlatformRollbackListener } from '../infrastructure/background/listeners/platform-rollback.listener';
 import { SocialAccountLinkedListener } from '../infrastructure/background/listeners/social-account-linked.listener';
 import { LinkedAccountRemovedListener } from '../infrastructure/background/listeners/linked-account-removed.listener';
@@ -105,6 +106,7 @@ import {
   providers: [
     JwtService,
     SearchCacheService,
+    ContentIndexCacheListener,
     PlatformRollbackListener,
     SocialAccountLinkedListener,
     LinkedAccountRemovedListener,

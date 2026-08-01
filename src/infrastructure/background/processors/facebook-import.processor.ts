@@ -15,6 +15,7 @@ import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAc
 import BullMQConfig from '../../../core/config/bullmq.config';
 import { mapUserContentToFacebookOnlineModel } from '../../../domain/mappers/facebook.mapper';
 import { IContentStreamRepository } from '../../../domain/repositories/icontentStream.repository';
+import { IContentStreamIndexService } from '../../../domain/services/icontentStreamIndex.service';
 
 function extractParams(nextUrl: string): Record<string, string> {
   try {
@@ -49,6 +50,8 @@ export class FacebookImportProcessor extends WorkerHost {
     private readonly notificationService: INotificationService,
     @Inject(_const.ICONTENTSTREAM_REPOSITORY)
     private readonly contentStreamRepository: IContentStreamRepository,
+    @Inject(_const.ICONTENTSTREAM_INDEX_SERVICE)
+    private readonly contentStreamIndexService: IContentStreamIndexService,
     private readonly gateway: ImportGateway,
   ) {
     super();
@@ -268,6 +271,13 @@ export class FacebookImportProcessor extends WorkerHost {
                 picture: facebookContent.full_picture,
                 via: facebookContent.via,
                 attachments: facebookContent.attachments,
+                creatorName: account.userName,
+                creatorUsername: account.userName,
+                creatorAvatar: account.profileImage,
+                creatorUrl:
+                  account.externalUrl ||
+                  `https://www.facebook.com/${account.externalId}`,
+                verified: account.verified,
               };
             } else if (type === 'Likes') {
               content.type = 'likes';
@@ -275,14 +285,19 @@ export class FacebookImportProcessor extends WorkerHost {
               content.metaData = {
                 category: facebookContent.category,
                 createdAt: facebookContent.created_time,
+                creatorName: account.userName,
+                creatorUsername: account.userName,
+                creatorAvatar: account.profileImage,
+                creatorUrl:
+                  account.externalUrl ||
+                  `https://www.facebook.com/${account.externalId}`,
+                verified: account.verified,
               };
             }
 
-            await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
-              _const.PLATFORMS.FACEBOOK,
-              content.externalId,
-            );
+            await this.preserveExistingEngagement(content);
             content = await this.userContentRepository.createAsync(content);
+            await this.contentStreamIndexService.upsertFromUserContent(content);
             importedExternalIds.push(content.externalId);
             const mappedContent = mapUserContentToFacebookOnlineModel(content);
             this.gateway.emitNewImportContent(
@@ -477,6 +492,74 @@ export class FacebookImportProcessor extends WorkerHost {
           platform: _const.PLATFORMS.FACEBOOK,
         },
       );
+    }
+  }
+
+  private async preserveExistingEngagement(
+    content: UserContent,
+  ): Promise<void> {
+    if (this.hasRealEngagement(content.engagement)) return;
+    const existing = await this.fetchExistingEngagement(
+      content.platform,
+      content.externalId,
+    );
+    if (!existing) return;
+    content.engagement = {
+      ...(existing.views != null ? { views: existing.views } : {}),
+      ...(existing.likes != null ? { likes: existing.likes } : {}),
+      ...(existing.comments != null ? { comments: existing.comments } : {}),
+      ...(existing.shares != null ? { shares: existing.shares } : {}),
+    };
+    content.metaData = {
+      ...(content.metaData ?? {}),
+      ...(existing.views != null ? { viewCount: existing.views } : {}),
+      ...(existing.likes != null ? { likeCount: existing.likes } : {}),
+      ...(existing.comments != null ? { commentCount: existing.comments } : {}),
+      ...(existing.shares != null ? { shareCount: existing.shares } : {}),
+    };
+  }
+
+  private hasRealEngagement(engagement: any): boolean {
+    if (!engagement || typeof engagement !== 'object') return false;
+    return [
+      engagement.views,
+      engagement.likes,
+      engagement.comments,
+      engagement.shares,
+    ].some((value) => Number(value) > 0);
+  }
+
+  private async fetchExistingEngagement(
+    platform: string,
+    externalId: string,
+  ): Promise<{
+    views?: number;
+    likes?: number;
+    comments?: number;
+    shares?: number;
+  } | null> {
+    try {
+      const [rows] = await this.contentStreamRepository.getEntriesAsync({
+        page: 1,
+        pageSize: 1,
+        filter: { platform, externalId },
+      });
+      const existing = rows?.[0]?.metaData?.engagement as
+        Record<string, any> | undefined;
+      if (!existing || typeof existing !== 'object') return null;
+      const toNum = (value: unknown): number | undefined => {
+        if (value == null) return undefined;
+        const n = Number(value);
+        return Number.isNaN(n) ? undefined : n;
+      };
+      return {
+        views: toNum(existing.viewCount ?? existing.views),
+        likes: toNum(existing.likeCount ?? existing.likes),
+        comments: toNum(existing.commentCount ?? existing.comments),
+        shares: toNum(existing.shareCount ?? existing.shares),
+      };
+    } catch {
+      return null;
     }
   }
 
