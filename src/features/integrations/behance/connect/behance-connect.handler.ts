@@ -168,9 +168,9 @@ export class BehanceConnectCallbackQueryHandler implements ICommandHandler<Behan
       );
     }
 
-    // For Behance, we use a placeholder token since there's no API
-    const access_token = 'behance_fallback_token';
-    const expires_in = 3600 * 24 * 365; // 1 year placeholder
+    // Behance has no search API — this is a read-only profile import fallback.
+    const access_token = '';
+    const expires_in = 3600;
 
     let existingAccountLogin =
       await this.userLoginRepository.getByUserIdAndProviderAsync(

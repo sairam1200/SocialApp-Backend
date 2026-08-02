@@ -122,7 +122,7 @@ export class SnapchatConnectCallbackQueryHandler implements ICommandHandler<Snap
         username: `user_${Date.now()}`,
         display_name: 'Snapchat User',
       };
-      access_token = 'fallback_token';
+      access_token = '';
       expires_in = 3600;
     }
 
