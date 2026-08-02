@@ -37,9 +37,6 @@ export class VerificationEmailService {
     const { user, targetEmail, isEmailChange, updateUser, deliveryMode } =
       options;
 
-    logger.debug(
-      `[VerificationEmail] Sending verification email userId=${user.id} isEmailChange=${isEmailChange}`,
-    );
 
     logger.info(
       `[VerificationEmail] CHECKPOINT 2: Service received targetEmail=${targetEmail} for userId=${user.id} (isEmailChange=${isEmailChange}, updateUser=${updateUser}, deliveryMode=${deliveryMode})`,

@@ -44,22 +44,53 @@ export class GeneralRepository implements IGeneralRepository {
     const result = await this.dataSource.query(query, [listIds, platform]);
     return result.map((row: { video_id: string }) => row.video_id);
   }
+  /**
+   * Bulk-insert aggregated platform content.
+   *
+   * A raw `jsonb_to_recordset` insert rather than TypeORM `save()`, because a search
+   * writes up to 25 rows per platform per query and one statement beats N round-trips.
+   *
+   * Two consequences of that choice, both learned the hard way:
+   *
+   * 1. **The column list is explicit, so a new entity column is silently dropped.**
+   *    `searchText` was set by the ContentStream constructor and never persisted —
+   *    every row landed with `searchText = NULL`, so the trigram index it exists for
+   *    was doing nothing. If you add a column to the entity, add it here too.
+   * 2. **No TypeORM lifecycle hook fires.** `@BeforeInsert` and friends are not
+   *    called on this path, so anything derived must be derived before the call.
+   *
+   * `ON CONFLICT DO NOTHING` guards the unique index on `(platform, externalId)`.
+   * Callers already dedupe via `checkExistingItemsAsync`, but that is a
+   * read-then-write: two concurrent searches returning the same item both pass the
+   * check and both insert. Before the unique index that produced duplicate rows;
+   * with it, the second insert would raise. Skipping the conflicting row is the
+   * correct outcome — it is the same external item either way.
+   */
   public async createAsync(content: ContentStream[]): Promise<any> {
     if (content.length < 1) return;
+
+    // Derive searchText here as well as in the constructor: callers that build a
+    // plain object rather than a ContentStream instance would otherwise insert NULL.
+    const rows = content.map((item) => ({
+      ...item,
+      searchText:
+        item.searchText ??
+        ContentStream.buildSearchText(item.title, item.metaData),
+    }));
+
     const query = `
         WITH incoming AS (
-            SELECT * 
+            SELECT *
             FROM jsonb_to_recordset($1::jsonb)
-                AS t(type "contentStreams_type_enum","lastRefreshed"  Date , "subType" text, "platform" text, "externalId" text, "title" text, "metaData" jsonb)
+                AS t(type "contentStreams_type_enum", "lastRefreshed" Date, "subType" text, "platform" text, "externalId" text, "title" text, "metaData" jsonb, "searchText" text)
         )
-        INSERT INTO "contentStreams" ("type","lastRefreshed", "subType", "platform", "externalId", "title", "metaData")
-        SELECT * 
+        INSERT INTO "contentStreams" ("type", "lastRefreshed", "subType", "platform", "externalId", "title", "metaData", "searchText")
+        SELECT "type", "lastRefreshed", "subType", "platform", "externalId", "title", "metaData", "searchText"
         FROM incoming
+        ON CONFLICT ("platform", "externalId") DO NOTHING
         RETURNING "id", "externalId";
         `;
-    const result = await this.dataSource.query(query, [
-      JSON.stringify(content),
-    ]);
+    const result = await this.dataSource.query(query, [JSON.stringify(rows)]);
     return result;
   }
 

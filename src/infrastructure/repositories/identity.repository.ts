@@ -17,6 +17,10 @@ import { ProfileImagePrivacy, UserType } from '../../domain/enums';
 import { generateTimestampUUID } from '../../core/utils/time.util';
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import {
+  containsPattern,
+  escapeLikePattern,
+} from '../../core/utils/likePattern.util';
+import {
   BadRequestException,
   forwardRef,
   Inject,
@@ -56,7 +60,7 @@ export class IdentityRepository implements IIdentityRepository {
 
   public async getSimilarUserNamesAsync(userName: string): Promise<string[]> {
     const users = await this.userContext.find({
-      where: { userName: Like(`%${userName}%`) },
+      where: { userName: Like(containsPattern(userName)) },
       select: ['userName'],
     });
     return users.map((user) => user.userName);
@@ -237,7 +241,7 @@ export class IdentityRepository implements IIdentityRepository {
     // Apply filter criteria to the query
     if (searchTerm) {
       queryBuilder.andWhere('user.email LIKE :email', {
-        email: `%${searchTerm}%`,
+        email: containsPattern(searchTerm),
       });
     }
 
@@ -280,8 +284,8 @@ export class IdentityRepository implements IIdentityRepository {
     page: number,
     limit: number,
   ): Promise<[SearchUserProjection[], number]> {
-    const escapedKeyword = keyword.replace(/[\\%_]/g, '\\$&');
-    const pattern = `%${escapedKeyword}%`;
+    // Escaping now lives in one place; this was one of only two sites that had it.
+    const pattern = containsPattern(keyword);
     const matches = `(user.firstName ILIKE :pattern ESCAPE '\\' OR user.lastName ILIKE :pattern ESCAPE '\\' OR user.userName ILIKE :pattern ESCAPE '\\')`;
     const qb = this.userContext
       .createQueryBuilder('user')
@@ -323,7 +327,7 @@ export class IdentityRepository implements IIdentityRepository {
       'ASC',
     )
       .addOrderBy('user.userName', 'ASC')
-      .setParameters({ keyword, prefix: `${escapedKeyword}%` });
+      .setParameters({ keyword, prefix: `${escapeLikePattern(keyword)}%` });
     const countQb = this.userContext
       .createQueryBuilder('user')
       .where('user.isActive = true')

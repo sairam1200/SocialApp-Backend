@@ -5,6 +5,25 @@
 The API credentials document asks for "clear documentation on all API integrations and
 which ones work and which ones need adjustments". This is that document.
 
+<<<<<<< HEAD
+=======
+**Five platforms return real data today, and four of them need no credential at all.**
+A single search across YouTube, GitHub, Apple, Openverse and Hacker News returns **41 real
+results in 1.15 s**, all persisted to `contentStreams` and served back through the
+user-facing read path in 0.46 s. Verified against a fresh database.
+
+That reframes the situation: the product is not "one platform working and eleven blocked".
+It is five working sources — covering search, code, music/audio/video, royalty-free imagery
+and news/trends — plus a set of social platforms gated on credentials that only their
+account owners can supply.
+
+**Verified separately from credentials.** `search.handler.spec.ts` (35 tests) pins the
+orchestration for all twelve platforms without needing any working credential: per-platform
+dispatch, that a stored OAuth token reaches its own platform and no other, failure
+isolation, and per-platform result counting and pagination. So for the eleven platforms
+below that lack credentials, the gap is the credential — not the code.
+
+>>>>>>> other/staging
 **Why it matters operationally:** a dead credential and "no results for this query"
 look identical to the user and in the logs. Every platform call in
 `GlobalSearchQueryHandler` is wrapped in `.catch()` so one failure degrades that
@@ -13,11 +32,49 @@ concluding that search is broken in code.
 
 ---
 
+<<<<<<< HEAD
+=======
+## What must happen for each platform to return real data
+
+Every remaining blocker needs an action by an account owner or a decision by the
+business. None can be resolved by writing code — the orchestration is verified
+(`search.handler.spec.ts`, 35 tests) and each platform's token path is proven to work the
+moment a valid credential exists.
+
+| Platform | Who acts | Exact action | Effort |
+|---|---|---|---|
+| **YouTube** | Engineering | ✅ Working. Request a **quota increase** in Google Cloud → APIs & Services → YouTube Data API v3 → Quotas. Default 10,000 units/day at 100 per `search.list` = ~100 searches/day, which will not survive launch | 30 min + Google review |
+| **Pinterest** | Account owner | **The app secret is valid — the blocker is account 2FA.** `POST /v5/oauth/token` with `grant_type=client_credentials` and a scope returns `1201: Two-factor authentication required`, which is a *different* error from invalid credentials: Pinterest accepted the app ID and secret and then challenged the account. So token minting cannot be automated at all; the owner must complete the OAuth flow interactively, satisfying 2FA, then **store the refresh token** so `oauth.service.ts` renews it without repeating that. Note `client_credentials` alone returns `400 Invalid parameters` — Pinterest v5 needs the authorisation-code flow | 1 hour, interactive |
+| **TikTok** | Account owner | Complete app review for the scopes needed, then gate TikTok results on a **connected account** — `client_credentials` cannot search content, by TikTok's design | Days–weeks (review) |
+| **Twitter / X** | Account owner | Complete email + phone verification on the developer account, then choose a paid API tier — the free tier has no search | Hours + ongoing cost |
+| **LinkedIn** | Account owner | Regain developer portal access, then apply for the Marketing/Community API. Search access is heavily restricted and may be declined | Weeks, uncertain |
+| **Facebook / Instagram / Threads** | Account owner | Meta app review for the scopes involved. Then gate on connected accounts | Weeks (review) |
+| **Snapchat** | Account owner | No credentials configured. Register an app if this platform is still in scope | Days |
+| **GitHub** | ✅ Done | Working with **no credential at all**. Optionally set a PAT to raise the rate limit from 10/min to 60/hr | Done |
+| **Spotify** | Engineering | No credentials configured. `client_credentials` is sufficient for catalogue search, so this is the **cheapest platform to add** — register an app at developer.spotify.com and set `SPOTIFY_CLIENT_ID`/`_SECRET` | 30 min |
+| **Reddit** | Business decision | API access was **declined**. Public JSON returns 403 from datacenter IPs regardless of User-Agent (retested with Reddit's required UA format on `www`, `old` and a subreddit listing — all 403). Either appeal, pay for the commercial tier, or **remove Reddit from the platform list** rather than shipping a permanently failing integration | Decision needed |
+| **Dribbble** | Product decision | Not a credential problem: **v2 has no search endpoint**. Reframe as a connected-account content import via `/v2/user/shots`, or drop it | Decision needed |
+| **Behance** | Product decision | No public API. Currently a **stub returning empty arrays**. Either remove it from `SEARCHABLE_PLATFORMS` or accept it never returns results | Decision needed |
+
+**The two cheapest wins, in order:** request the YouTube quota increase (the only working
+integration is capped at ~100 searches/day), then register a Spotify app — it needs no
+user authorisation, so it goes from zero to working in about half an hour.
+
+---
+
+>>>>>>> other/staging
 ## Summary
 
 | Platform | Status | Verified how | Blocker |
 |---|---|---|---|
 | **YouTube** | ✅ **Working** | `GET /youtube/v3/search` → 200, real results | Quota, not auth — see below |
+<<<<<<< HEAD
+=======
+| **GitHub** | ✅ **Working, no credential needed** | `GET /search/repositories` + `/search/users` → 200 unauthenticated; verified end-to-end into Postgres and back out | Rate limit 10/min unauthenticated, 60/hr with a token |
+| **Apple / iTunes** | ✅ **Working, no credential needed** | `GET /search?media=all` → 200; 9 rows persisted and served | Covers the brief's **music, audio and video** verticals |
+| **Openverse** | ✅ **Working, no credential needed** | `GET /v1/images/` → 200; 8 rows persisted and served | Covers the brief's explicit ask for **royalty-free image and asset sources**; every result carries its licence |
+| **Hacker News** | ✅ **Working, no credential needed** | `GET /api/v1/search` (Algolia) → 200; 8 rows persisted and served | Covers the brief's **news and trends** verticals |
+>>>>>>> other/staging
 | **TikTok** | ⚠️ **Partial** | `POST /v2/oauth/token/` → 200, token issued | `client_credentials` opens a narrow endpoint set; content search needs a user-authorised token |
 | **Pinterest** | ❌ **Broken** | `GET /v5/user_account` → **401** `Authentication failed` | Access token dead or expired. Needs re-authorisation |
 | **Dribbble** | ⚠️ **Needs user OAuth** | `POST /oauth/token` → **400** `Missing required parameter: code` | `client_credentials` unsupported; requires the authorisation-code flow |
@@ -66,12 +123,33 @@ only for users who have connected their TikTok account.
 Design implication: TikTok results should be gated on a connected account rather than
 attempted and silently failing for everyone else.
 
+<<<<<<< HEAD
 ## Pinterest — re-authorisation needed
 
 The configured access token returns 401. Pinterest v5 access tokens expire; the app ID
 and secret are still valid, so this needs the OAuth flow re-run to mint a fresh token
 plus refresh token. Store the **refresh** token and renew automatically —
 `oauth.service.ts` already has that pattern.
+=======
+## Pinterest — blocked by account 2FA, not by a bad secret
+
+Three distinct probes, and the third is the informative one:
+
+| Probe | Result | Meaning |
+|---|---|---|
+| `GET /v5/user_account` with the stored token | `401 Authentication failed` | The user access token is dead or expired |
+| `POST /v5/oauth/token` `grant_type=client_credentials` | `400 Invalid parameters` | v5 does not support this grant; it needs the authorisation-code flow |
+| Same, with `scope=pins:read,boards:read` | **`1201 Two-factor authentication required`** | Pinterest **accepted the app ID and secret**, then challenged the account |
+
+That third response matters. It is not a credentials error — it proves the app secret is
+valid and locates the blocker in an **interactive 2FA challenge on the Pinterest account**.
+
+Consequence: minting a Pinterest token cannot be automated, scripted, or done from CI. The
+account owner has to complete the OAuth flow in a browser and satisfy 2FA. Once that is
+done, **store the refresh token** so `oauth.service.ts` renews it automatically rather than
+requiring the 2FA dance again — that pattern already exists in the codebase and is the
+difference between a one-off task and a recurring one.
+>>>>>>> other/staging
 
 ## Reddit — treat as unavailable
 

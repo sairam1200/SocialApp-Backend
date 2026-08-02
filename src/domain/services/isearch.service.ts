@@ -1,3 +1,4 @@
+import { GithubSearchResponseModel } from '../contracts/github.model';
 import { PlatformSearchParamsModel } from '../contracts/platform-search.model';
 import { FacebookSearchResponseModel } from '../contracts/facebook.model';
 import { RedditSearchResponseModel } from '../contracts/reddit.model';
@@ -37,6 +38,23 @@ export interface ISearchService {
   searchSpotifyAsync(
     params: PlatformSearchParamsModel,
   ): Promise<SpotifySearchResponseModel>;
+  /**
+   * GitHub search. Needs no credential — api.github.com/search/* serves
+   * unauthenticated requests at 10/minute. An accessToken only raises that limit.
+   */
+  searchGithubAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<GithubSearchResponseModel>;
+
+  /**
+   * Credential-free sources covering verticals the brief names directly: music and audio
+   * (Apple), openly-licensed imagery (Openverse), news and trends (Hacker News). All three
+   * serve unauthenticated requests, which makes them the cheapest real integrations.
+   */
+  searchAppleAsync(params: PlatformSearchParamsModel): Promise<any>;
+  searchOpenverseAsync(params: PlatformSearchParamsModel): Promise<any>;
+  searchHackernewsAsync(params: PlatformSearchParamsModel): Promise<any>;
+
   searchYoutubeAsync(
     params: PlatformSearchParamsModel,
   ): Promise<YoutubeSearchResponseModel>;

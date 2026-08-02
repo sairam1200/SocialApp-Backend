@@ -8,12 +8,30 @@ export class YoutubeWebhookService {
   private readonly PUBSUBHUBBUB_URL =
     'https://pubsubhubbub.appspot.com/subscribe';
 
+  /**
+   * Fails closed rather than falling back to a shared default. The matching
+   * verification endpoint rejects requests when this is unset, so a default here
+   * would only produce handshakes that can never be verified — and a guessable
+   * one would let a third party complete them on our behalf.
+   */
+  private getVerifyToken(): string {
+    const verifyToken = process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN;
+    if (!verifyToken) {
+      throw new Error(
+        'YOUTUBE_WEBHOOK_VERIFY_TOKEN is not configured — cannot manage PubSubHubbub subscriptions',
+      );
+    }
+    return verifyToken;
+  }
+
   public async subscribeAsync(
     channelId: string,
     callbackUrl: string,
   ): Promise<void> {
+
     const verifyToken =
       process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN;
+
     const topic = `https://www.youtube.com/xml/feeds/videos.xml?channel_id=${channelId}`;
 
     try {
@@ -54,8 +72,10 @@ export class YoutubeWebhookService {
     channelId: string,
     callbackUrl: string,
   ): Promise<void> {
+
     const verifyToken =
       process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN;
+
     const topic = `https://www.youtube.com/xml/feeds/videos.xml?channel_id=${channelId}`;
 
     try {

@@ -20,11 +20,19 @@ Companion documents: [`../audit/2026-07_Security_And_Correctness_Audit.md`](../a
 |---|---|
 | Backend | NestJS 11, clean architecture + CQRS, 201 endpoints, builds clean, typechecks at 0 errors |
 | Frontend | Next.js 16, React 19, Tailwind v4, TanStack Query v5, builds clean, typecheck 130 → 0 |
+<<<<<<< HEAD
 | Tests | **136** backend (8 suites) + **52** frontend Vitest + **12** Playwright = **200**, from zero |
 | CI/CD | Cloud Build pipeline + local gate in both repos (no GitHub Actions, per cost constraint) |
 | Search | 12-platform fan-out, DB-persisted, cached, distributed-locked. **Verified end-to-end against the live YouTube API** — see [`../integrations/END_TO_END_VERIFICATION.md`](../integrations/END_TO_END_VERIFICATION.md). Four defects found and fixed, including aggregated results being saved but never shown to users |
 | Migrations | **A fresh database now builds** — 42 tables, 52 migrations. Six tables previously had no create-migration, so no environment could be provisioned from source |
 | Platform credentials | YouTube ✅ · TikTok ⚠️ partial · Pinterest ❌ · Reddit ❌ · Dribbble ⚠️ · see STATUS.md |
+=======
+| Tests | **218** backend (11 suites) + **66** frontend Vitest + **20** Playwright = **304**, from zero |
+| CI/CD | Cloud Build pipeline + local gate in both repos (no GitHub Actions, per cost constraint) |
+| Search | 12-platform fan-out, DB-persisted, cached, distributed-locked. **Verified end-to-end against the live YouTube API** — see [`../integrations/END_TO_END_VERIFICATION.md`](../integrations/END_TO_END_VERIFICATION.md). Four defects found and fixed, including aggregated results being saved but never shown to users |
+| Migrations | **A fresh database now builds** — 42 tables, 52 migrations. Six tables previously had no create-migration, so no environment could be provisioned from source |
+| Working platforms | **5 verified end-to-end**: YouTube ✅ · GitHub ✅ · Apple ✅ · Openverse ✅ · Hacker News ✅ — four need **no credential**. 41 real results in one 1.15 s search, persisted and served. Social platforms remain credential-gated: TikTok ⚠️ · Pinterest ❌ 2FA · Reddit ❌ declined · Dribbble/Behance ✖ no search API. See STATUS.md |
+>>>>>>> other/staging
 | i18n | next-intl live; `sv` + `en` catalogs; 28 locales registered; RTL working |
 | Light/dark | Working, with a pre-paint script and a settings control |
 | SEO | robots.txt, sitemap.xml, rich root metadata, per-profile metadata + JSON-LD |
@@ -70,6 +78,22 @@ observability.
 
 ### 3.1 Credentials (highest leverage)
 
+<<<<<<< HEAD
+=======
+**What is code-complete versus credential-blocked.** All twelve platforms' orchestration
+is now verified by `search.handler.spec.ts` (35 tests): each is dispatched to its own
+service method, a user's stored OAuth token reaches that platform *and no other*, one
+platform failing does not affect the rest, and results are counted and paginated per
+platform. That does not prove Pinterest's API returns data — nothing can until its token
+is re-authorised — but it does prove the token is used correctly when it arrives. The
+remaining work on these eleven is obtaining credentials, not writing code.
+
+Two are not credential problems at all: Dribbble's v2 API has **no search endpoint**, and
+Behance has no public API (its handler is a stub returning empty arrays). See
+[`../integrations/STATUS.md`](../integrations/STATUS.md).
+
+
+>>>>>>> other/staging
 Verified state is in [`../integrations/STATUS.md`](../integrations/STATUS.md). Only
 YouTube works fully today, and it allows **~100 searches/day** (`search.list` costs
 100 of 10,000 daily units).
@@ -130,8 +154,13 @@ paged independently, and relevance is not ranked across platforms — see §3.4.
 
 ### 3.5 Test coverage
 
+<<<<<<< HEAD
 The frontend has **52 Vitest tests** (locale registry, colour-scheme provider, content
 normaliser) plus **12 Playwright browser tests**; the backend has **136 across 8
+=======
+The frontend has **66 Vitest tests** (locale registry, colour-scheme provider, content
+normaliser, card helpers) plus **20 Playwright browser tests**; the backend has **218 across 11
+>>>>>>> other/staging
 suites**. Both gates are green.
 
 What is still uncovered, highest value first:

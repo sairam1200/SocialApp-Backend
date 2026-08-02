@@ -22,6 +22,7 @@ export class ContentStream extends BaseEntity {
   @Column({ type: 'json', nullable: true })
   metaData?: Record<string, any>;
 
+<<<<<<< HEAD
   // Search columns (Phase 1: Unified Search)
   @Column({ type: 'text', nullable: true })
   searchText?: string;
@@ -38,8 +39,55 @@ export class ContentStream extends BaseEntity {
   @Column({ type: 'uuid', nullable: true })
   creatorId?: string;
 
+=======
+  /**
+   * Denormalised search text: title plus the platform's body text.
+   *
+   * Exists so search does not have to expand every row's `metaData` with
+   * `json_each_text` on every query — that was a full table scan with per-row JSON
+   * parsing. Backed by a `pg_trgm` GIN index, so `ILIKE '%term%'` is index-assisted.
+   *
+   * Populated by `buildSearchText()` below; the constructor derives it automatically,
+   * so callers that build a ContentStream normally get it for free.
+   */
+  @Column({ type: 'text', nullable: true })
+  searchText?: string;
+
+>>>>>>> other/staging
   constructor(request: Partial<ContentStream> = {}) {
     super();
     Object.assign(this, request);
+
+    // Derive on construction unless explicitly supplied, so every write path stays
+    // searchable without each one remembering to set it.
+    if (this.searchText === undefined) {
+      this.searchText = ContentStream.buildSearchText(
+        this.title,
+        this.metaData,
+      );
+    }
+  }
+
+  /**
+   * Title plus whichever key this platform uses for body text.
+   *
+   * YouTube says `description`, Facebook `message`, Instagram `caption`, Reddit
+   * `selftext`. Kept in sync with the same fallback chain in
+   * `database-search.handler.ts`.
+   */
+  static buildSearchText(
+    title?: string | null,
+    metaData?: Record<string, any> | null,
+  ): string {
+    const body =
+      metaData?.description ??
+      metaData?.message ??
+      metaData?.caption ??
+      metaData?.selftext ??
+      '';
+
+    return `${title ?? ''} ${typeof body === 'string' ? body : ''}`
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 }

@@ -89,8 +89,11 @@ export class InstagramConnectQueryHandler implements ICommandHandler<InstagramCo
  */
 @CommandHandler(InstagramConnectCallbackQuery)
 export class InstagramConnectCallbackQueryHandler implements ICommandHandler<InstagramConnectCallbackQuery> {
+<<<<<<< HEAD
   private static callbackInvocationCount = 0;
 
+=======
+>>>>>>> other/staging
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,

@@ -63,6 +63,16 @@ import {
 } from './services';
 import { NewsletterSubscriberRepository } from './repositories/newsletterSubscriber.repository';
 import { ProjectRepository } from './repositories/project.repository';
+import {
+  CommerceRepository,
+  EngagementRepository,
+  LearningRepository,
+  MessagingRepository,
+  PostRepository,
+  SocialProfileRepository,
+  StreamRepository,
+} from './repositories/social';
+import { GaddrJobsRepository } from './repositories/gaddrJobs.repository';
 
 /* This is the dependency object that holds all the repositories & services
  * used in the application. It is used to provide the dependencies to the
@@ -310,9 +320,46 @@ export const dependency = {
     useClass: EmailBounceService,
   },
 
+<<<<<<< HEAD
   // Unified Search
   ContentStreamIndexService: {
     provide: _const.ICONTENTSTREAM_INDEX_SERVICE,
     useClass: ContentStreamIndexService,
+=======
+  // Community — the social layer.
+  SocialProfileRepository: {
+    provide: _const.ISOCIALPROFILE_REPOSITORY,
+    useClass: SocialProfileRepository,
+  },
+  PostRepository: {
+    provide: _const.IPOST_REPOSITORY,
+    useClass: PostRepository,
+  },
+  EngagementRepository: {
+    provide: _const.IENGAGEMENT_REPOSITORY,
+    useClass: EngagementRepository,
+  },
+  CommerceRepository: {
+    provide: _const.ICOMMERCE_REPOSITORY,
+    useClass: CommerceRepository,
+  },
+  StreamRepository: {
+    provide: _const.ISTREAM_REPOSITORY,
+    useClass: StreamRepository,
+  },
+  MessagingRepository: {
+    provide: _const.IMESSAGING_REPOSITORY,
+    useClass: MessagingRepository,
+  },
+  LearningRepository: {
+    provide: _const.ILEARNING_REPOSITORY,
+    useClass: LearningRepository,
+  },
+
+  // Gaddr Jobs — our sister product, read-only over the shared database.
+  GaddrJobsRepository: {
+    provide: _const.IGADDRJOBS_REPOSITORY,
+    useClass: GaddrJobsRepository,
+>>>>>>> other/staging
   },
 };

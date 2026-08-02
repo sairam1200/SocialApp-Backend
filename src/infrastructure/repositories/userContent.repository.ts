@@ -11,6 +11,10 @@ import { QueryOptions } from '../../domain/types/queryOptions.type';
 import { SearchContentProjection } from '../../domain/repositories/iuserContent.repository';
 import { User } from '../../domain/entities/identity/user.entity';
 import redis from '../../core/utils/redis.util';
+import {
+  containsPattern,
+  escapeLikePattern,
+} from '../../core/utils/likePattern.util';
 @Injectable()
 export class UserContentRepository implements IUserContentRepository {
   constructor(
@@ -211,7 +215,7 @@ export class UserContentRepository implements IUserContentRepository {
           )
         )
       `);
-      parameters.searchQuery = `%${searchQuery}%`;
+      parameters.searchQuery = containsPattern(searchQuery);
     }
 
     if (filter?.externalId) {
@@ -238,7 +242,7 @@ export class UserContentRepository implements IUserContentRepository {
           'ASC',
         )
         .addOrderBy(`uc.${orderBy}`, order)
-        .setParameter('exactSearch', `%${exactSearch}%`)
+        .setParameter('exactSearch', containsPattern(exactSearch))
         .setParameter('searchQuery', parameters.searchQuery);
     } else {
       queryBuilder.orderBy(`uc.${orderBy}`, order);
@@ -255,8 +259,8 @@ export class UserContentRepository implements IUserContentRepository {
     page: number,
     limit: number,
   ): Promise<[SearchContentProjection[], number]> {
-    const escapedKeyword = keyword.replace(/[\\%_]/g, '\\$&');
-    const pattern = `%${escapedKeyword}%`;
+    // Escaping now lives in one place; this was one of only two sites that had it.
+    const pattern = containsPattern(keyword);
     const qb = this.createGlobalSearchQuery(viewerUserId)
       .andWhere(
         `(
@@ -286,7 +290,7 @@ export class UserContentRepository implements IUserContentRepository {
         'ASC',
       )
       .addOrderBy('content.publishedAt', 'DESC', 'NULLS LAST')
-      .setParameters({ keyword, prefix: `${escapedKeyword}%` });
+      .setParameters({ keyword, prefix: `${escapeLikePattern(keyword)}%` });
     const rows = await qb.clone().getRawMany();
     const count = rows.length;
 

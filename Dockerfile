@@ -38,6 +38,12 @@ COPY --from=builder /app/dist ./dist
 
 COPY --from=builder /app/public ./public
 
+# docs/asyncapi.yaml is read at runtime by addWebSocketDocs via process.cwd(). It was never
+# copied, so that function always took its `existsSync` early-return and the WebSocket docs
+# silently did not exist in any built image — a feature that looked implemented and was not.
+# Small enough to include, and the alternative is deleting a working feature.
+COPY --from=builder /app/docs ./docs
+
 EXPOSE 8080
 
 CMD ["node", "dist/main.js"]

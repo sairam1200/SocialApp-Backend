@@ -7,6 +7,7 @@ import { LinkedAccount } from '../../domain/entities/linkedAccount.entity';
 import { HttpContext } from '../../core/middlewares/httpContext.middleware';
 import { ILinkedAccountRepository } from '../../domain/repositories/ilinkedAccount.repository';
 import { LinkedAccountAlreadyExistsException } from '../../core/exceptions/linkedAccount.exception';
+import { containsPattern } from '../../core/utils/likePattern.util';
 
 @Injectable()
 export class LinkedAccountRepository implements ILinkedAccountRepository {
@@ -45,7 +46,7 @@ export class LinkedAccountRepository implements ILinkedAccountRepository {
         )
       `);
 
-      parameters.searchQuery = `%${searchQuery}%`;
+      parameters.searchQuery = containsPattern(searchQuery);
     }
 
     if (filter?.platform) {

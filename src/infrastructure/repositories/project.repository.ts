@@ -7,6 +7,7 @@ import {
   ProjectSearchFilters,
 } from '../../domain/repositories/iproject.repository';
 import { PagedResult } from '../../domain/contracts/pagination/pagedResult';
+import { containsPattern } from '../../core/utils/likePattern.util';
 
 @Injectable()
 export class ProjectRepository implements IProjectRepository {
@@ -23,7 +24,7 @@ export class ProjectRepository implements IProjectRepository {
     const qb = this.projectContext.createQueryBuilder('project');
 
     if (filters.keyword && filters.keyword.trim()) {
-      const keyword = `%${filters.keyword.trim()}%`;
+      const keyword = containsPattern(filters.keyword.trim());
       const rawKeyword = filters.keyword.trim();
       qb.where(
         `(project.title ILIKE :keyword OR project.description ILIKE :keyword OR :rawKeyword = ANY(project.skills))`,
@@ -59,7 +60,7 @@ export class ProjectRepository implements IProjectRepository {
     keyword: string,
     limit: number,
   ): Promise<Pick<Project, 'id' | 'title' | 'description' | 'status'>[]> {
-    const likeKeyword = `%${keyword.trim()}%`;
+    const likeKeyword = containsPattern(keyword.trim());
     return this.projectContext
       .createQueryBuilder('project')
       .where(

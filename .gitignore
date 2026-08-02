@@ -3,6 +3,23 @@
 /node_modules
 /build
 
+# TypeScript incremental build caches — machine-local, cause spurious diffs
+*.tsbuildinfo
+
+# Database dumps and backups.
+# A production dump (neondb_backup_20260717_223225.dump) was previously committed
+# containing real password hashes and TOTP 2FA secrets. Never commit these:
+# use object storage with access control instead.
+*.dump
+*.sql
+*.sql.gz
+*.tar.gz
+*backup*.dump
+
+# Large test fixtures — use object storage or Git LFS
+test_video.mp4
+test_sql_output.js
+
 # Logs
 logs
 /logs

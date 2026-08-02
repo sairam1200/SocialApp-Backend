@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import _const from '../core/utils/const';
 import redis from '../core/utils/redis.util';
 import logger from '../core/utils/winston.util';
+import { IdentityAccessModule } from './identityAccess.module';
 import { UserModule } from './user.module';
 import { RoleModule } from './role.module';
 import { AuthModule } from './auth.module';
@@ -19,9 +20,14 @@ import { AnalyticsModule } from './analytics.module';
 import { DiscoverModule } from './discover.module';
 import { NewsletterModule } from './newsletter.module';
 import { ProjectModule } from './project.module';
+import { CommunityModule } from './community.module';
+import { VersionController } from '../features/version/version.endpoint';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DataSeeder } from '../infrastructure/services/data.seeder';
-import { postgresOptions } from '../infrastructure/persistence/data.source';
+import {
+  nestRetryOptions,
+  postgresOptions,
+} from '../infrastructure/persistence/data.source';
 import { HttpContextMiddleware } from '../core/middlewares/httpContext.middleware';
 import { RateLimitMiddleware } from '../core/middlewares/rate-limit.middleware';
 import { RateLimit, RateLimitLog } from '../domain/entities';
@@ -36,6 +42,10 @@ import {
 
 @Module({
   imports: [
+    // Global: the account guards read the database on a session-cache miss, and Nest
+    // resolves a guard's dependencies where the guard is *used* — across a dozen feature
+    // modules. See identityAccess.module.ts.
+    IdentityAccessModule,
     PassportModule,
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
@@ -43,7 +53,7 @@ import {
       secret: configs.jwt.secret,
       signOptions: { expiresIn: configs.jwt.accessTokenExpiration },
     }),
-    TypeOrmModule.forRoot(postgresOptions),
+    TypeOrmModule.forRoot({ ...postgresOptions, ...nestRetryOptions }),
     TypeOrmModule.forFeature([RateLimit, RateLimitLog]),
     UserModule,
     RoleModule,
@@ -58,7 +68,12 @@ import {
     DiscoverModule,
     NewsletterModule,
     ProjectModule,
+    CommunityModule,
   ],
+  // Deliberately on the root module rather than a feature module: it has no
+  // dependencies, and it must keep answering even if a feature module fails to
+  // resolve — that is exactly when you most need to know what is running.
+  controllers: [VersionController],
   providers: [dependency.RateLimitRepository, RateLimitMiddleware],
 })
 export class AppModule

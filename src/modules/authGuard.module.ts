@@ -10,6 +10,9 @@ import {
 } from '../core/passport';
 
 @Module({
+  // TypeOrmModule + IdentityRepository are needed because the account guards now fall
+  // back to the database when the session cache misses, rather than skipping the
+  // revocation check (finding C5).
   imports: [CqrsModule],
   providers: [
     JwtService,

@@ -1,4 +1,10 @@
 import axios from 'axios';
+import {
+  resilientGet,
+  resilientPost,
+} from '../../core/utils/resilientHttp.util';
+import { GithubSearchResponseModel } from '../../domain/contracts/github.model';
+import { StreamEntityType } from '../../domain/enums';
 import _const from '../../core/utils/const';
 import logger from '../../core/utils/winston.util';
 import { Inject, Injectable } from '@nestjs/common';
@@ -208,13 +214,15 @@ export class SearchService implements ISearchService {
         access_token: accessToken,
       };
 
-      const response = await axios.get(baseUrl, { params });
+      const response = await resilientGet<FacebookAPIResponseModel>(baseUrl, {
+        platform: _const.PLATFORMS.FACEBOOK,
+        params,
+      });
       return response.data;
     } catch (error: any) {
-      logger.error(
-        'Error fetching Facebook data:',
-        error?.response?.data || error.message || error,
-      );
+      logger.error('Error fetching Facebook data:', {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       return emptyResult;
     }
   }
@@ -1440,12 +1448,19 @@ export class SearchService implements ISearchService {
 
       params.key = configs.youtube.apiKey;
 
-      const response = await axios.get<YouTubeSearchResponseDataType>(
+      const response = await resilientGet<YouTubeSearchResponseDataType>(
         'https://www.googleapis.com/youtube/v3/search',
         {
+          platform: _const.PLATFORMS.YOUTUBE,
           params,
           headers,
           timeout: 10000,
+          // The quota-critical one. `search.list` costs 100 of 10,000 daily units — about
+          // 100 searches a day — so a retry against a 403 (quota exhausted) or 401 (bad
+          // key) would spend the remaining budget on errors. The wrapper only retries
+          // 429 and 5xx, which is exactly right here: a quota 403 is a permanent answer
+          // until midnight Pacific, while a 429 is genuinely "try again shortly".
+          maxRetries: 1,
         },
       );
 
@@ -1458,10 +1473,9 @@ export class SearchService implements ISearchService {
       // if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
       //   throw new ApplicationException('YouTube API request timeout. Please try again.');
       // }
-      logger.error(
-        `Error fetching YouTube videos for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching YouTube videos for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       // throw error;
       return emptyResult;
     }
@@ -1585,14 +1599,28 @@ export class SearchService implements ISearchService {
   }
 
   private async getRedditAppOnlyTokenAsync(): Promise<string> {
+    // Check before calling out.
+    //
+    // Without this, unset credentials interpolate as the string "undefined", are sent as
+    // real basic auth, and come back 401 — a wasted round trip on every search, and a log
+    // line that reads like rejected credentials rather than absent ones. It also opened
+    // the circuit breaker, conflating "not configured" with "broken": two different faults
+    // with two different remedies.
+    if (!configs.reddit?.clientId || !configs.reddit?.clientSecret) {
+      throw new Error(
+        'Reddit is not configured — set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET',
+      );
+    }
+
     try {
       const basicAuth = Buffer.from(
         `${configs.reddit.clientId}:${configs.reddit.clientSecret}`,
       ).toString('base64');
-      const response = await axios.post(
+      const response = await resilientPost<{ access_token: string }>(
         'https://www.reddit.com/api/v1/access_token',
         'grant_type=client_credentials',
         {
+          platform: `${_const.PLATFORMS.REDDIT}:token`,
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             Authorization: `Basic ${basicAuth}`,
@@ -1602,10 +1630,9 @@ export class SearchService implements ISearchService {
       );
       return response.data.access_token;
     } catch (error: any) {
-      logger.error(
-        'Error getting Reddit app-only token:',
-        error?.response?.data || error?.message,
-      );
+      logger.error('Error getting Reddit app-only token:', {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw new ApplicationException('Failed to authenticate with Reddit API.');
     }
   }
@@ -1668,10 +1695,9 @@ export class SearchService implements ISearchService {
           'Reddit API request timeout. Please try again.',
         );
       }
-      logger.error(
-        `Error fetching Reddit results for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching Reddit results for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw error;
     }
   }
@@ -1812,14 +1838,27 @@ export class SearchService implements ISearchService {
   }
 
   private async getSpotifyClientCredentialsTokenAsync(): Promise<string> {
+    // Same guard as Reddit. Spotify is the cheapest unclaimed integration —
+    // `client_credentials` alone suffices for catalogue search — so this is the message a
+    // maintainer is most likely to act on.
+    if (!configs.spotify?.clientId || !configs.spotify?.clientSecret) {
+      throw new Error(
+        'Spotify is not configured — set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET',
+      );
+    }
+
     try {
       const basicAuth = Buffer.from(
         `${configs.spotify.clientId}:${configs.spotify.clientSecret}`,
       ).toString('base64');
-      const response = await axios.post(
+      const response = await resilientPost<{ access_token: string }>(
         'https://accounts.spotify.com/api/token',
         'grant_type=client_credentials',
         {
+          // Separate breaker key from the search endpoints: a dead token endpoint and a
+          // dead search endpoint are different faults with different remedies, and
+          // collapsing them hides which one is actually broken.
+          platform: `${_const.PLATFORMS.SPOTIFY}:token`,
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             Authorization: `Basic ${basicAuth}`,
@@ -1828,10 +1867,9 @@ export class SearchService implements ISearchService {
       );
       return response.data.access_token;
     } catch (error: any) {
-      logger.error(
-        'Error getting Spotify client credentials token:',
-        error?.response?.data || error?.message,
-      );
+      logger.error('Error getting Spotify client credentials token:', {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw new ApplicationException(
         'Failed to authenticate with Spotify API.',
       );
@@ -1905,10 +1943,9 @@ export class SearchService implements ISearchService {
           'Spotify API request timeout. Please try again.',
         );
       }
-      logger.error(
-        `Error fetching Spotify results for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching Spotify results for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw error;
     }
   }
@@ -2070,10 +2107,9 @@ export class SearchService implements ISearchService {
           'Pinterest API request timeout. Please try again.',
         );
       }
-      logger.error(
-        `Error fetching Pinterest results for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching Pinterest results for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw error;
     }
   }
@@ -2243,10 +2279,9 @@ export class SearchService implements ISearchService {
           'TikTok API request timeout. Please try again.',
         );
       }
-      logger.error(
-        `Error fetching TikTok results for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching TikTok results for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw error;
     }
   }
@@ -2521,10 +2556,9 @@ export class SearchService implements ISearchService {
           'LinkedIn API request timeout. Please try again.',
         );
       }
-      logger.error(
-        `Error fetching LinkedIn results for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching LinkedIn results for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw error;
     }
   }
@@ -2694,10 +2728,9 @@ export class SearchService implements ISearchService {
           'Instagram API request timeout. Please try again.',
         );
       }
-      logger.error(
-        `Error fetching Instagram results for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching Instagram results for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw error;
     }
   }
@@ -2858,10 +2891,9 @@ export class SearchService implements ISearchService {
           'Twitter API request timeout. Please try again.',
         );
       }
-      logger.error(
-        `Error fetching Twitter results for "${query}":`,
-        error?.response?.data || error?.message,
-      );
+      logger.error(`Error fetching Twitter results for "${query}":`, {
+        reason: error?.response?.data ?? error?.message ?? String(error),
+      });
       throw error;
     }
   }
@@ -3003,5 +3035,406 @@ export class SearchService implements ISearchService {
       cacheParams,
     );
     return response;
+  }
+
+  /**
+   * GitHub search.
+   *
+   * The only platform besides YouTube that returns real data with **no credential** —
+   * `api.github.com/search/*` serves unauthenticated requests at 10/minute (60/hour with
+   * a token). It was already in `PLATFORMS` for account linking but had no search
+   * implementation, so it was sitting in the "blocked" bucket while actually being the
+   * cheapest available integration.
+   *
+   * Follows the same shape as the other platforms: cache → API → persist to
+   * contentStreams → build response. Repositories become Content/'repository' and users
+   * or organisations become Profile/'user', so both surface through the aggregated read
+   * path alongside every other platform.
+   *
+   * `accessToken` is honoured when a user has connected their GitHub account, purely to
+   * raise the rate limit — the same query works without one.
+   */
+  public async searchGithubAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<GithubSearchResponseModel> {
+    const {
+      filters = {},
+      limit,
+      normalizedQuery,
+      originalQuery,
+      accessToken,
+      page,
+      forceRefresh = false,
+    } = params;
+
+    filters.platform = _const.PLATFORMS.GITHUB;
+
+    const cacheParams = {
+      platform: _const.PLATFORMS.GITHUB,
+      normalizedQuery,
+      filters,
+      page,
+      limit,
+    };
+
+    if (!forceRefresh) {
+      const cached =
+        await this.cacheService.getCachedResults<GithubSearchResponseModel>(
+          cacheParams,
+        );
+      if (cached) return cached;
+    }
+
+    const response = new GithubSearchResponseModel({ query: originalQuery });
+
+    const term = (originalQuery ?? '').trim();
+    if (!term) return response;
+
+    // Split the requested limit across both entity kinds, and cap at GitHub's
+    // per_page maximum of 100.
+    const perPage = Math.max(1, Math.min(50, Math.floor((limit || 20) / 2)));
+    const currentPage = Math.max(1, page || 1);
+
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github+json',
+      // GitHub rejects requests without a User-Agent.
+      'User-Agent': 'Gaddr-Search/1.0',
+      'X-GitHub-Api-Version': '2022-11-28',
+    };
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+    // Both kinds in parallel, each failing independently: a rate-limited user search
+    // must not discard repository results that already succeeded.
+    const [repoResult, userResult] = await Promise.allSettled([
+      resilientGet<any>('https://api.github.com/search/repositories', {
+        platform: _const.PLATFORMS.GITHUB,
+        params: { q: term, per_page: perPage, page: currentPage },
+        headers,
+        timeout: 8000,
+      }),
+      resilientGet<any>('https://api.github.com/search/users', {
+        platform: _const.PLATFORMS.GITHUB,
+        params: { q: term, per_page: perPage, page: currentPage },
+        headers,
+        timeout: 8000,
+      }),
+    ]);
+
+    if (repoResult.status === 'fulfilled') {
+      response.results.repositories = repoResult.value.data?.items ?? [];
+    } else {
+      logger.warn(
+        `[GithubSearch] Repository search failed: ${repoResult.reason?.message}`,
+      );
+    }
+
+    if (userResult.status === 'fulfilled') {
+      response.results.users = userResult.value.data?.items ?? [];
+    } else {
+      logger.warn(
+        `[GithubSearch] User search failed: ${userResult.reason?.message}`,
+      );
+    }
+
+    // Persist so subsequent searches are served from Postgres rather than spending the
+    // 10/minute unauthenticated budget — the same read-model design every platform uses.
+    const mappedResults: ContentStream[] = [
+      ...response.results.repositories.map(
+        (repo) =>
+          new ContentStream({
+            type: StreamEntityType.Content,
+            subType: 'repository',
+            title: repo.full_name || '',
+            platform: _const.PLATFORMS.GITHUB,
+            externalId: String(repo.id),
+            metaData: {
+              description: repo.description,
+              externalUrl: repo.html_url,
+              language: repo.language,
+              stars: repo.stargazers_count,
+              forks: repo.forks_count,
+              thumbnailUrl: repo.owner?.avatar_url ?? null,
+              owner: repo.owner?.login,
+              updatedAt: repo.updated_at,
+            },
+            lastRefreshed: new Date(),
+          }),
+      ),
+      ...response.results.users.map(
+        (user) =>
+          new ContentStream({
+            type: StreamEntityType.Profile,
+            subType: 'user',
+            title: user.login || '',
+            platform: _const.PLATFORMS.GITHUB,
+            externalId: String(user.id),
+            metaData: {
+              externalUrl: user.html_url,
+              thumbnailUrl: user.avatar_url,
+              accountType: user.type,
+            },
+            lastRefreshed: new Date(),
+          }),
+      ),
+    ].filter((c) => c.externalId && c.externalId !== 'undefined');
+
+    if (mappedResults.length > 0) {
+      const externalIds = mappedResults.map((c) => c.externalId);
+      const newIds = await this.generalRepository.checkExistingItemsAsync(
+        externalIds,
+        _const.PLATFORMS.GITHUB,
+      );
+      const toAdd = mappedResults.filter((c) => newIds.includes(c.externalId));
+
+      if (toAdd.length > 0) {
+        await this.generalRepository.createAsync(toAdd);
+      }
+    }
+
+    // Page-number pagination: another page exists only if this one came back full.
+    const gotFullPage =
+      response.results.repositories.length >= perPage ||
+      response.results.users.length >= perPage;
+    response.nextPage = gotFullPage ? currentPage + 1 : null;
+
+    await this.cacheService.setCachedResults(cacheParams, response);
+
+    return response;
+  }
+
+  /**
+   * Shared shape for the three credential-free sources below.
+   *
+   * Each covers a vertical the product brief names directly — music and audio, royalty-free
+   * imagery, news and trends — and each serves unauthenticated requests. They exist as
+   * first-class platforms rather than a bolt-on because the read path, cache, persistence
+   * and dedup are all per-platform already; adding one is a mapping function, not new
+   * infrastructure.
+   */
+  private async searchOpenSourceAsync(
+    platform: string,
+    params: PlatformSearchParamsModel,
+    fetchAndMap: (
+      term: string,
+      perPage: number,
+      page: number,
+    ) => Promise<{ items: ContentStream[]; raw: unknown }>,
+  ): Promise<{ query: string; results: unknown; nextPage: number | null }> {
+    const {
+      filters = {},
+      limit,
+      normalizedQuery,
+      originalQuery,
+      page,
+      forceRefresh = false,
+    } = params;
+
+    filters.platform = platform;
+    const cacheParams = { platform, normalizedQuery, filters, page, limit };
+
+    if (!forceRefresh) {
+      const cached = await this.cacheService.getCachedResults<{
+        query: string;
+        results: unknown;
+        nextPage: number | null;
+      }>(cacheParams);
+      if (cached) return cached;
+    }
+
+    const term = (originalQuery ?? '').trim();
+    const empty = { query: originalQuery, results: [], nextPage: null };
+    if (!term) return empty;
+
+    const perPage = Math.max(1, Math.min(50, limit || 20));
+    const currentPage = Math.max(1, page || 1);
+
+    let mapped: ContentStream[] = [];
+    let raw: unknown = [];
+
+    try {
+      const result = await fetchAndMap(term, perPage, currentPage);
+      mapped = result.items;
+      raw = result.raw;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn(`[${platform}Search] failed: ${message}`);
+      return empty;
+    }
+
+    // Persist, so repeat searches are served from Postgres. Same read-model design as
+    // every other platform — and here it also keeps unauthenticated rate limits from
+    // being the binding constraint.
+    const valid = mapped.filter(
+      (c) => c.externalId && c.externalId !== 'undefined',
+    );
+    if (valid.length > 0) {
+      const newIds = await this.generalRepository.checkExistingItemsAsync(
+        valid.map((c) => c.externalId),
+        platform,
+      );
+      const toAdd = valid.filter((c) => newIds.includes(c.externalId));
+      if (toAdd.length > 0) await this.generalRepository.createAsync(toAdd);
+    }
+
+    const response = {
+      query: originalQuery,
+      results: raw,
+      nextPage: valid.length >= perPage ? currentPage + 1 : null,
+    };
+
+    await this.cacheService.setCachedResults(cacheParams, response);
+    return response;
+  }
+
+  /**
+   * Apple / iTunes Search — music, podcasts, audiobooks, video.
+   *
+   * Fully open, no key, no rate-limit header. Covers the brief's music, audio and video
+   * verticals. `media=all` so one query spans them.
+   */
+  public async searchAppleAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<any> {
+    return this.searchOpenSourceAsync(
+      _const.PLATFORMS.APPLE,
+      params,
+      async (term, perPage) => {
+        const { data } = await resilientGet<any>(
+          'https://itunes.apple.com/search',
+          {
+            platform: _const.PLATFORMS.APPLE,
+            params: { term, limit: perPage, media: 'all' },
+            timeout: 8000,
+          },
+        );
+
+        const items = (data?.results ?? []).map(
+          (r: any) =>
+            new ContentStream({
+              type: StreamEntityType.Content,
+              subType: r.kind || r.wrapperType || 'track',
+              title: r.trackName || r.collectionName || r.artistName || '',
+              platform: _const.PLATFORMS.APPLE,
+              externalId: String(
+                r.trackId || r.collectionId || r.artistId || '',
+              ),
+              metaData: {
+                description:
+                  r.longDescription || r.shortDescription || r.artistName,
+                externalUrl:
+                  r.trackViewUrl || r.collectionViewUrl || r.artistViewUrl,
+                thumbnailUrl: r.artworkUrl100 || r.artworkUrl60,
+                artist: r.artistName,
+                genre: r.primaryGenreName,
+                releaseDate: r.releaseDate,
+              },
+              lastRefreshed: new Date(),
+            }),
+        );
+
+        return { items, raw: data?.results ?? [] };
+      },
+    );
+  }
+
+  /**
+   * Openverse — openly-licensed images.
+   *
+   * Covers the brief's explicit ask for royalty-free image and asset sources. Every result
+   * carries its licence, which is the point: it is safe-to-reuse media rather than
+   * scraped content.
+   */
+  public async searchOpenverseAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<any> {
+    return this.searchOpenSourceAsync(
+      _const.PLATFORMS.OPENVERSE,
+      params,
+      async (term, perPage, page) => {
+        const { data } = await resilientGet<any>(
+          'https://api.openverse.org/v1/images/',
+          {
+            platform: _const.PLATFORMS.OPENVERSE,
+            params: { q: term, page_size: perPage, page },
+            headers: { 'User-Agent': 'Gaddr-Search/1.0' },
+            timeout: 8000,
+          },
+        );
+
+        const items = (data?.results ?? []).map(
+          (r: any) =>
+            new ContentStream({
+              type: StreamEntityType.Content,
+              subType: 'image',
+              title: r.title || 'Untitled',
+              platform: _const.PLATFORMS.OPENVERSE,
+              externalId: String(r.id || ''),
+              metaData: {
+                description: r.creator ? `by ${r.creator}` : null,
+                externalUrl: r.foreign_landing_url || r.url,
+                thumbnailUrl: r.thumbnail || r.url,
+                // The licence is the reason to use this source; never drop it.
+                license: r.license,
+                licenseVersion: r.license_version,
+                licenseUrl: r.license_url,
+                creator: r.creator,
+                source: r.source,
+              },
+              lastRefreshed: new Date(),
+            }),
+        );
+
+        return { items, raw: data?.results ?? [] };
+      },
+    );
+  }
+
+  /**
+   * Hacker News via Algolia — news and trending technical discussion.
+   *
+   * Fully open. Covers the brief's trends and news verticals.
+   */
+  public async searchHackernewsAsync(
+    params: PlatformSearchParamsModel,
+  ): Promise<any> {
+    return this.searchOpenSourceAsync(
+      _const.PLATFORMS.HACKERNEWS,
+      params,
+      async (term, perPage, page) => {
+        const { data } = await resilientGet<any>(
+          'https://hn.algolia.com/api/v1/search',
+          {
+            platform: _const.PLATFORMS.HACKERNEWS,
+            // Algolia pages are zero-indexed.
+            params: { query: term, hitsPerPage: perPage, page: page - 1 },
+            timeout: 8000,
+          },
+        );
+
+        const items = (data?.hits ?? []).map(
+          (h: any) =>
+            new ContentStream({
+              type: StreamEntityType.Content,
+              subType: h.url ? 'story' : 'discussion',
+              title: h.title || h.story_title || '',
+              platform: _const.PLATFORMS.HACKERNEWS,
+              externalId: String(h.objectID || ''),
+              metaData: {
+                description: h.story_text || h.comment_text || null,
+                // Prefer the linked article; fall back to the discussion thread.
+                externalUrl:
+                  h.url || `https://news.ycombinator.com/item?id=${h.objectID}`,
+                points: h.points,
+                numComments: h.num_comments,
+                author: h.author,
+                createdAt: h.created_at,
+              },
+              lastRefreshed: new Date(),
+            }),
+        );
+
+        return { items, raw: data?.hits ?? [] };
+      },
+    );
   }
 }

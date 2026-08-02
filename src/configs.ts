@@ -86,8 +86,35 @@ const envVarsSchema = Joi.object()
       .default(false)
       .description('Enable PostgreSQL query logging'),
     POSTGRES_MIGRATIONS_RUN: Joi.boolean()
-      .default(true)
-      .description('Run migrations on application start'),
+      // Defaults to FALSE, changed from true on 2026-07-26 after it broke a deploy.
+      //
+      // The two settings were entangled. `POSTGRES_MIGRATIONS` had no default, so
+      // `data.source.ts` built an unresolvable glob, TypeORM discovered zero migrations,
+      // and `migrationsRun: true` was a silent no-op everywhere. Giving the glob a correct
+      // default therefore did not just fix fresh environments — it switched migrations on
+      // in every environment at once, including production, where the schema already
+      // existed. The first migration in the chain tried to create tables that were already
+      // there:
+      //
+      //   Migration "InitialCreate1747343277182" failed,
+      //   error: relation "userRoles" already exists
+      //
+      // TypeORM throws that during DataSource.initialize(), so the process exits, the
+      // container never passes its startup probe, and the Cloud Run deploy fails after a
+      // perfectly successful build and push.
+      //
+      // False is also the better default on its own merits, independent of that bug:
+      // Cloud Run runs up to four instances, and every one of them would race to apply the
+      // same migrations on boot. AGENTS.md already flagged that hazard.
+      //
+      // So migrations are now a deliberate step — `npm run migration:run` — and
+      // `data.source.ts` logs the resolved glob and the count at startup either way, so the
+      // state is never invisible again.
+      .default(false)
+      .description(
+        'Apply migrations on application start. Default false — see the comment above; ' +
+          'prefer running "npm run migration:run" as an explicit step.',
+      ),
     FACEBOOK_CLIENT_ID: Joi.string().description('Facebook OAuth client ID'),
     FACEBOOK_CLIENT_SECRET: Joi.string().description(
       'Facebook OAuth client secret',
@@ -137,12 +164,51 @@ const envVarsSchema = Joi.object()
       'YouTube webhook callback URL',
     ),
     APP_URL: Joi.string().description('Application base URL'),
+
+    // Community — livestreaming. All optional: a deployment without a media
+    // server still serves the feed, and the UI reports streaming as
+    // unconfigured rather than showing broken ingest URLs.
+    MEDIA_SERVER_HOST: Joi.string()
+      .allow('')
+      .default('')
+      .description('Hostname of the MediaMTX ingest/playback server'),
+    MEDIA_SERVER_RTMP_PORT: Joi.number().default(1935),
+    MEDIA_SERVER_SRT_PORT: Joi.number().default(8890),
+    MEDIA_SERVER_PLAYBACK_BASE_URL: Joi.string()
+      .allow('')
+      .default('')
+      .description('Public HTTPS base for HLS/LL-HLS/WHEP playback'),
+    MEDIA_SERVER_WEBHOOK_SECRET: Joi.string()
+      .allow('')
+      .default('')
+      .description('Shared secret the media server signs its callbacks with'),
+    GADDR_JOBS_URL: Joi.string()
+      .allow('')
+      .default('')
+      .description('Public base URL of Gaddr Jobs, for linking to a result'),
+    COMMUNITY_INVITE_REWARD_MINOR: Joi.number()
+      .default(500)
+      .description(
+        'Minor units credited to an inviter when an invite converts',
+      ),
+    COMMUNITY_PLATFORM_FEE_BPS: Joi.number()
+      .min(0)
+      .max(10000)
+      .default(1000)
+      .description('Platform fee on creator earnings, in basis points'),
     SPOTIFY_CLIENT_ID: Joi.string().description('Spotify OAuth client ID'),
     SPOTIFY_CLIENT_SECRET: Joi.string().description(
       'Spotify OAuth client secret',
     ),
     SPOTIFY_CALLBACK_URL: Joi.string().description(
       'Spotify OAuth callback URL',
+    ),
+    // REDIS_URL is the convention every managed Redis provider hands you, and it was not
+    // read at all — only the discrete REDIS_HOST/REDIS_PORT below. An instance configured
+    // the normal way therefore fell back to ioredis's own default of 127.0.0.1:6379, which
+    // on Cloud Run is nothing at all. Exactly the same defect DATABASE_URL had.
+    REDIS_URL: Joi.string().description(
+      'Full Redis connection string. Takes precedence over the discrete REDIS_* values.',
     ),
     REDIS_HOST: Joi.string().description('Redis server host'),
     REDIS_PORT: Joi.number().description('Redis server port'),
@@ -385,6 +451,7 @@ export default {
     redirectUri: envVars.REDDIT_CALLBACK_URL,
   },
   redis: {
+    url: envVars.REDIS_URL,
     host: envVars.REDIS_HOST,
     port: envVars.REDIS_PORT,
     username: envVars.REDIS_USERNAME,
@@ -471,6 +538,20 @@ export default {
   },
   frontend: {
     url: envVars.FRONTEND_URL,
+  },
+  media: {
+    host: envVars.MEDIA_SERVER_HOST,
+    rtmpPort: envVars.MEDIA_SERVER_RTMP_PORT,
+    srtPort: envVars.MEDIA_SERVER_SRT_PORT,
+    playbackBaseUrl: envVars.MEDIA_SERVER_PLAYBACK_BASE_URL,
+    webhookSecret: envVars.MEDIA_SERVER_WEBHOOK_SECRET,
+  },
+  gaddrJobs: {
+    url: envVars.GADDR_JOBS_URL,
+  },
+  community: {
+    inviteRewardMinor: envVars.COMMUNITY_INVITE_REWARD_MINOR,
+    platformFeeBps: envVars.COMMUNITY_PLATFORM_FEE_BPS,
   },
   betterAuth: {
     secret: envVars.BETTER_AUTH_SECRET,

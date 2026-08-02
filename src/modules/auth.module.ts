@@ -9,6 +9,7 @@ import { AuthGuardsModule } from './authGuard.module';
 import { dependency } from '../infrastructure/dependency';
 import { NotificationModule } from './notification.module';
 import { AnalyticsModule } from './analytics.module';
+import { CommunityModule } from './community.module';
 import {
   UserClaim,
   User,
@@ -28,6 +29,10 @@ import {
     AuthGuardsModule,
     NotificationModule,
     AnalyticsModule,
+    // For `TwoFactorEmailService`, used by the login and 2FA handlers. Nest
+    // resolves a provider in the module where it is used, so importing the
+    // module that exports it is the only way these handlers construct.
+    CommunityModule,
     TypeOrmModule.forFeature([
       UserLogin,
       User,

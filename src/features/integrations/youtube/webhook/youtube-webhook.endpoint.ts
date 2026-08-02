@@ -33,8 +33,22 @@ export class YoutubeWebhookController {
       `[YoutubeWebhook] Verification request: mode=${mode}, topic=${topic}`,
     );
 
+<<<<<<< HEAD
     const expectedToken =
       process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN;
+=======
+    // Fail closed: a shared default ('default_verify_token') would let anyone who
+    // guessed it complete the PubSubHubbub handshake on our behalf.
+    const expectedToken = process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN;
+
+    if (!expectedToken) {
+      logger.error(
+        '[YoutubeWebhook] YOUTUBE_WEBHOOK_VERIFY_TOKEN is not configured — rejecting verification',
+      );
+
+      return res!.status(HttpStatus.FORBIDDEN).send('Invalid verify token');
+    }
+>>>>>>> other/staging
 
     if (verifyToken !== expectedToken) {
       logger.warn(`[YoutubeWebhook] Invalid verify token: ${verifyToken}`);

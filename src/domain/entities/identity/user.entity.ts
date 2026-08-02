@@ -1,4 +1,9 @@
-import { UserType, ProfilePrivacy, OnboardingStep } from '../../enums';
+import {
+  UserType,
+  ProfilePrivacy,
+  OnboardingStep,
+  TwoFactorMethod,
+} from '../../enums';
 import { BaseEntity } from '../../baseEntity';
 import { Playlist } from '../collection/playlist.entity';
 import { Entity, Column, OneToMany, OneToOne } from 'typeorm';
@@ -69,6 +74,16 @@ export class User extends BaseEntity {
 
   @Column({ nullable: true })
   twoFactorSecret?: string;
+
+  /**
+   * How the second factor is delivered.
+   *
+   * `totp` is the existing authenticator-app flow; `email` sends a one-time
+   * code. Stored as a plain varchar rather than a Postgres enum so adding a
+   * third method later is a code change, not a migration with a lock.
+   */
+  @Column({ type: 'varchar', length: 16, default: TwoFactorMethod.Totp })
+  twoFactorMethod: TwoFactorMethod;
 
   @Column({ nullable: true })
   passwordHash: string;

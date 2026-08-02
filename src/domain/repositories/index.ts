@@ -21,3 +21,4 @@ export { IFacebookPostAnalyticsRepository } from './ifacebookPostAnalytics.repos
 export { IFacebookVideoAnalyticsRepository } from './ifacebookVideoAnalytics.repository';
 export { INewsletterSubscriberRepository } from './inewsletterSubscriber.repository';
 export { IProjectRepository } from './iproject.repository';
+export { IGaddrJobsRepository } from './igaddrJobs.repository';

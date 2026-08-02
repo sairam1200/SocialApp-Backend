@@ -10,6 +10,7 @@ import {
   ApplicationException,
   UserNotFoundException,
 } from '../../../../core/exceptions';
+import { TwoFactorMethod } from '../../../../domain/enums';
 
 export class Enable2FAModel {
   @ApiProperty()
@@ -59,11 +60,14 @@ export class Enable2FACommandHandler implements ICommandHandler<
     }
 
     if (user.twoFactorEnabled) {
-      throw new ApplicationException(''); // AI fix error
+      throw new ApplicationException(
+        'Two-factor sign-in is already enabled. Turn it off first to change the method.',
+      );
     }
 
     user.twoFactorEnabled = true;
     user.twoFactorSecret = model.secret;
+    user.twoFactorMethod = TwoFactorMethod.Totp;
     await this.userRepository.updateAsync(user);
   }
 

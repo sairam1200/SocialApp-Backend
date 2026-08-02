@@ -16,8 +16,18 @@ Start from [`../AGENTS.md`](../AGENTS.md) if you are an AI agent.
 | [`audit/2026-07_Security_And_Correctness_Audit.md`](audit/2026-07_Security_And_Correctness_Audit.md) | **Read before touching auth, crypto or permissions.** Verified findings, remediation status, and settled non-issues |
 | [`roadmap/IMPLEMENTATION_PLAN.md`](roadmap/IMPLEMENTATION_PLAN.md) | **Where the platform is and what to build next.** Sequenced phases, what is deliberately deferred and why, plus the legal questions needing professional review |
 | [`integrations/STATUS.md`](integrations/STATUS.md) | **Which platform credentials actually work**, verified by live API call. Check this before debugging "search returns nothing" |
+<<<<<<< HEAD
 | [`integrations/END_TO_END_VERIFICATION.md`](integrations/END_TO_END_VERIFICATION.md) | A real run of the full search chain — live YouTube API → Postgres → user-facing endpoint — with the four defects it exposed and how to reproduce it |
 | [`security/00_Security_Guidelines.md`](security/00_Security_Guidelines.md) | **Single source of truth for security.** Secret management, auth, API security, infrastructure constraints, incident response. Read before any security-relevant change |
+=======
+| [`integrations/RESILIENCE_AND_LOGGING.md`](integrations/RESILIENCE_AND_LOGGING.md) | Outbound HTTP protections (timeout, jittered retry, per-platform circuit breaker), credential guards, and why 86 log sites recorded no cause — plus how to diagnose "this platform returns nothing" |
+| [`integrations/END_TO_END_VERIFICATION.md`](integrations/END_TO_END_VERIFICATION.md) | A real run of the full search chain — five live platform APIs → Postgres → user-facing endpoint — with the five defects it exposed and how to reproduce it |
+| [`ENGINEERING_PHILOSOPHY.md`](ENGINEERING_PHILOSOPHY.md) | **How we build here.** Governing document: reuse before building, abstract and deduplicate, make the wrong thing impossible, prove it end to end. Applies to every future change in both repositories |
+| [`social/ARCHITECTURE.md`](social/ARCHITECTURE.md) | **Community — the social layer.** One table for every timeline object, one visibility decision, one follow graph, one ledger. Read before touching anything under `features/community/` |
+| [`social/RECOMMENDER.md`](social/RECOMMENDER.md) | How the Recommended feed decides what you see: retrieval, Reciprocal Rank Fusion, the multi-objective ranker, MMR, and every knob the reader owns |
+| [`social/STREAMING.md`](social/STREAMING.md) | Livestreaming: RTMP/SRT/WHIP in, LL-HLS/WHEP out via MediaMTX, the transcode ladder, publish authorisation, simulcast |
+| [`social/CREATOR_ECONOMY.md`](social/CREATOR_ECONOMY.md) | Disclosure rules, why sponsored posts are never boosted, symmetric creator↔brand matching, the ledger, affiliate attribution, and what the free tier keeps |
+>>>>>>> other/staging
 
 ## 1b. Skills and sub-agents
 
@@ -31,12 +41,21 @@ one matches the task, or on an explicit `/skill-name`.
 | [`gaddr-encryption`](../.claude/skills/gaddr-encryption/SKILL.md) | Data at rest, key management, the CBC→GCM migration |
 | [`gaddr-database`](../.claude/skills/gaddr-database/SKILL.md) | Migrations, entities, indexes, query performance, provisioning |
 | [`gaddr-platform-integration`](../.claude/skills/gaddr-platform-integration/SKILL.md) | Adding or repairing a platform; API and MCP exposure |
+<<<<<<< HEAD
+=======
+| [`gaddr-api-resilience`](../.claude/skills/gaddr-api-resilience/SKILL.md) | Outbound HTTP: timeouts, retries, jittered backoff, circuit breakers, rate limits, quota, and diagnostic logging |
+>>>>>>> other/staging
 | [`gaddr-testing`](../.claude/skills/gaddr-testing/SKILL.md) | Writing and running tests; the env bootstrap; end-to-end verification |
 | [`gaddr-payments`](../.claude/skills/gaddr-payments/SKILL.md) | Stripe, Gaddr Pay, marketplace payouts, SCA/VAT, on-chain |
 | [`gaddr-fraud-identity`](../.claude/skills/gaddr-fraud-identity/SKILL.md) | Mobile BankID, KYC tiers, fraud signals, abuse defence |
 
+<<<<<<< HEAD
 Sub-agents in [`../.opencode/agents/`](../.opencode/agents/), with the skills each one
 is permitted to load:
+=======
+Sub-agents in [`../.claude/agents/`](../.claude/agents/), with the skills each one
+carries into its own context:
+>>>>>>> other/staging
 
 | Agent | Role | Writes code | Preloaded skill |
 |---|---|---|---|
@@ -62,6 +81,7 @@ is told not to edit but can still edit eventually does.
 | [`../.gitleaks.toml`](../.gitleaks.toml) | Secret-scan config. Allowlists verified false positives; adds a rule catching committed DB dumps by content |
 | [`../test/jest-setup-env.ts`](../test/jest-setup-env.ts) | Env bootstrap that makes importing real modules in tests possible |
 
+<<<<<<< HEAD
 ## 1d. Security
 
 | Document | Purpose |
@@ -69,6 +89,8 @@ is told not to edit but can still edit eventually does.
 | [`security/00_Security_Guidelines.md`](security/00_Security_Guidelines.md) | Engineering standard for security across the project — 22 sections covering secrets, auth, API, database, Redis, storage, logging, dependencies, CI/CD, infrastructure, incident response |
 | [`audit/2026-07_Security_And_Correctness_Audit.md`](audit/2026-07_Security_And_Correctness_Audit.md) | Verified findings from 2026-07-25 security audit — read before touching auth, crypto, or permissions |
 
+=======
+>>>>>>> other/staging
 ## 2. Source-tree documentation
 
 Layer READMEs live beside the code they describe, so they stay honest.
@@ -159,6 +181,7 @@ stated product mandate".
 
 | Gap | State |
 |---|---|
+<<<<<<< HEAD
 | Test coverage | **136 tests, 8 suites**, all passing (was 0). Concentrated on auth and search — the areas with critical findings. Everything else is uncovered. No suite here starts a real server, so backend end-to-end verification is still manual; see `integrations/END_TO_END_VERIFICATION.md`. |
 | Request validation | No global `ValidationPipe`; `class-validator` not installed. Joi is used per-handler and for env config. |
 | Rate limiting | ✅ Search is limited by `searchRateLimit.guard.ts` using atomic Redis `INCR`, per user when authenticated and per client IP otherwise, with a bounded per-instance fallback when Redis is down. `trust proxy` is set, so `req.ip` is correct. **Outstanding:** the older `RateLimitMiddleware` still covers only 4 auth routes via a non-atomic DB read-then-write. |
@@ -167,5 +190,21 @@ stated product mandate".
 | Token encryption | ✅ **Closed (C4).** AES-256-GCM, per-message random IV, HKDF-derived key, `v2:` format, with dual-read so stored CBC values stay readable. **Outstanding:** `ENCRYPTION_KEY` rotation (needs production access) and removal of the legacy branch once legacy reads reach zero. |
 | Payments / KYC | Nothing built. Both land on the auth layer — settle the open C-series findings first. |
 | Platform credentials | Only YouTube verified working, and it allows ~100 searches/day. See [`integrations/STATUS.md`](integrations/STATUS.md). |
+=======
+| Test coverage | **238 tests, 13 suites**, all passing (was 0). Concentrated on auth and search — the areas with critical findings. Everything else is uncovered. No suite here starts a real server, so backend end-to-end verification is still manual; see `integrations/END_TO_END_VERIFICATION.md`. |
+| Request validation | No global `ValidationPipe`; `class-validator` not installed. Joi is used per-handler and for env config. |
+| Rate limiting | ✅ Search is limited by `searchRateLimit.guard.ts` using atomic Redis `INCR`, per user when authenticated and per client IP otherwise, with a bounded per-instance fallback when Redis is down. `trust proxy` is set, so `req.ip` is correct. **Outstanding:** the older `RateLimitMiddleware` still covers only 4 auth routes via a non-atomic DB read-then-write. |
+| Security headers | No `helmet`; no CSP, HSTS, or frame options. This is what makes the frontend's `localStorage` token exposure (H3) exploitable. |
+| Session revocation | ✅ **Closed (C5).** Cache miss now falls back to the database, repopulates, and fails closed. Guards take `IIdentityRepository`, resolvable because `modules/identityAccess.module.ts` is `@Global()` — Nest resolves a guard's dependencies where the guard is *used*, and these cover ~147 endpoints across a dozen-plus modules. |
+| Token encryption | ✅ **Closed (C4).** AES-256-GCM, per-message random IV, HKDF-derived key, `v2:` format, with dual-read so stored CBC values stay readable. **Outstanding:** `ENCRYPTION_KEY` rotation (needs production access) and removal of the legacy branch once legacy reads reach zero. |
+| Redis client | ✅ **Fixed.** `ioredis` is now a declared dependency; it was imported while arriving only transitively via BullMQ. The unused `redis` (node-redis v4) and `@types/redis` are removed. They were a live trap, not clutter: node-redis silently *ignores* ioredis's positional `set(k, v, 'EX', ttl, 'NX')` — measured as NX not honoured (lock not exclusive) and TTL `-1` (key never expires). |
+| Fresh-environment boot | ✅ **Fixed.** `POSTGRES_ENTITIES` and `POSTGRES_MIGRATIONS` are optional in `configs.ts`, and `data.source.ts` concatenated `undefined` into the path when unset — TypeORM then found zero migrations, created the bookkeeping table, and reported a **successful start against an empty database** (1 table where 42 were expected, nothing in the log). Both globs now default correctly, and an unresolvable migration glob throws instead of booting. Verified: a fresh database reaches 42 tables and 53 migrations with neither variable set. |
+| Search correctness | ✅ **Verified 2026-07-26.** 100% precision on three sampled queries; result set and order byte-identical across 6 repeats; 0 duplicate `(platform, externalId)` pairs under 8 concurrent writes; blank and 600-char keywords rejected; injection payload left all rows intact. One real defect found and fixed: a keyword of `%` returned the whole table because it was interpolated into an `ILIKE` pattern unescaped — see [`integrations/END_TO_END_VERIFICATION.md`](integrations/END_TO_END_VERIFICATION.md). |
+| Result caching | ✅ **13 of 16 platforms persist to `contentStreams`.** The three that do not — snapchat, threads, behance — are stubs making zero outbound calls, so nothing is collected to cache. Behance has no public API at all. |
+| Migrations on boot | ✅ **`POSTGRES_MIGRATIONS_RUN` now defaults to `false`.** It defaulted to `true` while the glob was unresolvable, so it was a silent no-op; fixing the glob switched migrations on everywhere and broke a production deploy on `InitialCreate` → `relation "userRoles" already exists`. Applying migrations is now the explicit `npm run migration:run`. Cloud Run runs up to 4 instances, so auto-apply was a race hazard regardless. |
+| Payments / KYC | Nothing built. Both land on the auth layer — settle the open C-series findings first. |
+| Result attribution | ✅ **Fixed.** `renderPlatformIcon` in the frontend returned `null` for any platform without a bundled brand SVG — four of the five that actually return data. Results rendered with no indication of their source, which for an aggregation product reads as Gaddr's own content. Now a monogram badge plus a full source name in the card footer, so a newly added platform is attributed with no UI change. Openverse licence and creator now travel the whole chain: an unattributed CC-BY image is a licence breach, not a cosmetic gap. |
+| Platform credentials | **Five platforms verified end to end**, four needing no credential (GitHub, Apple, Openverse, Hacker News) plus YouTube on an API key. YouTube's ~100 searches/day quota is the binding limit on the one keyed source. Seven remain blocked on their owners' portals, 2FA or app review; Dribbble and Behance have no search API at all. See [`integrations/STATUS.md`](integrations/STATUS.md). |
+>>>>>>> other/staging
 
 Full sequencing in [`roadmap/IMPLEMENTATION_PLAN.md`](roadmap/IMPLEMENTATION_PLAN.md).

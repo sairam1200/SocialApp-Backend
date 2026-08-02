@@ -59,6 +59,7 @@ export class normalizeFkColumnsToUuid1784000000007 implements MigrationInterface
       `ALTER TABLE "publish_jobs" ALTER COLUMN "linkedAccountId" TYPE uuid USING "linkedAccountId"::uuid`,
     );
     await queryRunner.query(
+<<<<<<< HEAD
       `DO $$ BEGIN
         ALTER TABLE "youtube_accounts" ALTER COLUMN "user_id" TYPE uuid USING "user_id"::uuid;
        EXCEPTION WHEN undefined_table THEN NULL;
@@ -69,6 +70,12 @@ export class normalizeFkColumnsToUuid1784000000007 implements MigrationInterface
         ALTER TABLE "youtube_videos" ALTER COLUMN "account_id" TYPE uuid USING "account_id"::uuid;
        EXCEPTION WHEN undefined_table THEN NULL;
        END $$`,
+=======
+      `ALTER TABLE "youtube_accounts" ALTER COLUMN "user_id" TYPE uuid USING "user_id"::uuid`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "youtube_videos" ALTER COLUMN "account_id" TYPE uuid USING "account_id"::uuid`,
+>>>>>>> other/staging
     );
 
     // public schema — nullable columns (already normalized above)

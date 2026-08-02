@@ -1,0 +1,77 @@
+# gitleaks configuration — Gaddr Search & Me, Backend
+#
+# Used by the local pre-commit hook, ./scripts/ci.sh, and the secret-scan step in
+# cloudbuild.yaml, so all three agree on what counts as a finding.
+#
+# This repository has a concrete reason to take secret scanning seriously: a
+# production database dump containing bcrypt password hashes and TOTP 2FA secrets
+# was committed to history (see docs/audit/). The point of this file is to keep the
+# scanner *credible* — a scanner that cries wolf gets bypassed with --no-verify,
+# which is worse than no scanner at all.
+
+[extend]
+# Start from the maintained default ruleset and narrow it, rather than
+# reimplementing detection.
+useDefault = true
+
+[allowlist]
+description = "Verified false positives and generated output"
+
+paths = [
+  # Compiled output. Gitignored, reproducible from src, and the source of every
+  # current false positive.
+  '''^dist/''',
+  '''^coverage/''',
+  '''^node_modules/''',
+
+  # Lockfiles: long base64 integrity hashes, not credentials.
+  '''package-lock\.json$''',
+
+  # Test environment bootstrap. Values are placeholders built by string repetition
+  # specifically so they are not mistaken for real keys; see the file's comments.
+  '''^test/jest-setup-env\.ts$''',
+
+  # NOTE: .env files are deliberately NOT allowlisted here.
+  #
+  # They legitimately hold real credentials and are gitignored, so a working-tree
+  # scan reports them and turns the local gate red for every developer. The
+  # tempting fix — allowlisting them in this file — is wrong: this config is shared
+  # with the pre-commit `gitleaks protect --staged` hook, so it would also stop
+  # blocking a force-added `git add -f .env`. Verified by doing exactly that.
+  #
+  # Instead, scripts/ci.sh drops findings in gitignored files after the scan, which
+  # keeps this config strict where it matters.
+]
+
+regexes = [
+  # The default `twitter-api-key` rule matches any 25+ character alphanumeric
+  # run, which collides with ordinary TypeScript identifiers in this codebase —
+  # e.g. `TwitterSearchContentRequestModel`, `disableTwitterSyncCommandHandler`.
+  # Verified by inspection: every current match is a class or handler name, not a
+  # credential.
+  #
+  # Deliberately narrow: only PascalCase/camelCase identifier shapes are allowed.
+  # A real key is not word-shaped, so genuine credentials still trip the rule.
+  '''\b[A-Z][a-zA-Z]{24,}\b''',
+  '''\b[a-z][a-zA-Z]{24,}(Handler|Model|Endpoint|Service|Repository|Command|Query|Controller|Dto|Response|Request)\b''',
+
+  # Claim URIs are public identifiers, not secrets.
+  '''http://gaddr\.com/claims/[a-z-]+''',
+]
+
+[[rules]]
+# Project-specific: catch a committed database dump by content rather than by
+# filename, since renaming the file would evade a path-based .gitignore rule.
+# PostgreSQL custom-format dumps begin with the magic bytes "PGDMP".
+id = "gaddr-postgres-dump"
+description = "PostgreSQL dump committed to the repository"
+regex = '''PGDMP'''
+tags = ["database", "dump", "pii"]
+
+[[rules]]
+# The specific shape of the credentials this product handles. Platform OAuth
+# tokens in source are always a mistake — they belong in Secret Manager.
+id = "gaddr-platform-token"
+description = "Social platform access token in source"
+regex = '''\b(pina_[A-Za-z0-9]{40,}|ya29\.[A-Za-z0-9_-]{40,}|EAA[A-Za-z0-9]{40,}|act\.[A-Za-z0-9]{40,})'''
+tags = ["oauth", "token"]

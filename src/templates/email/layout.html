@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="{{locale}}" dir="{{direction}}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <title>{{subject}}</title>
+    <!--
+      One layout for every transactional email.
+
+      Table-based and inline-styled because that is what mail clients render:
+      Outlook ignores flexbox and grid entirely, and Gmail strips <style> from
+      forwarded messages. The @media block below is progressive enhancement —
+      everything is legible without it.
+
+      Colours mirror the app's tokens (primary #512fb6, gradient #6400bf →
+      #0f13b9). When those change in globals.css, change them here too; there
+      is no way to share a token across a stylesheet and an inlined email.
+    -->
+    <style>
+      @media (prefers-color-scheme: dark) {
+        .gd-body { background: #131417 !important; }
+        .gd-card { background: #1c1d22 !important; }
+        .gd-text { color: #ededed !important; }
+        .gd-muted { color: #a1a1aa !important; }
+        .gd-divider { border-color: #2e2f36 !important; }
+        .gd-panel { background: #24252c !important; }
+      }
+      @media only screen and (max-width: 620px) {
+        .gd-card { width: 100% !important; }
+        .gd-pad { padding: 24px !important; }
+        .gd-h1 { font-size: 22px !important; }
+      }
+      a { color: #512fb6; }
+    </style>
+  </head>
+  <body
+    class="gd-body"
+    style="margin: 0; padding: 0; background-color: #f5f4f8; -webkit-font-smoothing: antialiased;"
+  >
+    <!-- Preheader: the grey line next to the subject in an inbox list. -->
+    <div
+      style="display: none; max-height: 0; overflow: hidden; opacity: 0; color: transparent;"
+    >
+      {{preheader}}
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td align="center" style="padding: 32px 16px;">
+          <table
+            role="presentation"
+            class="gd-card"
+            width="600"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            style="width: 600px; max-width: 100%; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 1px 24px rgba(54, 0, 249, 0.10);"
+          >
+            <!-- Brand bar -->
+            <tr>
+              <td
+                style="background: linear-gradient(90deg, #6400bf 0%, #0f13b9 100%); padding: 22px 32px;"
+              >
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="left" style="vertical-align: middle;">
+                      <a href="{{appUrl}}" style="text-decoration: none;">
+                        <span
+                          style="font-family: Georgia, 'Times New Roman', serif; font-size: 26px; font-weight: 700; letter-spacing: -0.5px; color: #ffffff;"
+                          >gaddr</span
+                        >
+                      </a>
+                    </td>
+                    <td align="right" style="vertical-align: middle;">
+                      <span
+                        style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; color: rgba(255,255,255,0.82);"
+                        >{{productName}}</span
+                      >
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Content -->
+            <tr>
+              <td
+                class="gd-pad"
+                style="padding: 36px 40px 8px 40px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;"
+              >
+                <h1
+                  class="gd-h1 gd-text"
+                  style="margin: 0 0 8px 0; font-size: 26px; line-height: 1.25; font-weight: 700; color: #131417;"
+                >
+                  {{title}}
+                </h1>
+                {{#if subtitle}}
+                <p
+                  class="gd-muted"
+                  style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #595959;"
+                >
+                  {{subtitle}}
+                </p>
+                {{/if}}
+              </td>
+            </tr>
+
+            <tr>
+              <td
+                class="gd-pad gd-text"
+                style="padding: 4px 40px 8px 40px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; line-height: 1.65; color: #262626;"
+              >
+                {{{content}}}
+              </td>
+            </tr>
+
+            {{#if ctaUrl}}
+            <tr>
+              <td class="gd-pad" style="padding: 12px 40px 32px 40px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td
+                      style="border-radius: 12px; background: linear-gradient(90deg, #6400bf 0%, #0f13b9 100%);"
+                    >
+                      <a
+                        href="{{ctaUrl}}"
+                        style="display: inline-block; padding: 14px 30px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 12px;"
+                        >{{ctaLabel}}</a
+                      >
+                    </td>
+                  </tr>
+                </table>
+                {{#if ctaFallbackNote}}
+                <p
+                  class="gd-muted"
+                  style="margin: 16px 0 0 0; font-size: 12px; line-height: 1.6; color: #767676; word-break: break-all;"
+                >
+                  {{ctaFallbackNote}}<br />
+                  <a href="{{ctaUrl}}" style="color: #512fb6;">{{ctaUrl}}</a>
+                </p>
+                {{/if}}
+              </td>
+            </tr>
+            {{/if}}
+
+            <!-- Footer -->
+            <tr>
+              <td
+                class="gd-pad"
+                style="padding: 24px 40px 32px 40px; border-top: 1px solid #ececf1;"
+                class="gd-divider"
+              >
+                <p
+                  class="gd-muted"
+                  style="margin: 0 0 10px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 12px; line-height: 1.7; color: #767676;"
+                >
+                  {{footerNote}}
+                </p>
+                <p
+                  class="gd-muted"
+                  style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 12px; line-height: 1.7; color: #767676;"
+                >
+                  <a href="{{appUrl}}" style="color: #767676; text-decoration: underline;">Gaddr</a>
+                  &nbsp;·&nbsp;
+                  <a href="{{appUrl}}/privacy-policy" style="color: #767676; text-decoration: underline;">Privacy</a>
+                  &nbsp;·&nbsp;
+                  <a href="{{appUrl}}/terms" style="color: #767676; text-decoration: underline;">Terms</a>
+                  {{#if unsubscribeUrl}}
+                  &nbsp;·&nbsp;
+                  <a href="{{unsubscribeUrl}}" style="color: #767676; text-decoration: underline;">Unsubscribe</a>
+                  {{/if}}
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <p
+            style="margin: 20px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 11px; color: #9a9aa5;"
+          >
+            You are receiving this because you have a Gaddr account.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
