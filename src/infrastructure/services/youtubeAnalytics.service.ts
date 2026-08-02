@@ -576,7 +576,7 @@ export class YoutubeAnalyticsService implements IYoutubeAnalyticsService {
     rows: string[][];
   }> {
     const MAX_RESULTS = 10000;
-    let startIndex = 1;
+    let startIndex = 0;
     let allRows: string[][] = [];
     let columnHeaders: Array<{
       name: string;

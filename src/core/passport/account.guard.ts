@@ -13,6 +13,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import dataSource from '../../infrastructure/persistence/data.source';
 
 function createAccountGuard(
   type?: UserType,
@@ -73,6 +74,46 @@ function createAccountGuard(
           response.setHeader('X-Password-Change', 'true');
           throw new UnauthorizedException(
             'Your session has been invalidated. Please log in again.',
+          );
+        }
+      } else {
+        // Cache miss — fall back to database (fail closed)
+        try {
+          const ds = await dataSource;
+          const result = await ds.query(
+            `SELECT u."securityStamp", u."concurrencyStamp" 
+             FROM identity.users u 
+             WHERE u.id = $1 LIMIT 1`,
+            [userId],
+          );
+
+          if (result?.length) {
+            const dbUser = result[0];
+            if (concurrencyStamp !== dbUser.concurrencyStamp) {
+              response.setHeader('X-Token-Refresh-Required', 'true');
+            }
+            if (securityStamp !== dbUser.securityStamp) {
+              logger.warn(
+                `[AccountGuard] SecurityStamp mismatch (DB fallback) for user ${userId} - forcing re-authentication`,
+              );
+              response.setHeader('X-Password-Change', 'true');
+              throw new UnauthorizedException(
+                'Your session has been invalidated. Please log in again.',
+              );
+            }
+          } else {
+            // User not found in either Redis or DB — reject
+            throw new UnauthorizedException(
+              'Unauthorized: Unable to verify session.',
+            );
+          }
+        } catch (dbError) {
+          if (dbError instanceof UnauthorizedException) throw dbError;
+          logger.error(
+            `[AccountGuard] DB fallback failed for user ${userId}: ${dbError.message}`,
+          );
+          throw new UnauthorizedException(
+            'Unauthorized: Unable to verify session.',
           );
         }
       }

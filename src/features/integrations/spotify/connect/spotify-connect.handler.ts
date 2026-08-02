@@ -109,7 +109,6 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
 
     const userData = await this.fetchUserData(access_token);
 
-    console.log(userData.data);
     const user =
       configs.env !== 'production'
         ? await this.userRepository.getUserByIdAsync(dataProtectionKey.userId)
@@ -124,7 +123,7 @@ export class SpotifyConnectCallbackQueryHandler implements ICommandHandler<Spoti
         _const.PLATFORMS.SPOTIFY,
         user.id,
       );
-    console.log('this is the account : ', linkedAccount);
+    logger.debug('[SpotifyConnect] Checking existing linked account');
 
     const newExternalId = userData.data.id;
     if (linkedAccount) {

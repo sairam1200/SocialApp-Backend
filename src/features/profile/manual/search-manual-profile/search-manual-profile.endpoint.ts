@@ -42,6 +42,10 @@ export class SearchManualProfileController {
     @Query('orderBy') orderBy: string = 'id',
     @Query('searchTerm') searchTerm?: string,
   ): Promise<Response> {
+    const allowedOrderColumns = ['id', 'firstname', 'lastname', 'email', 'createdOn'];
+    if (!allowedOrderColumns.includes(orderBy)) {
+      orderBy = 'id';
+    }
     return res;
   }
 }

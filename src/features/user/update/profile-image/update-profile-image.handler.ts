@@ -39,7 +39,6 @@ export class UpdateProfileImageCommandHandler implements ICommandHandler<UpdateP
     const user = await this.userRepository.getUserByIdAsync(
       HttpContext.getCurrentUserId,
     );
-    console.log('COMMAND FILE', command.file);
     if (!user) {
       throw new UserNotFoundException();
     }
@@ -79,7 +78,6 @@ export class UpdateProfileImageCommandHandler implements ICommandHandler<UpdateP
         base64Image,
         'users',
       );
-      console.log('UPLOAD RESULT', uploadResult);
       // Create or update UserBiometrics
       if (!biometrics) {
         // Generate initials image if UserBiometrics doesn't exist

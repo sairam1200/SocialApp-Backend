@@ -140,7 +140,6 @@ export class SpotifyImportCommandHandler implements ICommandHandler<SpotifyImpor
         expires_in,
       };
     } catch (error) {
-      console.error('Error refreshing Spotify token:', error);
       logger.error(
         `An error occurred while processing the Spotify import command: 
           ${error instanceof Error ? error.message : JSON.stringify(error)}`,
@@ -163,9 +162,9 @@ export class SpotifyImportCommandHandler implements ICommandHandler<SpotifyImpor
       return !!response.data?.id;
     } catch (error) {
       if (error.response?.status === 401) {
-        console.warn('Spotify access token is invalid or expired');
+        logger.warn('Spotify access token is invalid or expired');
       } else {
-        console.error('Spotify token verification error:', error.message);
+        logger.error('Spotify token verification error');
       }
 
       return false;

@@ -49,9 +49,13 @@ export class PermissionsGuard implements CanActivate {
     const controller = context.getClass();
     const requiredPermission = `${controller.name}.${handler.name}`;
 
-    const hasPermission = claimsPrinciple.permission?.some(
-      (permission: string) => requiredPermission.includes(permission),
+    const grantedPermissions = new Set(
+      (claimsPrinciple.permission ?? []).filter((p: string) => p && p.length > 0)
     );
+    const hasPermission =
+      grantedPermissions.has(requiredPermission) ||
+      grantedPermissions.has('*') ||
+      grantedPermissions.has(`${requiredPermission.split('.')[0]}.*`);
     if (hasPermission) {
       return true;
     } else {

@@ -29,7 +29,7 @@ export class UpdateProfileImageController {
 
   @Patch('profile-image')
   @UseGuards(AuthenticatedAccountGuard)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -54,9 +54,6 @@ export class UpdateProfileImageController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    console.log('CONTENT TYPE', req.headers['content-type']);
-    console.log('FILE', file);
-
     await this.commandBus.execute(new UpdateProfileImageCommand({ file }));
 
     return res.status(HttpStatus.NO_CONTENT).send();

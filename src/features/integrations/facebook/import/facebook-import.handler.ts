@@ -54,17 +54,9 @@ export class FacebookImportCommandHandler implements ICommandHandler<FacebookImp
 
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
 
-    console.log('=================================');
-    console.log('FACEBOOK IMPORT EXECUTE START');
-    console.log('USER ID:', userId);
-    console.log('TOKEN PROVIDED:', !!facebookAccessToken);
-    console.log('=================================');
-
     if (facebookAccessToken) {
       const isTokenValid =
         await this.verifyAccessTokenAsync(facebookAccessToken);
-
-      console.log('PROVIDED TOKEN VALID:', isTokenValid);
 
       if (isTokenValid) {
         accessToken = facebookAccessToken;
@@ -87,26 +79,14 @@ export class FacebookImportCommandHandler implements ICommandHandler<FacebookImp
     } else {
       const userLogin = await this.getUserLoginAsync(userId);
 
-      console.log('USER LOGIN FOUND:', {
-        id: userLogin.id,
-        expiryDateUtc: userLogin.expiryDateUtc,
-      });
-
       const tokenValue = deserializeObject<{
         access_token: string;
         expires_in: number;
       }>(userLogin.tokenValue);
 
-      console.log('DESERIALIZED TOKEN:', {
-        access_token: tokenValue?.access_token?.substring(0, 40) + '...',
-        expires_in: tokenValue?.expires_in,
-      });
-
       const isTokenValid = await this.verifyAccessTokenAsync(
         tokenValue.access_token,
       );
-
-      console.log('STORED TOKEN VALID:', isTokenValid);
 
       if (!isTokenValid) {
         throw new UnauthorizedException(
@@ -118,26 +98,14 @@ export class FacebookImportCommandHandler implements ICommandHandler<FacebookImp
       expiresIn = tokenValue.expires_in;
     }
 
-    console.log('FINAL TOKEN:', accessToken?.substring(0, 40) + '...');
-
-    console.log('FINAL EXPIRES IN:', expiresIn);
-
     const account =
       await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
         _const.PLATFORMS.FACEBOOK,
         userId,
       );
-    console.log('ACCOUNT LOOKUP RESULT:', JSON.stringify(account, null, 2));
     if (!account) {
       throw new NotFoundException('No matching Facebook profile was found!');
     }
-
-    console.log('LINKED ACCOUNT:', {
-      id: account.id,
-      facebookId: account.externalId,
-      userName: account.userName,
-      allowImport: account.allowImport,
-    });
 
     try {
       const pageAccessToken = account.metaData?.pageAccessToken;
@@ -153,20 +121,12 @@ export class FacebookImportCommandHandler implements ICommandHandler<FacebookImp
         account.externalId,
       );
     } catch (error: unknown) {
-      const axiosData =
-        error && typeof error === 'object' && 'response' in error
-          ? (error as { response: { data: unknown } }).response?.data
-          : undefined;
       const errorMsg = error instanceof Error ? error.message : String(error);
 
-      console.error('FACEBOOK IMPORT ERROR:', axiosData || errorMsg || error);
-
-      logger.error(`[FacebookImport] Failed importing page posts`, error);
+      logger.error(`[FacebookImport] Failed importing page posts: ${errorMsg}`, error);
     }
 
     try {
-      console.log('ENQUEUING FACEBOOK IMPORT JOB...');
-
       await this.queueService.enqueueFacebookImport(account, accessToken);
 
       logger.info(`[FacebookImport] Import job enqueued for user ${userId}`);
@@ -181,8 +141,6 @@ export class FacebookImportCommandHandler implements ICommandHandler<FacebookImp
         'Failed to initiate Facebook import. Please try again later.',
       );
     }
-
-    console.log('FACEBOOK IMPORT EXECUTE COMPLETE');
 
     return {
       accessToken,

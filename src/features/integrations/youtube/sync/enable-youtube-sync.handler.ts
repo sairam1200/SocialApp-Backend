@@ -35,7 +35,7 @@ export class EnableYoutubeSyncCommandHandler implements ICommandHandler<EnableYo
     command: EnableYoutubeSyncCommand,
   ): Promise<{ syncEnabled: boolean }> {
     const userId = HttpContext.user[Globals.ClaimTypes.UserId];
-    console.log(`[EnableYoutubeSyncCommand] Executing for user ${userId}`);
+    logger.debug(`[YoutubeSync] Executing for user ${userId}`);
     const account =
       await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
         _const.PLATFORMS.YOUTUBE,
@@ -56,15 +56,15 @@ export class EnableYoutubeSyncCommandHandler implements ICommandHandler<EnableYo
     if (!configs.youtube.webhookUrl) {
       throw new NotFoundException('YouTube webhook URL not configured.');
     }
-    console.log(
-      `Attempting to subscribe to YouTube webhook for channel ${channelId} with callback URL ${configs.youtube.webhookUrl}`,
+    logger.debug(
+      `[YoutubeSync] Subscribing to webhook for channel ${channelId}`,
     );
     try {
       await this.youtubeWebhookService.subscribeAsync(
         channelId,
         configs.youtube.webhookUrl,
       );
-      console.info(
+      logger.debug(
         `[YoutubeSync] Webhook subscription successful for channel ${channelId}`,
       );
     } catch (error) {
@@ -73,7 +73,7 @@ export class EnableYoutubeSyncCommandHandler implements ICommandHandler<EnableYo
     }
 
     account.syncEnabled = true;
-    console.info(`[YoutubeSync] Sync enabled for user ${userId}`);
+    logger.debug(`[YoutubeSync] Sync enabled for user ${userId}`);
 
     try {
       const userLogin =

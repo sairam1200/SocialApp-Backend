@@ -38,7 +38,6 @@ export class FacebookImportController {
     const result = await this.commandBus.execute(
       new FacebookImportCommand({ model }),
     );
-    console.log('facebook import result:', result);
     if (model.facebookAccessToken) {
       return res
         .status(HttpStatus.OK)

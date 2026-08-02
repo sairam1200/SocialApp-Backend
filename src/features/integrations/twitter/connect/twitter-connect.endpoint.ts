@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { CommandBus } from '@nestjs/cqrs';
 import configs from '../../../../configs';
+import logger from '../../../../core/utils/winston.util';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import { cryptoUtils } from '../../../../core/utils/crypto.util';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
@@ -70,7 +71,7 @@ export class TwitterConnectController {
     @Query('state') state: string,
     @Res() res: Response,
   ): Promise<Response | void> {
-    console.log('TWITTER CALLBACK HIT');
+    logger.debug('[TwitterConnect] Callback received');
     const result = await this.commandBus.execute(
       new TwitterConnectCallbackQuery({
         model: { code, state },

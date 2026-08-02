@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AnalyticsEvent } from '../../domain/entities/analyticsEvent.entity';
-import { IAnalyticsRepository } from '../../domain/repositories/ianalytics.repository';
+import {
+  AggregatedEventRow,
+  IAnalyticsRepository,
+} from '../../domain/repositories/ianalytics.repository';
 
 @Injectable()
 export class AnalyticsRepository implements IAnalyticsRepository {
@@ -36,5 +39,29 @@ export class AnalyticsRepository implements IAnalyticsRepository {
       .createQueryBuilder('ae')
       .where('ae.createdOn >= :fromDate', { fromDate })
       .getMany();
+  }
+
+  /**
+   * Returns pre-aggregated event counts via SQL GROUP BY (userId, eventName).
+   * Result is one row per user per event type instead of one row per event.
+   */
+  async getAggregatedEventsAsync(
+    since: Date,
+  ): Promise<AggregatedEventRow[]> {
+    const rows = await this.analyticsContext
+      .createQueryBuilder('event')
+      .select('event.userId', 'userId')
+      .addSelect('event.eventName', 'eventName')
+      .addSelect('COUNT(*)', 'count')
+      .where('event.createdOn >= :since', { since })
+      .groupBy('event.userId')
+      .addGroupBy('event.eventName')
+      .getRawMany();
+
+    return rows.map((r) => ({
+      userId: r.userId ?? 'anonymous',
+      eventName: r.eventName,
+      count: parseInt(r.count, 10),
+    }));
   }
 }

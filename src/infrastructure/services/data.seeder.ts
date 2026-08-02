@@ -28,6 +28,23 @@ export class DataSeeder {
   ) {}
 
   public async initializeAsync(): Promise<void> {
+    if (
+      configs.systemAdmin.password === 'CHANGE_ME_BEFORE_SEEDING' ||
+      !configs.systemAdmin.password
+    ) {
+      throw new Error(
+        'DataSeeder requires SYSTEM_ADMIN_PASSWORD to be set in the environment. Aborting seed.',
+      );
+    }
+    if (
+      configs.guestUser.password === 'CHANGE_ME_BEFORE_SEEDING' ||
+      !configs.guestUser.password
+    ) {
+      throw new Error(
+        'DataSeeder requires GUEST_USER_PASSWORD to be set in the environment. Aborting seed.',
+      );
+    }
+
     await this.addAdministratorUserAndRoleAsync();
 
     if (configs.env !== 'production') {
@@ -112,7 +129,7 @@ export class DataSeeder {
           `Failed to upload avatar for user ${JOHN_DOE.email}: ${error.message}`,
         );
       }
-      await this.userRepository.createAsync(JOHN_DOE, '@Abc@123');
+      await this.userRepository.createAsync(JOHN_DOE, configs.guestUser.password);
     }
   }
 

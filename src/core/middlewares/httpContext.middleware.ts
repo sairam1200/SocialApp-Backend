@@ -78,7 +78,7 @@ export class HttpContextMiddleware implements NestMiddleware {
         access_token,
         res,
         this.jwtService,
-        true,
+        false,
       );
       HttpContext.run(req, res, user ?? null, next);
     }

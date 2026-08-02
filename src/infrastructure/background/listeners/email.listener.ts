@@ -33,7 +33,6 @@ export class EmailListener {
         pass: configs.smtp.password,
       },
     });
-    console.log('THis is SMPT: ', configs.brevo);
     if (configs.brevo?.apiKey) {
       this.apiInstance = new TransactionalEmailsApi();
       this.apiInstance.setApiKey(

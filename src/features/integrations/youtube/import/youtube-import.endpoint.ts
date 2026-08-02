@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import logger from '../../../../core/utils/winston.util';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
 import {
   Body,
@@ -41,7 +42,6 @@ export class YoutubeImportController {
     const result = await this.commandBus.execute(
       new YoutubeImportCommand({ model }),
     );
-    console.log('YoutubeImportCommand result:', result);
     if (model.youtubeAccessToken) {
       return res
         .status(HttpStatus.OK)

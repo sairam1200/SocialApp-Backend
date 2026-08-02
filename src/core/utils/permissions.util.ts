@@ -34,7 +34,6 @@ export class Permissions {
       });
     });
 
-    console.log(permissions);
     return permissions;
   }
 }

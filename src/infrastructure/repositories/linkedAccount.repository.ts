@@ -19,7 +19,10 @@ export class LinkedAccountRepository implements ILinkedAccountRepository {
     params: QueryOptions,
   ): Promise<[LinkedAccount[], number]> {
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;
-    console.log('Query Options:', searchQuery);
+    const allowedOrderColumns = ['userName', 'platform', 'email', 'externalId', 'createdOn', 'updatedOn', 'id'];
+    if (!allowedOrderColumns.includes(orderBy)) {
+      orderBy = 'userName';
+    }
     const queryBuilder =
       this.linkedAccountContext.createQueryBuilder('account');
 
@@ -85,7 +88,6 @@ export class LinkedAccountRepository implements ILinkedAccountRepository {
 
     queryBuilder.skip((page - 1) * pageSize).take(pageSize);
     const result = await queryBuilder.getManyAndCount();
-    console.log('Query Result:', result);
     return result;
   }
 
@@ -179,10 +181,14 @@ export class LinkedAccountRepository implements ILinkedAccountRepository {
     metaKey: string,
     metaValue: string,
   ): Promise<LinkedAccount | null> {
+    const allowedMetaKeys = ['facebookUserId', 'youtubeChannelId', 'tiktokUserId', 'twitterUserId', 'redditUserId', 'discordUserId', 'spotifyUserId', 'threadsUserId', 'linkedinUserId', 'instagramUserId', 'snapchatUserId', 'pinterestUserId', 'githubUserId', 'twitchUserId', 'behanceUserId'];
+    if (!allowedMetaKeys.includes(metaKey)) {
+      return null;
+    }
     return await this.linkedAccountContext
       .createQueryBuilder('account')
       .where('account.platform = :platform', { platform })
-      .andWhere(`account.metaData->>'${metaKey}' = :metaValue`, { metaValue })
+      .andWhere(`account.metaData->>:metaKey`, { metaKey, metaValue })
       .getOne();
   }
 

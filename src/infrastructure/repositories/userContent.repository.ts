@@ -183,7 +183,10 @@ export class UserContentRepository implements IUserContentRepository {
     params: QueryOptions,
   ): Promise<[UserContent[], number]> {
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;
-    console.log('Query Options:', searchQuery);
+    const allowedOrderColumns = ['title', 'platform', 'type', 'text', 'createdOn', 'updatedOn', 'publishedAt', 'id'];
+    if (!allowedOrderColumns.includes(orderBy)) {
+      orderBy = 'title';
+    }
     const queryBuilder = this.userContentContext
       .createQueryBuilder('uc')
       .leftJoinAndSelect('uc.user', 'user')
@@ -243,7 +246,6 @@ export class UserContentRepository implements IUserContentRepository {
 
     queryBuilder.skip((page - 1) * pageSize).take(pageSize);
     const result = await queryBuilder.getManyAndCount();
-    console.log('Query Result:', result);
     return result;
   }
 

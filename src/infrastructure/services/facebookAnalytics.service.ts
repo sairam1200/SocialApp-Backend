@@ -406,14 +406,17 @@ export class FacebookAnalyticsService implements IFacebookAnalyticsService {
         return;
       } catch (apiErr) {
         logger.error(
-          `[FacebookAnalyticsService] Facebook API call failed during sync for user ${userId}. Falling back to mock data.`,
+          `[FacebookAnalyticsService] Facebook API call failed during sync for user ${userId}. Not overwriting existing data.`,
           apiErr,
         );
+        return;
       }
     }
 
-    // Trigger Mock Fallback if real credentials/API failed
-    await this.syncMockAnalyticsAsync(userId);
+    // Only generate mock data when no real credentials exist at all
+    if (!credentialsAvailable) {
+      await this.syncMockAnalyticsAsync(userId);
+    }
   }
 
   public async syncAllAccountsAnalyticsAsync(): Promise<void> {

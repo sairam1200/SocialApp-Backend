@@ -10,3 +10,6 @@ process.env.JWT_SECRET = 'test-jwt-secret';
 process.env.JWT_AUDIENCE = 'https://localhost:80';
 process.env.JWT_ISSUER = 'https://localhost:80';
 process.env.BETTER_AUTH_SECRET = 'test-better-auth-secret';
+process.env.POSTGRES_PASSWORD = 'test-postgres-password';
+process.env.SYSTEM_ADMIN_PASSWORD = 'test-admin-password';
+process.env.GUEST_USER_PASSWORD = 'test-guest-password';

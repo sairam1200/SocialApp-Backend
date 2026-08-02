@@ -9,24 +9,36 @@ const rawIV = Buffer.from(configs.encryption.iv, 'utf-8');
 const key = rawKey.subarray(0, 32); // AES-256 needs 32-byte key
 const iv = rawIV.subarray(0, 16); // CBC mode needs 16-byte IV
 
-// Encrypt using AES-256-CBC
 function encrypt(
   text: string,
   keyParam: Buffer = key,
   ivParam: Buffer = iv,
 ): string {
-  const cipher = crypto.createCipheriv(algorithm, keyParam, ivParam);
+  const randomIV = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', keyParam, randomIV);
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
-  return encrypted;
+  const authTag = cipher.getAuthTag().toString('hex');
+  return `v2:${randomIV.toString('hex')}:${encrypted}:${authTag}`;
 }
 
-// Decrypt using AES-256-CBC
 function decrypt(
   encryptedText: string,
   keyParam: Buffer = key,
   ivParam: Buffer = iv,
 ): string {
+  if (encryptedText.startsWith('v2:')) {
+    const parts = encryptedText.split(':');
+    const ivBuf = Buffer.from(parts[1], 'hex');
+    const ciphertext = parts[2];
+    const authTag = Buffer.from(parts[3], 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', keyParam, ivBuf);
+    decipher.setAuthTag(authTag);
+    let decrypted = decipher.update(ciphertext, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  }
+  // Legacy CBC fallback for existing stored tokens
   const decipher = crypto.createDecipheriv(algorithm, keyParam, ivParam);
   let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
   decrypted += decipher.final('utf8');
@@ -49,10 +61,12 @@ function verifyWithHMAC(encryptedText: string, hmac: string): boolean {
     .createHmac('sha256', key)
     .update(encryptedText)
     .digest('hex');
-  return crypto.timingSafeEqual(
-    Buffer.from(computedHMAC, 'utf8'),
-    Buffer.from(hmac, 'utf8'),
-  );
+  const computedBuf = Buffer.from(computedHMAC, 'utf8');
+  const hmacBuf = Buffer.from(hmac, 'utf8');
+  if (computedBuf.length !== hmacBuf.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(computedBuf, hmacBuf);
 }
 
 // SHA-256 -> base64
@@ -92,8 +106,6 @@ function generateEncryptionKey(size: number = 32): string {
 // Export utility object
 export const cryptoUtils = {
   algorithm,
-  key,
-  iv,
   encrypt,
   decrypt,
   encryptWithHMAC,

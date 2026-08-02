@@ -71,7 +71,6 @@ export class YoutubeImportCommandHandler implements ICommandHandler<YoutubeImpor
     }
 
     const channelId = account.metaData?.channel?.id;
-    console.log('check', channelId);
     if (!channelId) {
       throw new NotFoundException(
         'No YouTube channel ID found for this account.',

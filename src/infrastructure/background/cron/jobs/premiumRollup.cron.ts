@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import _const from '../../../../core/utils/const';
 import { IAnalyticsRepository } from '../../../../domain/repositories/ianalytics.repository';
 import { IPremiumRollupRepository } from '../../../../domain/repositories/ipremiumRollup.repository';
+import { PremiumRollup } from '../../../../domain/entities/premiumRollup.entity';
 import logger from '../../../../core/utils/winston.util';
 
 @Injectable()
@@ -25,43 +26,44 @@ export class PremiumRollupCron {
       weekStartDate.setDate(now.getDate() - 7);
       weekStartDate.setHours(0, 0, 0, 0);
 
-      // 2. Fetch all analytics events from the last 7 days
-      const allRecentEvents =
-        await this.analyticsRepository.getAllEventsAsync(weekStartDate);
+      // 2. Fetch pre-aggregated event counts via SQL GROUP BY
+      //    Returns one row per (userId, eventName) instead of one row per event.
+      const aggregatedRows =
+        await this.analyticsRepository.getAggregatedEventsAsync(weekStartDate);
 
-      // 3. Group events by userId
+      // 3. Group the already-aggregated rows by userId in JS.
+      //    The result set is orders of magnitude smaller than raw events.
       const grouped: Record<
         string,
         { counts: Record<string, number>; total: number }
       > = {};
 
-      for (const event of allRecentEvents) {
-        const uid = event.userId ?? 'anonymous';
-        if (!grouped[uid]) {
-          grouped[uid] = { counts: {}, total: 0 };
+      for (const row of aggregatedRows) {
+        if (!grouped[row.userId]) {
+          grouped[row.userId] = { counts: {}, total: 0 };
         }
-        grouped[uid].total += 1;
-        grouped[uid].counts[event.eventName] =
-          (grouped[uid].counts[event.eventName] ?? 0) + 1;
+        grouped[row.userId].counts[row.eventName] = row.count;
+        grouped[row.userId].total += row.count;
       }
 
-      // 4. Upsert a PremiumRollup row for each userId
-      for (const [userId, stats] of Object.entries(grouped)) {
-        const topFeatureUsed =
-          Object.entries(stats.counts).sort((a, b) => b[1] - a[1])[0]?.[0] ??
-          null;
-
-        await this.premiumRollupRepository.upsertRollupAsync({
+      // 4. Build the rollup objects
+      const rollups: Partial<PremiumRollup>[] = Object.entries(grouped).map(
+        ([userId, stats]) => ({
           userId,
           weekStartDate,
           totalInteractions: stats.total,
-          topFeatureUsed,
+          topFeatureUsed:
+            Object.entries(stats.counts).sort((a, b) => b[1] - a[1])[0]?.[0] ??
+            null,
           interactionBreakdown: stats.counts,
-        });
-      }
+        }),
+      );
+
+      // 5. Batch upsert — one find + one save instead of N individual upserts
+      await this.premiumRollupRepository.batchUpsertRollupsAsync(rollups);
 
       logger.info(
-        `PremiumRollupCron: Rollup complete. Processed ${Object.keys(grouped).length} users.`,
+        `PremiumRollupCron: Rollup complete. Processed ${rollups.length} users.`,
       );
     } catch (error) {
       logger.error('PremiumRollupCron: Error during weekly rollup', error);

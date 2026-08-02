@@ -63,9 +63,7 @@ export class TiktokConnectQueryHandler implements ICommandHandler<TikTokConnectQ
   constructor(
     @Inject(_const.IDATAPROTECTIONKEY_REPOSITORY)
     private readonly dataProtectionKeyRepository: IDataProtectionKeyRepository,
-  ) {
-    console.log('TiktokConnectQueryHandler initialized');
-  }
+  ) {}
 
   public async execute(query: TikTokConnectQuery): Promise<void> {
     const { model } = query;
@@ -114,7 +112,6 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
       refresh_expires_in,
       refresh_token,
     } = await this.fetchTokenAsync(model.code, dataProtectionKey.value);
-    console.log('TikTok access token:', access_token);
     const userData = await this.fetchUserData(access_token, open_id);
     const user = await this.userRepository.getUserByIdAsync(
       dataProtectionKey.userId,
@@ -202,7 +199,6 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
         code_verifier: codeVerifier,
         redirect_uri: configs.tiktok.redirectUri,
       };
-      console.log(configs.tiktok.clientId, configs.tiktok.clientSecret);
       const response = await axios.post(
         `${TIKTOK_BASE}/oauth/token/`,
         tokenRequest,
@@ -309,7 +305,6 @@ export class TiktokConnectCallbackQueryHandler implements ICommandHandler<Tiktok
       _const.PLATFORMS.TIKTOK,
       userData.open_id,
     );
-    console.log('this is the user data', userData);
     const userName = userData.profile_deep_link?.split('@')[1] ?? '';
     const newEntry = new LinkedAccount({
       userId,

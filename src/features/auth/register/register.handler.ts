@@ -151,8 +151,8 @@ export class RegisterCommandHandler implements ICommandHandler<RegisterCommand> 
     } catch (error) {
       if (user) {
         try {
-          console.log(
-            `[OAUTH-DBG] REGISTER-HANDLER deleteByUserIdAsync userId=${user.id} — error cleanup path`,
+          logger.debug(
+            `[Register] Cleaning up tokens for userId=${user.id}`,
           );
           await this.dataProtectionKeyRepository.deleteByUserIdAsync(user.id);
         } catch {

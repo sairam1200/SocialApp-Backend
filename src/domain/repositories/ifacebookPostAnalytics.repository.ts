@@ -5,6 +5,10 @@ export interface IFacebookPostAnalyticsRepository {
     analytics: FacebookPostAnalytics,
   ): Promise<FacebookPostAnalytics>;
   getLatestByPostIdAsync(postId: string): Promise<FacebookPostAnalytics | null>;
+  getLatestByPostIdAndUserIdAsync(
+    postId: string,
+    userId: string,
+  ): Promise<FacebookPostAnalytics | null>;
   getLatestByUserIdAsync(userId: string): Promise<FacebookPostAnalytics[]>;
   getTrendsAsync(
     postId: string,

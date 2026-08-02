@@ -486,15 +486,16 @@ export class SearchOrchestratorService {
     });
 
     if (process.env.DEBUG_SEARCH === 'true') {
-      console.log('[SEARCH DEBUG]');
-      console.log(`Query: ${telemetry.query}`);
-      console.log(`Cache hit: ${telemetry.cacheHit}`);
-      console.log(`Repos: ${JSON.stringify(telemetry.repos)}`);
-      console.log(`Merged: ${telemetry.merged}`);
-      console.log(`Ranked: ${telemetry.ranked}`);
-      console.log(`Paginated: ${telemetry.paginated}`);
-      console.log(`Returned: ${telemetry.returned}`);
-      console.log(`Total duration: ${telemetry.durationMs}ms`);
+      logger.debug('[SearchDebug] Query telemetry', {
+        query: telemetry.query,
+        cacheHit: telemetry.cacheHit,
+        repos: telemetry.repos,
+        merged: telemetry.merged,
+        ranked: telemetry.ranked,
+        paginated: telemetry.paginated,
+        returned: telemetry.returned,
+        durationMs: telemetry.durationMs,
+      });
     }
   }
 }

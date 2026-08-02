@@ -120,14 +120,12 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
       throw new UserNotFoundException(userData.id);
     }
 
-    console.log('user user: ', user);
-    console.log('user userdata: ', userData);
+    logger.debug('[PinterestConnect] Processing callback');
     let linkedAccount =
       await this.linkedAccountRepository.getByPlatformAndUserIdAsync(
         _const.PLATFORMS.PINTEREST,
         user.id,
       );
-    console.log('linkedAccount: ', linkedAccount);
 
     const newExternalId = userData.id;
     if (linkedAccount) {
@@ -162,7 +160,7 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
       );
       await this.linkedAccountRepository.updateAsync(linkedAccount);
     } else {
-      console.log('Creating new linked account for Pinterest');
+      logger.debug('[PinterestConnect] Creating new linked account');
       await this.contentStreamRepository.deleteByPlatformAndExternalIdAsync(
         _const.PLATFORMS.PINTEREST,
         userData.id,
@@ -247,7 +245,7 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
           },
         },
       );
-      console.log('Access token response:', response.data);
+      logger.debug('[PinterestConnect] Token fetched');
       return response.data;
     } catch (error) {
       //console.log('Error fetching token from Pinterest', error);
@@ -269,10 +267,10 @@ export class PinterestConnectCallbackQueryHandler implements ICommandHandler<Pin
           },
         },
       );
-      console.log('User data response:', response.data);
+      logger.debug('[PinterestConnect] User data fetched');
       return response.data;
     } catch (error) {
-      console.log('Error fetching user data from Pinterest', error);
+      logger.error('Error fetching user data from Pinterest');
       throw new ApplicationException(
         'Unexpected error during authentication with Pinterest',
       );

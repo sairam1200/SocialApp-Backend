@@ -7,6 +7,10 @@ export interface IFacebookVideoAnalyticsRepository {
   getLatestByVideoIdAsync(
     videoId: string,
   ): Promise<FacebookVideoAnalytics | null>;
+  getLatestByVideoIdAndUserIdAsync(
+    videoId: string,
+    userId: string,
+  ): Promise<FacebookVideoAnalytics | null>;
   getLatestByUserIdAsync(userId: string): Promise<FacebookVideoAnalytics[]>;
   getTrendsAsync(
     videoId: string,

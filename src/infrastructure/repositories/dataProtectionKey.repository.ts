@@ -12,7 +12,6 @@ export class DataProtectionKeyRepository implements IDataProtectionKeyRepository
 
   public async getAllAsync(): Promise<DataProtectionKey[]> {
     const results = await this.dataProtectionKeyContext.find();
-    console.log(`[OAUTH-DBG] REPO.getAllAsync totalCount=${results.length}`);
     return results;
   }
 
@@ -21,13 +20,9 @@ export class DataProtectionKeyRepository implements IDataProtectionKeyRepository
   }
 
   public async getByKeyAsync(key: string): Promise<DataProtectionKey | null> {
-    console.log(`[OAUTH-DBG] REPO.getByKeyAsync LOOKUP lookupKey=${key}`);
     const result = await this.dataProtectionKeyContext.findOne({
       where: { key },
     });
-    console.log(
-      `[OAUTH-DBG] REPO.getByKeyAsync RESULT lookupKey=${key} found=${!!result} rowId=${result?.id ?? 'NULL'} rowKey=${result?.key ?? 'NULL'} rowUserId=${result?.userId ?? 'NULL'} rowExpiresIn=${result?.expiresIn ?? 'NULL'}`,
-    );
     return result;
   }
 
@@ -35,9 +30,6 @@ export class DataProtectionKeyRepository implements IDataProtectionKeyRepository
     const results = await this.dataProtectionKeyContext.find({
       where: { userId },
     });
-    console.log(
-      `[OAUTH-DBG] REPO.getByUserIdAsync userId=${userId} count=${results.length} keyIds=${results.map((k) => `${k.id}:${k.key}`).join(', ')}`,
-    );
     return results;
   }
 
@@ -67,15 +59,7 @@ export class DataProtectionKeyRepository implements IDataProtectionKeyRepository
       newKey.setCurrentUser(HttpContext.getCurrentUserId);
     }
 
-    console.log(
-      `[OAUTH-DBG] REPO.createAsync BEFORE-SAVE lookupKey=${key} userId=${userId} expiresIn=${expiresIn} now=${Math.floor(Date.now() / 1000)}`,
-    );
-
     const saved = await this.dataProtectionKeyContext.save(newKey);
-
-    console.log(
-      `[OAUTH-DBG] REPO.createAsync AFTER-SAVE lookupKey=${key} savedId=${saved?.id} savedKey=${saved?.key} savedUserId=${saved?.userId}`,
-    );
 
     return saved;
   }
@@ -93,13 +77,7 @@ export class DataProtectionKeyRepository implements IDataProtectionKeyRepository
   public async deleteAsync(
     dataProtectionKey: DataProtectionKey,
   ): Promise<void> {
-    console.log(
-      `[OAUTH-DBG] REPO.deleteAsync DELETE rowId=${dataProtectionKey.id} lookupKey=${dataProtectionKey.key} rowUserId=${dataProtectionKey.userId}`,
-    );
     await this.dataProtectionKeyContext.delete(dataProtectionKey.id);
-    console.log(
-      `[OAUTH-DBG] REPO.deleteAsync DELETED rowId=${dataProtectionKey.id}`,
-    );
   }
 
   public async deleteByUserIdAsync(
@@ -110,14 +88,8 @@ export class DataProtectionKeyRepository implements IDataProtectionKeyRepository
       ? entityManager.getRepository(DataProtectionKey)
       : this.dataProtectionKeyContext;
     const keys = await repo.find({ where: { userId } });
-    console.log(
-      `[OAUTH-DBG] REPO.deleteByUserIdAsync userId=${userId} keysFound=${keys.length} keyIds=${keys.map((k) => `${k.id}:${k.key}`).join(', ')}`,
-    );
     for (const key of keys) {
       await repo.delete(key.id);
     }
-    console.log(
-      `[OAUTH-DBG] REPO.deleteByUserIdAsync COMPLETE userId=${userId} deletedCount=${keys.length}`,
-    );
   }
 }

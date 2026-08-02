@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { CommandBus } from '@nestjs/cqrs';
 import configs from '../../../../configs';
+import logger from '../../../../core/utils/winston.util';
 import { ProblemDocument } from 'http-problem-details';
 import { cryptoUtils } from '../../../../core/utils/crypto.util';
 import { ApiProperty, ApiTags, ApiResponse } from '@nestjs/swagger';
@@ -83,7 +84,6 @@ export class TiktokConnectController {
     const state = cryptoUtils.generateEncryptionKey(16);
     const codeVerifier = cryptoUtils.generateEncryptionKey();
     const challenge = cryptoUtils.encodeSHA256ToBase64(codeVerifier);
-    console.log(configs.tiktok.clientId, configs.tiktok.redirectUri);
     const params = new URLSearchParams({
       response_type: 'code',
       client_key: configs.tiktok.clientId,

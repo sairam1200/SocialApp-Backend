@@ -16,6 +16,10 @@ export class ContentStreamRepository implements IContentStreamRepository {
     params: QueryOptions,
   ): Promise<[ContentStream[], number]> {
     let { page, pageSize, orderBy, order, searchQuery, filter } = params;
+    const allowedOrderColumns = ['title', 'platform', 'type', 'subType', 'createdOn', 'updatedOn', 'id'];
+    if (!allowedOrderColumns.includes(orderBy)) {
+      orderBy = 'title';
+    }
     const queryBuilder = this.contentStreamContext.createQueryBuilder('cs');
 
     if (!orderBy) {
@@ -83,7 +87,6 @@ export class ContentStreamRepository implements IContentStreamRepository {
       .skip((page - 1) * pageSize)
       .take(pageSize)
       .getManyAndCount();
-    console.log('Query Result:', result);
     return result;
   }
 

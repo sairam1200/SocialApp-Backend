@@ -1,5 +1,6 @@
 import { Inject } from '@nestjs/common';
 import _const from '../../../core/utils/const';
+import logger from '../../../core/utils/winston.util';
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import { ITopicRepository } from '../../../domain/repositories';
 import { TopicModel } from '../../../domain/contracts/onboarding.model';
@@ -22,7 +23,7 @@ export class GetTopicsQueryHandler implements IQueryHandler<
 
   public async execute(query: GetTopicsQuery): Promise<TopicModel[]> {
     const topics = await this.topicRepository.getAllAsync();
-    console.log('TOPICS FROM DB:', topics.length);
+    logger.debug(`[Topics] Fetched ${topics.length} topics from DB`);
     return topics.map(
       (topic) =>
         new TopicModel({

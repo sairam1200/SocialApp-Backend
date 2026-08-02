@@ -59,9 +59,6 @@ export class YoutubeConnectController {
     ].join(' ');
 
     const state = stringUtil.generateRandomString(16);
-    console.log('configs.youtube.callbackUrl:', configs.youtube.callbackUrl);
-
-    console.log('headers:', HttpContext.headers);
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: configs.youtube.clientId,
@@ -72,12 +69,6 @@ export class YoutubeConnectController {
       include_granted_scopes: 'true',
       prompt: 'consent',
     });
-    console.log('configs.youtube.callbackUrl:', configs.youtube.callbackUrl);
-
-    console.log(
-      'getRedirectUrl result:',
-      getRedirectUrl(configs.youtube.callbackUrl),
-    );
     const authorizeURL = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
     await this.commandBus.execute(

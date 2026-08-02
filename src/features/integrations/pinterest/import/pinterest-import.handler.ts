@@ -99,11 +99,11 @@ export class PinterestImportCommandHandler implements ICommandHandler<PinterestI
     if (!account.syncEnabled) {
       account.syncEnabled = true;
       await this.linkedAccountRepository.updateAsync(account);
-      console.log(`[PinterestImport] Sync enabled for user ${userId}`);
+      logger.debug(`[PinterestImport] Sync enabled for user ${userId}`);
     }
 
     try {
-      console.log('[PinterestImport] Starting import');
+      logger.debug('[PinterestImport] Starting import');
 
       await this.pinterestImportService.importPinsAsync(
         userId,
@@ -167,7 +167,6 @@ export class PinterestImportCommandHandler implements ICommandHandler<PinterestI
         refresh_token_expires_in,
       };
     } catch (error) {
-      console.log(error);
       logger.error(
         `An error occurred while processing the Pinterest import command: 
         ${error instanceof Error ? error.message : JSON.stringify(error)}`,

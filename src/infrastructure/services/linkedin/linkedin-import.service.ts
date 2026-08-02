@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import axios from 'axios';
 
 import _const from '../../../core/utils/const';
+import logger from '../../../core/utils/winston.util';
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
 import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
 import { IOwnershipResolver } from '../../../domain/services/iownership-resolver.service';
@@ -79,7 +80,7 @@ export class LinkedInImportService {
         comments =
           analyticsResponse.data?.commentsSummary?.totalFirstLevelComments ?? 0;
       } catch (err) {
-        console.warn(`Analytics unavailable for ${post.id}`);
+        logger.warn(`Analytics unavailable for ${post.id}`);
       }
 
       await this.userContentRepository.createAsync(

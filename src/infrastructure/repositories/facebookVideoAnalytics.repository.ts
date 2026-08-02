@@ -39,6 +39,16 @@ export class FacebookVideoAnalyticsRepository implements IFacebookVideoAnalytics
     });
   }
 
+  async getLatestByVideoIdAndUserIdAsync(
+    videoId: string,
+    userId: string,
+  ): Promise<FacebookVideoAnalytics | null> {
+    return await this.videoAnalyticsContext.findOne({
+      where: { videoId, userId },
+      order: { snapshotDate: 'DESC' },
+    });
+  }
+
   async getLatestByUserIdAsync(
     userId: string,
   ): Promise<FacebookVideoAnalytics[]> {

@@ -2,6 +2,7 @@ import * as bcrypt from 'bcrypt';
 import configs from '../../configs';
 import _const from '../../core/utils/const';
 import redis from '../../core/utils/redis.util';
+import logger from '../../core/utils/winston.util';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository, SelectQueryBuilder, EntityManager } from 'typeorm';
 import { cryptoUtils } from '../../core/utils/crypto.util';
@@ -572,15 +573,15 @@ export class IdentityRepository implements IIdentityRepository {
 
     for (const userId of expiredUserIds) {
       try {
-        console.log(
-          `[OAUTH-DBG] IDENTITY-REPO.deleteExpiredUsers RAW-SQL-DELETE-DATA-PROTECTION-KEYS userId=${userId}`,
+        logger.debug(
+          `[IdentityRepo] Deleting data protection keys for userId=${userId}`,
         );
         await this.userContext.query(
           'DELETE FROM "dataProtectionKeys" WHERE "userId" = $1',
           [userId],
         );
-        console.log(
-          `[OAUTH-DBG] IDENTITY-REPO.deleteExpiredUsers RAW-SQL-DELETE-COMPLETE userId=${userId}`,
+        logger.debug(
+          `[IdentityRepo] Data protection keys deleted for userId=${userId}`,
         );
 
         const user = await this.userContext.findOne({ where: { id: userId } });
@@ -892,8 +893,6 @@ export class IdentityRepository implements IIdentityRepository {
       if (currentUserId) {
         existing.setCurrentUser(currentUserId);
       }
-      console.log('Incoming biometrics:', biometrics);
-      console.log('profileImageUrl:', biometrics.profileImageUrl);
       return await this.userBiometricsContext.save(existing);
     } else {
       biometrics.userId = userId;

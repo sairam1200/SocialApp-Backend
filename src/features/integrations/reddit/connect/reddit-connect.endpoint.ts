@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { CommandBus } from '@nestjs/cqrs';
 import configs from '../../../../configs';
+import logger from '../../../../core/utils/winston.util';
 import { ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { stringUtil } from '../../../../core/utils/string.util';
 import { UserAccoutGuard } from '../../../../core/passport/account.guard';
@@ -50,12 +51,7 @@ export class RedditConnectController {
 
     const authorizeURL = `https://www.reddit.com/api/v1/authorize?${params.toString()}`;
 
-    console.log('Initiating Reddit OAuth:', {
-      clientId: configs.reddit.clientId,
-      redirectUri: configs.reddit.redirectUri,
-      state,
-      authorizeURL,
-    });
+    logger.debug('[RedditConnect] Initiating OAuth flow');
 
     await this.commandBus.execute(new RedditConnectQuery({ model: { state } }));
 
@@ -72,7 +68,7 @@ export class RedditConnectController {
     @Query('state') state: string,
     @Res() res: Response,
   ): Promise<Response | void> {
-    console.log('Reddit callback received:', { code, state });
+    logger.debug('[RedditConnect] Callback received');
 
     const result = await this.commandBus.execute(
       new RedditConnectCallbackQuery({ model: { code, state } }),

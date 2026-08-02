@@ -125,7 +125,6 @@ export class YoutubeConnectCallbackQueryHandler implements ICommandHandler<Youtu
     });
 
     const userData = await this.fetchUserData(access_token);
-    console.log(userData);
 
     const user = await this.userRepository.getUserByIdAsync(
       dataProtectionKey.userId,

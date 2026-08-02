@@ -131,9 +131,12 @@ export class GetFacebookPostAnalyticsQueryHandler implements IQueryHandler<GetFa
   async execute(
     query: GetFacebookPostAnalyticsQuery,
   ): Promise<FacebookPostAnalytics> {
-    const latest = await this.postAnalyticsRepository.getLatestByPostIdAsync(
-      query.postId,
-    );
+    const userId = HttpContext.user[Globals.ClaimTypes.UserId];
+    const latest =
+      await this.postAnalyticsRepository.getLatestByPostIdAndUserIdAsync(
+        query.postId,
+        userId,
+      );
     if (!latest) {
       throw new NotFoundException(
         `No analytics record found for Facebook post: ${query.postId}`,
@@ -153,9 +156,12 @@ export class GetFacebookVideoAnalyticsQueryHandler implements IQueryHandler<GetF
   async execute(
     query: GetFacebookVideoAnalyticsQuery,
   ): Promise<FacebookVideoAnalytics> {
-    const latest = await this.videoAnalyticsRepository.getLatestByVideoIdAsync(
-      query.videoId,
-    );
+    const userId = HttpContext.user[Globals.ClaimTypes.UserId];
+    const latest =
+      await this.videoAnalyticsRepository.getLatestByVideoIdAndUserIdAsync(
+        query.videoId,
+        userId,
+      );
     if (!latest) {
       throw new NotFoundException(
         `No analytics record found for Facebook video: ${query.videoId}`,

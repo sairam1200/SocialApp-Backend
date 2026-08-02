@@ -34,7 +34,7 @@ export class YoutubeWebhookController {
     );
 
     const expectedToken =
-      process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN || 'default_verify_token';
+      process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN;
 
     if (verifyToken !== expectedToken) {
       logger.warn(`[YoutubeWebhook] Invalid verify token: ${verifyToken}`);
@@ -69,7 +69,7 @@ export class YoutubeWebhookController {
     logger.info('======================');
     if (mode === 'subscribe' || mode === 'unsubscribe') {
       const expectedToken =
-        process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN || 'default_verify_token';
+        process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN;
 
       if (verifyToken !== expectedToken) {
         logger.warn(`[YoutubeWebhook] Invalid verify token: ${verifyToken}`);

@@ -156,7 +156,7 @@ export class LinkedInConnectCallbackQueryHandler implements ICommandHandler<Link
           new PlatformConnectCleanupEvent({ account: linkedAccount }),
         );
       }
-      console.log('updating LINKEDIN STATE:', model.state);
+      logger.debug('[LinkedInConnect] Updating linked account');
       linkedAccount = await this.updateLinkedAccount(
         linkedAccount,
         userData,
@@ -164,7 +164,7 @@ export class LinkedInConnectCallbackQueryHandler implements ICommandHandler<Link
         organization,
       );
     } else {
-      console.log('CREATING LINKEDIN STATE:', model.state);
+      logger.debug('[LinkedInConnect] Creating linked account');
       linkedAccount = await this.createLinkedAccount(
         user.id,
         userData,
@@ -269,12 +269,7 @@ export class LinkedInConnectCallbackQueryHandler implements ICommandHandler<Link
 
       return response.data?.elements ?? [];
     } catch (error: any) {
-      console.log('LINKEDIN ORG ERROR STATUS:', error.response?.status);
-
-      console.log(
-        'LINKEDIN ORG ERROR DATA:',
-        JSON.stringify(error.response?.data, null, 2),
-      );
+      logger.error(`LinkedIn org fetch failed: status=${error.response?.status}`);
 
       throw error;
     }
@@ -291,7 +286,7 @@ export class LinkedInConnectCallbackQueryHandler implements ICommandHandler<Link
 
       const userData = response.data;
 
-      console.log('LINKEDIN USER INFO:', JSON.stringify(userData, null, 2));
+      logger.debug('[LinkedInConnect] User data fetched');
 
       return {
         id: userData.sub,
@@ -304,9 +299,7 @@ export class LinkedInConnectCallbackQueryHandler implements ICommandHandler<Link
         email: userData.email ?? '',
       } as LinkedInUserDataType;
     } catch (error: any) {
-      console.error('LINKEDIN USERINFO ERROR:', error?.response?.status);
-
-      console.error('LINKEDIN USERINFO DATA:', error?.response?.data);
+      logger.error(`LinkedIn user data fetch failed: status=${error?.response?.status}`);
 
       logger.error('LinkedIn user data fetch failed', error);
 
@@ -334,12 +327,12 @@ export class LinkedInConnectCallbackQueryHandler implements ICommandHandler<Link
   }
 
   private async validateStateAsync(state: string): Promise<DataProtectionKey> {
-    console.log('VALIDATING STATE:', state);
+    logger.debug('[LinkedInConnect] Validating state');
 
     const dataProtectionKey =
       await this.dataProtectionKeyRepository.getByKeyAsync(state);
 
-    console.log('FOUND DATA PROTECTION KEY:', dataProtectionKey);
+    logger.debug('[LinkedInConnect] State validated');
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
     }

@@ -39,6 +39,16 @@ export class FacebookPostAnalyticsRepository implements IFacebookPostAnalyticsRe
     });
   }
 
+  async getLatestByPostIdAndUserIdAsync(
+    postId: string,
+    userId: string,
+  ): Promise<FacebookPostAnalytics | null> {
+    return await this.postAnalyticsContext.findOne({
+      where: { postId, userId },
+      order: { snapshotDate: 'DESC' },
+    });
+  }
+
   async getLatestByUserIdAsync(
     userId: string,
   ): Promise<FacebookPostAnalytics[]> {

@@ -15,7 +15,6 @@ export function getRedirectUrl(defaultRedirectUrl: string): string {
   if (configs.env !== 'production') {
     const headers = HttpContext.headers;
     if (headers) {
-      console.log('Headers: ', headers);
       const clientOrigin = headers['x-redirect-url'];
       if (clientOrigin) {
         const originValue = Array.isArray(clientOrigin)
@@ -23,7 +22,6 @@ export function getRedirectUrl(defaultRedirectUrl: string): string {
           : clientOrigin;
         if (originValue && typeof originValue === 'string') {
           redirectUrl = originValue.replace(/\/$/, '');
-          console.log('This is the redirect url: ', redirectUrl);
         }
       }
     }

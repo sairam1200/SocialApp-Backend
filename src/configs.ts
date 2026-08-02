@@ -35,7 +35,6 @@ const envVarsSchema = Joi.object()
         'Initialization vector for encryption (16+ bytes, no default)',
       ),
     JWT_SECRET: Joi.string()
-      .default('this is my custom Secret key for authentication')
       .required()
       .description('Secret key for signing JWT tokens'),
     JWT_AUDIENCE: Joi.string()
@@ -78,7 +77,7 @@ const envVarsSchema = Joi.object()
       'Path to PostgreSQL migrations',
     ),
     POSTGRES_SSL_REJECTUNAUTHORIZED: Joi.boolean()
-      .default(false)
+      .default(true)
       .description('Path to PostgreSQL ssl rejectUnauthorized'),
     POSTGRES_SSL_CERTIFICATION: Joi.string().description(
       'Path to PostgreSQL ssl certificate',
@@ -231,11 +230,15 @@ const envVarsSchema = Joi.object()
       .default('logs')
       .description('Directory path for log files'),
     SYSTEM_ADMIN_EMAIL: Joi.string().default('team@gaddr.com'),
-    SYSTEM_ADMIN_PASSWORD: Joi.string().default('@Admin@123'),
+    SYSTEM_ADMIN_PASSWORD: Joi.string()
+      .default('CHANGE_ME_BEFORE_SEEDING')
+      .description('Admin password — must be set before enabling DataSeeder'),
     SYSTEM_ADMIN_FIRST_NAME: Joi.string().default('System'),
     SYSTEM_ADMIN_LAST_NAME: Joi.string().default('Admin'),
     GUEST_USER_EMAIL: Joi.string().default('johndoe@gaddr.com'),
-    GUEST_USER_PASSWORD: Joi.string().default('@Abc@123'),
+    GUEST_USER_PASSWORD: Joi.string()
+      .default('CHANGE_ME_BEFORE_SEEDING')
+      .description('Guest password — must be set before enabling DataSeeder'),
     GUEST_USER_FIRST_NAME: Joi.string().default('John'),
     GUEST_USER_LAST_NAME: Joi.string().default('Doe'),
     GUEST_USERNAME: Joi.string().default('Doe'),

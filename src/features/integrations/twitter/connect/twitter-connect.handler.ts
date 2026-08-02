@@ -71,7 +71,7 @@ export class TwiiterConnectQueryHandler implements ICommandHandler<TwitterConnec
 
     const expiresIn =
       Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
-    console.log('Saving state:', model.state);
+    logger.debug('[TwitterConnect] Saving state');
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
       model.codeVerifier,
@@ -125,7 +125,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
         _const.PLATFORMS.TWITTER,
         user.id,
       );
-    console.log('Linked Account:', linkedAccount);
+    logger.debug('[TwitterConnect] Checking existing linked account');
     const newExternalId = userData.data.id;
     if (linkedAccount) {
       const oldExternalId = linkedAccount.externalId;
@@ -151,7 +151,6 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
         _const.PLATFORMS.TWITTER,
       );
     const tokenValue = serializeObject({ access_token, refresh_token });
-    console.log('this is the token value: ', tokenValue);
     if (existingAccountLogin) {
       await this.updateUserLogin(existingAccountLogin, tokenValue);
     } else {
@@ -191,8 +190,6 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
       const credentials = Buffer.from(
         `${configs.twitter.clientId}:${configs.twitter.clientSecret}`,
       ).toString('base64');
-      console.log(configs.twitter.clientId);
-      console.log(configs.twitter.clientSecret);
       const response = await axios.post(
         'https://api.x.com/2/oauth2/token',
         body.toString(),
@@ -204,11 +201,11 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
         },
       );
 
-      console.log('TOKEN RESPONSE', response.data);
+      logger.debug('[TwitterConnect] Token fetched successfully');
 
       return response.data;
     } catch (error: any) {
-      console.error('TOKEN ERROR', error?.response?.data ?? error);
+      logger.error('Twitter token fetch failed');
 
       throw error;
     }
@@ -242,10 +239,9 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
           },
         },
       );
-      console.log('Twitter user data response:', response.data);
+      logger.debug('[TwitterConnect] User data fetched');
       return response.data;
     } catch (error) {
-      console.log(error);
       logger.error('Error fetching user data from Twitter', error);
       throw new ApplicationException(
         'Unexpected error during authentication with Twiiter',
@@ -254,7 +250,7 @@ export class TwitterConnectCallbackQueryHandler implements ICommandHandler<Twitt
   }
 
   private async validateStateAsync(state: string): Promise<DataProtectionKey> {
-    console.log('Callback state:', state);
+    logger.debug('[TwitterConnect] Validating state');
     const dataProtectionKey =
       await this.dataProtectionKeyRepository.getByKeyAsync(state);
 

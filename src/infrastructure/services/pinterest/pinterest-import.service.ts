@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import axios from 'axios';
 
 import _const from '../../../core/utils/const';
+import logger from '../../../core/utils/winston.util';
 import { ILinkedAccountRepository } from '../../../domain/repositories/ilinkedAccount.repository';
 import { IUserContentRepository } from '../../../domain/repositories/iuserContent.repository';
 import { IContentStreamRepository } from '../../../domain/repositories/icontentStream.repository';
@@ -99,7 +100,6 @@ export class PinterestImportService {
             );
 
             const analyticsData = analyticsResponse.data;
-            console.log(analyticsData);
             analytics = {
               impressions:
                 analyticsData?.IMPRESSION ?? analyticsData?.impression ?? 0,
@@ -115,9 +115,8 @@ export class PinterestImportService {
                 0,
             };
           } catch (analyticsError) {
-            console.warn(
+            logger.warn(
               `[Pinterest] Analytics unavailable for pin ${pin.id}`,
-              analyticsError?.response?.data,
             );
           }
 
@@ -185,9 +184,8 @@ export class PinterestImportService {
           importedCount++;
         }
       } catch (error) {
-        console.warn(
+        logger.warn(
           `[Pinterest] Failed to import board ${board.id}`,
-          error?.response?.data,
         );
       }
     }

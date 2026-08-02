@@ -16,25 +16,26 @@ import { ErrorHandlersFilter } from './core/exceptions/exceptionHandler.filter';
 import { ApiDocRedirectMiddleware } from './core/middlewares/apiDocRedirect.middleware';
 import { CORS_ORIGINS } from './core/configs/cors.config';
 import cookieParser = require('cookie-parser');
+import helmet from 'helmet';
 
 console.info(
   `[startup] main.ts loaded — PID ${process.pid}, NODE_ENV=${process.env.NODE_ENV}, K_SERVICE=${process.env.K_SERVICE || 'none'}`,
 );
 
-// OAUTH-DBG: Log database connection info at startup
+// OAUTH-DBG: Log database connection info at startup (no secrets)
 try {
   const dbUrl = process.env.DATABASE_URL || 'NOT_SET';
   const urlObj = new URL(dbUrl);
-  console.log(
-    `[OAUTH-DBG] STARTUP DB-INFO host=${urlObj.hostname} database=${urlObj.pathname} port=${urlObj.port} hasPassword=${!!urlObj.password} pid=${process.pid}`,
+  logger.info(
+    `[startup] DB-INFO hasPassword=${!!urlObj.password} pid=${process.pid}`,
   );
 } catch (e: any) {
-  console.log(
-    `[OAUTH-DBG] STARTUP DB-INFO parseError=${e.message} DATABASE_URL=${process.env.DATABASE_URL ? 'SET' : 'NOT_SET'}`,
+  logger.info(
+    `[startup] DB-INFO parseError=${e.message} DATABASE_URL=${process.env.DATABASE_URL ? 'SET' : 'NOT_SET'}`,
   );
 }
-console.log(
-  `[OAUTH-DBG] STARTUP POSTGRES_HOST=${process.env.POSTGRES_HOST || 'NOT_SET'} POSTGRES_PORT=${process.env.POSTGRES_PORT || 'NOT_SET'} POSTGRES_DATABASE=${process.env.POSTGRES_DATABASE || 'NOT_SET'}`,
+logger.info(
+  `[startup] POSTGRES_HOST=${process.env.POSTGRES_HOST ? 'SET' : 'NOT_SET'} POSTGRES_PORT=${process.env.POSTGRES_PORT ? 'SET' : 'NOT_SET'} POSTGRES_DATABASE=${process.env.POSTGRES_DATABASE ? 'SET' : 'NOT_SET'}`,
 );
 
 process.on('unhandledRejection', (reason) => {
@@ -66,29 +67,26 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   console.info('[startup] STEP 2 — NestFactory created');
 
-  // OAUTH-DBG: Log TypeORM config info (no DB queries — avoids startup timeout)
+  // Log TypeORM config info (no DB queries — avoids startup timeout)
   try {
     const typeormDs = app.get(DataSource, { strict: false });
     const typeormOpts = typeormDs?.options;
     if (typeormOpts) {
-      const connUrl = (typeormOpts as any).url || 'unknown';
-      let connHost = 'unknown';
-      let connDatabase = 'unknown';
-      try {
-        const parsed = new URL(connUrl);
-        connHost = parsed.hostname;
-        connDatabase = parsed.pathname;
-      } catch {}
-      console.log(
-        `[OAUTH-DBG] STARTUP TYPEORM-DB host=${connHost} database=${connDatabase} synchronize=${typeormOpts.synchronize} migrationsRun=${typeormOpts.migrationsRun} pid=${process.pid}`,
+      logger.info(
+        `[startup] TypeORM synchronize=${typeormOpts.synchronize} migrationsRun=${typeormOpts.migrationsRun} pid=${process.pid}`,
       );
     }
   } catch (e: any) {
-    console.log(`[OAUTH-DBG] STARTUP TYPEORM-DB error=${e.message}`);
+    logger.info(`[startup] TypeORM config read error=${e.message}`);
   }
 
   app.enableShutdownHooks();
   app.use(cookieParser());
+  (app.getHttpAdapter().getInstance() as any).set('trust proxy', 1);
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }));
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
   app.enableVersioning({

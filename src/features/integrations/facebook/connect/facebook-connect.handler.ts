@@ -87,12 +87,7 @@ export class FacebookConnectQueryHandler implements ICommandHandler<FacebookConn
     const expiresIn =
       Math.floor(Date.now() / 1000) + configs.Token.expirationTime;
 
-    console.log('[FACEBOOK CONNECT] Saving state:', model.state);
-
-    console.log(
-      '[FACEBOOK CONNECT] User:',
-      HttpContext.user[Globals.ClaimTypes.UserId],
-    );
+    logger.debug('[FacebookConnect] Saving state');
 
     await this.dataProtectionKeyRepository.createAsync(
       model.state,
@@ -105,7 +100,7 @@ export class FacebookConnectQueryHandler implements ICommandHandler<FacebookConn
       model.state,
     );
 
-    console.log('[FACEBOOK CONNECT] Saved state:', verify);
+    logger.debug('[FacebookConnect] Saved state');
   }
 }
 
@@ -131,7 +126,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     profile: FacebookProfileModel;
   }> {
     const { model } = query;
-    console.log('CALLBACK STATE:', model.state);
+    logger.debug('[FacebookConnect] Callback received');
     await facebookConnectCallbackValidations.validateAsync(model);
     const dataProtectionKey = await this.validateState(model.state);
 
@@ -203,10 +198,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         userData,
         page,
       );
-      console.log(
-        'LINKED ACCOUNT SAVED:',
-        JSON.stringify(linkedAccount, null, 2),
-      );
+      logger.debug('[FacebookConnect] Linked account updated');
     } else {
       linkedAccount = await this.createLinkedAccount(
         user.id,
@@ -214,10 +206,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
         userData,
         page,
       );
-      console.log(
-        'LINKED ACCOUNT SAVED:',
-        JSON.stringify(linkedAccount, null, 2),
-      );
+      logger.debug('[FacebookConnect] Linked account created');
     }
 
     const existingAccountLogin =
@@ -276,10 +265,7 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
       },
     });
 
-    console.log(
-      'FACEBOOK LONG TOKEN RESPONSE:',
-      JSON.stringify(response.data, null, 2),
-    );
+    logger.debug('[FacebookConnect] Fetched long-lived token');
 
     return response.data;
   }
@@ -313,10 +299,10 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
   }
 
   private async validateState(state: string): Promise<DataProtectionKey> {
-    console.log('LOOKING FOR STATE:', state);
+    logger.debug('[FacebookConnect] Validating state');
     const dataProtectionKey =
       await this.dataProtectionKeyRepository.getByKeyAsync(state);
-    console.log('FOUND STATE:', dataProtectionKey);
+    logger.debug('[FacebookConnect] State validated');
     if (!dataProtectionKey) {
       throw new ApplicationException('Invalid state parameter');
     }
@@ -326,7 +312,6 @@ export class FacebookConnectCallbackQueryHandler implements ICommandHandler<Face
     }
 
     await this.dataProtectionKeyRepository.deleteAsync(dataProtectionKey);
-    console.log('AFTER DELETE');
     return dataProtectionKey;
   }
 

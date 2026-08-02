@@ -37,8 +37,8 @@ export class VerificationEmailService {
     const { user, targetEmail, isEmailChange, updateUser, deliveryMode } =
       options;
 
-    console.log(
-      `[OAUTH-DBG] SEND-VERIFICATION-EMAIL userId=${user.id} targetEmail=${targetEmail} isEmailChange=${isEmailChange} — WILL CALL rotateTokens WHICH DELETES ALL DATA PROTECTION KEYS`,
+    logger.debug(
+      `[VerificationEmail] Sending verification email userId=${user.id} isEmailChange=${isEmailChange}`,
     );
 
     logger.info(
@@ -91,11 +91,11 @@ export class VerificationEmailService {
   }
 
   private async rotateTokens(userId: string, em: any): Promise<void> {
-    console.log(
-      `[OAUTH-DBG] ROTATE-TOKENS ENTRY userId=${userId} — THIS DELETES ALL DATA PROTECTION KEYS FOR THIS USER`,
+    logger.debug(
+      `[VerificationEmail] Rotating tokens for userId=${userId}`,
     );
     await this.dataProtectionKeyRepository.deleteByUserIdAsync(userId, em);
-    console.log(`[OAUTH-DBG] ROTATE-TOKENS COMPLETE userId=${userId}`);
+    logger.debug(`[VerificationEmail] Token rotation complete for userId=${userId}`);
   }
 
   private buildConfirmationUrl(

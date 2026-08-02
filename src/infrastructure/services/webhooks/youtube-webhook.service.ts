@@ -13,7 +13,7 @@ export class YoutubeWebhookService {
     callbackUrl: string,
   ): Promise<void> {
     const verifyToken =
-      process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN || 'default_verify_token';
+      process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN;
     const topic = `https://www.youtube.com/xml/feeds/videos.xml?channel_id=${channelId}`;
 
     try {
@@ -25,7 +25,7 @@ export class YoutubeWebhookService {
           'hub.callback': callbackUrl,
           'hub.verify': 'sync',
           'hub.verify_token': verifyToken,
-          'hub.secret': process.env.YOUTUBE_WEBHOOK_SECRET || '',
+          'hub.secret': process.env.YOUTUBE_WEBHOOK_SECRET,
         }),
         {
           headers: {
@@ -55,7 +55,7 @@ export class YoutubeWebhookService {
     callbackUrl: string,
   ): Promise<void> {
     const verifyToken =
-      process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN || 'default_verify_token';
+      process.env.YOUTUBE_WEBHOOK_VERIFY_TOKEN;
     const topic = `https://www.youtube.com/xml/feeds/videos.xml?channel_id=${channelId}`;
 
     try {

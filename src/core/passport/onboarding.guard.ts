@@ -7,17 +7,16 @@ import {
 } from '@nestjs/common';
 import _const from '../utils/const';
 import redis from '../utils/redis.util';
+import logger from '../utils/winston.util';
 import { Globals } from '../globals';
 import { OnboardingStep } from '../../domain/enums';
 import { HttpContext } from '../middlewares/httpContext.middleware';
+import dataSource from '../../infrastructure/persistence/data.source';
 
 @Injectable()
 export class OnboardingGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const claimsPrinciple = HttpContext.user;
-
-    console.log('OnboardingGuard triggered');
-    console.log('claimsPrinciple:', claimsPrinciple);
 
     if (!claimsPrinciple) {
       throw new UnauthorizedException(
@@ -26,7 +25,6 @@ export class OnboardingGuard implements CanActivate {
     }
 
     const userId = claimsPrinciple[Globals.ClaimTypes.UserId];
-    console.log('userId:', userId);
 
     if (!userId) {
       throw new UnauthorizedException('Unauthorized: Invalid user context.');
@@ -35,17 +33,29 @@ export class OnboardingGuard implements CanActivate {
     const accountKey = redis.getRedisKey<string>(
       `${userId}${_const.REDIS.USER.ACCOUNT}`,
     );
-    console.log('accountKey:', accountKey);
 
-    const userAccount = await redis.getFromRedisAsync<{
+    let userAccount = await redis.getFromRedisAsync<{
       useronboardingStep: string;
       concurrencyStamp: string;
       securityStamp: string;
     }>(accountKey);
 
-    console.log('userAccount:', userAccount);
-    console.log('onboardingStep value:', userAccount?.useronboardingStep);
-    console.log('completed enum value:', OnboardingStep.Completed);
+    if (!userAccount) {
+      try {
+        const ds = await dataSource;
+        const result = await ds.query(
+          `SELECT u."onboardingStep" as "useronboardingStep"
+           FROM identity.users u
+           WHERE u.id = $1 LIMIT 1`,
+          [userId],
+        );
+        if (result?.length) {
+          userAccount = result[0];
+        }
+      } catch (error) {
+        logger.error(`[OnboardingGuard] DB fallback failed for user ${userId}`);
+      }
+    }
 
     if (userAccount?.useronboardingStep === OnboardingStep.Completed) {
       throw new ForbiddenException(

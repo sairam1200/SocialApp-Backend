@@ -11,9 +11,9 @@ export const postgresOptions: DataSourceOptions = {
   logging: configs.postgres.logging,
   migrationsRun: configs.postgres.migrationsRun,
 
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  ssl: configs.postgres.ssl?.rejectUnauthorized !== undefined 
+    ? { rejectUnauthorized: configs.postgres.ssl.rejectUnauthorized }
+    : undefined,
 };
 
 const dataSource = new DataSource(postgresOptions);
