@@ -28,6 +28,7 @@ import {
   GlobalSearchQueryHandler,
   GlobalSearchRequestModel,
 } from './search.handler';
+import { SearchOrchestratorService } from './searchOrchestrator.service';
 
 /**
  * Multi-platform search orchestration.
@@ -51,88 +52,38 @@ import {
  * docs/integrations/END_TO_END_VERIFICATION.md.
  */
 
-/** Every platform the handler dispatches to, with its service method. */
-const PLATFORM_METHODS: Array<{ platform: string; method: string }> = [
-  { platform: _const.PLATFORMS.FACEBOOK, method: 'searchFacebookAsync' },
-  { platform: _const.PLATFORMS.INSTAGRAM, method: 'searchInstagramAsync' },
-  { platform: _const.PLATFORMS.TWITTER, method: 'searchTwitterAsync' },
-  { platform: _const.PLATFORMS.LINKEDIN, method: 'searchLinkedInAsync' },
-  { platform: _const.PLATFORMS.YOUTUBE, method: 'searchYoutubeAsync' },
-  { platform: _const.PLATFORMS.GITHUB, method: 'searchGithubAsync' },
-  { platform: _const.PLATFORMS.APPLE, method: 'searchAppleAsync' },
-  { platform: _const.PLATFORMS.OPENVERSE, method: 'searchOpenverseAsync' },
-  { platform: _const.PLATFORMS.HACKERNEWS, method: 'searchHackernewsAsync' },
-  { platform: _const.PLATFORMS.SPOTIFY, method: 'searchSpotifyAsync' },
-  { platform: _const.PLATFORMS.REDDIT, method: 'searchRedditAsync' },
-  { platform: _const.PLATFORMS.PINTEREST, method: 'searchPinterestAsync' },
-  { platform: _const.PLATFORMS.TIKTOK, method: 'searchTiktokAsync' },
-  { platform: _const.PLATFORMS.SNAPCHAT, method: 'searchSnapchatAsync' },
-  { platform: _const.PLATFORMS.THREADS, method: 'searchThreadsAsync' },
-  { platform: _const.PLATFORMS.BEHANCE, method: 'searchBehanceAsync' },
-];
-
-/** A search service where every platform method is a spy returning an empty result. */
-function makeSearchService() {
-  const service: Record<string, jest.Mock> = {};
-  for (const { method } of PLATFORM_METHODS) {
-    service[method] = jest.fn().mockResolvedValue({ results: [] });
-  }
-  return service;
-}
-
 function makeHandler(
   overrides: {
-    searchService?: Record<string, jest.Mock>;
-    linkedAccounts?: Array<{ platform: string }>;
-    userLogins?: Record<
-      string,
-      { provider: string; tokenValue: string } | null
-    >;
-    similarQueries?: Array<{ originalQuery: string; normalizedQuery: string }>;
+    orchestrator?: jest.Mocked<SearchOrchestratorService>;
+    analyticsService?: { trackEvent: jest.Mock };
   } = {},
 ) {
-  const searchService = overrides.searchService ?? makeSearchService();
+  const orchestrator = overrides.orchestrator ?? {
+    execute: jest.fn().mockResolvedValue({
+      query: 'design',
+      items: [],
+      pagination: { page: 1, limit: 25, total: 0, hasMore: false },
+      facets: {
+        content: 0,
+        profile: 0,
+        project: 0,
+        job: 0,
+      },
+    }),
+  } as unknown as jest.Mocked<SearchOrchestratorService>;
 
-  const searchHistoryRepository = {
-    findSimilarQueriesAsync: jest
-      .fn()
-      .mockResolvedValue(overrides.similarQueries ?? []),
-    createAsync: jest.fn().mockResolvedValue(undefined),
-  };
-
-  const linkedAccountRepository = {
-    getByUserIdAsync: jest
-      .fn()
-      .mockResolvedValue(overrides.linkedAccounts ?? []),
-  };
-
-  const userLoginRepository = {
-    getByUserIdAndProviderAsync: jest
-      .fn()
-      .mockImplementation(
-        async (_userId: string, provider: string) =>
-          overrides.userLogins?.[provider] ?? null,
-      ),
-  };
-
-  const analyticsService = {
+  const analyticsService = overrides.analyticsService ?? {
     trackEvent: jest.fn().mockResolvedValue(undefined),
   };
 
   const handler = new GlobalSearchQueryHandler(
-    searchService as never,
-    searchHistoryRepository as never,
-    userLoginRepository as never,
-    linkedAccountRepository as never,
     analyticsService as never,
+    orchestrator,
   );
 
   return {
     handler,
-    searchService,
-    searchHistoryRepository,
-    linkedAccountRepository,
-    userLoginRepository,
+    orchestrator,
     analyticsService,
   };
 }
@@ -140,15 +91,6 @@ function makeHandler(
 function query(model: Partial<GlobalSearchRequestModel>) {
   return new GlobalSearchQuery({
     model: Object.assign(new GlobalSearchRequestModel(), model),
-  });
-}
-
-/** A stored OAuth token in the shape the userLogins table holds. */
-function storedToken(accessToken: string) {
-  return JSON.stringify({
-    access_token: accessToken,
-    refresh_token: 'refresh',
-    expires_in: 3600,
   });
 }
 
@@ -166,427 +108,70 @@ describe('GlobalSearchQueryHandler', () => {
     jest.restoreAllMocks();
   });
 
-  describe('per-platform dispatch', () => {
-    it.each(PLATFORM_METHODS)(
-      'routes a $platform search to $method',
-      async ({ platform, method }) => {
-        // The core wiring claim: each platform reaches its own service method and no
-        // other. A copy-paste error in the dispatch switch would silently search the
-        // wrong platform and still return a 200.
-        const { handler, searchService } = makeHandler();
-
-        await handler.execute(
-          query({ searchTerm: 'design', platforms: [platform] }),
-        );
-
-        expect(searchService[method]).toHaveBeenCalledTimes(1);
-
-        for (const other of PLATFORM_METHODS) {
-          if (other.method === method) continue;
-          expect(searchService[other.method]).not.toHaveBeenCalled();
-        }
-      },
-    );
-
-    it('searches every searchable platform when none is specified', async () => {
-      const { handler, searchService } = makeHandler();
-
-      const response = await handler.execute(query({ searchTerm: 'design' }));
-
-      expect(response.platforms).toEqual(_const.SEARCHABLE_PLATFORMS);
-      for (const { method } of PLATFORM_METHODS) {
-        expect(searchService[method]).toHaveBeenCalledTimes(1);
-      }
-    });
-
-    it('does not dispatch to link-only platforms', async () => {
-      // twitch and discord are in PLATFORMS for account linking but have no search
-      // implementation. Including them produced "Unsupported platform" entries in every
-      // response.
-      const { handler } = makeHandler();
-
-      const response = await handler.execute(query({ searchTerm: 'design' }));
-
-      // github is deliberately absent here — it became searchable once its
-      // credential-free API was wired up.
-      for (const platform of ['twitch', 'discord']) {
-        expect(response.results[platform]).toBeUndefined();
-      }
-    });
-
-    it('normalises platform casing from the caller', async () => {
-      const { handler, searchService } = makeHandler();
-
-      await handler.execute(
-        query({ searchTerm: 'design', platforms: ['YouTube', 'PINTEREST'] }),
-      );
-
-      expect(searchService.searchYoutubeAsync).toHaveBeenCalledTimes(1);
-      expect(searchService.searchPinterestAsync).toHaveBeenCalledTimes(1);
-    });
-
-    it('ignores an unknown platform rather than erroring the whole search', async () => {
-      const { handler, searchService } = makeHandler();
-
-      const response = await handler.execute(
-        query({ searchTerm: 'design', platforms: ['youtube', 'myspace'] }),
-      );
-
-      expect(searchService.searchYoutubeAsync).toHaveBeenCalledTimes(1);
-      expect(response.platforms).toEqual(['youtube']);
-    });
-  });
-
-  describe('user OAuth tokens — the "real connection" path', () => {
-    function authenticate(userId = 'user-1') {
-      userSpy.mockReturnValue({
-        [Globals.ClaimTypes.UserId]: userId,
-      } as never);
-    }
-
-    it('passes a stored token to the platform it belongs to', async () => {
-      // This is what makes the eleven credential-blocked platforms work the moment a
-      // user connects an account: the token is read from userLogins and handed to that
-      // platform's search method.
-      authenticate();
-
-      const { handler, searchService } = makeHandler({
-        linkedAccounts: [{ platform: _const.PLATFORMS.PINTEREST }],
-        userLogins: {
-          [_const.PLATFORMS.PINTEREST]: {
-            provider: _const.PLATFORMS.PINTEREST,
-            tokenValue: storedToken('pinterest-user-token'),
-          },
-        },
-      });
-
-      await handler.execute(
-        query({
-          searchTerm: 'design',
-          platforms: [_const.PLATFORMS.PINTEREST],
-        }),
-      );
-
-      expect(searchService.searchPinterestAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ accessToken: 'pinterest-user-token' }),
-      );
-    });
-
-    it('never leaks one platform token to another', async () => {
-      // A cross-platform token leak would send a user's Pinterest credential to TikTok.
-      authenticate();
-
-      const { handler, searchService } = makeHandler({
-        linkedAccounts: [{ platform: _const.PLATFORMS.PINTEREST }],
-        userLogins: {
-          [_const.PLATFORMS.PINTEREST]: {
-            provider: _const.PLATFORMS.PINTEREST,
-            tokenValue: storedToken('pinterest-user-token'),
-          },
-        },
-      });
-
-      await handler.execute(
-        query({
-          searchTerm: 'design',
-          platforms: [_const.PLATFORMS.PINTEREST, _const.PLATFORMS.TIKTOK],
-        }),
-      );
-
-      expect(searchService.searchTiktokAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ accessToken: undefined }),
-      );
-    });
-
-    it('searches without a token for an anonymous caller', async () => {
-      // Public search must still work — it is the product's front door. YouTube, Reddit
-      // and Spotify support unauthenticated queries.
-      const { handler, searchService, linkedAccountRepository } = makeHandler();
-
-      await handler.execute(
-        query({ searchTerm: 'design', platforms: [_const.PLATFORMS.YOUTUBE] }),
-      );
-
-      expect(linkedAccountRepository.getByUserIdAsync).not.toHaveBeenCalled();
-      expect(searchService.searchYoutubeAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ accessToken: undefined }),
-      );
-    });
-
-    it('tolerates a malformed stored token instead of failing the search', async () => {
-      // Tokens are encrypted then serialised; a corrupt row must degrade to an
-      // unauthenticated search, not a 500.
-      authenticate();
-
-      const { handler, searchService } = makeHandler({
-        linkedAccounts: [{ platform: _const.PLATFORMS.PINTEREST }],
-        userLogins: {
-          [_const.PLATFORMS.PINTEREST]: {
-            provider: _const.PLATFORMS.PINTEREST,
-            tokenValue: 'not-json-at-all',
-          },
-        },
-      });
-
-      await expect(
-        handler.execute(
-          query({
-            searchTerm: 'design',
-            platforms: [_const.PLATFORMS.PINTEREST],
-          }),
-        ),
-      ).resolves.toBeDefined();
-
-      expect(searchService.searchPinterestAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ accessToken: undefined }),
-      );
-    });
-
-    it('survives a token lookup failure', async () => {
-      authenticate();
-
-      const { handler } = makeHandler({
-        linkedAccounts: [{ platform: _const.PLATFORMS.PINTEREST }],
-      });
-
-      await expect(
-        handler.execute(query({ searchTerm: 'design' })),
-      ).resolves.toBeDefined();
-    });
-  });
-
-  describe('failure isolation', () => {
-    it('reports one platform failing without losing the others', async () => {
-      // Exactly the situation today: Pinterest returns 401 while YouTube works. A
-      // rejected platform must not take the response down.
-      const searchService = makeSearchService();
-      searchService.searchPinterestAsync.mockRejectedValue(
-        new Error('Authentication failed'),
-      );
-      searchService.searchYoutubeAsync.mockResolvedValue({
-        results: [{ id: 'v1' }, { id: 'v2' }],
-      });
-
-      const { handler } = makeHandler({ searchService });
-
-      const response = await handler.execute(
-        query({
-          searchTerm: 'design',
-          platforms: [_const.PLATFORMS.PINTEREST, _const.PLATFORMS.YOUTUBE],
-        }),
-      );
-
-      expect(response.results.pinterest).toEqual({
-        error: 'Authentication failed',
-      });
-      expect(response.results.youtube).toEqual({
-        results: [{ id: 'v1' }, { id: 'v2' }],
-      });
-      expect(response.totalResults).toBe(2);
-    });
-
-    it('returns a response even when every platform fails', async () => {
-      const searchService = makeSearchService();
-      for (const { method } of PLATFORM_METHODS) {
-        searchService[method].mockRejectedValue(new Error('down'));
-      }
-
-      const { handler } = makeHandler({ searchService });
-
-      const response = await handler.execute(query({ searchTerm: 'design' }));
-
-      expect(response.totalResults).toBe(0);
-      // Each platform reports its own failure rather than the request 500ing.
-      for (const { platform } of PLATFORM_METHODS) {
-        expect(response.results[platform]).toEqual({ error: 'down' });
-      }
-    });
-
-    it('nulls the pagination token for a failed platform', async () => {
-      const searchService = makeSearchService();
-      searchService.searchYoutubeAsync.mockRejectedValue(new Error('quota'));
-
-      const { handler } = makeHandler({ searchService });
-
-      const response = await handler.execute(
-        query({ searchTerm: 'design', platforms: [_const.PLATFORMS.YOUTUBE] }),
-      );
-
-      expect(response.paginationTokens.youtube).toBeNull();
-    });
-  });
-
-  describe('result counting and pagination', () => {
-    it('counts YouTube results', async () => {
-      const searchService = makeSearchService();
-      searchService.searchYoutubeAsync.mockResolvedValue({
-        results: [{ id: 1 }, { id: 2 }, { id: 3 }],
-        nextPageToken: 'CAoQAA',
-      });
-
-      const { handler } = makeHandler({ searchService });
-      const response = await handler.execute(
-        query({ searchTerm: 'design', platforms: [_const.PLATFORMS.YOUTUBE] }),
-      );
-
-      expect(response.totalResults).toBe(3);
-      expect(response.paginationTokens.youtube).toBe('CAoQAA');
-    });
-
-    it('counts a multi-section platform response', async () => {
-      // Pinterest returns pins, boards and users separately; the total must sum them,
-      // not report the section count.
-      const searchService = makeSearchService();
-      searchService.searchPinterestAsync.mockResolvedValue({
-        results: { pins: [1, 2], boards: [3], users: [4, 5, 6] },
-        bookmark: 'next-page',
-      });
-
-      const { handler } = makeHandler({ searchService });
-      const response = await handler.execute(
-        query({
-          searchTerm: 'design',
-          platforms: [_const.PLATFORMS.PINTEREST],
-        }),
-      );
-
-      expect(response.totalResults).toBe(6);
-      expect(response.paginationTokens.pinterest).toBe('next-page');
-    });
-
-    it('forwards a caller-supplied pagination token to the right platform', async () => {
-      const { handler, searchService } = makeHandler();
-
-      await handler.execute(
-        query({
-          searchTerm: 'design',
-          platforms: [_const.PLATFORMS.YOUTUBE, _const.PLATFORMS.REDDIT],
-          paginationTokens: { youtube: 'page-2' },
-        }),
-      );
-
-      expect(searchService.searchYoutubeAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ paginationToken: 'page-2' }),
-      );
-      expect(searchService.searchRedditAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ paginationToken: undefined }),
-      );
-    });
-
-    it('passes page, limit and forceRefresh through unchanged', async () => {
-      // forceRefresh bypasses the cache and therefore spends third-party quota, so it
-      // must not be set accidentally.
-      const { handler, searchService } = makeHandler();
-
-      await handler.execute(
-        query({
-          searchTerm: 'design',
-          platforms: [_const.PLATFORMS.YOUTUBE],
-          page: 3,
-          limit: 50,
-          forceRefresh: true,
-        }),
-      );
-
-      expect(searchService.searchYoutubeAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ page: 3, limit: 50, forceRefresh: true }),
-      );
-    });
-
-    it('defaults to page 1, limit 25 and no force refresh', async () => {
-      const { handler, searchService } = makeHandler();
-
-      await handler.execute(
-        query({ searchTerm: 'design', platforms: [_const.PLATFORMS.YOUTUBE] }),
-      );
-
-      expect(searchService.searchYoutubeAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ page: 1, limit: 25, forceRefresh: false }),
-      );
-    });
-  });
-
-  describe('query normalisation and history', () => {
-    it('passes both the original and normalised query to each platform', async () => {
-      // The normalised form is the cache key; the original is what the platform is
-      // actually asked. Conflating them would either break caching or search for the
-      // wrong thing.
-      const { handler, searchService } = makeHandler();
-
-      await handler.execute(
-        query({
-          searchTerm: '  Photography!  ',
-          platforms: [_const.PLATFORMS.YOUTUBE],
-        }),
-      );
-
-      expect(searchService.searchYoutubeAsync).toHaveBeenCalledWith(
-        expect.objectContaining({
-          originalQuery: '  Photography!  ',
-          normalizedQuery: 'photography',
-        }),
-      );
-    });
-
-    it('does not record search history for an anonymous caller', async () => {
-      // searchHistories is behavioural data about a person; there is no person here.
-      const { handler, searchHistoryRepository } = makeHandler();
+  describe('orchestrator delegation', () => {
+    it('delegates to SearchOrchestratorService.execute', async () => {
+      const { handler, orchestrator } = makeHandler();
 
       await handler.execute(query({ searchTerm: 'design' }));
 
-      expect(searchHistoryRepository.createAsync).not.toHaveBeenCalled();
+      expect(orchestrator.execute).toHaveBeenCalledTimes(1);
+      expect(orchestrator.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ searchTerm: 'design' }),
+      );
     });
 
-    it('records search history for an authenticated caller', async () => {
+    it('returns the orchestrator response unchanged', async () => {
+      const mockResponse = {
+        query: 'design',
+        items: [{ id: '1', title: 'Test' }],
+        pagination: { page: 1, limit: 25, total: 1, hasMore: false },
+        facets: { content: 1, profile: 0, project: 0, job: 0 },
+      };
+      const { handler, orchestrator } = makeHandler();
+      orchestrator.execute.mockResolvedValue(mockResponse as any);
+
+      const response = await handler.execute(query({ searchTerm: 'design' }));
+
+      expect(response).toEqual(mockResponse);
+    });
+
+    it('sets viewerUserId from HttpContext before calling orchestrator', async () => {
       userSpy.mockReturnValue({
-        [Globals.ClaimTypes.UserId]: 'user-1',
+        [Globals.ClaimTypes.UserId]: 'user-123',
       } as never);
 
-      const { handler, searchHistoryRepository } = makeHandler();
+      const { handler, orchestrator } = makeHandler();
 
       await handler.execute(query({ searchTerm: 'design' }));
 
-      expect(searchHistoryRepository.createAsync).toHaveBeenCalledTimes(1);
+      expect(orchestrator.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ viewerUserId: 'user-123' }),
+      );
     });
 
-    it('does not duplicate an existing history entry', async () => {
-      userSpy.mockReturnValue({
-        [Globals.ClaimTypes.UserId]: 'user-1',
-      } as never);
+    it('returns empty results on orchestrator failure', async () => {
+      const { handler, orchestrator } = makeHandler();
+      orchestrator.execute.mockRejectedValue(new Error('Search failed'));
 
-      const { handler, searchHistoryRepository } = makeHandler({
-        similarQueries: [
-          { originalQuery: 'design', normalizedQuery: 'design' },
-        ],
-      });
+      const response = await handler.execute(query({ searchTerm: 'design' }));
 
-      await handler.execute(query({ searchTerm: 'design' }));
-
-      expect(searchHistoryRepository.createAsync).not.toHaveBeenCalled();
+      expect(response.items).toEqual([]);
+      expect(response.pagination.total).toBe(0);
     });
 
-    it('handles an empty search term without dispatching a useless fan-out', async () => {
-      const { handler } = makeHandler();
-
-      const response = await handler.execute(query({ searchTerm: '   ' }));
-
-      expect(response.query).toBe('   ');
-      // Normalisation yields nothing, so there is no term to cache or match on.
-      expect(response.totalResults).toBe(0);
-    });
-  });
-
-  describe('analytics', () => {
-    it('records that a search was performed', async () => {
+    it('tracks analytics event before executing search', async () => {
       const { handler, analyticsService } = makeHandler();
 
       await handler.execute(
-        query({ searchTerm: 'design', platforms: [_const.PLATFORMS.YOUTUBE] }),
+        query({ searchTerm: 'design', platforms: ['youtube'] }),
       );
 
       expect(analyticsService.trackEvent).toHaveBeenCalledWith(
         _const.ANALYTICS_EVENTS.SEARCH.PERFORMED,
-        expect.objectContaining({ searchTerm: 'design' }),
+        expect.objectContaining({
+          searchTerm: 'design',
+          platforms: ['youtube'],
+        }),
       );
     });
   });

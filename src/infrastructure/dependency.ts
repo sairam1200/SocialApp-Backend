@@ -320,12 +320,12 @@ export const dependency = {
     useClass: EmailBounceService,
   },
 
-<<<<<<< HEAD
   // Unified Search
   ContentStreamIndexService: {
     provide: _const.ICONTENTSTREAM_INDEX_SERVICE,
     useClass: ContentStreamIndexService,
-=======
+  },
+
   // Community — the social layer.
   SocialProfileRepository: {
     provide: _const.ISOCIALPROFILE_REPOSITORY,
@@ -360,6 +360,5 @@ export const dependency = {
   GaddrJobsRepository: {
     provide: _const.IGADDRJOBS_REPOSITORY,
     useClass: GaddrJobsRepository,
->>>>>>> other/staging
   },
 };

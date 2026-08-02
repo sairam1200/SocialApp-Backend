@@ -5,6 +5,7 @@ import { SearchCacheService } from './searchCache.service';
 import { IContentStreamRepository } from '../../domain/repositories/icontentStream.repository';
 import { ILinkedAccountRepository } from '../../domain/repositories/ilinkedAccount.repository';
 import { IContentStreamIndexService } from '../../domain/services/icontentStreamIndex.service';
+import { IGeneralRepository } from '../../domain/repositories/igeneral.repository';
 import { PlatformSearchParamsModel } from 'domain/contracts/platform-search.model';
 
 jest.mock('axios', () => ({ get: jest.fn() }));
@@ -38,6 +39,7 @@ function buildService(indexBatch: jest.Mock): SearchService {
     emptyRepository as unknown as ILinkedAccountRepository,
     cacheService as unknown as SearchCacheService,
     { indexBatch } as unknown as IContentStreamIndexService,
+    { checkExistingItemsAsync: jest.fn().mockResolvedValue([]), createAsync: jest.fn().mockResolvedValue(undefined) } as unknown as IGeneralRepository,
   );
 }
 
@@ -260,6 +262,7 @@ describe('SearchService', () => {
         emptyRepo as unknown as ILinkedAccountRepository,
         cacheService as unknown as SearchCacheService,
         { indexBatch } as unknown as IContentStreamIndexService,
+        { checkExistingItemsAsync: jest.fn().mockResolvedValue([]), createAsync: jest.fn().mockResolvedValue(undefined) } as unknown as IGeneralRepository,
       );
 
       const response = await service.searchYoutubeAsync(youtubeParams());

@@ -9,9 +9,6 @@ const rawIV = Buffer.from(configs.encryption.iv, 'utf-8');
 const key = rawKey.subarray(0, 32); // AES-256 needs 32-byte key
 const iv = rawIV.subarray(0, 16); // CBC mode needs 16-byte IV
 
-<<<<<<< HEAD
-function encrypt(
-=======
 /* ==========================================================================
  * v2 — authenticated encryption (AES-256-GCM)
  *
@@ -127,21 +124,16 @@ function encrypt(text: string, keyParam?: Buffer, ivParam?: Buffer): string {
 
 /** Legacy AES-256-CBC. Retained only for explicit callers and for round-trip tests. */
 function encryptLegacy(
->>>>>>> other/staging
   text: string,
   keyParam: Buffer = key,
   ivParam: Buffer = iv,
 ): string {
-  const randomIV = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', keyParam, randomIV);
+  const cipher = crypto.createCipheriv(algorithm, keyParam, ivParam);
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
-  const authTag = cipher.getAuthTag().toString('hex');
-  return `v2:${randomIV.toString('hex')}:${encrypted}:${authTag}`;
+  return encrypted;
 }
 
-<<<<<<< HEAD
-=======
 /**
  * Decrypt, routing by format.
  *
@@ -152,27 +144,11 @@ function encryptLegacy(
  *
  * When they reach zero, delete `encryptLegacy`, this branch, and `ENCRYPTION_IV`.
  */
->>>>>>> other/staging
 function decrypt(
   encryptedText: string,
   keyParam?: Buffer,
   ivParam?: Buffer,
 ): string {
-<<<<<<< HEAD
-  if (encryptedText.startsWith('v2:')) {
-    const parts = encryptedText.split(':');
-    const ivBuf = Buffer.from(parts[1], 'hex');
-    const ciphertext = parts[2];
-    const authTag = Buffer.from(parts[3], 'hex');
-    const decipher = crypto.createDecipheriv('aes-256-gcm', keyParam, ivBuf);
-    decipher.setAuthTag(authTag);
-    let decrypted = decipher.update(ciphertext, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
-  }
-  // Legacy CBC fallback for existing stored tokens
-  const decipher = crypto.createDecipheriv(algorithm, keyParam, ivParam);
-=======
   if (isV2(encryptedText)) {
     return decryptV2(encryptedText);
   }
@@ -182,7 +158,6 @@ function decrypt(
     keyParam ?? key,
     ivParam ?? iv,
   );
->>>>>>> other/staging
   let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
   decrypted += decipher.final('utf8');
   return decrypted;
@@ -204,14 +179,6 @@ function verifyWithHMAC(encryptedText: string, hmac: string): boolean {
     .createHmac('sha256', key)
     .update(encryptedText)
     .digest('hex');
-<<<<<<< HEAD
-  const computedBuf = Buffer.from(computedHMAC, 'utf8');
-  const hmacBuf = Buffer.from(hmac, 'utf8');
-  if (computedBuf.length !== hmacBuf.length) {
-    return false;
-  }
-  return crypto.timingSafeEqual(computedBuf, hmacBuf);
-=======
 
   const expected = Buffer.from(computedHMAC, 'utf8');
   const actual = Buffer.from(hmac ?? '', 'utf8');
@@ -223,7 +190,6 @@ function verifyWithHMAC(encryptedText: string, hmac: string): boolean {
   }
 
   return crypto.timingSafeEqual(expected, actual);
->>>>>>> other/staging
 }
 
 // SHA-256 -> base64

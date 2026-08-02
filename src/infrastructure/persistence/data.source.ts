@@ -254,16 +254,8 @@ export const postgresOptions: DataSourceOptions = {
   migrations: [MIGRATIONS_GLOB],
   logging: configs.postgres.logging,
   migrationsRun: configs.postgres.migrationsRun,
-<<<<<<< HEAD
-
-  ssl: configs.postgres.ssl?.rejectUnauthorized !== undefined 
-    ? { rejectUnauthorized: configs.postgres.ssl.rejectUnauthorized }
-    : undefined,
-};
-=======
   ssl: resolveSsl(),
 } as DataSourceOptions;
->>>>>>> other/staging
 
 const dataSource = new DataSource(postgresOptions);
 export default dataSource;

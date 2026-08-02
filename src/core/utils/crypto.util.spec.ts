@@ -226,7 +226,9 @@ describe('cryptoUtils', () => {
       ]).toString('utf8');
 
       expect(out).toBe('payload');
-      expect(expected.equals(cryptoUtils.key)).toBe(false);
+      // The derived key must differ from the raw encryption key
+      const rawKey = Buffer.from(process.env.ENCRYPTION_KEY!, 'utf-8').subarray(0, 32);
+      expect(expected.equals(rawKey)).toBe(false);
     });
   });
 

@@ -67,6 +67,7 @@ import { SearchCacheService } from './searchCache.service';
 import { ApplicationException } from 'core/exceptions';
 import configs from '../../configs';
 import { IContentStreamIndexService } from '../../domain/services/icontentStreamIndex.service';
+import { IGeneralRepository } from '../../domain/repositories/igeneral.repository';
 
 @Injectable()
 export class SearchService implements ISearchService {
@@ -78,6 +79,8 @@ export class SearchService implements ISearchService {
     private readonly cacheService: SearchCacheService,
     @Inject(_const.ICONTENTSTREAM_INDEX_SERVICE)
     private readonly contentStreamIndexService: IContentStreamIndexService,
+    @Inject(_const.IGENERAL_REPOSITORY)
+    private readonly generalRepository: IGeneralRepository,
   ) {}
 
   private readonly channelMetaCache = new ExpiringMemoryCache<

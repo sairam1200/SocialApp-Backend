@@ -1,19 +1,3 @@
-<<<<<<< HEAD
-const isProduction = process.env.NODE_ENV === 'production';
-
-const productionOrigins = [
-  'https://gaddr.com',
-  'https://www.gaddr.com',
-  'https://jobs.gaddr.com',
-  'https://demo.gaddr.com',
-  'https://dev.gaddr.com',
-];
-
-const developmentOrigins = [
-  'http://localhost:3000',
-  'https://localhost:3000',
-  'http://localhost:5173',
-=======
 /**
  * Allowed cross-origin origins, split by environment.
  *
@@ -41,16 +25,11 @@ const DEVELOPMENT_ORIGINS = [
   'https://localhost:3000',
   'http://localhost:5173',
   // Reassignable tunnel + preview deployment — development only, never production.
->>>>>>> other/staging
   'https://almost-backtrack-drapery.ngrok-free.dev',
   'https://social-app-zeta-three.vercel.app',
 ];
 
-<<<<<<< HEAD
-export const CORS_ORIGINS = isProduction ? productionOrigins : [...productionOrigins, ...developmentOrigins];
-=======
 export const CORS_ORIGINS =
   process.env.NODE_ENV === 'production'
     ? PRODUCTION_ORIGINS
     : [...PRODUCTION_ORIGINS, ...DEVELOPMENT_ORIGINS];
->>>>>>> other/staging

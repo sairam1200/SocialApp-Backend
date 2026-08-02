@@ -89,11 +89,6 @@ export class InstagramConnectQueryHandler implements ICommandHandler<InstagramCo
  */
 @CommandHandler(InstagramConnectCallbackQuery)
 export class InstagramConnectCallbackQueryHandler implements ICommandHandler<InstagramConnectCallbackQuery> {
-<<<<<<< HEAD
-  private static callbackInvocationCount = 0;
-
-=======
->>>>>>> other/staging
   constructor(
     @Inject(_const.ILINKEDACCOUNT_REPOSITORY)
     private readonly linkedAccountRepository: ILinkedAccountRepository,
@@ -113,13 +108,11 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     expiresIn: number;
     profile: InstagramProfileModel;
   }> {
-    const invocationNum =
-      ++InstagramConnectCallbackQueryHandler.callbackInvocationCount;
     const { model } = query;
 
     await instagramConnectCallbackValidations.validateAsync(model);
 
-    await this.validateState(model.state, invocationNum);
+    await this.validateState(model.state);
 
     const tokenResponse = await this.fetchShortLivedToken(model.code);
 
@@ -272,10 +265,7 @@ export class InstagramConnectCallbackQueryHandler implements ICommandHandler<Ins
     }
   }
 
-  private async validateState(
-    state: string,
-    invocationNum: number,
-  ): Promise<void> {
+  private async validateState(state: string): Promise<void> {
     const dataProtectionKey =
       await this.dataProtectionKeyRepository.getByKeyAsync(state);
 

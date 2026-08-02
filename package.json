@@ -139,10 +139,6 @@
     },
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
-<<<<<<< HEAD
-    "setupFiles": [
-      "<rootDir>/jest.setup.ts"
-=======
     "modulePaths": [
       "<rootDir>"
     ],
@@ -151,7 +147,6 @@
     ],
     "transformIgnorePatterns": [
       "node_modules/(?!(nanoid|@?nanoid)/)"
->>>>>>> other/staging
     ]
   }
 }

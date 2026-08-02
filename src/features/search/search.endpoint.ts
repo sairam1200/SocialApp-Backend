@@ -11,11 +11,6 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-<<<<<<< HEAD
-import { GlobalSearchQuery, GlobalSearchRequestModel } from './search.handler';
-import { SearchSuggestionsQuery } from './database-search.handler';
-import { SearchResponse } from '../../domain/contracts/search';
-=======
 import {
   ExternalSearchRateLimitGuard,
   SearchRateLimitGuard,
@@ -23,14 +18,11 @@ import {
 import {
   GlobalSearchQuery,
   GlobalSearchRequestModel,
-  GlobalSearchResponseModel,
 } from './search.handler';
 import {
-  SearchItemQuery,
-  SearchResultsQuery,
   SearchSuggestionsQuery,
 } from './database-search.handler';
->>>>>>> other/staging
+import { SearchResponse } from '../../domain/contracts/search';
 
 @ApiTags('Search')
 @Controller({
@@ -51,31 +43,6 @@ export class GlobalSearchController {
     return this.queryBus.execute(new SearchSuggestionsQuery({ keyword }));
   }
 
-<<<<<<< HEAD
-=======
-  @Get('results')
-  public results(
-    @Query('keyword') keyword: string,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
-  ) {
-    return this.queryBus.execute(
-      new SearchResultsQuery({ keyword, page, limit }),
-    );
-  }
-
-  @Get('item')
-  public item(
-    @Query('id') id: string,
-    @Query('type') type: 'user' | 'userContent',
-  ) {
-    return this.queryBus.execute(new SearchItemQuery({ id, type }));
-  }
-
-  // The expensive one: a twelve-platform fan-out that can spend third-party quota,
-  // and which accepts forceRefresh to bypass the cache deliberately. Tighter bucket
-  // than the database-backed GETs above.
->>>>>>> other/staging
   @Post()
   @UseGuards(ExternalSearchRateLimitGuard)
   @ApiResponse({ status: 429, description: 'TOO_MANY_REQUESTS' })

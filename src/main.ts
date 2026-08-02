@@ -17,7 +17,6 @@ import { ErrorHandlersFilter } from './core/exceptions/exceptionHandler.filter';
 import { ApiDocRedirectMiddleware } from './core/middlewares/apiDocRedirect.middleware';
 import { CORS_ORIGINS } from './core/configs/cors.config';
 import cookieParser = require('cookie-parser');
-import helmet from 'helmet';
 
 console.info(
   `[startup] main.ts loaded — PID ${process.pid}, NODE_ENV=${process.env.NODE_ENV}, K_SERVICE=${process.env.K_SERVICE || 'none'}`,

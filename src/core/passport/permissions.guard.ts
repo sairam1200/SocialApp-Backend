@@ -49,10 +49,6 @@ export class PermissionsGuard implements CanActivate {
     const controller = context.getClass();
     const requiredPermission = `${controller.name}.${handler.name}`;
 
-<<<<<<< HEAD
-    const grantedPermissions = new Set(
-      (claimsPrinciple.permission ?? []).filter((p: string) => p && p.length > 0)
-=======
     // Exact match only. A substring test (`requiredPermission.includes(p)`) is
     // dangerously permissive: an empty-string grant matches every endpoint, and
     // a coarse grant such as "User" matches any Controller.method containing it.
@@ -69,12 +65,7 @@ export class PermissionsGuard implements CanActivate {
         (permission === requiredPermission ||
           permission === '*' ||
           permission === `${requiredPermission.split('.')[0]}.*`),
->>>>>>> other/staging
     );
-    const hasPermission =
-      grantedPermissions.has(requiredPermission) ||
-      grantedPermissions.has('*') ||
-      grantedPermissions.has(`${requiredPermission.split('.')[0]}.*`);
     if (hasPermission) {
       return true;
     } else {
