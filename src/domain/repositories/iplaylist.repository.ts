@@ -15,6 +15,12 @@ export interface IPlaylistRepository {
   deleteAsync(playlist: Playlist): Promise<void>;
 
   getContentsAsync(referenceId: string): Promise<PlaylistContent[]>;
+  getContentsPaginatedAsync(
+    referenceId: string,
+    page: number,
+    limit: number,
+  ): Promise<{ items: PlaylistContent[]; total: number }>;
+  getContentCountAsync(referenceId: string): Promise<number>;
   removeContentAsync(
     referenceId: string,
     content: PlaylistContent,

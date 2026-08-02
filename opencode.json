@@ -50,5 +50,20 @@
     "skill": {
       "gaddr-*": "allow"
     }
+  },
+  "compaction": {
+    "auto": false
+  },
+  "provider": {
+    "opencode": {
+      "models": {
+        "mimo-v2-5-free": {
+          "limit": {
+            "context": 1000000,
+            "output": 32000
+          }
+        }
+      }
+    }
   }
 }

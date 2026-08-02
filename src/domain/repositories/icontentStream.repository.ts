@@ -3,6 +3,12 @@ import { ContentStream } from '../entities/contentStream.entity';
 
 export interface IContentStreamRepository {
   getEntriesAsync(params: QueryOptions): Promise<[ContentStream[], number]>;
+  getByExternalIdsAsync(
+    externalIds: string[],
+    userId?: string,
+  ): Promise<ContentStream[]>;
+  getByIdsAsync(ids: string[]): Promise<ContentStream[]>;
+  getByIdsOrExternalIdsAsync(ids: string[]): Promise<ContentStream[]>;
   deleteByPlatformAndExternalIdAsync(
     platform: string,
     externalId: string,

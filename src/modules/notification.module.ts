@@ -6,6 +6,7 @@ import { dependency } from '../infrastructure/dependency';
 import { Notification } from '../domain/entities/notification/notification.entity';
 import { UserPreference } from '../domain/entities';
 import { NotificationGateway } from '../infrastructure/websocket/gateways/notification.gateway';
+import { BookmarkGateway } from '../infrastructure/websocket/gateways/bookmark.gateway';
 import { NotificationEvent } from 'domain/entities/notification/notificationEvent.entity';
 import { NotificationTemplate } from 'domain/entities/notification/notificationTemplate.entity';
 
@@ -26,12 +27,14 @@ import { NotificationTemplate } from 'domain/entities/notification/notificationT
     dependency.UserPreferenceRepository,
     dependency.NotificationService,
     NotificationGateway,
+    BookmarkGateway,
   ],
   controllers: [...notification.addControllers()],
   exports: [
     dependency.NotificationService,
     dependency.NotificationRepository,
     NotificationGateway,
+    BookmarkGateway,
   ],
 })
 export class NotificationModule {}

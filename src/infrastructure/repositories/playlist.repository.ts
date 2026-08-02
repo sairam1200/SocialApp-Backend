@@ -93,12 +93,52 @@ export class PlaylistRepository implements IPlaylistRepository {
     });
   }
 
+  public async getContentsPaginatedAsync(
+    referenceId: string,
+    page: number,
+    limit: number,
+  ): Promise<{ items: PlaylistContent[]; total: number }> {
+    const [items, total] = await this.playlistContentContext.findAndCount({
+      where: { playlist: { referenceId } },
+      relations: [
+        'playlist',
+        'addedBy',
+        'addedBy.user',
+        'userContent',
+        'userContent.media',
+      ],
+      order: { createdOn: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return { items, total };
+  }
+
+  public async getContentCountAsync(referenceId: string): Promise<number> {
+    return await this.playlistContentContext.count({
+      where: { playlist: { referenceId } },
+    });
+  }
+
   public async getContentAsync(
     referenceId: string,
     contentId: string,
   ): Promise<PlaylistContent | null> {
+    const result = await this.playlistContentContext.findOne({
+      where: [
+        { id: contentId, playlist: { referenceId } },
+        { userContentId: contentId, playlist: { referenceId } },
+      ],
+      relations: ['playlist', 'addedBy', 'addedBy.user'],
+    });
+
+    if (result) {
+      return result;
+    }
+
     return await this.playlistContentContext.findOne({
-      where: { id: contentId, playlist: { referenceId } },
+      where: { contentId, playlist: { referenceId } },
       relations: ['playlist', 'addedBy', 'addedBy.user'],
     });
   }

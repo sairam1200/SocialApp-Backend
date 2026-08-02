@@ -203,6 +203,7 @@ export class QueuesModule implements NestModule, OnApplicationShutdown {
         dependency.QueueService,
         dependency.UserContentRepository,
         registeredQueues,
+        ImportGateway,
       ],
     };
   }

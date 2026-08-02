@@ -366,10 +366,10 @@ export class GetYoutubeTopVideosQueryHandler implements IQueryHandler<GetYoutube
     for (const uc of userContents) {
       const vid = uc.metaData?.videoId || uc.externalId;
       if (!vid) continue;
-      const existing = enrichmentMap.get(vid) || { viewCount: 0, likeCount: 0 };
+      const existing = enrichmentMap.get(vid) ?? { viewCount: 0, likeCount: 0 };
       enrichmentMap.set(vid, {
-        viewCount: existing.viewCount || Number(uc.metaData?.viewCount) || 0,
-        likeCount: existing.likeCount || Number(uc.metaData?.likeCount) || 0,
+        viewCount: existing.viewCount ?? Number(uc.metaData?.viewCount) ?? 0,
+        likeCount: existing.likeCount ?? Number(uc.metaData?.likeCount) ?? 0,
       });
     }
 
@@ -505,16 +505,16 @@ export class GetYoutubeOverviewQueryHandler implements IQueryHandler<GetYoutubeO
         shares: number;
       },
     ): ChannelMetricsAggregate => ({
-      viewCount: video.viewCount || channel.viewCount,
+      viewCount: video.viewCount ?? channel.viewCount,
       estimatedMinutesWatched:
-        video.estimatedMinutesWatched || channel.estimatedMinutesWatched,
+        video.estimatedMinutesWatched ?? channel.estimatedMinutesWatched,
       averageViewDurationSeconds:
-        video.averageViewDurationSeconds || channel.averageViewDurationSeconds,
+        video.averageViewDurationSeconds ?? channel.averageViewDurationSeconds,
       subscribersGained: channel.subscribersGained,
       subscribersLost: channel.subscribersLost,
-      likes: video.likes || channel.likes,
-      comments: video.comments || channel.comments,
-      shares: video.shares || channel.shares,
+      likes: video.likes ?? channel.likes,
+      comments: video.comments ?? channel.comments,
+      shares: video.shares ?? channel.shares,
       estimatedRevenueUsd: channel.estimatedRevenueUsd,
       estimatedAdRevenueUsd: channel.estimatedAdRevenueUsd,
       snapshotCount: channel.snapshotCount,

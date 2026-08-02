@@ -15,6 +15,7 @@ import {
   User,
   UserContent,
   UserRole,
+  ContentStream,
 } from '../domain/entities';
 
 @Module({
@@ -30,6 +31,7 @@ import {
       PlaylistMember,
       PlaylistContent,
       UserContent,
+      ContentStream,
     ]),
   ],
   controllers: [...playlist.addControllers(), ...bookmark.addControllers()],
@@ -37,7 +39,9 @@ import {
     JwtService,
 
     ...playlist.addHandlers(),
+    ...bookmark.addHandlers(),
     dependency.PlaylistRepository,
+    dependency.ContentStreamRepository,
     dependency.UserContentRepository,
   ],
   exports: [],

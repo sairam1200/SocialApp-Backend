@@ -57,6 +57,11 @@ export class UserContentRepository implements IUserContentRepository {
     return await this.userContentContext.findOne({ where: { id } });
   }
 
+  public async getByIdsAsync(ids: string[]): Promise<UserContent[]> {
+    if (ids.length === 0) return [];
+    return await this.userContentContext.find({ where: { id: In(ids) } });
+  }
+
   public async deleteAsync(content: UserContent): Promise<void> {
     await this.userContentContext.remove(content);
     this.invalidateDiscoverFeedCache().catch(() => {});

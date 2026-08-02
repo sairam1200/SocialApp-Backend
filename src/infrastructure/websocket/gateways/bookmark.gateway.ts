@@ -14,27 +14,22 @@ import logger from '../../../core/utils/winston.util';
 import { BaseGateway } from './base.gateway';
 import { CORS_ORIGINS } from '../../../core/configs/cors.config';
 
-export interface ImportContentPayload {
-  platform?: string;
-  [key: string]: any;
-}
-
 @Injectable()
 @WebSocketGateway({
-  namespace: '/imports',
+  namespace: '/bookmarks',
   cors: {
     origin: CORS_ORIGINS,
     credentials: true,
   },
 })
-export class ImportGateway
+export class BookmarkGateway
   extends BaseGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
   @WebSocketServer()
   server: Server;
 
-  protected gatewayName = 'ImportGateway';
+  protected gatewayName = 'BookmarkGateway';
   private connectedUsers = new Map<string, Set<string>>();
 
   constructor(jwtService: JwtService) {
@@ -62,7 +57,6 @@ export class ImportGateway
     this.setupClientData(client, userId, user);
     client.join(userId);
 
-    // Track connected users
     if (!this.connectedUsers.has(userId)) {
       this.connectedUsers.set(userId, new Set());
     }
@@ -102,15 +96,6 @@ export class ImportGateway
 
     client.join(userId);
     logger.debug(`[${this.gatewayName}] User ${userId} joined room`);
-  }
-
-  emitNewImportContent(
-    userId: string,
-    platform: string,
-    payload: ImportContentPayload,
-  ) {
-    const data = { platform, ...payload };
-    this.safeEmit(userId, 'new-content', data);
   }
 
   emitBookmarkAdded(userId: string, payload: { contentId: string }) {

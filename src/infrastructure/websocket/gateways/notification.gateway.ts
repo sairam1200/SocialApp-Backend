@@ -119,6 +119,14 @@ export class NotificationGateway
     this.safeEmit(userId, 'notification-read', readAt);
   }
 
+  emitBookmarkAdded(userId: string, payload: { contentId: string }) {
+    this.safeEmit(userId, 'bookmark-added', payload);
+  }
+
+  emitBookmarkRemoved(userId: string, payload: { contentId: string }) {
+    this.safeEmit(userId, 'bookmark-removed', payload);
+  }
+
   @SubscribeMessage('mark-as-read')
   async handleMarkAsRead(
     @MessageBody() payload: { notificationId: string },

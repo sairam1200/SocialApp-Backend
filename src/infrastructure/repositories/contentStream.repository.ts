@@ -112,4 +112,37 @@ export class ContentStreamRepository implements IContentStreamRepository {
     if (contentStreams.length === 0) return [];
     return await this.contentStreamContext.save(contentStreams);
   }
+
+  async getByExternalIdsAsync(
+    externalIds: string[],
+    userId?: string,
+  ): Promise<ContentStream[]> {
+    if (externalIds.length === 0) return [];
+
+    const queryBuilder = this.contentStreamContext.createQueryBuilder('cs');
+
+    queryBuilder
+      .where('cs.externalId IN (:...externalIds)', { externalIds })
+      .andWhere(userId ? 'cs.creatorId = :userId' : '1=1', { userId })
+      .orderBy('cs."createdOn"', 'DESC');
+
+    return await queryBuilder.getMany();
+  }
+
+  async getByIdsAsync(ids: string[]): Promise<ContentStream[]> {
+    if (ids.length === 0) return [];
+
+    return await this.contentStreamContext.find({
+      where: { id: In(ids) },
+    });
+  }
+
+  async getByIdsOrExternalIdsAsync(ids: string[]): Promise<ContentStream[]> {
+    if (ids.length === 0) return [];
+
+    return await this.contentStreamContext
+      .createQueryBuilder('cs')
+      .where('cs.id IN (:...ids) OR cs."externalId" IN (:...ids)', { ids })
+      .getMany();
+  }
 }
